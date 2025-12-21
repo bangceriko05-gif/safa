@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus, FileDown, UserCog, Calendar, History, Users, FileText, Shield, Settings, Package, Store, Inbox } from "lucide-react";
+import { LogOut, Plus, FileDown, UserCog, Calendar, History, Users, FileText, Shield, Settings, Package, Store, Inbox, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -31,6 +31,7 @@ import NotificationSettings from "./NotificationSettings";
 import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
+import DataImport from "./DataImport";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
@@ -371,8 +372,8 @@ export default function Dashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full max-w-6xl" style={{ 
             gridTemplateColumns: 
-              userRole === "admin" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" :
-              userRole === "leader" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
+              userRole === "admin" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" :
+              userRole === "leader" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
               "1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
@@ -400,6 +401,10 @@ export default function Dashboard() {
                 <TabsTrigger value="rooms">
                   <Package className="mr-2 h-4 w-4" />
                   Produk & Inventori
+                </TabsTrigger>
+                <TabsTrigger value="import">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
                 </TabsTrigger>
                 <TabsTrigger value="activity">
                   <History className="mr-2 h-4 w-4" />
@@ -458,6 +463,10 @@ export default function Dashboard() {
 
               <TabsContent value="rooms" className="mt-6">
                 <RoomManagement />
+              </TabsContent>
+
+              <TabsContent value="import" className="mt-6">
+                <DataImport />
               </TabsContent>
               
               <TabsContent value="activity" className="mt-6">
