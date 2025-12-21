@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 40 100% 97%;
+    --foreground: 220 15% 25%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 25%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 25%;
+
+    --primary: 220 90% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 20% 95%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 200 20% 95%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 180 70% 90%;
+    --accent-foreground: 220 15% 25%;
+
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 20% 88%;
+    --input: 200 20% 88%;
+    --ring: 220 90% 56%;
+
+    --radius: 0.75rem;
+
+    /* Pastel gradients */
+    --gradient-main: linear-gradient(135deg, hsl(40 100% 97%) 0%, hsl(200 70% 95%) 100%);
+    --gradient-card: linear-gradient(to bottom, hsl(0 0% 100%) 0%, hsl(200 20% 98%) 100%);
+    
+    /* Room colors - pastel versions */
+    --room-black-gold: 43 100% 65%;
+    --room-blue-diamond: 210 100% 70%;
+    --room-blue-fire: 220 85% 55%;
+    --room-brown-walnut: 25 60% 50%;
+    --room-green-stone: 160 70% 60%;
+    --room-grey-sand: 200 10% 65%;
+    --room-red-ruby: 0 80% 65%;
+    --room-vip-1: 270 70% 70%;
+    --room-vip-2: 280 65% 75%;
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -2px hsl(220 20% 50% / 0.08);
+    --shadow-card: 0 2px 12px -2px hsl(220 20% 50% / 0.1);
+    --shadow-hover: 0 8px 30px -4px hsl(220 30% 50% / 0.15);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Fonts */
+    --font-inter: 'Inter', sans-serif;
+    --font-poppins: 'Poppins', sans-serif;
+    --font-roboto: 'Roboto', sans-serif;
+    --font-lato: 'Lato', sans-serif;
+  }
+
+  .dark {
+    --background: 220 25% 10%;
+    --foreground: 200 20% 92%;
+
+    --card: 220 20% 13%;
+    --card-foreground: 200 20% 92%;
+
+    --popover: 220 20% 13%;
+    --popover-foreground: 200 20% 92%;
+
+    --primary: 220 90% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 200 20% 92%;
+
+    --muted: 220 15% 20%;
+    --muted-foreground: 200 10% 60%;
+
+    --accent: 220 15% 25%;
+    --accent-foreground: 200 20% 92%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 25%;
+    --input: 220 15% 25%;
+    --ring: 220 90% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

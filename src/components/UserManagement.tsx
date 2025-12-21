@@ -1,0 +1,938 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { Loader2, UserCog, Pencil, Key, Trash2, UserPlus, Building2, X } from "lucide-react";
+import { logActivity } from "@/utils/activityLogger";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+  role: "admin" | "leader" | "user";
+  stores?: string[];
+}
+
+interface Store {
+  id: string;
+  name: string;
+  location: string | null;
+}
+
+interface UserStoreAccess {
+  store_id: string;
+  role: string;
+  stores: Store;
+}
+
+interface TempPassword {
+  id: string;
+  temp_password: string;
+  created_at: string;
+  is_used: boolean;
+}
+
+export default function UserManagement() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<User | null>(null);
+  const [tempPasswords, setTempPasswords] = useState<TempPassword[]>([]);
+  const [newPassword, setNewPassword] = useState("");
+  const [currentUserRole, setCurrentUserRole] = useState<string>("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+  });
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [addFormData, setAddFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user" as "admin" | "leader" | "user",
+  });
+  const [isStoreAccessDialogOpen, setIsStoreAccessDialogOpen] = useState(false);
+  const [storeAccessUser, setStoreAccessUser] = useState<User | null>(null);
+  const [allStores, setAllStores] = useState<Store[]>([]);
+  const [userStoreAccess, setUserStoreAccess] = useState<UserStoreAccess[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string>("");
+  const [selectedStoreRole, setSelectedStoreRole] = useState<string>("staff");
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      // Fetch all profiles with their roles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Fetch all user roles
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("*");
+
+      if (rolesError) throw rolesError;
+
+      // Fetch user store access
+      const { data: storeAccess, error: storeAccessError } = await supabase
+        .from("user_store_access")
+        .select("user_id, stores(name)");
+
+      if (storeAccessError) throw storeAccessError;
+
+      // Combine the data
+      const usersWithRoles = profiles?.map((profile) => {
+        const userRole = roles?.find((r) => r.user_id === profile.id);
+        const userStores = storeAccess?.filter((sa: any) => sa.user_id === profile.id)
+          .map((sa: any) => sa.stores?.name)
+          .filter(Boolean) || [];
+        
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          created_at: profile.created_at,
+          role: userRole?.role || "user",
+          stores: userStores,
+        };
+      }) || [];
+
+      setUsers(usersWithRoles);
+    } catch (error: any) {
+      toast.error("Gagal memuat data pengguna: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    getCurrentUserRole();
+    fetchAllStores();
+  }, []);
+
+  const fetchAllStores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("id, name, location")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setAllStores(data || []);
+    } catch (error: any) {
+      console.error("Error fetching stores:", error);
+    }
+  };
+
+  const getCurrentUserRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleData) {
+        setCurrentUserRole(roleData.role);
+      }
+    } catch (error) {
+      console.error("Error getting current user role:", error);
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: "admin" | "leader" | "user") => {
+    setUpdating(userId);
+    try {
+      // Get user name before updating
+      const user = users.find(u => u.id === userId);
+      
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: newRole })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      // Log activity
+      if (user) {
+        await logActivity({
+          actionType: 'updated',
+          entityType: 'User',
+          entityId: userId,
+          description: `Mengubah role ${user.name} menjadi ${newRole}`,
+        });
+      }
+
+      toast.success("Role pengguna berhasil diperbarui!");
+      fetchUsers();
+    } catch (error: any) {
+      toast.error("Gagal memperbarui role: " + error.message);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          name: formData.name,
+          email: formData.email,
+        })
+        .eq("id", editingUser.id);
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'updated',
+        entityType: 'User',
+        entityId: editingUser.id,
+        description: `Mengubah data pengguna ${formData.name}`,
+      });
+
+      toast.success("Data pengguna berhasil diperbarui!");
+      fetchUsers();
+      handleCloseDialog();
+    } catch (error: any) {
+      toast.error("Gagal memperbarui data: " + error.message);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditingUser(null);
+    setFormData({
+      name: "",
+      email: "",
+    });
+  };
+
+  const handleShowPassword = async (user: User) => {
+    setPasswordUser(user);
+    setNewPassword("");
+    
+    // Fetch temp passwords for this user
+    const { data, error } = await supabase
+      .from("user_temp_passwords")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    
+    if (!error && data) {
+      setTempPasswords(data);
+    } else {
+      setTempPasswords([]);
+    }
+    
+    setIsPasswordDialogOpen(true);
+  };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordUser || !newPassword) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Store temp password
+      const { error } = await supabase
+        .from("user_temp_passwords")
+        .insert({
+          user_id: passwordUser.id,
+          temp_password: newPassword,
+          created_by: user.id,
+        });
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'updated',
+        entityType: 'User',
+        entityId: passwordUser.id,
+        description: `Mengatur password baru untuk ${passwordUser.name}`,
+      });
+
+      toast.success("Password berhasil disimpan!");
+      setNewPassword("");
+      
+      // Refresh temp passwords
+      handleShowPassword(passwordUser);
+    } catch (error: any) {
+      toast.error("Gagal menyimpan password: " + error.message);
+    }
+  };
+
+  const handleClosePasswordDialog = () => {
+    setIsPasswordDialogOpen(false);
+    setPasswordUser(null);
+    setNewPassword("");
+    setTempPasswords([]);
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Use edge function for secure user creation
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'create',
+          email: addFormData.email,
+          password: addFormData.password,
+          name: addFormData.name,
+          role: addFormData.role,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await logActivity({
+        actionType: 'created',
+        entityType: 'User',
+        entityId: data?.user?.id,
+        description: `Menambah pengguna baru ${addFormData.name}`,
+      });
+
+      toast.success("Pengguna berhasil ditambahkan!");
+      fetchUsers();
+      handleCloseAddDialog();
+    } catch (error: any) {
+      toast.error("Gagal menambah pengguna: " + error.message);
+    }
+  };
+
+  const handleCloseAddDialog = () => {
+    setIsAddDialogOpen(false);
+    setAddFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "user",
+    });
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+
+    try {
+      // Use edge function for secure user deletion
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'delete',
+          userId: deletingUser.id,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'User',
+        entityId: deletingUser.id,
+        description: `Menghapus pengguna ${deletingUser.name}`,
+      });
+
+      toast.success("Pengguna berhasil dihapus!");
+      fetchUsers();
+      handleCloseDeleteDialog();
+    } catch (error: any) {
+      toast.error("Gagal menghapus pengguna: " + error.message);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setDeletingUser(null);
+  };
+
+  const handleManageStoreAccess = async (user: User) => {
+    setStoreAccessUser(user);
+    
+    // Fetch user's current store access
+    const { data, error } = await supabase
+      .from("user_store_access")
+      .select("store_id, role, stores(*)")
+      .eq("user_id", user.id);
+    
+    if (!error && data) {
+      setUserStoreAccess(data as UserStoreAccess[]);
+    } else {
+      setUserStoreAccess([]);
+    }
+    
+    setIsStoreAccessDialogOpen(true);
+  };
+
+  const handleAddStoreAccess = async () => {
+    if (!storeAccessUser || !selectedStore) {
+      toast.error("Pilih cabang terlebih dahulu");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("user_store_access")
+        .insert({
+          user_id: storeAccessUser.id,
+          store_id: selectedStore,
+          role: selectedStoreRole,
+        });
+
+      if (error) throw error;
+
+      const storeName = allStores.find(s => s.id === selectedStore)?.name;
+      await logActivity({
+        actionType: 'created',
+        entityType: 'User Store Access',
+        entityId: storeAccessUser.id,
+        description: `Memberikan akses ${storeName} kepada ${storeAccessUser.name}`,
+      });
+
+      toast.success("Akses cabang berhasil ditambahkan!");
+      handleManageStoreAccess(storeAccessUser);
+      setSelectedStore("");
+      setSelectedStoreRole("staff");
+      fetchUsers();
+    } catch (error: any) {
+      if (error.code === "23505") {
+        toast.error("User sudah memiliki akses ke cabang ini");
+      } else {
+        toast.error("Gagal menambahkan akses: " + error.message);
+      }
+    }
+  };
+
+  const handleRemoveStoreAccess = async (storeId: string) => {
+    if (!storeAccessUser) return;
+
+    try {
+      const { error } = await supabase
+        .from("user_store_access")
+        .delete()
+        .eq("user_id", storeAccessUser.id)
+        .eq("store_id", storeId);
+
+      if (error) throw error;
+
+      const storeName = userStoreAccess.find(sa => sa.store_id === storeId)?.stores.name;
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'User Store Access',
+        entityId: storeAccessUser.id,
+        description: `Menghapus akses ${storeName} dari ${storeAccessUser.name}`,
+      });
+
+      toast.success("Akses cabang berhasil dihapus!");
+      handleManageStoreAccess(storeAccessUser);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error("Gagal menghapus akses: " + error.message);
+    }
+  };
+
+  const handleCloseStoreAccessDialog = () => {
+    setIsStoreAccessDialogOpen(false);
+    setStoreAccessUser(null);
+    setUserStoreAccess([]);
+    setSelectedStore("");
+    setSelectedStoreRole("staff");
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserCog className="h-6 w-6 text-primary" />
+            <div>
+              <CardTitle>Manajemen Pengguna</CardTitle>
+              <CardDescription>
+                Kelola pengguna dan atur hak akses mereka
+              </CardDescription>
+            </div>
+          </div>
+          {(currentUserRole === "admin" || currentUserRole === "leader") && (
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tambah Pengguna
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Akses Cabang</TableHead>
+                <TableHead>Terdaftar</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Tidak ada pengguna ditemukan
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        user.role === "admin" ? "default" : 
+                        user.role === "leader" ? "destructive" : 
+                        "secondary"
+                      }>
+                        {user.role === "admin" ? "Admin" : 
+                         user.role === "leader" ? "Leader" : 
+                         "User"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {user.stores && user.stores.length > 0 ? (
+                          user.stores.map((store, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {store}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Tidak ada akses</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(user.created_at).toLocaleDateString("id-ID", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2 items-center">
+                        {currentUserRole === "admin" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditUser(user)}
+                              title="Edit Pengguna"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleShowPassword(user)}
+                              title="Kelola Password"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleManageStoreAccess(user)}
+                              title="Kelola Akses Cabang"
+                            >
+                              <Building2 className="h-4 w-4" />
+                            </Button>
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user")}
+                              disabled={updating === user.id}
+                            >
+                              <SelectTrigger className="w-32">
+                                {updating === user.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <SelectValue />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="leader">Leader</SelectItem>
+                                <SelectItem value="user">User</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </>
+                        )}
+                        {(currentUserRole === "admin" || currentUserRole === "leader") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDeletingUser(user);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            title="Hapus Pengguna"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={handleCloseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Data Pengguna</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProfile} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nama Lengkap *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Batal
+              </Button>
+              <Button type="submit">
+                Simpan
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Management Dialog (Admin Only) */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={handleClosePasswordDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Kelola Password - {passwordUser?.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <form onSubmit={handleSetPassword} className="space-y-4 border-b pb-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Set Password Baru</Label>
+                <Input
+                  id="newPassword"
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Masukkan password baru"
+                  required
+                  minLength={6}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimal 6 karakter
+                </p>
+              </div>
+              <Button type="submit">Simpan Password</Button>
+            </form>
+
+            <div className="space-y-2">
+              <h3 className="font-medium">Riwayat Password</h3>
+              {tempPasswords.length > 0 ? (
+                <div className="space-y-2">
+                  {tempPasswords.map((pwd) => (
+                    <Card key={pwd.id} className="p-3">
+                      <div className="flex justify-between items-center gap-4">
+                        <div className="flex-1">
+                          <div className="font-mono font-semibold text-lg break-all">{pwd.temp_password}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Dibuat: {new Date(pwd.created_at).toLocaleString("id-ID")}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(pwd.temp_password);
+                              toast.success("Password disalin!");
+                            }}
+                          >
+                            Salin
+                          </Button>
+                          <Badge variant={pwd.is_used ? "secondary" : "default"}>
+                            {pwd.is_used ? "Sudah digunakan" : "Aktif"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Belum ada password yang diatur</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={handleCloseAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Pengguna Baru</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddUser} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-name">Nama Lengkap *</Label>
+              <Input
+                id="add-name"
+                value={addFormData.name}
+                onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-email">Email *</Label>
+              <Input
+                id="add-email"
+                type="email"
+                value={addFormData.email}
+                onChange={(e) => setAddFormData({ ...addFormData, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-password">Password *</Label>
+              <Input
+                id="add-password"
+                type="password"
+                value={addFormData.password}
+                onChange={(e) => setAddFormData({ ...addFormData, password: e.target.value })}
+                required
+                minLength={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Minimal 6 karakter
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-role">Role *</Label>
+              <Select
+                value={addFormData.role}
+                onValueChange={(value) => setAddFormData({ ...addFormData, role: value as "admin" | "leader" | "user" })}
+              >
+                <SelectTrigger id="add-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="leader">Leader</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={handleCloseAddDialog}>
+                Batal
+              </Button>
+              <Button type="submit">
+                Tambah
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={handleCloseDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Pengguna?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus pengguna <strong>{deletingUser?.name}</strong>? 
+              Tindakan ini tidak dapat dibatalkan dan akan menghapus semua data yang terkait dengan pengguna ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Store Access Management Dialog */}
+      <Dialog open={isStoreAccessDialogOpen} onOpenChange={handleCloseStoreAccessDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Kelola Akses Cabang - {storeAccessUser?.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Add Store Access Form */}
+            <Card className="p-4 bg-muted/50">
+              <h3 className="font-medium mb-4">Tambah Akses Cabang</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Pilih Cabang</Label>
+                    <Select value={selectedStore} onValueChange={setSelectedStore}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih cabang" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allStores.map((store) => (
+                          <SelectItem key={store.id} value={store.id}>
+                            {store.name} {store.location && `(${store.location})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Role di Cabang</Label>
+                    <Select value={selectedStoreRole} onValueChange={setSelectedStoreRole}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <Button onClick={handleAddStoreAccess} className="w-full">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Tambah Akses
+                </Button>
+              </div>
+            </Card>
+
+            {/* Current Store Access */}
+            <div className="space-y-3">
+              <h3 className="font-medium">Akses Cabang Saat Ini</h3>
+              {userStoreAccess.length > 0 ? (
+                <div className="space-y-2">
+                  {userStoreAccess.map((access) => (
+                    <Card key={access.store_id} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <div className="font-medium">{access.stores.name}</div>
+                          {access.stores.location && (
+                            <div className="text-sm text-muted-foreground">{access.stores.location}</div>
+                          )}
+                          <div className="mt-2">
+                            <Badge variant={
+                              access.role === "super_admin" ? "default" : 
+                              access.role === "admin" ? "destructive" : 
+                              "secondary"
+                            }>
+                              {access.role === "super_admin" ? "Super Admin" : 
+                               access.role === "admin" ? "Admin" : 
+                               "Staff"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveStoreAccess(access.store_id)}
+                          title="Hapus Akses"
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Pengguna belum memiliki akses ke cabang manapun
+                </p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}

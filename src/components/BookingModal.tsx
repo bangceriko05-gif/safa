@@ -1,0 +1,1651 @@
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
+import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
+import { logActivity } from "@/utils/activityLogger";
+import { format } from "date-fns";
+import { useStore } from "@/contexts/StoreContext";
+import { validateBookingInputs } from "@/utils/bookingValidation";
+
+interface BookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedDate: Date;
+  selectedSlot: { roomId: string; time: string } | null;
+  editingBooking: any;
+  userId: string;
+}
+
+interface Room {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+interface RoomVariant {
+  id: string;
+  room_id: string;
+  variant_name: string;
+  duration: number;
+  price: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface SelectedProduct {
+  product_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export default function BookingModal({
+  isOpen,
+  onClose,
+  selectedDate,
+  selectedSlot,
+  editingBooking,
+  userId,
+}: BookingModalProps) {
+  const { currentStore } = useStore();
+  const [loading, setLoading] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [roomVariants, setRoomVariants] = useState<RoomVariant[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productQuantity, setProductQuantity] = useState("1");
+  const [showProductSuggestions, setShowProductSuggestions] = useState(false);
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
+  const [isPrice2ManuallyEdited, setIsPrice2ManuallyEdited] = useState(false);
+  const [lastFetchedStoreId, setLastFetchedStoreId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    customer_name: "",
+    phone: "",
+    reference_no: "",
+    room_id: "",
+    variant_id: "",
+    start_time: "",
+    end_time: "",
+    payment_method: "",
+    price: "",
+    note: "",
+    dual_payment: false,
+    payment_method_2: "",
+    price_2: "",
+    reference_no_2: "",
+    status: "BO",
+    discount_type: "percentage" as "percentage" | "amount",
+    discount_value: "",
+    has_discount: false,
+    discount_applies_to: "variant" as "variant" | "product",
+  });
+
+  // Fetch data when modal opens or store changes
+  useEffect(() => {
+    if (!currentStore || !isOpen) return;
+    
+    // Refetch if store changed or no data yet
+    const storeChanged = lastFetchedStoreId !== currentStore.id;
+    if (storeChanged || rooms.length === 0) {
+      fetchRooms();
+    }
+    if (storeChanged || customers.length === 0) {
+      fetchCustomers();
+    }
+    if (storeChanged || products.length === 0) {
+      fetchProducts();
+    }
+    
+    if (storeChanged) {
+      setLastFetchedStoreId(currentStore.id);
+    }
+  }, [currentStore, isOpen]);
+
+  useEffect(() => {
+    if (formData.room_id) {
+      fetchRoomVariants(formData.room_id);
+    } else {
+      setRoomVariants([]);
+    }
+  }, [formData.room_id]);
+
+  // Calculate room subtotal based on variant price and duration (for display only)
+  const calculateRoomSubtotal = () => {
+    if (formData.variant_id && formData.start_time && formData.end_time) {
+      const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
+      if (selectedVariant) {
+        const currentDuration = calculateDuration(formData.start_time, formData.end_time);
+        if (currentDuration > 0) {
+          return selectedVariant.price * currentDuration;
+        }
+      }
+    }
+    return 0;
+  };
+
+  // Auto-fill Total Bayar with Grand Total (only if dual payment is NOT active)
+  useEffect(() => {
+    // Skip auto-fill if dual payment is active - user should manually split the payment
+    if (formData.dual_payment) return;
+    
+    const grandTotal = calculateGrandTotal();
+    if (grandTotal > 0) {
+      setFormData(prev => ({
+        ...prev,
+        price: formatPrice(grandTotal.toString()),
+      }));
+    }
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment]);
+
+  // Auto-fill Total Bayar Kedua when dual_payment is enabled
+  useEffect(() => {
+    if (formData.dual_payment && !isPrice2ManuallyEdited) {
+      const grandTotal = calculateGrandTotal();
+      const price1 = parseFloat(formData.price.replace(/\./g, '')) || 0;
+      const calculatedPrice2 = grandTotal - price1;
+      
+      if (calculatedPrice2 >= 0) {
+        setFormData(prev => ({
+          ...prev,
+          price_2: formatPrice(calculatedPrice2.toString()),
+        }));
+      }
+    } else if (!formData.dual_payment) {
+      setFormData(prev => ({
+        ...prev,
+        price_2: "",
+      }));
+      setIsPrice2ManuallyEdited(false);
+    }
+  }, [formData.dual_payment, formData.price, formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, isPrice2ManuallyEdited]);
+
+  useEffect(() => {
+    if (editingBooking) {
+      // Format time from "HH:MM:SS" or "HH:MM" to "HH:MM"
+      const formatTime = (time: string) => {
+        if (!time) return "";
+        const parts = time.split(":");
+        return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+      };
+      
+      setFormData({
+        customer_name: editingBooking.customer_name,
+        phone: editingBooking.phone,
+        reference_no: editingBooking.reference_no,
+        room_id: editingBooking.room_id,
+        variant_id: editingBooking.variant_id || "",
+        start_time: formatTime(editingBooking.start_time),
+        end_time: formatTime(editingBooking.end_time),
+        payment_method: editingBooking.payment_method || "",
+        price: formatPrice(editingBooking.price.toString()),
+        note: editingBooking.note || "",
+        dual_payment: editingBooking.dual_payment || false,
+        payment_method_2: editingBooking.payment_method_2 || "",
+        status: editingBooking.status || "BO",
+        price_2: editingBooking.price_2 ? formatPrice(editingBooking.price_2.toString()) : "",
+        reference_no_2: editingBooking.reference_no_2 || "",
+        discount_type: editingBooking.discount_type || "percentage",
+        discount_value: editingBooking.discount_value ? editingBooking.discount_value.toString() : "",
+        has_discount: !!editingBooking.discount_value && editingBooking.discount_value > 0,
+        discount_applies_to: editingBooking.discount_applies_to || "variant",
+      });
+      // If booking has price_2, treat it as manually edited
+      setIsPrice2ManuallyEdited(!!editingBooking.price_2);
+
+      // Fetch booking products
+      fetchBookingProducts(editingBooking.id);
+    } else if (selectedSlot && selectedSlot.roomId) {
+      setFormData({
+        customer_name: "",
+        phone: "",
+        reference_no: "",
+        room_id: selectedSlot.roomId,
+        variant_id: "",
+        start_time: selectedSlot.time,
+        end_time: "",
+        payment_method: "",
+        price: "",
+        note: "",
+        dual_payment: false,
+        payment_method_2: "",
+        price_2: "",
+        reference_no_2: "",
+        status: "BO",
+        discount_type: "percentage",
+        discount_value: "",
+        has_discount: false,
+        discount_applies_to: "variant",
+      });
+      setSelectedProducts([]);
+      setIsPrice2ManuallyEdited(false);
+    } else {
+      // Reset form if no slot selected
+      setFormData({
+        customer_name: "",
+        phone: "",
+        reference_no: "",
+        room_id: "",
+        variant_id: "",
+        start_time: "",
+        end_time: "",
+        payment_method: "",
+        price: "",
+        note: "",
+        dual_payment: false,
+        payment_method_2: "",
+        price_2: "",
+        reference_no_2: "",
+        status: "BO",
+        discount_type: "percentage",
+        discount_value: "",
+        has_discount: false,
+        discount_applies_to: "variant",
+      });
+      setSelectedProducts([]);
+      setIsPrice2ManuallyEdited(false);
+    }
+  }, [editingBooking, selectedSlot]);
+
+  const fetchRooms = async () => {
+    try {
+      if (!currentStore) return;
+      
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("id, name, status")
+        .eq("status", "Aktif")
+        .eq("store_id", currentStore.id)
+        .order("name");
+
+      if (error) throw error;
+      setRooms(data || []);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      if (!currentStore) return;
+      
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, name, phone")
+        .eq("store_id", currentStore.id)
+        .order("name");
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      if (!currentStore) return;
+      
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("store_id", currentStore.id)
+        .order("name");
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
+  const fetchBookingProducts = async (bookingId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("booking_products")
+        .select("*")
+        .eq("booking_id", bookingId);
+
+      if (error) throw error;
+
+      const bookingProducts = (data || []).map(item => ({
+        product_id: item.product_id,
+        name: item.product_name,
+        price: item.product_price,
+        quantity: item.quantity,
+        subtotal: item.subtotal,
+      }));
+
+      setSelectedProducts(bookingProducts);
+    } catch (error) {
+      console.error("Error fetching booking products:", error);
+    }
+  };
+
+  const fetchRoomVariants = async (roomId: string) => {
+    try {
+      if (!currentStore) return;
+
+      const { data, error } = await supabase
+        .from("room_variants")
+        .select("*")
+        .eq("room_id", roomId)
+        .eq("store_id", currentStore.id)
+        .eq("is_active", true)
+        .order("variant_name");
+
+      if (error) throw error;
+      setRoomVariants(data || []);
+    } catch (error) {
+      console.error("Error fetching room variants:", error);
+    }
+  };
+
+  const handleVariantChange = (variantId: string) => {
+    const selectedVariant = roomVariants.find(v => v.id === variantId);
+    if (selectedVariant) {
+      // Calculate end time based on start time and duration
+      if (formData.start_time) {
+        const [startHour, startMinute] = formData.start_time.split(":").map(Number);
+        const totalMinutes = startHour * 60 + startMinute + selectedVariant.duration * 60;
+        const endHour = Math.floor(totalMinutes / 60) % 24;
+        const endMinute = totalMinutes % 60;
+        const endTime = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`;
+        
+        setFormData({
+          ...formData,
+          variant_id: variantId,
+          end_time: endTime,
+        });
+      } else {
+        setFormData({
+          ...formData,
+          variant_id: variantId,
+        });
+      }
+    } else {
+      setFormData({ ...formData, variant_id: variantId });
+    }
+  };
+
+  const handleNameChange = (value: string) => {
+    setFormData({ ...formData, customer_name: value });
+    setShowNameSuggestions(value.length > 0);
+    
+    // Auto-fill phone if exact match found
+    const matchedCustomer = customers.find(
+      c => c.name.toLowerCase() === value.toLowerCase()
+    );
+    if (matchedCustomer) {
+      setFormData({ ...formData, customer_name: value, phone: matchedCustomer.phone });
+      setShowNameSuggestions(false);
+    }
+  };
+
+  const handlePhoneChange = async (value: string) => {
+    setFormData({ ...formData, phone: value });
+    
+    // Auto-fill name if phone matches
+    if (value.length >= 10) {
+      const { data } = await supabase
+        .from("customers")
+        .select("name, phone")
+        .eq("phone", value)
+        .maybeSingle();
+      
+      if (data) {
+        setFormData({ ...formData, phone: value, customer_name: data.name });
+        setShowPhoneSuggestions(false);
+      }
+    }
+  };
+
+  const selectCustomer = (customer: Customer) => {
+    setFormData({ ...formData, customer_name: customer.name, phone: customer.phone });
+    setShowNameSuggestions(false);
+    setShowPhoneSuggestions(false);
+  };
+
+  // Format number with dots as thousand separators
+  const formatPrice = (value: string) => {
+    // Remove all non-digit characters
+    const numericValue = value.replace(/\D/g, '');
+    // Add dots as thousand separators
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Parse formatted price back to number
+  const parsePrice = (value: string) => {
+    return value.replace(/\./g, '');
+  };
+
+  const handlePriceChange = (value: string) => {
+    const formatted = formatPrice(value);
+    setFormData({ ...formData, price: formatted });
+  };
+
+  const handlePrice2Change = (value: string) => {
+    const formatted = formatPrice(value);
+    setFormData({ ...formData, price_2: formatted });
+    setIsPrice2ManuallyEdited(true);
+  };
+
+  const handleAddProduct = () => {
+    if (!productName || !productPrice || !productQuantity) {
+      toast.error("Lengkapi data produk");
+      return;
+    }
+
+    const qty = parseInt(productQuantity);
+    const price = parseFloat(productPrice.replace(/\./g, ''));
+    
+    if (qty <= 0 || price <= 0) {
+      toast.error("Jumlah dan harga harus lebih dari 0");
+      return;
+    }
+
+    const product = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+    const productId = product?.id || selectedProductId || crypto.randomUUID();
+
+    // Check if product already added
+    const existingIndex = selectedProducts.findIndex(p => p.product_id === productId);
+    if (existingIndex >= 0) {
+      const updated = [...selectedProducts];
+      updated[existingIndex].quantity = qty;
+      updated[existingIndex].price = price;
+      updated[existingIndex].subtotal = price * qty;
+      setSelectedProducts(updated);
+    } else {
+      setSelectedProducts([...selectedProducts, {
+        product_id: productId,
+        name: productName,
+        price: price,
+        quantity: qty,
+        subtotal: price * qty,
+      }]);
+    }
+
+    setProductName("");
+    setProductPrice("");
+    setSelectedProductId("");
+    setProductQuantity("1");
+  };
+
+  const handleProductNameChange = (value: string) => {
+    setProductName(value);
+    setShowProductSuggestions(value.length > 0);
+    
+    const matchedProduct = products.find(p => p.name.toLowerCase() === value.toLowerCase());
+    if (matchedProduct) {
+      setSelectedProductId(matchedProduct.id);
+      setProductPrice(matchedProduct.price.toLocaleString('id-ID'));
+      setShowProductSuggestions(false);
+    }
+  };
+
+  const selectProduct = (product: Product) => {
+    setProductName(product.name);
+    setProductPrice(product.price.toLocaleString('id-ID'));
+    setSelectedProductId(product.id);
+    setShowProductSuggestions(false);
+  };
+
+  const handleRemoveProduct = (productId: string) => {
+    setSelectedProducts(selectedProducts.filter(p => p.product_id !== productId));
+  };
+
+  const calculateProductsTotal = () => {
+    return selectedProducts.reduce((sum, p) => sum + p.subtotal, 0);
+  };
+
+  const calculateDiscount = () => {
+    if (!formData.has_discount || !formData.discount_value) return 0;
+
+    const roomPrice = calculateRoomSubtotal();
+    const productsTotal = calculateProductsTotal();
+    
+    // Determine which amount to apply discount to
+    const targetAmount = formData.discount_applies_to === "variant" ? roomPrice : productsTotal;
+
+    if (formData.discount_type === "percentage") {
+      const percentage = parseFloat(formData.discount_value);
+      return (targetAmount * percentage) / 100;
+    } else {
+      return parseFloat(formData.discount_value);
+    }
+  };
+
+  const calculateGrandTotal = () => {
+    const roomPrice = calculateRoomSubtotal();
+    const productsTotal = calculateProductsTotal();
+    const discount = calculateDiscount();
+    return Math.max(0, roomPrice + productsTotal - discount);
+  };
+
+  const calculatePaymentDifference = () => {
+    const grandTotal = calculateGrandTotal();
+    const price1 = parseFloat(formData.price.replace(/\./g, '')) || 0;
+    const price2 = formData.dual_payment ? (parseFloat(formData.price_2.replace(/\./g, '')) || 0) : 0;
+    const totalPaid = price1 + price2;
+    const difference = totalPaid - grandTotal;
+    
+    return {
+      difference,
+      isDifferent: Math.abs(difference) > 0,
+      isOverpayment: difference > 0,
+      isUnderpayment: difference < 0
+    };
+  };
+
+  const filteredCustomersByName = customers.filter(c =>
+    c.name.toLowerCase().includes(formData.customer_name.toLowerCase())
+  ).slice(0, 5);
+
+  const filteredCustomersByPhone = customers.filter(c =>
+    c.phone.includes(formData.phone)
+  ).slice(0, 5);
+
+  const calculateDuration = (start: string, end: string) => {
+    if (!start || !end) return 0;
+    let startHour = parseInt(start.split(":")[0]);
+    let endHour = parseInt(end.split(":")[0]);
+    const startMinute = parseInt(start.split(":")[1] || "0");
+    const endMinute = parseInt(end.split(":")[1] || "0");
+    
+    // Handle overnight bookings (e.g., 23:00 to 02:00)
+    if (endHour < startHour) {
+      endHour += 24;
+    }
+    
+    return (endHour - startHour) + (endMinute - startMinute) / 60;
+  };
+
+  const duration = calculateDuration(formData.start_time, formData.end_time);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validate user inputs with zod schema
+      const inputValidation = validateBookingInputs({
+        customer_name: formData.customer_name,
+        phone: formData.phone,
+        reference_no: formData.reference_no,
+        reference_no_2: formData.reference_no_2,
+        note: formData.note,
+      });
+
+      if (!inputValidation.success) {
+        inputValidation.errors.forEach(error => toast.error(error));
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.room_id) {
+        toast.error("Silakan pilih ruangan terlebih dahulu");
+        setLoading(false);
+        return;
+      }
+
+      // Validate variant is selected
+      if (!formData.variant_id) {
+        toast.error("Varian kamar wajib dipilih");
+        setLoading(false);
+        return;
+      }
+
+      // Validate payment method is selected
+      if (!formData.payment_method) {
+        toast.error("Metode pembayaran wajib dipilih");
+        setLoading(false);
+        return;
+      }
+
+      // Validate dual payment
+      if (formData.dual_payment) {
+        const price2Value = parseFloat(formData.price_2.replace(/\./g, '')) || 0;
+        if (price2Value === 0) {
+          toast.error("Total Bayar Kedua tidak boleh 0");
+          setLoading(false);
+          return;
+        }
+        if (!formData.payment_method_2) {
+          toast.error("Metode Pembayaran Kedua wajib diisi saat Dual Payment aktif");
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (duration <= 0) {
+        toast.error("Jam selesai harus lebih besar dari jam mulai");
+        setLoading(false);
+        return;
+      }
+
+      // Check if room is active
+      const { data: roomData, error: roomError } = await supabase
+        .from("rooms")
+        .select("status")
+        .eq("id", formData.room_id)
+        .single();
+
+      if (roomError) throw roomError;
+
+      if (roomData.status !== "Aktif") {
+        toast.error("Ruangan ini sedang tidak tersedia. Silakan pilih ruangan lain.");
+        return;
+      }
+
+      // Check for overlapping bookings - ONLY if time or room changed
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      
+      // Skip overlap check if editing and only status changed (no time/room change)
+      const timeOrRoomChanged = !editingBooking || 
+        editingBooking.room_id !== formData.room_id ||
+        editingBooking.start_time?.substring(0, 5) !== formData.start_time ||
+        editingBooking.end_time?.substring(0, 5) !== formData.end_time;
+      
+      if (timeOrRoomChanged) {
+        let query = supabase
+          .from("bookings")
+          .select("*")
+          .eq("room_id", formData.room_id)
+          .eq("date", dateStr);
+        
+        // Only exclude current booking if editing
+        if (editingBooking?.id) {
+          query = query.neq("id", editingBooking.id);
+        }
+        
+        const { data: existingBookings, error: checkError } = await query;
+
+        if (checkError) throw checkError;
+
+        const hasOverlap = existingBookings?.some((booking) => {
+          let existingStart = parseInt(booking.start_time.split(":")[0]);
+          let existingEnd = parseInt(booking.end_time.split(":")[0]);
+          let newStart = parseInt(formData.start_time.split(":")[0]);
+          let newEnd = parseInt(formData.end_time.split(":")[0]);
+
+          // Handle overnight bookings - convert hours after midnight to 24+ format
+          // If end time is 00:00-08:00, treat it as next day (24-32)
+          if (existingEnd >= 0 && existingEnd < 9 && existingStart >= 9) {
+            existingEnd += 24;
+          }
+          if (newEnd >= 0 && newEnd < 9 && newStart >= 9) {
+            newEnd += 24;
+          }
+          
+          // If new booking starts in early morning (00:00-08:00), convert to 24+ format
+          // to check against bookings that might extend past midnight
+          if (newStart >= 0 && newStart < 9) {
+            newStart += 24;
+          }
+          if (newEnd >= 0 && newEnd < 9) {
+            newEnd += 24;
+          }
+
+          return (
+            (newStart >= existingStart && newStart < existingEnd) ||
+            (newEnd > existingStart && newEnd <= existingEnd) ||
+            (newStart <= existingStart && newEnd >= existingEnd)
+          );
+        });
+
+        if (hasOverlap) {
+          toast.error("Ruangan sudah dibooking pada waktu tersebut");
+          return;
+        }
+      }
+
+      if (!currentStore) {
+        toast.error("Pilih cabang terlebih dahulu");
+        return;
+      }
+
+      const bookingData: any = {
+        customer_name: formData.customer_name,
+        phone: formData.phone,
+        reference_no: formData.reference_no,
+        room_id: formData.room_id,
+        variant_id: formData.variant_id || null,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        payment_method: formData.payment_method || null,
+        note: formData.note || null,
+        dual_payment: formData.dual_payment,
+        payment_method_2: formData.payment_method_2 || null,
+        reference_no_2: formData.reference_no_2 || null,
+        status: formData.status,
+        date: dateStr,
+        duration,
+        price: parseFloat(parsePrice(formData.price)),
+        price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
+        discount_type: formData.has_discount ? formData.discount_type : null,
+        discount_value: formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
+        discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
+        store_id: currentStore.id,
+      };
+
+      // Only set created_by for NEW bookings, never update it for existing bookings
+      if (!editingBooking) {
+        bookingData.created_by = userId;
+      }
+
+      // Track status changes for editing bookings
+      if (editingBooking) {
+        const previousStatus = editingBooking.status || 'BO';
+        const newStatus = formData.status;
+
+        // If status changed to CI, track check-in
+        if (newStatus === 'CI' && previousStatus !== 'CI') {
+          bookingData.checked_in_by = userId;
+          bookingData.checked_in_at = new Date().toISOString();
+        }
+
+        // If status changed to CO, track check-out
+        if (newStatus === 'CO' && previousStatus !== 'CO') {
+          bookingData.checked_out_by = userId;
+          bookingData.checked_out_at = new Date().toISOString();
+        }
+
+        // If status changed to BO, track confirmation
+        if (newStatus === 'BO' && previousStatus !== 'BO') {
+          bookingData.confirmed_by = userId;
+          bookingData.confirmed_at = new Date().toISOString();
+        }
+      } else {
+        // For new bookings with BO status, set confirmed_by
+        if (formData.status === 'BO') {
+          bookingData.confirmed_by = userId;
+          bookingData.confirmed_at = new Date().toISOString();
+        }
+      }
+
+      // Auto-save customer to database if new
+      const existingCustomer = customers.find(
+        c => c.phone === formData.phone
+      );
+      
+      if (!existingCustomer && !editingBooking) {
+        try {
+          await supabase.from("customers").insert([{
+            name: formData.customer_name,
+            phone: formData.phone,
+            created_by: userId,
+            store_id: currentStore.id,
+          }]);
+          // Refresh customers list
+          fetchCustomers();
+        } catch (error: any) {
+          // If customer already exists (race condition), continue with booking
+          if (error.code !== '23505') {
+            console.error("Error saving customer:", error);
+          }
+        }
+      }
+
+      const roomName = rooms.find(r => r.id === formData.room_id)?.name || 'Unknown';
+
+      if (editingBooking) {
+        // Log what we're updating for debugging
+        console.log('Updating booking with data:', bookingData);
+        
+        const { error } = await supabase
+          .from("bookings")
+          .update(bookingData)
+          .eq("id", editingBooking.id);
+
+        if (error) throw error;
+
+        // Delete existing products
+        await supabase
+          .from("booking_products")
+          .delete()
+          .eq("booking_id", editingBooking.id);
+
+        // Insert new products
+        if (selectedProducts.length > 0) {
+          const bookingProducts = selectedProducts.map(p => ({
+            booking_id: editingBooking.id,
+            product_id: p.product_id,
+            product_name: p.name,
+            product_price: p.price,
+            quantity: p.quantity,
+            subtotal: p.subtotal,
+          }));
+
+          const { error: productsError } = await supabase
+            .from("booking_products")
+            .insert(bookingProducts);
+
+          if (productsError) throw productsError;
+        }
+        
+        // Log activity
+        await logActivity({
+          actionType: 'updated',
+          entityType: 'Booking',
+          entityId: editingBooking.id,
+          description: `Mengubah booking ${formData.customer_name} di kamar ${roomName} pada ${dateStr}`,
+        });
+        
+        toast.success("Booking berhasil diupdate");
+      } else {
+        const { data: newBooking, error } = await supabase
+          .from("bookings")
+          .insert([bookingData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Insert products
+        if (selectedProducts.length > 0) {
+          const bookingProducts = selectedProducts.map(p => ({
+            booking_id: newBooking.id,
+            product_id: p.product_id,
+            product_name: p.name,
+            product_price: p.price,
+            quantity: p.quantity,
+            subtotal: p.subtotal,
+          }));
+
+          const { error: productsError } = await supabase
+            .from("booking_products")
+            .insert(bookingProducts);
+
+          if (productsError) throw productsError;
+        }
+        
+        // Log activity
+        await logActivity({
+          actionType: 'created',
+          entityType: 'Booking',
+          entityId: newBooking.id,
+          description: `Membuat booking ${formData.customer_name} di kamar ${roomName} pada ${dateStr}`,
+        });
+        
+        toast.success("Booking berhasil ditambahkan");
+      }
+
+      onClose();
+      setSelectedProducts([]);
+      setSelectedProductId("");
+      setProductName("");
+      setProductPrice("");
+      setProductQuantity("1");
+      setFormData({
+        customer_name: "",
+        phone: "",
+        reference_no: "",
+        room_id: "",
+        variant_id: "",
+        start_time: "",
+        end_time: "",
+        payment_method: "",
+        price: "",
+        note: "",
+        dual_payment: false,
+        payment_method_2: "",
+        price_2: "",
+        reference_no_2: "",
+        status: "BO",
+        discount_type: "percentage",
+        discount_value: "",
+        has_discount: false,
+        discount_applies_to: "variant",
+      });
+
+      // Trigger refresh by dispatching a custom event
+      window.dispatchEvent(new CustomEvent("booking-changed"));
+    } catch (error: any) {
+      toast.error(error.message || "Terjadi kesalahan");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editingBooking ? "Ubah Booking" : "Tambah Booking"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer_name">Nama Pelanggan</Label>
+            <div className="relative">
+              <Input
+                id="customer_name"
+                value={formData.customer_name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onFocus={() => setShowNameSuggestions(formData.customer_name.length > 0)}
+                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
+                placeholder="Ketik nama pelanggan..."
+                required
+              />
+              {showNameSuggestions && filteredCustomersByName.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredCustomersByName.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                      onMouseDown={() => selectCustomer(customer)}
+                    >
+                      <div className="font-medium">{customer.name}</div>
+                      <div className="text-sm text-gray-600">{customer.phone}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Nomor HP</Label>
+            <div className="relative">
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                placeholder="Ketik nomor HP..."
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="room_id">Ruangan *</Label>
+            <Select
+              value={formData.room_id}
+              onValueChange={(value) => setFormData({ ...formData, room_id: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih ruangan" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                {rooms.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    Tidak ada ruangan aktif
+                  </div>
+                ) : (
+                  rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.room_id && (
+            <div className="space-y-2">
+              <Label htmlFor="variant_id">Varian Kamar *</Label>
+              {roomVariants.length > 0 ? (
+                <>
+                  <Select
+                    value={formData.variant_id}
+                    onValueChange={(value) => handleVariantChange(value)}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih varian" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {roomVariants.map((variant) => (
+                        <SelectItem key={variant.id} value={variant.id}>
+                          {variant.variant_name} - Rp {variant.price.toLocaleString('id-ID')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Wajib memilih varian untuk mengisi harga otomatis
+                  </p>
+                </>
+              ) : (
+                <div className="text-sm text-red-500 p-3 bg-red-50 rounded-md border border-red-200">
+                  Belum ada varian untuk kamar ini. Silakan tambahkan varian kamar terlebih dahulu di menu Pengaturan.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start_time">Jam Mulai</Label>
+              <Select
+                value={formData.start_time}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, start_time: value });
+                }}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jam mulai" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50 max-h-[200px]">
+                  {/* Generate time slots from 09:00 to 05:00 (next day) */}
+                  {Array.from({ length: 20 }, (_, i) => {
+                    const hour = i + 9;
+                    const displayHour = hour >= 24 ? hour - 24 : hour;
+                    const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
+                    return (
+                      <SelectItem key={`start-${i}`} value={timeValue}>
+                        {timeValue}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end_time">Jam Selesai</Label>
+              <Select
+                value={formData.end_time}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, end_time: value })
+                }
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jam selesai" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50 max-h-[200px]">
+                  {/* Generate all time slots from 10:00 to 06:00 (next day) */}
+                  {Array.from({ length: 21 }, (_, i) => {
+                    const hour = i + 10;
+                    const displayHour = hour >= 24 ? hour - 24 : hour;
+                    const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
+                    return (
+                      <SelectItem key={`end-${i}`} value={timeValue}>
+                        {timeValue}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Product Selection */}
+          <div className="space-y-2">
+            <Label>Tambah Produk (Opsional)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <Label htmlFor="product_name" className="text-xs">Nama Produk</Label>
+                <Input
+                  id="product_name"
+                  value={productName}
+                  onChange={(e) => handleProductNameChange(e.target.value)}
+                  onFocus={() => setShowProductSuggestions(productName.length > 0)}
+                  onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddProduct();
+                    }
+                  }}
+                  placeholder="Pilih atau ketik nama produk"
+                />
+                {showProductSuggestions && products.filter(p => p.name.toLowerCase().includes(productName.toLowerCase())).length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {products.filter(p => p.name.toLowerCase().includes(productName.toLowerCase())).slice(0, 5).map((product) => (
+                      <div
+                        key={product.id}
+                        className="px-3 py-2 hover:bg-accent cursor-pointer"
+                        onMouseDown={() => selectProduct(product)}
+                      >
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-sm text-muted-foreground">Rp {product.price.toLocaleString('id-ID')}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="product_price" className="text-xs">Harga</Label>
+                <Input
+                  id="product_price"
+                  value={productPrice}
+                  onChange={(e) => setProductPrice(formatPrice(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddProduct();
+                    }
+                  }}
+                  placeholder="25000"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="product_qty" className="text-xs">Qty</Label>
+                <Input
+                  id="product_qty"
+                  type="number"
+                  value={productQuantity}
+                  onChange={(e) => setProductQuantity(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddProduct();
+                    }
+                  }}
+                  placeholder="1"
+                  min="1"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="button" onClick={handleAddProduct} className="w-full">
+                  Tambah
+                </Button>
+              </div>
+            </div>
+
+            {selectedProducts.length > 0 && (
+              <div className="border rounded-lg p-3 space-y-2 mt-2">
+                {selectedProducts.map((product) => (
+                  <div key={product.product_id} className="flex justify-between items-center text-sm">
+                    <div className="flex-1">
+                      <span className="font-medium">{product.name}</span>
+                      <span className="text-muted-foreground"> x{product.quantity}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>Rp {product.subtotal.toLocaleString('id-ID')}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveProduct(product.product_id)}
+                        className="h-6 w-6 p-0"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Discount Section */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="has_discount"
+                checked={formData.has_discount}
+                onCheckedChange={(checked) => 
+                  setFormData({ 
+                    ...formData, 
+                    has_discount: checked as boolean,
+                    discount_value: checked ? formData.discount_value : ""
+                  })
+                }
+              />
+              <Label
+                htmlFor="has_discount"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Tambah Diskon
+              </Label>
+            </div>
+
+            {formData.has_discount && (
+              <div className="space-y-2 pl-6">
+                <div>
+                  <Label htmlFor="discount_applies_to" className="text-xs">Diskon Untuk</Label>
+                  <Select
+                    value={formData.discount_applies_to}
+                    onValueChange={(value: "variant" | "product") => 
+                      setFormData({ ...formData, discount_applies_to: value })
+                    }
+                  >
+                    <SelectTrigger id="discount_applies_to">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="variant">Varian Ruangan</SelectItem>
+                      <SelectItem value="product">Produk</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="discount_type" className="text-xs">Tipe Diskon</Label>
+                    <Select
+                      value={formData.discount_type}
+                      onValueChange={(value: "percentage" | "amount") => 
+                        setFormData({ ...formData, discount_type: value })
+                      }
+                    >
+                      <SelectTrigger id="discount_type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="percentage">Persentase (%)</SelectItem>
+                        <SelectItem value="amount">Rupiah (Rp)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="discount_value" className="text-xs">
+                      {formData.discount_type === "percentage" ? "Persentase" : "Jumlah"}
+                    </Label>
+                    <Input
+                      id="discount_value"
+                      type="number"
+                      value={formData.discount_value}
+                      onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
+                      placeholder={formData.discount_type === "percentage" ? "10" : "50000"}
+                      min="0"
+                      max={formData.discount_type === "percentage" ? "100" : undefined}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {duration > 0 && (
+            <div className="border rounded-lg p-4 space-y-3 bg-card">
+              <h3 className="font-semibold text-base border-b pb-2">Billing / Nota</h3>
+              
+              <div className="space-y-2 text-sm">
+                {formData.variant_id && roomVariants.length > 0 && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Mode:</span>
+                      <span className="font-medium">
+                        {roomVariants.find(v => v.id === formData.variant_id)?.variant_name || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Harga per jam:</span>
+                      <span className="font-medium">
+                        Rp {roomVariants.find(v => v.id === formData.variant_id)?.price.toLocaleString('id-ID') || '0'}
+                      </span>
+                    </div>
+                  </>
+                )}
+                
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Jam:</span>
+                  <span className="font-medium">{duration.toFixed(1)} jam</span>
+                </div>
+
+                {selectedProducts.length > 0 && (
+                  <>
+                    <div className="border-t pt-2 mt-2">
+                      <div className="font-medium mb-2">Produk:</div>
+                      {selectedProducts.map((product) => (
+                        <div key={product.product_id} className="flex justify-between text-sm mb-1">
+                          <span className="text-muted-foreground">
+                            {product.name} x{product.quantity}
+                          </span>
+                          <span className="font-medium">
+                            Rp {product.subtotal.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                 
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Subtotal Kamar:</span>
+                    <span className="font-bold text-primary">
+                      Rp {calculateRoomSubtotal().toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  {selectedProducts.length > 0 && (
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="font-semibold">Subtotal Produk:</span>
+                      <span className="font-bold text-primary">
+                        Rp {calculateProductsTotal().toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {formData.has_discount && formData.discount_value && (
+                    <div className="flex justify-between items-center mt-1 text-red-600">
+                      <span className="font-semibold">
+                        Diskon ({formData.discount_type === "percentage" ? `${formData.discount_value}%` : `Rp ${parseFloat(formData.discount_value).toLocaleString('id-ID')}`}):
+                      </span>
+                      <span className="font-bold">
+                        - Rp {calculateDiscount().toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                    <span className="font-bold text-base">TOTAL KESELURUHAN:</span>
+                    <span className="font-bold text-xl text-primary">
+                      Rp {calculateGrandTotal().toLocaleString('id-ID')}
+                    </span>
+                  </div>
+
+                  {/* Total Bayar Section */}
+                  {(formData.price || formData.price_2) && (
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total Bayar:</span>
+                        <span className="font-semibold text-base">
+                          Rp {(parseFloat(formData.price.replace(/\./g, '')) || 0).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      {formData.dual_payment && formData.price_2 && (
+                        <>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="font-semibold">Total Bayar 2:</span>
+                            <span className="font-semibold text-base">
+                              Rp {(parseFloat(formData.price_2.replace(/\./g, '')) || 0).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1 pt-1 border-t">
+                            <span className="font-bold">Total Dibayar:</span>
+                            <span className="font-bold text-base">
+                              Rp {((parseFloat(formData.price.replace(/\./g, '')) || 0) + (parseFloat(formData.price_2.replace(/\./g, '')) || 0)).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Payment Difference in Billing */}
+                      {(() => {
+                        const paymentDiff = calculatePaymentDifference();
+                        if (paymentDiff.isDifferent) {
+                          return (
+                            <div className={`flex justify-between items-center mt-2 pt-2 border-t ${paymentDiff.isOverpayment ? 'text-green-600' : 'text-yellow-600'}`}>
+                              <span className="font-bold">
+                                {paymentDiff.isOverpayment ? "Kelebihan Bayar:" : "Kekurangan Bayar:"}
+                              </span>
+                              <span className="font-bold text-base">
+                                Rp {Math.abs(paymentDiff.difference).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="border-t pt-2 mt-2 hidden">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Total Harga:</span>
+                    <span className="font-bold text-lg text-primary">
+                      Rp {formData.price ? parsePrice(formData.price).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '0'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="payment_method">Metode Pembayaran *</Label>
+            <Select
+              value={formData.payment_method}
+              onValueChange={(value) => {
+                console.log('Payment method changed to:', value);
+                setFormData({ ...formData, payment_method: value });
+              }}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih metode pembayaran" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                <SelectItem value="Qris">Qris</SelectItem>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Total Bayar {formData.dual_payment ? "Pertama *" : ""}</Label>
+              <Input
+                id="price"
+                type="text"
+                value={formData.price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                placeholder={formData.dual_payment ? "Masukkan nilai pembayaran pertama" : "Masukan total bayar"}
+                required
+              />
+              {formData.dual_payment && (
+                <p className="text-xs text-muted-foreground">
+                  Masukkan nilai pembayaran pertama (misal: setengah dari total keseluruhan)
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reference_no">No. Reff {formData.payment_method !== "Cash" && "*"}</Label>
+              <Input
+                id="reference_no"
+                value={formData.reference_no}
+                onChange={(e) =>
+                  setFormData({ ...formData, reference_no: e.target.value })
+                }
+                placeholder="Nomor referensi"
+                required={formData.payment_method !== "Cash"}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="dual_payment"
+              checked={formData.dual_payment}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  // When enabling dual payment, reset price fields so user can split payment correctly
+                  setFormData({ 
+                    ...formData, 
+                    dual_payment: true,
+                    price: "",
+                    price_2: ""
+                  });
+                  setIsPrice2ManuallyEdited(false);
+                  toast.info("Masukkan nilai pembayaran pertama dan kedua yang terpisah");
+                } else {
+                  // When disabling dual payment, set price back to grand total
+                  const grandTotal = calculateGrandTotal();
+                  setFormData({ 
+                    ...formData, 
+                    dual_payment: false,
+                    price: grandTotal.toLocaleString('id-ID'),
+                    price_2: "",
+                    payment_method_2: "",
+                    reference_no_2: ""
+                  });
+                  setIsPrice2ManuallyEdited(false);
+                }
+              }}
+            />
+            <Label
+              htmlFor="dual_payment"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Dual Payment
+            </Label>
+          </div>
+
+          {formData.dual_payment && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="payment_method_2">Metode Pembayaran Kedua *</Label>
+                <Select
+                  value={formData.payment_method_2}
+                  onValueChange={(value) => setFormData({ ...formData, payment_method_2: value })}
+                  required={formData.dual_payment}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih metode pembayaran kedua *" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="Qris">Qris</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price_2">Total Bayar Kedua *</Label>
+                  <Input
+                    id="price_2"
+                    type="text"
+                    value={formData.price_2}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value.replace(/\./g, '')) || 0;
+                      if (numValue === 0 && value !== "") {
+                        toast.error("Total Bayar Kedua tidak boleh 0");
+                      }
+                      handlePrice2Change(value);
+                    }}
+                    placeholder="Masukkan nilai pembayaran kedua"
+                    required={formData.dual_payment}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Masukkan nilai pembayaran kedua (sisanya dari total keseluruhan)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reference_no_2">No. Reff Kedua {formData.payment_method_2 !== "Cash" && "*"}</Label>
+                  <Input
+                    id="reference_no_2"
+                    value={formData.reference_no_2}
+                    onChange={(e) =>
+                      setFormData({ ...formData, reference_no_2: e.target.value })
+                    }
+                    placeholder="Nomor referensi kedua"
+                    required={formData.dual_payment && formData.payment_method_2 !== "Cash"}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Payment Difference Alert */}
+          {(() => {
+            const paymentDiff = calculatePaymentDifference();
+            if (paymentDiff.isDifferent) {
+              return (
+                <Alert className={paymentDiff.isOverpayment ? "border-green-500 bg-green-50" : "border-yellow-500 bg-yellow-50"}>
+                  <div className="flex items-start gap-2">
+                    {paymentDiff.isOverpayment ? (
+                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                    )}
+                    <AlertDescription className={paymentDiff.isOverpayment ? "text-green-800" : "text-yellow-800"}>
+                      <strong>
+                        {paymentDiff.isOverpayment ? "Kelebihan Bayar: " : "Kekurangan Bayar: "}
+                      </strong>
+                      Rp {Math.abs(paymentDiff.difference).toLocaleString('id-ID')}
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              );
+            }
+            return null;
+          })()}
+
+
+          {editingBooking && (
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="BO">BO (Booking)</SelectItem>
+                  <SelectItem value="CI">CI (Check In)</SelectItem>
+                  <SelectItem value="CO">CO (Check Out)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="note">Catatan</Label>
+            <Textarea
+              id="note"
+              value={formData.note}
+              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Batal
+            </Button>
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingBooking ? "Update" : "Tambah"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
