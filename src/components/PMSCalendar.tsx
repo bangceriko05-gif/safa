@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy } from "lucide-react";
-import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInDays, startOfDay } from "date-fns";
+import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy, Calendar as CalendarIcon } from "lucide-react";
+import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInDays, startOfDay, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/popover";
 import { logActivity } from "@/utils/activityLogger";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 interface PMSCalendarProps {
   selectedDate: Date;
@@ -330,6 +332,20 @@ export default function PMSCalendar({
 
   const isToday = (date: Date) => isSameDay(date, new Date());
   const isSelected = (date: Date) => isSameDay(date, selectedDate);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(selectedDate);
+
+  const handleYesterday = () => {
+    onDateChange(subDays(new Date(), 1));
+  };
+
+  const handleToday = () => {
+    onDateChange(new Date());
+  };
+
+  const handleTomorrow = () => {
+    onDateChange(addDays(new Date(), 1));
+  };
 
   const handlePrevWeek = () => {
     onDateChange(addDays(selectedDate, -7));
@@ -341,6 +357,17 @@ export default function PMSCalendar({
 
   const handleDateClick = (date: Date) => {
     onDateChange(date);
+  };
+
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (date) {
+      setTempDate(date);
+    }
+  };
+
+  const handleCalendarConfirm = () => {
+    onDateChange(tempDate);
+    setCalendarOpen(false);
   };
 
   return (
@@ -356,17 +383,79 @@ export default function PMSCalendar({
       
       {!isLoading && (
         <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden border-2 border-border">
-          {/* Header with navigation */}
-          <div className="flex items-center justify-between p-4 border-b-2 border-border bg-muted/50">
-            <Button variant="outline" size="sm" onClick={handlePrevWeek}>
-              <ChevronLeft className="h-4 w-4" />
-              Minggu Sebelumnya
-            </Button>
-            <h2 className="text-lg font-semibold capitalize">{monthYear}</h2>
-            <Button variant="outline" size="sm" onClick={handleNextWeek}>
-              Minggu Berikutnya
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          {/* Date Navigation Bar */}
+          <div className="flex flex-wrap items-center justify-center gap-2 p-4 border-b-2 border-border bg-muted/50">
+            <div className="flex items-center bg-background rounded-lg border border-border overflow-hidden">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleYesterday}
+                className="rounded-none border-r border-border px-4 hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Kemarin
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleToday}
+                className={cn(
+                  "rounded-none border-r border-border px-4 hover:bg-muted",
+                  isSameDay(selectedDate, new Date()) && "bg-primary/10 text-primary font-semibold"
+                )}
+              >
+                Hari Ini
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleTomorrow}
+                className="rounded-none px-4 hover:bg-muted"
+              >
+                Besok
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="gap-2 px-4"
+                  onClick={() => setTempDate(selectedDate)}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  {format(selectedDate, "d MMMM yyyy", { locale: idLocale })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center">
+                <div className="p-3 space-y-3">
+                  <Calendar
+                    mode="single"
+                    selected={tempDate}
+                    onSelect={handleCalendarSelect}
+                    initialFocus
+                    locale={idLocale}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCalendarOpen(false)}
+                    >
+                      Batal
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleCalendarConfirm}
+                    >
+                      OK
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <ScrollArea className="w-full">
