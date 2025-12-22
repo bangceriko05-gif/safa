@@ -19,6 +19,7 @@ import {
 import DateNavigation from "./DateNavigation";
 import RoomSummary from "./RoomSummary";
 import ScheduleTable from "./ScheduleTable";
+import PMSCalendar from "./PMSCalendar";
 import BookingModal from "./BookingModal";
 import UserManagement from "./UserManagement";
 import RoomManagement from "./RoomManagement";
@@ -155,17 +156,28 @@ export default function Dashboard() {
     }
   };
 
-  const handleAddBooking = (roomId: string, time: string) => {
+  const handleAddBooking = (roomId: string, timeOrDate: string) => {
+    // Check if this is a PMS calendar call (date format) or time-based call
+    const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
+    
+    if (isPMSMode) {
+      // For PMS mode, timeOrDate is a date string
+      setSelectedSlot({ roomId, time: timeOrDate });
+      setEditingBooking(null);
+      setIsModalOpen(true);
+      return;
+    }
+    
     const daysDiff = getDaysDifference();
     if (daysDiff !== 0) {
       // Show confirmation dialog for non-today dates
-      setPendingBookingSlot({ roomId, time });
+      setPendingBookingSlot({ roomId, time: timeOrDate });
       setShowDateConfirmation(true);
       return;
     }
     
     // Open modal directly for today
-    setSelectedSlot({ roomId, time });
+    setSelectedSlot({ roomId, time: timeOrDate });
     setEditingBooking(null);
     setIsModalOpen(true);
   };
@@ -425,20 +437,35 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-6 mt-6">
-            {/* Date Navigation */}
-            <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            {/* Conditional rendering based on store type */}
+            {currentStore?.name?.toLowerCase().includes("safa") ? (
+              /* PMS Calendar for SAFA Kost */
+              <PMSCalendar
+                selectedDate={selectedDate}
+                userRole={userRole}
+                onAddBooking={handleAddBooking}
+                onEditBooking={handleEditBooking}
+                onDateChange={setSelectedDate}
+              />
+            ) : (
+              /* Regular schedule table for other stores */
+              <>
+                {/* Date Navigation */}
+                <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
-            {/* Room Summary */}
-            <RoomSummary selectedDate={selectedDate} />
+                {/* Room Summary */}
+                <RoomSummary selectedDate={selectedDate} />
 
-            {/* Schedule Table */}
-            <ScheduleTable
-              selectedDate={selectedDate}
-              userRole={userRole}
-              onAddBooking={handleAddBooking}
-              onEditBooking={handleEditBooking}
-              displaySize={displaySize}
-            />
+                {/* Schedule Table */}
+                <ScheduleTable
+                  selectedDate={selectedDate}
+                  userRole={userRole}
+                  onAddBooking={handleAddBooking}
+                  onEditBooking={handleEditBooking}
+                  displaySize={displaySize}
+                />
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="customers" className="mt-6">
