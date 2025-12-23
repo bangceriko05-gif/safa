@@ -390,7 +390,7 @@ export default function Dashboard() {
           }}>
             <TabsTrigger value="bookings">
               <Calendar className="mr-2 h-4 w-4" />
-              Booking
+              Kalender
             </TabsTrigger>
             <TabsTrigger value="customers">
               <Users className="mr-2 h-4 w-4" />
