@@ -18,13 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
-import { format } from "date-fns";
+import { format, addDays, differenceInDays } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { validateBookingInputs } from "@/utils/bookingValidation";
+import { cn } from "@/lib/utils";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -93,6 +101,10 @@ export default function BookingModal({
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
   const [isPrice2ManuallyEdited, setIsPrice2ManuallyEdited] = useState(false);
   const [lastFetchedStoreId, setLastFetchedStoreId] = useState<string | null>(null);
+  const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
+  const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
@@ -114,6 +126,9 @@ export default function BookingModal({
     has_discount: false,
     discount_applies_to: "variant" as "variant" | "product",
   });
+
+  // Check if PMS mode (SAFA store)
+  const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
 
   // Fetch data when modal opens or store changes
   useEffect(() => {
@@ -146,16 +161,31 @@ export default function BookingModal({
 
   // Calculate room subtotal based on variant price and duration (for display only)
   const calculateRoomSubtotal = () => {
-    if (formData.variant_id && formData.start_time && formData.end_time) {
-      const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
-      if (selectedVariant) {
-        const currentDuration = calculateDuration(formData.start_time, formData.end_time);
-        if (currentDuration > 0) {
-          return selectedVariant.price * currentDuration;
+    if (isPMSMode) {
+      // For PMS mode, calculate based on nights
+      if (formData.variant_id && checkInDate && checkOutDate) {
+        const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
+        if (selectedVariant) {
+          const nights = differenceInDays(checkOutDate, checkInDate);
+          if (nights > 0) {
+            return selectedVariant.price * nights;
+          }
         }
       }
+      return 0;
+    } else {
+      // For time-based mode
+      if (formData.variant_id && formData.start_time && formData.end_time) {
+        const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
+        if (selectedVariant) {
+          const currentDuration = calculateDuration(formData.start_time, formData.end_time);
+          if (currentDuration > 0) {
+            return selectedVariant.price * currentDuration;
+          }
+        }
+      }
+      return 0;
     }
-    return 0;
   };
 
   // Auto-fill Total Bayar with Grand Total (only if dual payment is NOT active)
@@ -170,7 +200,7 @@ export default function BookingModal({
         price: formatPrice(grandTotal.toString()),
       }));
     }
-  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment]);
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode]);
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
@@ -192,7 +222,7 @@ export default function BookingModal({
       }));
       setIsPrice2ManuallyEdited(false);
     }
-  }, [formData.dual_payment, formData.price, formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, isPrice2ManuallyEdited]);
+  }, [formData.dual_payment, formData.price, formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, isPrice2ManuallyEdited, checkInDate, checkOutDate, isPMSMode]);
 
   useEffect(() => {
     if (editingBooking) {
@@ -227,6 +257,17 @@ export default function BookingModal({
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
+      // For PMS mode, set check-in/out dates from booking date and duration
+      if (isPMSMode && editingBooking.date) {
+        const bookingDate = new Date(editingBooking.date);
+        setCheckInDate(bookingDate);
+        if (editingBooking.duration) {
+          setCheckOutDate(addDays(bookingDate, Math.ceil(editingBooking.duration)));
+        } else {
+          setCheckOutDate(addDays(bookingDate, 1));
+        }
+      }
+
       // Fetch booking products
       fetchBookingProducts(editingBooking.id);
     } else if (selectedSlot && selectedSlot.roomId) {
@@ -236,7 +277,7 @@ export default function BookingModal({
         reference_no: "",
         room_id: selectedSlot.roomId,
         variant_id: "",
-        start_time: selectedSlot.time,
+        start_time: isPMSMode ? "" : selectedSlot.time,
         end_time: "",
         payment_method: "",
         price: "",
@@ -253,6 +294,19 @@ export default function BookingModal({
       });
       setSelectedProducts([]);
       setIsPrice2ManuallyEdited(false);
+
+      // For PMS mode, initialize check-in date from selected date
+      if (isPMSMode) {
+        // If selectedSlot.time is a date string (from PMSCalendar)
+        const slotDate = new Date(selectedSlot.time);
+        if (!isNaN(slotDate.getTime())) {
+          setCheckInDate(slotDate);
+          setCheckOutDate(addDays(slotDate, 1));
+        } else {
+          setCheckInDate(selectedDate);
+          setCheckOutDate(addDays(selectedDate, 1));
+        }
+      }
     } else {
       // Reset form if no slot selected
       setFormData({
@@ -278,8 +332,14 @@ export default function BookingModal({
       });
       setSelectedProducts([]);
       setIsPrice2ManuallyEdited(false);
+      
+      // Reset check-in/out dates for PMS mode
+      if (isPMSMode) {
+        setCheckInDate(selectedDate);
+        setCheckOutDate(addDays(selectedDate, 1));
+      }
     }
-  }, [editingBooking, selectedSlot]);
+  }, [editingBooking, selectedSlot, isPMSMode, selectedDate]);
 
   const fetchRooms = async () => {
     try {
@@ -594,7 +654,9 @@ export default function BookingModal({
     return (endHour - startHour) + (endMinute - startMinute) / 60;
   };
 
-  const duration = calculateDuration(formData.start_time, formData.end_time);
+  const duration = isPMSMode 
+    ? (checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0)
+    : calculateDuration(formData.start_time, formData.end_time);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -651,10 +713,24 @@ export default function BookingModal({
         }
       }
 
-      if (duration <= 0) {
-        toast.error("Jam selesai harus lebih besar dari jam mulai");
-        setLoading(false);
-        return;
+      // Validate duration/dates
+      if (isPMSMode) {
+        if (!checkInDate || !checkOutDate) {
+          toast.error("Tanggal Check In dan Check Out wajib diisi");
+          setLoading(false);
+          return;
+        }
+        if (differenceInDays(checkOutDate, checkInDate) <= 0) {
+          toast.error("Tanggal Check Out harus setelah Check In");
+          setLoading(false);
+          return;
+        }
+      } else {
+        if (duration <= 0) {
+          toast.error("Jam selesai harus lebih besar dari jam mulai");
+          setLoading(false);
+          return;
+        }
       }
 
       // Check if room is active
@@ -671,65 +747,70 @@ export default function BookingModal({
         return;
       }
 
-      // Check for overlapping bookings - ONLY if time or room changed
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      // Check for overlapping bookings - ONLY if time or room changed (skip for PMS mode for now)
+      const dateStr = isPMSMode && checkInDate 
+        ? format(checkInDate, "yyyy-MM-dd") 
+        : format(selectedDate, "yyyy-MM-dd");
       
-      // Skip overlap check if editing and only status changed (no time/room change)
-      const timeOrRoomChanged = !editingBooking || 
-        editingBooking.room_id !== formData.room_id ||
-        editingBooking.start_time?.substring(0, 5) !== formData.start_time ||
-        editingBooking.end_time?.substring(0, 5) !== formData.end_time;
-      
-      if (timeOrRoomChanged) {
-        let query = supabase
-          .from("bookings")
-          .select("*")
-          .eq("room_id", formData.room_id)
-          .eq("date", dateStr);
+      // Skip overlap check for PMS mode - will implement date range overlap check later
+      if (!isPMSMode) {
+        // Skip overlap check if editing and only status changed (no time/room change)
+        const timeOrRoomChanged = !editingBooking || 
+          editingBooking.room_id !== formData.room_id ||
+          editingBooking.start_time?.substring(0, 5) !== formData.start_time ||
+          editingBooking.end_time?.substring(0, 5) !== formData.end_time;
         
-        // Only exclude current booking if editing
-        if (editingBooking?.id) {
-          query = query.neq("id", editingBooking.id);
-        }
-        
-        const { data: existingBookings, error: checkError } = await query;
-
-        if (checkError) throw checkError;
-
-        const hasOverlap = existingBookings?.some((booking) => {
-          let existingStart = parseInt(booking.start_time.split(":")[0]);
-          let existingEnd = parseInt(booking.end_time.split(":")[0]);
-          let newStart = parseInt(formData.start_time.split(":")[0]);
-          let newEnd = parseInt(formData.end_time.split(":")[0]);
-
-          // Handle overnight bookings - convert hours after midnight to 24+ format
-          // If end time is 00:00-08:00, treat it as next day (24-32)
-          if (existingEnd >= 0 && existingEnd < 9 && existingStart >= 9) {
-            existingEnd += 24;
-          }
-          if (newEnd >= 0 && newEnd < 9 && newStart >= 9) {
-            newEnd += 24;
+        if (timeOrRoomChanged) {
+          let query = supabase
+            .from("bookings")
+            .select("*")
+            .eq("room_id", formData.room_id)
+            .eq("date", dateStr);
+          
+          // Only exclude current booking if editing
+          if (editingBooking?.id) {
+            query = query.neq("id", editingBooking.id);
           }
           
-          // If new booking starts in early morning (00:00-08:00), convert to 24+ format
-          // to check against bookings that might extend past midnight
-          if (newStart >= 0 && newStart < 9) {
-            newStart += 24;
-          }
-          if (newEnd >= 0 && newEnd < 9) {
-            newEnd += 24;
-          }
+          const { data: existingBookings, error: checkError } = await query;
 
-          return (
-            (newStart >= existingStart && newStart < existingEnd) ||
-            (newEnd > existingStart && newEnd <= existingEnd) ||
-            (newStart <= existingStart && newEnd >= existingEnd)
-          );
-        });
+          if (checkError) throw checkError;
 
-        if (hasOverlap) {
-          toast.error("Ruangan sudah dibooking pada waktu tersebut");
-          return;
+          const hasOverlap = existingBookings?.some((booking) => {
+            let existingStart = parseInt(booking.start_time.split(":")[0]);
+            let existingEnd = parseInt(booking.end_time.split(":")[0]);
+            let newStart = parseInt(formData.start_time.split(":")[0]);
+            let newEnd = parseInt(formData.end_time.split(":")[0]);
+
+            // Handle overnight bookings - convert hours after midnight to 24+ format
+            // If end time is 00:00-08:00, treat it as next day (24-32)
+            if (existingEnd >= 0 && existingEnd < 9 && existingStart >= 9) {
+              existingEnd += 24;
+            }
+            if (newEnd >= 0 && newEnd < 9 && newStart >= 9) {
+              newEnd += 24;
+            }
+            
+            // If new booking starts in early morning (00:00-08:00), convert to 24+ format
+            // to check against bookings that might extend past midnight
+            if (newStart >= 0 && newStart < 9) {
+              newStart += 24;
+            }
+            if (newEnd >= 0 && newEnd < 9) {
+              newEnd += 24;
+            }
+
+            return (
+              (newStart >= existingStart && newStart < existingEnd) ||
+              (newEnd > existingStart && newEnd <= existingEnd) ||
+              (newStart <= existingStart && newEnd >= existingEnd)
+            );
+          });
+
+          if (hasOverlap) {
+            toast.error("Ruangan sudah dibooking pada waktu tersebut");
+            return;
+          }
         }
       }
 
@@ -744,8 +825,8 @@ export default function BookingModal({
         reference_no: formData.reference_no,
         room_id: formData.room_id,
         variant_id: formData.variant_id || null,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
+        start_time: isPMSMode ? "14:00" : formData.start_time,
+        end_time: isPMSMode ? "12:00" : formData.end_time,
         payment_method: formData.payment_method || null,
         note: formData.note || null,
         dual_payment: formData.dual_payment,
@@ -1053,63 +1134,133 @@ export default function BookingModal({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start_time">Jam Mulai</Label>
-              <Select
-                value={formData.start_time}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, start_time: value });
-                }}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jam mulai" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50 max-h-[200px]">
-                  {/* Generate time slots from 09:00 to 05:00 (next day) */}
-                  {Array.from({ length: 20 }, (_, i) => {
-                    const hour = i + 9;
-                    const displayHour = hour >= 24 ? hour - 24 : hour;
-                    const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
-                    return (
-                      <SelectItem key={`start-${i}`} value={timeValue}>
-                        {timeValue}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Check-In/Check-Out for PMS Mode OR Start/End Time for regular mode */}
+          {isPMSMode ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Check In</Label>
+                <Popover open={checkInOpen} onOpenChange={setCheckInOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !checkInDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {checkInDate ? format(checkInDate, "dd MMM yyyy", { locale: idLocale }) : <span>Pilih tanggal</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={checkInDate}
+                      onSelect={(date) => {
+                        setCheckInDate(date);
+                        // Auto-set checkout to next day if not set or if before check-in
+                        if (date && (!checkOutDate || checkOutDate <= date)) {
+                          setCheckOutDate(addDays(date, 1));
+                        }
+                        setCheckInOpen(false);
+                      }}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="end_time">Jam Selesai</Label>
-              <Select
-                value={formData.end_time}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, end_time: value })
-                }
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jam selesai" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50 max-h-[200px]">
-                  {/* Generate all time slots from 10:00 to 06:00 (next day) */}
-                  {Array.from({ length: 21 }, (_, i) => {
-                    const hour = i + 10;
-                    const displayHour = hour >= 24 ? hour - 24 : hour;
-                    const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
-                    return (
-                      <SelectItem key={`end-${i}`} value={timeValue}>
-                        {timeValue}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label>Check Out</Label>
+                <Popover open={checkOutOpen} onOpenChange={setCheckOutOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !checkOutDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {checkOutDate ? format(checkOutDate, "dd MMM yyyy", { locale: idLocale }) : <span>Pilih tanggal</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={checkOutDate}
+                      onSelect={(date) => {
+                        setCheckOutDate(date);
+                        setCheckOutOpen(false);
+                      }}
+                      disabled={(date) => checkInDate ? date <= checkInDate : false}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_time">Jam Mulai</Label>
+                <Select
+                  value={formData.start_time}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, start_time: value });
+                  }}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih jam mulai" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50 max-h-[200px]">
+                    {/* Generate time slots from 09:00 to 05:00 (next day) */}
+                    {Array.from({ length: 20 }, (_, i) => {
+                      const hour = i + 9;
+                      const displayHour = hour >= 24 ? hour - 24 : hour;
+                      const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
+                      return (
+                        <SelectItem key={`start-${i}`} value={timeValue}>
+                          {timeValue}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="end_time">Jam Selesai</Label>
+                <Select
+                  value={formData.end_time}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, end_time: value })
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih jam selesai" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50 max-h-[200px]">
+                    {/* Generate all time slots from 10:00 to 06:00 (next day) */}
+                    {Array.from({ length: 21 }, (_, i) => {
+                      const hour = i + 10;
+                      const displayHour = hour >= 24 ? hour - 24 : hour;
+                      const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
+                      return (
+                        <SelectItem key={`end-${i}`} value={timeValue}>
+                          {timeValue}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           {/* Product Selection */}
           <div className="space-y-2">
@@ -1314,8 +1465,8 @@ export default function BookingModal({
                 )}
                 
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Jam:</span>
-                  <span className="font-medium">{duration.toFixed(1)} jam</span>
+                  <span className="text-muted-foreground">{isPMSMode ? "Total Malam:" : "Total Jam:"}</span>
+                  <span className="font-medium">{isPMSMode ? `${duration} malam` : `${duration.toFixed(1)} jam`}</span>
                 </div>
 
                 {selectedProducts.length > 0 && (
