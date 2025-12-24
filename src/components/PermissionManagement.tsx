@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Shield, User, Users } from "lucide-react";
+import { Loader2, Shield, User, Users, Check, Save } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Permission {
@@ -34,6 +34,18 @@ interface RolePermission {
   permission_id: string;
 }
 
+// Permission categories for better organization
+const permissionCategories: Record<string, string[]> = {
+  "Booking": ["create_bookings", "edit_bookings", "delete_bookings", "view_bookings", "checkin_bookings", "checkout_bookings", "cancel_bookings"],
+  "Kamar": ["manage_rooms", "view_rooms"],
+  "Pelanggan": ["manage_customers", "view_customers"],
+  "Keuangan": ["manage_income", "manage_expense", "view_reports"],
+  "Produk": ["manage_products", "view_products"],
+  "Toko": ["manage_stores", "view_stores"],
+  "Pengguna": ["manage_users", "manage_permissions"],
+  "Pengaturan": ["manage_settings", "view_activity_logs"],
+};
+
 export default function PermissionManagement() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -43,6 +55,10 @@ export default function PermissionManagement() {
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pendingUserChanges, setPendingUserChanges] = useState<Set<string>>(new Set());
+  const [pendingRoleChanges, setPendingRoleChanges] = useState<Set<string>>(new Set());
+  const [hasUnsavedUserChanges, setHasUnsavedUserChanges] = useState(false);
+  const [hasUnsavedRoleChanges, setHasUnsavedRoleChanges] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -126,6 +142,181 @@ export default function PermissionManagement() {
 
   const hasRolePermission = (permissionId: string) => {
     return rolePermissions.some((rp) => rp.permission_id === permissionId);
+  };
+
+  // Get permissions grouped by category
+  const getPermissionsByCategory = () => {
+    const result: Record<string, Permission[]> = {};
+    
+    Object.entries(permissionCategories).forEach(([category, permNames]) => {
+      const categoryPerms = permissions.filter(p => permNames.includes(p.name));
+      if (categoryPerms.length > 0) {
+        result[category] = categoryPerms;
+      }
+    });
+    
+    // Add uncategorized permissions
+    const categorizedNames = Object.values(permissionCategories).flat();
+    const uncategorized = permissions.filter(p => !categorizedNames.includes(p.name));
+    if (uncategorized.length > 0) {
+      result["Lainnya"] = uncategorized;
+    }
+    
+    return result;
+  };
+
+  const toggleUserPermissionLocal = (permissionId: string) => {
+    setPendingUserChanges(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(permissionId)) {
+        newSet.delete(permissionId);
+      } else {
+        newSet.add(permissionId);
+      }
+      return newSet;
+    });
+    setHasUnsavedUserChanges(true);
+  };
+
+  const toggleRolePermissionLocal = (permissionId: string) => {
+    setPendingRoleChanges(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(permissionId)) {
+        newSet.delete(permissionId);
+      } else {
+        newSet.add(permissionId);
+      }
+      return newSet;
+    });
+    setHasUnsavedRoleChanges(true);
+  };
+
+  const isUserPermissionChecked = (permissionId: string) => {
+    const hasExisting = hasPermission(permissionId);
+    const isPending = pendingUserChanges.has(permissionId);
+    return hasExisting ? !isPending : isPending;
+  };
+
+  const isRolePermissionChecked = (permissionId: string) => {
+    const hasExisting = hasRolePermission(permissionId);
+    const isPending = pendingRoleChanges.has(permissionId);
+    return hasExisting ? !isPending : isPending;
+  };
+
+  const handleSaveUserPermissions = async () => {
+    if (!selectedUserId || pendingUserChanges.size === 0) {
+      toast.info("Tidak ada perubahan untuk disimpan");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const currentUser = await supabase.auth.getUser();
+      if (!currentUser.data.user) throw new Error("User not authenticated");
+
+      const toAdd: string[] = [];
+      const toRemove: string[] = [];
+
+      pendingUserChanges.forEach(permId => {
+        if (hasPermission(permId)) {
+          toRemove.push(permId);
+        } else {
+          toAdd.push(permId);
+        }
+      });
+
+      // Remove permissions
+      if (toRemove.length > 0) {
+        const { error } = await supabase
+          .from("user_permissions")
+          .delete()
+          .eq("user_id", selectedUserId)
+          .in("permission_id", toRemove);
+        if (error) throw error;
+      }
+
+      // Add permissions
+      if (toAdd.length > 0) {
+        const newPermissions = toAdd.map(permId => ({
+          user_id: selectedUserId,
+          permission_id: permId,
+          granted_by: currentUser.data.user.id,
+        }));
+        const { error } = await supabase
+          .from("user_permissions")
+          .insert(newPermissions);
+        if (error) throw error;
+      }
+
+      await logActivity({
+        actionType: "updated",
+        entityType: "Permission",
+        description: `Mengubah ${toAdd.length + toRemove.length} permission untuk pengguna`,
+      });
+
+      toast.success("Perubahan permission berhasil disimpan");
+      setPendingUserChanges(new Set());
+      setHasUnsavedUserChanges(false);
+      fetchUserPermissions(selectedUserId);
+    } catch (error: any) {
+      console.error("Error saving user permissions:", error);
+      toast.error("Gagal menyimpan perubahan permission");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveRolePermissions = async () => {
+    if (!selectedRole || pendingRoleChanges.size === 0) {
+      toast.info("Tidak ada perubahan untuk disimpan");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const toAdd: string[] = [];
+      const toRemove: string[] = [];
+
+      pendingRoleChanges.forEach(permId => {
+        if (hasRolePermission(permId)) {
+          toRemove.push(permId);
+        } else {
+          toAdd.push(permId);
+        }
+      });
+
+      // Remove permissions from role_permissions
+      for (const permId of toRemove) {
+        const existingPerm = rolePermissions.find(rp => rp.permission_id === permId);
+        if (existingPerm) {
+          await supabase.from("role_permissions").delete().eq("id", existingPerm.id);
+        }
+      }
+
+      // Add permissions to role_permissions
+      for (const permId of toAdd) {
+        await supabase.from("role_permissions").insert({
+          role: selectedRole,
+          permission_id: permId,
+        });
+      }
+
+      await logActivity({
+        actionType: "updated",
+        entityType: "Permission",
+        description: `Mengubah ${toAdd.length + toRemove.length} permission untuk role ${selectedRole}`,
+      });
+
+      toast.success("Perubahan permission role berhasil disimpan");
+      setPendingRoleChanges(new Set());
+      setHasUnsavedRoleChanges(false);
+      fetchRolePermissions(selectedRole);
+    } catch (error: any) {
+      console.error("Error saving role permissions:", error);
+      toast.error("Gagal menyimpan perubahan permission role");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleTogglePermission = async (permissionId: string, permissionName: string) => {
@@ -430,36 +621,65 @@ export default function PermissionManagement() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  {permissions.map((permission) => {
-                    const isChecked = hasPermission(permission.id);
-                    return (
-                      <div
-                        key={permission.id}
-                        className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <Checkbox
-                          id={permission.id}
-                          checked={isChecked}
-                          disabled={saving}
-                          onCheckedChange={() =>
-                            handleTogglePermission(permission.id, permission.name)
-                          }
-                        />
-                        <div className="flex-1 space-y-1">
-                          <Label
-                            htmlFor={permission.id}
-                            className="cursor-pointer font-medium"
-                          >
-                            {permission.name}
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            {permission.description}
-                          </p>
-                        </div>
+                <div className="space-y-6">
+                  {Object.entries(getPermissionsByCategory()).map(([category, categoryPerms]) => (
+                    <div key={category} className="space-y-3">
+                      <h4 className="font-medium text-sm text-primary border-b pb-2 flex items-center gap-2">
+                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-semibold">
+                          {category}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          ({categoryPerms.filter(p => isUserPermissionChecked(p.id)).length}/{categoryPerms.length})
+                        </span>
+                      </h4>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {categoryPerms.map((permission) => {
+                          const isChecked = isUserPermissionChecked(permission.id);
+                          const hasChanged = pendingUserChanges.has(permission.id);
+                          return (
+                            <div
+                              key={permission.id}
+                              className={`flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors ${hasChanged ? 'border-primary bg-primary/5' : ''}`}
+                            >
+                              <Checkbox
+                                id={permission.id}
+                                checked={isChecked}
+                                disabled={saving}
+                                onCheckedChange={() => toggleUserPermissionLocal(permission.id)}
+                              />
+                              <div className="flex-1 space-y-1">
+                                <Label
+                                  htmlFor={permission.id}
+                                  className="cursor-pointer font-medium text-sm"
+                                >
+                                  {permission.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  {permission.description}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* OK Button for User Permissions */}
+                <div className="flex justify-end pt-4 border-t">
+                  <Button
+                    onClick={handleSaveUserPermissions}
+                    disabled={saving || !hasUnsavedUserChanges}
+                    className="min-w-[120px]"
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    OK - Simpan
+                  </Button>
                 </div>
               </div>
             )}
@@ -500,36 +720,65 @@ export default function PermissionManagement() {
                   </p>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  {permissions.map((permission) => {
-                    const isChecked = hasRolePermission(permission.id);
-                    return (
-                      <div
-                        key={permission.id}
-                        className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <Checkbox
-                          id={`role-${permission.id}`}
-                          checked={isChecked}
-                          disabled={saving}
-                          onCheckedChange={() =>
-                            handleToggleRolePermission(permission.id, permission.name)
-                          }
-                        />
-                        <div className="flex-1 space-y-1">
-                          <Label
-                            htmlFor={`role-${permission.id}`}
-                            className="cursor-pointer font-medium"
-                          >
-                            {permission.name}
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            {permission.description}
-                          </p>
-                        </div>
+                <div className="space-y-6">
+                  {Object.entries(getPermissionsByCategory()).map(([category, categoryPerms]) => (
+                    <div key={category} className="space-y-3">
+                      <h4 className="font-medium text-sm text-primary border-b pb-2 flex items-center gap-2">
+                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-semibold">
+                          {category}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          ({categoryPerms.filter(p => isRolePermissionChecked(p.id)).length}/{categoryPerms.length})
+                        </span>
+                      </h4>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {categoryPerms.map((permission) => {
+                          const isChecked = isRolePermissionChecked(permission.id);
+                          const hasChanged = pendingRoleChanges.has(permission.id);
+                          return (
+                            <div
+                              key={permission.id}
+                              className={`flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors ${hasChanged ? 'border-primary bg-primary/5' : ''}`}
+                            >
+                              <Checkbox
+                                id={`role-${permission.id}`}
+                                checked={isChecked}
+                                disabled={saving}
+                                onCheckedChange={() => toggleRolePermissionLocal(permission.id)}
+                              />
+                              <div className="flex-1 space-y-1">
+                                <Label
+                                  htmlFor={`role-${permission.id}`}
+                                  className="cursor-pointer font-medium text-sm"
+                                >
+                                  {permission.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  {permission.description}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* OK Button for Role Permissions */}
+                <div className="flex justify-end pt-4 border-t">
+                  <Button
+                    onClick={handleSaveRolePermissions}
+                    disabled={saving || !hasUnsavedRoleChanges}
+                    className="min-w-[120px]"
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    OK - Simpan
+                  </Button>
                 </div>
               </div>
             )}
