@@ -59,6 +59,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [tempDate, setTempDate] = useState<Date | undefined>(new Date());
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
     CI: "#90EE90",
@@ -69,7 +70,31 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   useEffect(() => {
     if (!currentStore) return;
     fetchStatusColors();
+    fetchUserPermissions();
   }, [currentStore]);
+
+  const fetchUserPermissions = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("user_permissions")
+        .select("permission_id, permissions(name)")
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      
+      const permissionNames = data?.map((up: any) => up.permissions?.name).filter(Boolean) || [];
+      setUserPermissions(permissionNames);
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+    }
+  };
+
+  const hasPermission = (permissionName: string) => {
+    return userPermissions.includes(permissionName) || userRole === "admin";
+  };
 
   useEffect(() => {
     if (!currentStore) return;
@@ -205,6 +230,12 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
 
   const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null) => {
     try {
+      // Check permission first
+      if (!hasPermission("edit_bookings")) {
+        toast.error("Anda tidak memiliki izin untuk mengubah status booking");
+        return;
+      }
+
       // Check if user is trying to change to/from BATAL
       if ((currentStatus === "BATAL" || newStatus === "BATAL") && userRole !== "admin") {
         toast.error("Hanya Admin yang dapat mengubah status BATAL");
@@ -438,30 +469,32 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           {/* Edit Button */}
-                          <DropdownMenuItem 
-                            onClick={() => onEditBooking(booking)}
-                            disabled={!canEdit(booking)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
+                          {hasPermission("edit_bookings") && (
+                            <DropdownMenuItem 
+                              onClick={() => onEditBooking(booking)}
+                              disabled={!canEdit(booking)}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
                           
-                          {/* Status Change Options */}
-                          {canChangeStatus(booking) && booking.status !== "BO" && (
+                          {/* Status Change Options - requires edit_bookings permission */}
+                          {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "BO" && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
                               <Eye className="mr-2 h-4 w-4" />
                               Reservasi
                             </DropdownMenuItem>
                           )}
                           
-                          {canChangeStatus(booking) && booking.status !== "CI" && !isStatusBatal(booking.status) && (
+                          {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CI" && !isStatusBatal(booking.status) && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CI", booking.status)}>
                               <LogIn className="mr-2 h-4 w-4" />
                               Check In
                             </DropdownMenuItem>
                           )}
                           
-                          {canChangeStatus(booking) && booking.status !== "CO" && !isStatusBatal(booking.status) && (
+                          {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CO" && !isStatusBatal(booking.status) && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CO", booking.status)}>
                               <LogOut className="mr-2 h-4 w-4" />
                               Check Out
