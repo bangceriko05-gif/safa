@@ -67,6 +67,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
           { status: "BO", color: "#87CEEB", store_id: currentStore.id },
           { status: "CI", color: "#90EE90", store_id: currentStore.id },
           { status: "CO", color: "#6B7280", store_id: currentStore.id },
+          { status: "BATAL", color: "#9CA3AF", store_id: currentStore.id },
         ];
 
         const { data: newColors, error: insertError } = await supabase
@@ -277,7 +278,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
                 Pengaturan Warna Status Booking
               </CardTitle>
               <CardDescription>
-                Atur warna untuk setiap status booking (BO, CI, CO)
+                Atur warna untuk setiap status booking (BO, CI, CO, BATAL)
               </CardDescription>
             </div>
             <Button
@@ -303,6 +304,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
                 {statusColor.status === 'BO' && ' (Booking Only)'}
                 {statusColor.status === 'CI' && ' (Check In)'}
                 {statusColor.status === 'CO' && ' (Check Out)'}
+                {statusColor.status === 'BATAL' && ' (Dibatalkan)'}
               </label>
               <Select 
                 value={statusColor.color} 

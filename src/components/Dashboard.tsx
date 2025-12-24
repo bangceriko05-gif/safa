@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus, FileDown, UserCog, Calendar, History, Users, FileText, Shield, Settings, Package, Store, Inbox, Upload } from "lucide-react";
+import { LogOut, Plus, FileDown, UserCog, Calendar, History, Users, FileText, Shield, Settings, Package, Store, Inbox, Upload, List } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -33,6 +33,7 @@ import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
 import DataImport from "./DataImport";
+import ListBooking from "./ListBooking";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
@@ -384,13 +385,17 @@ export default function Dashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full max-w-6xl" style={{ 
             gridTemplateColumns: 
-              userRole === "admin" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" :
-              userRole === "leader" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
-              "1fr 1fr 1fr 1fr 1fr" 
+              userRole === "admin" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" :
+              userRole === "leader" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
+              "1fr 1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
               <Calendar className="mr-2 h-4 w-4" />
               Kalender
+            </TabsTrigger>
+            <TabsTrigger value="list-booking">
+              <List className="mr-2 h-4 w-4" />
+              List Booking
             </TabsTrigger>
             <TabsTrigger value="customers">
               <Users className="mr-2 h-4 w-4" />
@@ -466,6 +471,10 @@ export default function Dashboard() {
                 />
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="list-booking" className="mt-6">
+            <ListBooking userRole={userRole} onEditBooking={handleEditBooking} />
           </TabsContent>
 
           <TabsContent value="customers" className="mt-6">

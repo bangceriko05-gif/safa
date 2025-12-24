@@ -94,6 +94,7 @@ export default function ScheduleTable({
     BO: "#87CEEB",
     CI: "#90EE90",
     CO: "#6B7280",
+    BATAL: "#9CA3AF",
   });
   const [bookingTextColor, setBookingTextColor] = useState<string>(() => {
     return localStorage.getItem("booking-text-color") || "#1F2937";
@@ -687,7 +688,8 @@ export default function ScheduleTable({
                         // Determine background color based on status using configured colors
                         const status = booking.status || 'BO';
                         const statusColor = statusColors[status] || '#3B82F6';
-                        const bgColor = `${statusColor}40`; // Add transparency
+                        const isBatal = status === 'BATAL';
+                        const bgColor = isBatal ? `${statusColor}20` : `${statusColor}40`; // Add transparency
                         const borderColor = statusColor;
                           
                         // Calculate the actual rowSpan based on visible time slots
@@ -708,7 +710,7 @@ export default function ScheduleTable({
                           >
                             <Card
                               className={`${size.cardPadding} h-full transition-[var(--transition-smooth)] relative ${
-                                isBlocked 
+                                isBlocked || isBatal
                                   ? "opacity-60 bg-muted/30" 
                                   : "hover:shadow-[var(--shadow-hover)]"
                               }`}
@@ -938,7 +940,7 @@ export default function ScheduleTable({
                                 </div>
                                 
                                 {/* Edit and Delete buttons */}
-                                {(hasPermission("edit_bookings") || hasPermission("delete_bookings")) && (
+                                {(hasPermission("edit_bookings") || hasPermission("delete_bookings")) && (booking.status !== 'BATAL' || userRole === 'admin') && (
                                   <div className={`flex ${size.gapSize} pt-1.5`}>
                                     {hasPermission("edit_bookings") && (
                                       <Button
@@ -962,6 +964,11 @@ export default function ScheduleTable({
                                         Hapus
                                       </Button>
                                     )}
+                                  </div>
+                                )}
+                                {booking.status === 'BATAL' && userRole !== 'admin' && (
+                                  <div className="text-center text-xs text-muted-foreground py-1">
+                                    Booking dibatalkan
                                   </div>
                                 )}
                               </div>

@@ -83,6 +83,7 @@ export default function PMSCalendar({
     BO: "#87CEEB",
     CI: "#90EE90",
     CO: "#6B7280",
+    BATAL: "#9CA3AF",
   });
 
   // Calculate visible date range (14 days centered on selected date)
@@ -520,13 +521,17 @@ export default function PMSCalendar({
                           if (booking) {
                             const status = booking.status || 'BO';
                             const statusColor = statusColors[status] || '#3B82F6';
-                            const bgColor = `${statusColor}80`;
+                            const isBatal = status === 'BATAL';
+                            const bgColor = isBatal ? `${statusColor}40` : `${statusColor}80`;
                             const nights = booking.duration || 1;
                             
                             return (
                               <td 
                                 key={date.toISOString()} 
-                                className="p-1 align-top border-r border-border"
+                                className={cn(
+                                  "p-1 align-top border-r border-border",
+                                  isBatal && "opacity-60"
+                                )}
                                 colSpan={Math.min(nights, visibleDates.length - visibleDates.findIndex(d => isSameDay(d, date)))}
                               >
                                 <Popover>
@@ -628,7 +633,7 @@ export default function PMSCalendar({
                                       </div>
 
                                       <div className="flex gap-2 pt-2 border-t">
-                                        {hasPermission("edit_bookings") && (
+                                        {hasPermission("edit_bookings") && (status !== 'BATAL' || userRole === 'admin') && (
                                           <Button
                                             size="sm"
                                             variant="outline"
@@ -639,7 +644,7 @@ export default function PMSCalendar({
                                             Edit
                                           </Button>
                                         )}
-                                        {hasPermission("delete_bookings") && (
+                                        {hasPermission("delete_bookings") && (status !== 'BATAL' || userRole === 'admin') && (
                                           <Button
                                             size="sm"
                                             variant="destructive"
@@ -649,6 +654,11 @@ export default function PMSCalendar({
                                             <Trash2 className="h-3 w-3 mr-1" />
                                             Hapus
                                           </Button>
+                                        )}
+                                        {status === 'BATAL' && userRole !== 'admin' && (
+                                          <div className="flex-1 text-center text-sm text-muted-foreground py-2">
+                                            Booking dibatalkan
+                                          </div>
                                         )}
                                       </div>
                                     </div>
