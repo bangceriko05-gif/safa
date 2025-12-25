@@ -730,21 +730,21 @@ export default function PMSCalendar({
                                 // Room is dirty - show "Kotor" with option to set Ready
                                 <Button
                                   variant="ghost"
-                                  className="w-full h-full min-h-[60px] bg-red-100 hover:bg-green-100 border border-red-300 hover:border-green-400 transition-all group"
+                                  className="w-full h-full min-h-[60px] bg-destructive/10 hover:bg-primary/10 border border-destructive/30 hover:border-primary/40 transition-all group"
                                   onClick={() => handleRoomStatusChange(room.id, "Aktif")}
                                   title="Klik untuk set Ready"
                                 >
-                                  <span className="text-red-600 font-semibold text-xs group-hover:hidden">Kotor</span>
-                                  <span className="text-green-600 font-semibold text-xs hidden group-hover:inline">Set Ready</span>
+                                  <span className="text-destructive font-semibold text-xs group-hover:hidden">Kotor</span>
+                                  <span className="text-primary font-semibold text-xs hidden group-hover:inline">Set Ready</span>
                                 </Button>
                               ) : !isBlocked && hasPermission("create_bookings") ? (
                                 // Room is available - show "Ready" button to add booking
                                 <Button
                                   variant="ghost"
-                                  className="w-full h-full min-h-[60px] bg-green-50 hover:bg-green-100 border border-dashed border-green-300 hover:border-green-500 transition-all"
+                                  className="w-full h-full min-h-[60px] bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary transition-all"
                                   onClick={() => onAddBooking(room.id, dateStr)}
                                 >
-                                  <span className="text-green-600 font-semibold text-xs">Ready</span>
+                                  <span className="text-primary font-semibold text-xs">Ready</span>
                                 </Button>
                               ) : (
                                 <div className="w-full h-full min-h-[60px] flex items-center justify-center text-xs text-muted-foreground">
