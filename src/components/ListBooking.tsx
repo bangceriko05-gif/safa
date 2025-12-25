@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, MoreHorizontal, Eye, Edit, XCircle, LogIn, LogOut } from "lucide-react";
+import { CalendarIcon, MoreHorizontal, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
@@ -307,6 +307,58 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
     }
   };
 
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      // Check permission first
+      if (!hasPermission("delete_bookings")) {
+        toast.error("Anda tidak memiliki izin untuk menghapus booking");
+        return;
+      }
+
+      // Get booking details for logging
+      const { data: bookingData } = await supabase
+        .from("bookings")
+        .select(`
+          customer_name,
+          bid,
+          rooms (name)
+        `)
+        .eq("id", bookingId)
+        .single();
+
+      // Delete booking products first
+      await supabase
+        .from("booking_products")
+        .delete()
+        .eq("booking_id", bookingId);
+
+      // Delete the booking
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", bookingId);
+
+      if (error) throw error;
+
+      if (bookingData) {
+        const roomName = (bookingData as any).rooms?.name || 'Unknown';
+        await logActivity({
+          actionType: 'deleted',
+          entityType: 'Booking',
+          entityId: bookingId,
+          description: `Menghapus booking ${bookingData.bid || ''} - ${bookingData.customer_name} di kamar ${roomName}`,
+        });
+      }
+
+      toast.success("Booking berhasil dihapus");
+      fetchBookings();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
+    } catch (error: any) {
+      toast.error("Gagal menghapus booking");
+      console.error(error);
+    }
+  };
+
   const getStatusLabel = (status: string | null) => {
     switch (status) {
       case "BO":
@@ -516,8 +568,9 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                             </DropdownMenuItem>
                           )}
                           
-                          {/* BATAL option - only for admin */}
-                          {userRole === "admin" && booking.status !== "BATAL" && (
+                          {/* BATAL option - for admin or users with cancel_checkout_bookings permission for CO status */}
+                          {(userRole === "admin" || (hasPermission("cancel_checkout_bookings") && booking.status === "CO")) && 
+                            booking.status !== "BATAL" && (
                             <DropdownMenuItem 
                               onClick={() => handleStatusChange(booking.id, "BATAL", booking.status)}
                               className="text-destructive"
@@ -530,8 +583,19 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                           {/* Restore from BATAL - only for admin */}
                           {userRole === "admin" && booking.status === "BATAL" && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
-                              <Eye className="mr-2 h-4 w-4" />
+                              <Undo className="mr-2 h-4 w-4" />
                               Pulihkan ke Reservasi
+                            </DropdownMenuItem>
+                          )}
+
+                          {/* Delete option - for users with delete_bookings permission */}
+                          {hasPermission("delete_bookings") && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteBooking(booking.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Hapus
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
