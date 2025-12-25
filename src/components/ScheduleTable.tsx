@@ -99,6 +99,7 @@ export default function ScheduleTable({
   const [bookingTextColor, setBookingTextColor] = useState<string>(() => {
     return localStorage.getItem("booking-text-color") || "#1F2937";
   });
+  const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
 
   const timeSlots = Array.from({ length: 20 }, (_, i) => {
     const hour = i + 9;
@@ -267,6 +268,48 @@ export default function ScheduleTable({
     }
   };
 
+  const fetchRoomDailyStatus = async () => {
+    try {
+      if (!currentStore) return;
+
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("room_daily_status")
+        .select("room_id, status")
+        .eq("date", dateStr);
+
+      if (error) throw error;
+
+      const map: Record<string, string> = {};
+      data?.forEach((row) => {
+        map[row.room_id] = row.status;
+      });
+      setRoomDailyStatus(map);
+    } catch (error) {
+      console.error("Error fetching room daily status:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentStore) return;
+    fetchRoomDailyStatus();
+
+    const channel = supabase
+      .channel(
+        `room-daily-status-${currentStore.id}-${format(selectedDate, "yyyy-MM-dd")}`
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "room_daily_status" },
+        () => fetchRoomDailyStatus()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentStore, selectedDate]);
+
   const fetchBookings = async () => {
     try {
       if (!currentStore) return;
@@ -429,13 +472,24 @@ export default function ScheduleTable({
       } else if (newStatus === "CO") {
         updateData.checked_out_by = user?.id;
         updateData.checked_out_at = new Date().toISOString();
-        
-        // Update room status to "Kotor" when checkout
+
+        // Mark room as "Kotor" ONLY for this date (date-specific)
         if (bookingData?.room_id) {
-          await supabase
-            .from("rooms")
-            .update({ status: "Kotor" })
-            .eq("id", bookingData.room_id);
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+          const { error: dailyError } = await supabase
+            .from("room_daily_status")
+            .upsert(
+              {
+                room_id: bookingData.room_id,
+                date: dateStr,
+                status: "Kotor",
+                updated_by: user?.id,
+              },
+              { onConflict: "room_id,date" }
+            );
+
+          if (dailyError) throw dailyError;
         }
       }
 
@@ -458,7 +512,7 @@ export default function ScheduleTable({
 
       toast.success(`Status berhasil diubah ke ${newStatus}`);
       fetchBookings();
-      fetchRooms();
+      fetchRoomDailyStatus();
       window.dispatchEvent(new CustomEvent("booking-changed"));
     } catch (error: any) {
       toast.error("Gagal mengubah status");
@@ -468,24 +522,44 @@ export default function ScheduleTable({
 
   const handleRoomStatusChange = async (roomId: string, newStatus: string) => {
     try {
-      const room = rooms.find(r => r.id === roomId);
-      
-      const { error } = await supabase
-        .from("rooms")
-        .update({ status: newStatus })
-        .eq("id", roomId);
+      const room = rooms.find((r) => r.id === roomId);
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-      if (error) throw error;
+      if (newStatus === "Aktif") {
+        const { error } = await supabase
+          .from("room_daily_status")
+          .delete()
+          .eq("room_id", roomId)
+          .eq("date", dateStr);
+
+        if (error) throw error;
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const { error } = await supabase
+          .from("room_daily_status")
+          .upsert(
+            {
+              room_id: roomId,
+              date: dateStr,
+              status: newStatus,
+              updated_by: user?.id,
+            },
+            { onConflict: "room_id,date" }
+          );
+
+        if (error) throw error;
+      }
 
       await logActivity({
         actionType: 'updated',
         entityType: 'Room',
         entityId: roomId,
-        description: `Mengubah status kamar ${room?.name || 'Unknown'} menjadi ${newStatus}`,
+        description: `Mengubah status kamar ${room?.name || 'Unknown'} tanggal ${dateStr} menjadi ${newStatus === 'Aktif' ? 'Ready' : newStatus}`,
       });
 
-      toast.success(`Status kamar berhasil diubah ke ${newStatus}`);
-      fetchRooms();
+      toast.success(`Status kamar ${room?.name} tanggal ${format(selectedDate, "dd MMM")} sudah ${newStatus === 'Aktif' ? 'Ready' : newStatus}`);
+      fetchRoomDailyStatus();
     } catch (error: any) {
       toast.error("Gagal mengubah status kamar");
       console.error(error);
@@ -677,44 +751,49 @@ export default function ScheduleTable({
                 </th>
                 {visibleRooms.map((room) => {
                   const isBlocked = room.status !== "Aktif";
-                  const isKotor = room.status === "Kotor";
+                  const dailyStatus = roomDailyStatus[room.id] || null;
+                  const isKotor = dailyStatus === "Kotor";
+
                   return (
                     <th 
                       key={room.id} 
                       className={`${size.headerPadding} text-left font-medium ${size.headerFont} ${size.minWidth} border-r-2 border-border sticky top-0 bg-muted/50 z-10 ${isBlocked ? "opacity-50" : ""}`}
                     >
-                      <div className={`flex items-center ${size.gapSize}`}>
+                      <div className={`flex items-center ${size.gapSize}`}> 
                         <div
                           className={`${size.dotSize} rounded-full`}
                           style={{ backgroundColor: isKotor ? "#EF4444" : isBlocked ? "#9CA3AF" : "#3B82F6" }}
                         />
                         {room.name}
-                        {isBlocked && (
+
+                        {isKotor ? (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <span 
+                              <span
                                 className={`${size.fontSize} text-muted-foreground cursor-pointer hover:text-primary transition-colors`}
-                                title={isKotor ? "Klik untuk set Ready" : ""}
+                                title="Klik untuk set Ready"
                               >
-                                ({room.status})
+                                (Kotor)
                               </span>
                             </PopoverTrigger>
-                            {isKotor && (
-                              <PopoverContent className="w-48 p-2" side="bottom" align="start">
-                                <div className="space-y-2">
-                                  <p className="text-xs text-muted-foreground">Kamar sedang kotor</p>
-                                  <Button
-                                    size="sm"
-                                    className="w-full bg-green-500 hover:bg-green-600 text-white"
-                                    onClick={() => handleRoomStatusChange(room.id, "Aktif")}
-                                  >
-                                    Set Ready
-                                  </Button>
-                                </div>
-                              </PopoverContent>
-                            )}
+                            <PopoverContent className="w-56 p-2" side="bottom" align="start">
+                              <div className="space-y-2">
+                                <p className="text-xs text-muted-foreground">Kamar sedang kotor (tanggal ini)</p>
+                                <Button
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => handleRoomStatusChange(room.id, "Aktif")}
+                                >
+                                  Set Ready
+                                </Button>
+                              </div>
+                            </PopoverContent>
                           </Popover>
-                        )}
+                        ) : isBlocked ? (
+                          <span className={`${size.fontSize} text-muted-foreground`}>
+                            ({room.status})
+                          </span>
+                        ) : null}
                       </div>
                     </th>
                   );
