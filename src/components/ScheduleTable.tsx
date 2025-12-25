@@ -440,6 +440,32 @@ export default function ScheduleTable({
     }
   };
 
+  const handleRoomStatusChange = async (roomId: string, newStatus: string) => {
+    try {
+      const room = rooms.find(r => r.id === roomId);
+      
+      const { error } = await supabase
+        .from("rooms")
+        .update({ status: newStatus })
+        .eq("id", roomId);
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'updated',
+        entityType: 'Room',
+        entityId: roomId,
+        description: `Mengubah status kamar ${room?.name || 'Unknown'} menjadi ${newStatus}`,
+      });
+
+      toast.success(`Status kamar berhasil diubah ke ${newStatus}`);
+      fetchRooms();
+    } catch (error: any) {
+      toast.error("Gagal mengubah status kamar");
+      console.error(error);
+    }
+  };
+
   // Check if a slot is the start of a booking
   // Also handles bookings that started before the first visible time slot
   const isBookingStart = (roomId: string, time: string) => {
@@ -625,6 +651,7 @@ export default function ScheduleTable({
                 </th>
                 {visibleRooms.map((room) => {
                   const isBlocked = room.status !== "Aktif";
+                  const isKotor = room.status === "Kotor";
                   return (
                     <th 
                       key={room.id} 
@@ -633,10 +660,35 @@ export default function ScheduleTable({
                       <div className={`flex items-center ${size.gapSize}`}>
                         <div
                           className={`${size.dotSize} rounded-full`}
-                          style={{ backgroundColor: isBlocked ? "#9CA3AF" : "#3B82F6" }}
+                          style={{ backgroundColor: isKotor ? "#EF4444" : isBlocked ? "#9CA3AF" : "#3B82F6" }}
                         />
                         {room.name}
-                        {isBlocked && <span className={size.fontSize + " text-muted-foreground"}>({room.status})</span>}
+                        {isBlocked && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <span 
+                                className={`${size.fontSize} text-muted-foreground cursor-pointer hover:text-primary transition-colors`}
+                                title={isKotor ? "Klik untuk set Ready" : ""}
+                              >
+                                ({room.status})
+                              </span>
+                            </PopoverTrigger>
+                            {isKotor && (
+                              <PopoverContent className="w-48 p-2" side="bottom" align="start">
+                                <div className="space-y-2">
+                                  <p className="text-xs text-muted-foreground">Kamar sedang kotor</p>
+                                  <Button
+                                    size="sm"
+                                    className="w-full bg-green-500 hover:bg-green-600 text-white"
+                                    onClick={() => handleRoomStatusChange(room.id, "Aktif")}
+                                  >
+                                    Set Ready
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            )}
+                          </Popover>
+                        )}
                       </div>
                     </th>
                   );
