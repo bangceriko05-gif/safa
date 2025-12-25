@@ -442,6 +442,9 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-6 mt-6">
+            {/* Room Summary - shown for all store types */}
+            <RoomSummary selectedDate={selectedDate} />
+
             {/* Conditional rendering based on store type */}
             {currentStore?.name?.toLowerCase().includes("safa") ? (
               /* PMS Calendar for SAFA Kost */
@@ -457,9 +460,6 @@ export default function Dashboard() {
               <>
                 {/* Date Navigation */}
                 <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
-
-                {/* Room Summary */}
-                <RoomSummary selectedDate={selectedDate} />
 
                 {/* Schedule Table */}
                 <ScheduleTable
