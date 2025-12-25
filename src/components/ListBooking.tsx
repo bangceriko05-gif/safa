@@ -271,13 +271,24 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
       } else if (newStatus === "CO") {
         updateData.checked_out_by = user?.id;
         updateData.checked_out_at = new Date().toISOString();
-        
-        // Update room status to "Kotor" when checkout
+
+        // Mark room as "Kotor" ONLY for this booking date (date-specific)
         if (bookingForRoom?.room_id) {
-          await supabase
-            .from("rooms")
-            .update({ status: "Kotor" })
-            .eq("id", bookingForRoom.room_id);
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+          const { error: dailyError } = await supabase
+            .from("room_daily_status")
+            .upsert(
+              {
+                room_id: bookingForRoom.room_id,
+                date: dateStr,
+                status: "Kotor",
+                updated_by: user?.id,
+              },
+              { onConflict: "room_id,date" }
+            );
+
+          if (dailyError) throw dailyError;
         }
       }
 
