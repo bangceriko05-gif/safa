@@ -85,6 +85,8 @@ export default function PMSCalendar({
     CO: "#6B7280",
     BATAL: "#9CA3AF",
   });
+  // Date-specific room status (from room_daily_status table)
+  const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
 
   // Calculate visible date range (14 days centered on selected date)
   const visibleDates = useMemo(() => {
@@ -121,6 +123,32 @@ export default function PMSCalendar({
       supabase.removeChannel(roomsChannel);
     };
   }, [currentStore]);
+
+  // Fetch room daily status when visible dates change
+  useEffect(() => {
+    if (!currentStore) return;
+    fetchRoomDailyStatus();
+
+    // Realtime subscription for room_daily_status
+    const dailyStatusChannel = supabase
+      .channel(`pms-daily-status-${currentStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_daily_status',
+        },
+        () => {
+          fetchRoomDailyStatus();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(dailyStatusChannel);
+    };
+  }, [currentStore, visibleDates]);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -223,6 +251,38 @@ export default function PMSCalendar({
     }
   };
 
+  const fetchRoomDailyStatus = async () => {
+    try {
+      if (!currentStore) return;
+
+      const startDate = format(visibleDates[0], "yyyy-MM-dd");
+      const endDate = format(visibleDates[visibleDates.length - 1], "yyyy-MM-dd");
+
+      const { data, error } = await supabase
+        .from("room_daily_status")
+        .select("room_id, date, status")
+        .gte("date", startDate)
+        .lte("date", endDate);
+
+      if (error) throw error;
+
+      // Create a map: "roomId-date" -> status
+      const statusMap: Record<string, string> = {};
+      data?.forEach((item) => {
+        statusMap[`${item.room_id}-${item.date}`] = item.status;
+      });
+      setRoomDailyStatus(statusMap);
+    } catch (error) {
+      console.error("Error fetching room daily status:", error);
+    }
+  };
+
+  // Helper to get room status for a specific date
+  const getRoomStatusForDate = (roomId: string, date: Date): string | null => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return roomDailyStatus[`${roomId}-${dateStr}`] || null;
+  };
+
   const fetchBookings = async () => {
     try {
       if (!currentStore) return;
@@ -306,26 +366,45 @@ export default function PMSCalendar({
     }
   };
 
-  const handleRoomStatusChange = async (roomId: string, newStatus: string) => {
+  const handleRoomStatusChange = async (roomId: string, newStatus: string, date: Date) => {
     try {
       const room = rooms.find(r => r.id === roomId);
+      const dateStr = format(date, "yyyy-MM-dd");
       
-      const { error } = await supabase
-        .from("rooms")
-        .update({ status: newStatus })
-        .eq("id", roomId);
+      if (newStatus === 'Aktif') {
+        // Delete the daily status record to mark as ready
+        const { error } = await supabase
+          .from("room_daily_status")
+          .delete()
+          .eq("room_id", roomId)
+          .eq("date", dateStr);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Insert or update the daily status
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        const { error } = await supabase
+          .from("room_daily_status")
+          .upsert({
+            room_id: roomId,
+            date: dateStr,
+            status: newStatus,
+            updated_by: user?.id,
+          }, { onConflict: 'room_id,date' });
+
+        if (error) throw error;
+      }
 
       await logActivity({
         actionType: 'updated',
         entityType: 'Room',
         entityId: roomId,
-        description: `Mengubah status kamar ${room?.name || 'Unknown'} menjadi ${newStatus}`,
+        description: `Mengubah status kamar ${room?.name || 'Unknown'} tanggal ${dateStr} menjadi ${newStatus === 'Aktif' ? 'Ready' : newStatus}`,
       });
 
-      toast.success(`Kamar ${room?.name} sudah ${newStatus === 'Aktif' ? 'Ready' : newStatus}`);
-      fetchRooms();
+      toast.success(`Kamar ${room?.name} tanggal ${format(date, "dd MMM", { locale: idLocale })} sudah ${newStatus === 'Aktif' ? 'Ready' : newStatus}`);
+      fetchRoomDailyStatus();
       window.dispatchEvent(new CustomEvent("booking-changed"));
     } catch (error: any) {
       toast.error("Gagal mengubah status kamar");
@@ -718,8 +797,9 @@ export default function PMSCalendar({
                             );
                           }
 
-                          // Empty cell - show based on room status
-                          const isKotor = room.status === "Kotor";
+                          // Empty cell - show based on date-specific room status
+                          const dailyStatus = getRoomStatusForDate(room.id, date);
+                          const isKotor = dailyStatus === "Kotor";
                           
                           return (
                             <td 
@@ -727,11 +807,11 @@ export default function PMSCalendar({
                               className={`p-1 align-top border-r border-border ${isBlocked && !isKotor ? "bg-muted/30" : ""}`}
                             >
                               {isKotor ? (
-                                // Room is dirty - show "Kotor" with option to set Ready
+                                // Room is dirty on this date - show "Kotor" with option to set Ready
                                 <Button
                                   variant="ghost"
                                   className="w-full h-full min-h-[60px] bg-destructive/10 hover:bg-primary/10 border border-destructive/30 hover:border-primary/40 transition-all group"
-                                  onClick={() => handleRoomStatusChange(room.id, "Aktif")}
+                                  onClick={() => handleRoomStatusChange(room.id, "Aktif", date)}
                                   title="Klik untuk set Ready"
                                 >
                                   <span className="text-destructive font-semibold text-xs group-hover:hidden">Kotor</span>

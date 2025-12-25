@@ -723,6 +723,41 @@ export type Database = {
           },
         ]
       }
+      room_daily_status: {
+        Row: {
+          date: string
+          id: string
+          room_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          date: string
+          id?: string
+          room_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          date?: string
+          id?: string
+          room_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_daily_status_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_variants: {
         Row: {
           created_at: string
