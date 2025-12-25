@@ -99,6 +99,27 @@ export default function PMSCalendar({
     fetchRooms();
     fetchUserPermissions();
     fetchStatusColors();
+
+    // Realtime subscription for rooms
+    const roomsChannel = supabase
+      .channel(`pms-rooms-${currentStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms',
+          filter: `store_id=eq.${currentStore.id}`,
+        },
+        () => {
+          fetchRooms();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(roomsChannel);
+    };
   }, [currentStore]);
 
   useEffect(() => {
@@ -282,6 +303,33 @@ export default function PMSCalendar({
       console.error(error);
     } finally {
       setDeleteBookingId(null);
+    }
+  };
+
+  const handleRoomStatusChange = async (roomId: string, newStatus: string) => {
+    try {
+      const room = rooms.find(r => r.id === roomId);
+      
+      const { error } = await supabase
+        .from("rooms")
+        .update({ status: newStatus })
+        .eq("id", roomId);
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'updated',
+        entityType: 'Room',
+        entityId: roomId,
+        description: `Mengubah status kamar ${room?.name || 'Unknown'} menjadi ${newStatus}`,
+      });
+
+      toast.success(`Kamar ${room?.name} sudah ${newStatus === 'Aktif' ? 'Ready' : newStatus}`);
+      fetchRooms();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
+    } catch (error: any) {
+      toast.error("Gagal mengubah status kamar");
+      console.error(error);
     }
   };
 
@@ -670,23 +718,37 @@ export default function PMSCalendar({
                             );
                           }
 
-                          // Empty cell - can add booking
+                          // Empty cell - show based on room status
+                          const isKotor = room.status === "Kotor";
+                          
                           return (
                             <td 
                               key={date.toISOString()} 
-                              className={`p-1 align-top border-r border-border ${isBlocked ? "bg-muted/30" : ""}`}
+                              className={`p-1 align-top border-r border-border ${isBlocked && !isKotor ? "bg-muted/30" : ""}`}
                             >
-                              {!isBlocked && hasPermission("create_bookings") ? (
+                              {isKotor ? (
+                                // Room is dirty - show "Kotor" with option to set Ready
                                 <Button
                                   variant="ghost"
-                                  className="w-full h-full min-h-[60px] border border-dashed border-border/50 hover:border-primary hover:bg-primary/5 transition-all"
+                                  className="w-full h-full min-h-[60px] bg-red-100 hover:bg-green-100 border border-red-300 hover:border-green-400 transition-all group"
+                                  onClick={() => handleRoomStatusChange(room.id, "Aktif")}
+                                  title="Klik untuk set Ready"
+                                >
+                                  <span className="text-red-600 font-semibold text-xs group-hover:hidden">Kotor</span>
+                                  <span className="text-green-600 font-semibold text-xs hidden group-hover:inline">Set Ready</span>
+                                </Button>
+                              ) : !isBlocked && hasPermission("create_bookings") ? (
+                                // Room is available - show "Ready" button to add booking
+                                <Button
+                                  variant="ghost"
+                                  className="w-full h-full min-h-[60px] bg-green-50 hover:bg-green-100 border border-dashed border-green-300 hover:border-green-500 transition-all"
                                   onClick={() => onAddBooking(room.id, dateStr)}
                                 >
-                                  <Plus className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-green-600 font-semibold text-xs">Ready</span>
                                 </Button>
                               ) : (
                                 <div className="w-full h-full min-h-[60px] flex items-center justify-center text-xs text-muted-foreground">
-                                  {isBlocked ? "Tidak tersedia" : "-"}
+                                  {isBlocked ? room.status : "-"}
                                 </div>
                               )}
                             </td>
