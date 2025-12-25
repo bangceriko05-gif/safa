@@ -258,12 +258,27 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Get room_id from booking for room status update
+      const { data: bookingForRoom } = await supabase
+        .from("bookings")
+        .select("room_id")
+        .eq("id", bookingId)
+        .single();
+
       if (newStatus === "CI") {
         updateData.checked_in_by = user?.id;
         updateData.checked_in_at = new Date().toISOString();
       } else if (newStatus === "CO") {
         updateData.checked_out_by = user?.id;
         updateData.checked_out_at = new Date().toISOString();
+        
+        // Update room status to "Kotor" when checkout
+        if (bookingForRoom?.room_id) {
+          await supabase
+            .from("rooms")
+            .update({ status: "Kotor" })
+            .eq("id", bookingForRoom.room_id);
+        }
       }
 
       const { error } = await supabase

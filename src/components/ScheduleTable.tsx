@@ -273,12 +273,13 @@ export default function ScheduleTable({
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-      // Fetch all bookings for the date
+      // Fetch all bookings for the date (exclude CO status - they should not appear on calendar)
       const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select("*, bid")
         .eq("date", dateStr)
-        .eq("store_id", currentStore.id);
+        .eq("store_id", currentStore.id)
+        .neq("status", "CO");
 
       if (error) throw error;
       
