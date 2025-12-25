@@ -210,12 +210,14 @@ export default function PMSCalendar({
       const startDate = format(visibleDates[0], "yyyy-MM-dd");
       const endDate = format(visibleDates[visibleDates.length - 1], "yyyy-MM-dd");
 
+      // Exclude CO (checked-out) bookings from calendar display
       const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select("*, bid")
         .eq("store_id", currentStore.id)
         .gte("date", startDate)
-        .lte("date", endDate);
+        .lte("date", endDate)
+        .neq("status", "CO");
 
       if (error) throw error;
       

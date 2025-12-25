@@ -406,19 +406,42 @@ export default function ScheduleTable({
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
-      // Get booking details for logging
+      // Get booking details for logging and room update
       const { data: bookingData } = await supabase
         .from("bookings")
         .select(`
           customer_name,
+          room_id,
           rooms (name)
         `)
         .eq("id", bookingId)
         .single();
 
+      // Get current user for tracking who made the change
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Prepare update data
+      const updateData: any = { status: newStatus };
+      
+      if (newStatus === "CI") {
+        updateData.checked_in_by = user?.id;
+        updateData.checked_in_at = new Date().toISOString();
+      } else if (newStatus === "CO") {
+        updateData.checked_out_by = user?.id;
+        updateData.checked_out_at = new Date().toISOString();
+        
+        // Update room status to "Kotor" when checkout
+        if (bookingData?.room_id) {
+          await supabase
+            .from("rooms")
+            .update({ status: "Kotor" })
+            .eq("id", bookingData.room_id);
+        }
+      }
+
       const { error } = await supabase
         .from("bookings")
-        .update({ status: newStatus })
+        .update(updateData)
         .eq("id", bookingId);
 
       if (error) throw error;
@@ -435,6 +458,8 @@ export default function ScheduleTable({
 
       toast.success(`Status berhasil diubah ke ${newStatus}`);
       fetchBookings();
+      fetchRooms();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
     } catch (error: any) {
       toast.error("Gagal mengubah status");
       console.error(error);
