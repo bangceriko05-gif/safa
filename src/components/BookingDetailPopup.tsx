@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Trash2, Plus } from "lucide-react";
 
 interface BookingDetailPopupProps {
   isOpen: boolean;
@@ -47,15 +47,19 @@ interface BookingDetail {
   reference_no?: string | null;
 }
 
-interface UserProfile {
+interface ActivityLogEntry {
   id: string;
-  name: string;
+  action_type: string;
+  description: string;
+  user_name: string;
+  created_at: string;
 }
 
 interface TrackingEntry {
   action: string;
   user_name: string;
   timestamp: string;
+  description: string;
   icon: React.ReactNode;
 }
 
@@ -69,6 +73,7 @@ export default function BookingDetailPopup({
   const [loading, setLoading] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
 
   useEffect(() => {
     if (isOpen && bookingId) {
@@ -123,6 +128,16 @@ export default function BookingDetailPopup({
 
       setProducts(productsData || []);
 
+      // Fetch activity logs for this booking
+      const { data: logsData } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .eq("entity_type", "Booking")
+        .eq("entity_id", bookingId)
+        .order("created_at", { ascending: true });
+
+      setActivityLogs(logsData || []);
+
       // Fetch variant name if variant_id exists
       let variantName = undefined;
       if (bookingData.variant_id) {
@@ -165,60 +180,46 @@ export default function BookingDetailPopup({
     return statusColors[status || "BO"] || "#87CEEB";
   };
 
+  const getActionIcon = (actionType: string, description: string) => {
+    if (actionType === "created") {
+      return <Plus className="h-4 w-4 text-blue-500" />;
+    } else if (actionType === "updated") {
+      if (description.toLowerCase().includes("check in") || description.toLowerCase().includes("ci")) {
+        return <LogIn className="h-4 w-4 text-emerald-500" />;
+      } else if (description.toLowerCase().includes("check out") || description.toLowerCase().includes("co")) {
+        return <LogOut className="h-4 w-4 text-orange-500" />;
+      } else if (description.toLowerCase().includes("batal")) {
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      } else if (description.toLowerCase().includes("konfirmasi") || description.toLowerCase().includes("bo")) {
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      }
+      return <Edit className="h-4 w-4 text-yellow-500" />;
+    } else if (actionType === "deleted") {
+      return <Trash2 className="h-4 w-4 text-red-500" />;
+    } else if (actionType === "check-in") {
+      return <LogIn className="h-4 w-4 text-emerald-500" />;
+    } else if (actionType === "check-out") {
+      return <LogOut className="h-4 w-4 text-orange-500" />;
+    } else if (actionType === "confirm") {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    }
+    return <User className="h-4 w-4 text-gray-500" />;
+  };
+
   const getTrackingHistory = (): TrackingEntry[] => {
-    if (!booking) return [];
-
-    const entries: TrackingEntry[] = [];
-
-    // Created
-    entries.push({
-      action: "Dibuat",
-      user_name: profiles[booking.created_by] || "Unknown",
-      timestamp: booking.created_at,
-      icon: <User className="h-4 w-4 text-blue-500" />,
-    });
-
-    // Confirmed
-    if (booking.confirmed_at && booking.confirmed_by) {
-      entries.push({
-        action: "Dikonfirmasi",
-        user_name: profiles[booking.confirmed_by] || "Unknown",
-        timestamp: booking.confirmed_at,
-        icon: <CheckCircle className="h-4 w-4 text-green-500" />,
-      });
-    }
-
-    // Check In
-    if (booking.checked_in_at && booking.checked_in_by) {
-      entries.push({
-        action: "Check In",
-        user_name: profiles[booking.checked_in_by] || "Unknown",
-        timestamp: booking.checked_in_at,
-        icon: <LogIn className="h-4 w-4 text-emerald-500" />,
-      });
-    }
-
-    // Check Out
-    if (booking.checked_out_at && booking.checked_out_by) {
-      entries.push({
-        action: "Check Out",
-        user_name: profiles[booking.checked_out_by] || "Unknown",
-        timestamp: booking.checked_out_at,
-        icon: <LogOut className="h-4 w-4 text-orange-500" />,
-      });
-    }
-
-    // BATAL
-    if (booking.status === "BATAL") {
-      entries.push({
-        action: "Dibatalkan",
-        user_name: "-",
-        timestamp: booking.created_at,
-        icon: <AlertCircle className="h-4 w-4 text-red-500" />,
-      });
-    }
-
-    return entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    // Use activity logs as the primary source
+    return activityLogs.map((log) => ({
+      action: log.action_type === "created" ? "Dibuat" : 
+              log.action_type === "updated" ? "Diubah" : 
+              log.action_type === "deleted" ? "Dihapus" :
+              log.action_type === "check-in" ? "Check In" :
+              log.action_type === "check-out" ? "Check Out" :
+              log.action_type === "confirm" ? "Dikonfirmasi" : log.action_type,
+      user_name: log.user_name,
+      timestamp: log.created_at,
+      description: log.description,
+      icon: getActionIcon(log.action_type, log.description),
+    }));
   };
 
   const formatCurrency = (amount: number) => {
@@ -347,22 +348,26 @@ export default function BookingDetailPopup({
                 <Clock className="h-4 w-4" />
                 Riwayat Tracking
               </h4>
-              <div className="space-y-3">
-                {getTrackingHistory().map((entry, index) => (
-                  <div key={index} className="flex items-start gap-3 text-sm">
-                    <div className="mt-0.5">{entry.icon}</div>
-                    <div className="flex-1">
-                      <div className="font-medium">{entry.action}</div>
-                      <div className="text-muted-foreground">
-                        oleh {entry.user_name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDateTime(entry.timestamp)}
+              {getTrackingHistory().length === 0 ? (
+                <p className="text-sm text-muted-foreground">Belum ada riwayat aktivitas</p>
+              ) : (
+                <div className="space-y-3">
+                  {getTrackingHistory().map((entry, index) => (
+                    <div key={index} className="flex items-start gap-3 text-sm border-l-2 border-muted pl-3 py-1">
+                      <div className="mt-0.5">{entry.icon}</div>
+                      <div className="flex-1">
+                        <div className="font-medium">{entry.action}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {entry.description}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          oleh <span className="font-medium">{entry.user_name}</span> • {formatDateTime(entry.timestamp)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
