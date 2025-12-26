@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus, FileDown, UserCog, Calendar, History, Users, FileText, Shield, Settings, Package, Store, Inbox, Upload, List } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, List } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -32,7 +32,6 @@ import NotificationSettings from "./NotificationSettings";
 import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
-import DataImport from "./DataImport";
 import ListBooking from "./ListBooking";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
@@ -385,8 +384,7 @@ export default function Dashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full max-w-6xl" style={{ 
             gridTemplateColumns: 
-              userRole === "admin" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" :
-              userRole === "leader" ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
+              (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
               "1fr 1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
@@ -409,19 +407,11 @@ export default function Dashboard() {
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan
             </TabsTrigger>
-            <TabsTrigger value="requests">
-              <Inbox className="mr-2 h-4 w-4" />
-              Request
-            </TabsTrigger>
             {(userRole === "admin" || userRole === "leader") && (
               <>
                 <TabsTrigger value="rooms">
                   <Package className="mr-2 h-4 w-4" />
                   Produk & Inventori
-                </TabsTrigger>
-                <TabsTrigger value="import">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
                 </TabsTrigger>
                 <TabsTrigger value="activity">
                   <History className="mr-2 h-4 w-4" />
@@ -432,12 +422,6 @@ export default function Dashboard() {
                   Pengguna
                 </TabsTrigger>
               </>
-            )}
-            {userRole === "admin" && (
-              <TabsTrigger value="permissions">
-                <Shield className="mr-2 h-4 w-4" />
-                Permission
-              </TabsTrigger>
             )}
           </TabsList>
 
@@ -490,35 +474,23 @@ export default function Dashboard() {
             <NotificationSettings />
           </TabsContent>
 
-          <TabsContent value="requests" className="mt-6">
-            <BookingRequestsManagement />
-          </TabsContent>
-
           {(userRole === "admin" || userRole === "leader") && (
             <>
-
               <TabsContent value="rooms" className="mt-6">
                 <RoomManagement />
-              </TabsContent>
-
-              <TabsContent value="import" className="mt-6">
-                <DataImport />
               </TabsContent>
               
               <TabsContent value="activity" className="mt-6">
                 <ActivityLog />
               </TabsContent>
 
-              <TabsContent value="users" className="mt-6">
+              <TabsContent value="users" className="mt-6 space-y-6">
                 <UserManagement />
+                {userRole === "admin" && (
+                  <PermissionManagement />
+                )}
               </TabsContent>
             </>
-          )}
-
-          {userRole === "admin" && (
-            <TabsContent value="permissions" className="mt-6">
-              <PermissionManagement />
-            </TabsContent>
           )}
         </Tabs>
 

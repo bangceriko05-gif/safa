@@ -23,13 +23,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, MoreHorizontal, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo } from "lucide-react";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
+import BookingDetailPopup from "./BookingDetailPopup";
 
 interface ListBookingProps {
   userRole: string | null;
@@ -66,6 +67,8 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
     CO: "#6B7280",
     BATAL: "#9CA3AF",
   });
+  const [detailPopupOpen, setDetailPopupOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -495,13 +498,13 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>BID</TableHead>
                   <TableHead>Nama Customer</TableHead>
                   <TableHead>Kamar</TableHead>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>{isPMSMode ? "Durasi" : "Jam"}</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -512,6 +515,18 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                       isStatusBatal(booking.status) && "opacity-60 bg-muted/30"
                     )}
                   >
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedBookingId(booking.id);
+                          setDetailPopupOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       {booking.bid || "-"}
                     </TableCell>
@@ -529,23 +544,26 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                       }
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        style={{ 
-                          backgroundColor: getStatusColor(booking.status),
-                          color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937"
-                        }}
-                      >
-                        {getStatusLabel(booking.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="gap-1 h-7 px-2"
+                            disabled={!canChangeStatus(booking) && !hasPermission("edit_bookings")}
+                          >
+                            <Badge 
+                              style={{ 
+                                backgroundColor: getStatusColor(booking.status),
+                                color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937"
+                              }}
+                            >
+                              {getStatusLabel(booking.status)}
+                            </Badge>
+                            <ChevronDown className="h-3 w-3" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="bg-popover">
                           {/* Edit Button */}
                           {hasPermission("edit_bookings") && (
                             <DropdownMenuItem 
@@ -560,21 +578,45 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                           {/* Status Change Options - requires edit_bookings permission */}
                           {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "BO" && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
-                              <Eye className="mr-2 h-4 w-4" />
+                              <Badge 
+                                className="mr-2"
+                                style={{ 
+                                  backgroundColor: statusColors.BO,
+                                  color: "#1F2937"
+                                }}
+                              >
+                                BO
+                              </Badge>
                               Reservasi
                             </DropdownMenuItem>
                           )}
                           
                           {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CI" && !isStatusBatal(booking.status) && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CI", booking.status)}>
-                              <LogIn className="mr-2 h-4 w-4" />
+                              <Badge 
+                                className="mr-2"
+                                style={{ 
+                                  backgroundColor: statusColors.CI,
+                                  color: "#1F2937"
+                                }}
+                              >
+                                CI
+                              </Badge>
                               Check In
                             </DropdownMenuItem>
                           )}
                           
                           {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CO" && !isStatusBatal(booking.status) && (
                             <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CO", booking.status)}>
-                              <LogOut className="mr-2 h-4 w-4" />
+                              <Badge 
+                                className="mr-2"
+                                style={{ 
+                                  backgroundColor: statusColors.CO,
+                                  color: "#fff"
+                                }}
+                              >
+                                CO
+                              </Badge>
                               Check Out
                             </DropdownMenuItem>
                           )}
@@ -618,6 +660,17 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
             </Table>
           </div>
         )}
+
+        {/* Booking Detail Popup */}
+        <BookingDetailPopup
+          isOpen={detailPopupOpen}
+          onClose={() => {
+            setDetailPopupOpen(false);
+            setSelectedBookingId(null);
+          }}
+          bookingId={selectedBookingId}
+          statusColors={statusColors}
+        />
       </CardContent>
     </Card>
   );
