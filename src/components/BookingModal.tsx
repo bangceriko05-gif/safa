@@ -738,8 +738,14 @@ export default function BookingModal({
     return (endHour - startHour) + (endMinute - startMinute) / 60;
   };
 
+  // Calculate duration - for monthly variants, use the booking_duration_value instead of nights count
+  const selectedVariantForDuration = roomVariants.find(v => v.id === formData.variant_id);
+  const isMonthlyVariant = selectedVariantForDuration?.booking_duration_type === "months";
+  
   const duration = isPMSMode 
-    ? (checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0)
+    ? (isMonthlyVariant 
+        ? (selectedVariantForDuration?.booking_duration_value || 1) // Use variant's duration value for monthly
+        : (checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0))
     : calculateDuration(formData.start_time, formData.end_time);
 
   const handleSubmit = async (e: React.FormEvent) => {
