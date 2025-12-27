@@ -27,9 +27,7 @@ import CustomerManagement from "./CustomerManagement";
 import { ActivityLog } from "./ActivityLog";
 import Reports from "./Reports";
 import PermissionManagement from "./PermissionManagement";
-import DisplaySettings from "./DisplaySettings";
-import NotificationSettings from "./NotificationSettings";
-import VariantScheduleSettings from "./VariantScheduleSettings";
+import SettingsPage from "./SettingsPage";
 import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
@@ -470,9 +468,8 @@ export default function Dashboard() {
             <Reports />
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-6 space-y-6">
-            <DisplaySettings userRole={userRole} />
-            <NotificationSettings />
+          <TabsContent value="settings" className="mt-6">
+            <SettingsPage userRole={userRole} />
           </TabsContent>
 
           {(userRole === "admin" || userRole === "leader") && (
