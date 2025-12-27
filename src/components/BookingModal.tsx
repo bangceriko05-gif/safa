@@ -228,7 +228,10 @@ export default function BookingModal({
     }
   }, [formData.dual_payment, formData.price, formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, isPrice2ManuallyEdited, checkInDate, checkOutDate, isPMSMode]);
 
+  // Initialize form when modal opens or data changes
   useEffect(() => {
+    if (!isOpen) return; // Only run when modal is open
+    
     if (editingBooking) {
       // Format time from "HH:MM:SS" or "HH:MM" to "HH:MM"
       const formatTime = (time: string) => {
@@ -275,6 +278,7 @@ export default function BookingModal({
       // Fetch booking products
       fetchBookingProducts(editingBooking.id);
     } else if (selectedSlot && selectedSlot.roomId) {
+      // New booking from slot click - auto-fill room_id
       setFormData({
         customer_name: "",
         phone: "",
@@ -343,7 +347,7 @@ export default function BookingModal({
         setCheckOutDate(addDays(selectedDate, 1));
       }
     }
-  }, [editingBooking, selectedSlot, isPMSMode, selectedDate]);
+  }, [isOpen, editingBooking, selectedSlot, isPMSMode, selectedDate]);
 
   const fetchRooms = async () => {
     try {
