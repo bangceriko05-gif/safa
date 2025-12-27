@@ -738,15 +738,14 @@ export default function BookingModal({
     return (endHour - startHour) + (endMinute - startMinute) / 60;
   };
 
-  // Calculate duration - for monthly variants, use the booking_duration_value instead of nights count
-  const selectedVariantForDuration = roomVariants.find(v => v.id === formData.variant_id);
-  const isMonthlyVariant = selectedVariantForDuration?.booking_duration_type === "months";
-  
+  // Calculate duration in nights/days for blocking calendar
+  // For monthly variants, use the actual number of days between check-in and check-out
   const duration = isPMSMode 
-    ? (isMonthlyVariant 
-        ? (selectedVariantForDuration?.booking_duration_value || 1) // Use variant's duration value for monthly
-        : (checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0))
+    ? (checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0)
     : calculateDuration(formData.start_time, formData.end_time);
+  
+  // Ensure duration is at least 1 for valid bookings
+  const finalDuration = duration > 0 ? duration : 1;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -924,7 +923,7 @@ export default function BookingModal({
         reference_no_2: formData.reference_no_2 || null,
         status: formData.status,
         date: dateStr,
-        duration,
+        duration: finalDuration,
         price: parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
         discount_type: formData.has_discount ? formData.discount_type : null,
@@ -1594,17 +1593,18 @@ export default function BookingModal({
                           Rp {selectedVariant?.price.toLocaleString('id-ID') || '0'}
                         </span>
                       </div>
-                      {/* Only show duration if not monthly variant */}
-                      {!isMonthlyVariant && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{isPMSMode ? "Total Malam:" : "Total Jam:"}</span>
-                          <span className="font-medium">{isPMSMode ? `${duration} malam` : `${duration.toFixed(1)} jam`}</span>
-                        </div>
-                      )}
-                      {isMonthlyVariant && (
+                      {/* Show duration info */}
+                      {isMonthlyVariant ? (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Durasi:</span>
-                          <span className="font-medium">{selectedVariant?.booking_duration_value || 1} bulan</span>
+                          <span className="font-medium">
+                            {selectedVariant?.booking_duration_value || 1} bulan ({finalDuration} malam)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{isPMSMode ? "Total Malam:" : "Total Jam:"}</span>
+                          <span className="font-medium">{isPMSMode ? `${finalDuration} malam` : `${duration.toFixed(1)} jam`}</span>
                         </div>
                       )}
                     </>
