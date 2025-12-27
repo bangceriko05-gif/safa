@@ -170,6 +170,11 @@ export default function BookingModal({
       if (formData.variant_id && checkInDate && checkOutDate) {
         const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
         if (selectedVariant) {
+          // If variant has monthly duration type, price is already for the full period - don't multiply by nights
+          if (selectedVariant.booking_duration_type === "months") {
+            return selectedVariant.price;
+          }
+          
           const nights = differenceInDays(checkOutDate, checkInDate);
           if (nights > 0) {
             return selectedVariant.price * nights;
@@ -1563,27 +1568,42 @@ export default function BookingModal({
               <h3 className="font-semibold text-base border-b pb-2">Billing / Nota</h3>
               
               <div className="space-y-2 text-sm">
-                {formData.variant_id && roomVariants.length > 0 && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Mode:</span>
-                      <span className="font-medium">
-                        {roomVariants.find(v => v.id === formData.variant_id)?.variant_name || '-'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Harga per jam:</span>
-                      <span className="font-medium">
-                        Rp {roomVariants.find(v => v.id === formData.variant_id)?.price.toLocaleString('id-ID') || '0'}
-                      </span>
-                    </div>
-                  </>
-                )}
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{isPMSMode ? "Total Malam:" : "Total Jam:"}</span>
-                  <span className="font-medium">{isPMSMode ? `${duration} malam` : `${duration.toFixed(1)} jam`}</span>
-                </div>
+                {formData.variant_id && roomVariants.length > 0 && (() => {
+                  const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
+                  const isMonthlyVariant = selectedVariant?.booking_duration_type === "months";
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Mode:</span>
+                        <span className="font-medium">
+                          {selectedVariant?.variant_name || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          {isMonthlyVariant ? "Harga per bulan:" : isPMSMode ? "Harga per malam:" : "Harga per jam:"}
+                        </span>
+                        <span className="font-medium">
+                          Rp {selectedVariant?.price.toLocaleString('id-ID') || '0'}
+                        </span>
+                      </div>
+                      {/* Only show duration if not monthly variant */}
+                      {!isMonthlyVariant && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{isPMSMode ? "Total Malam:" : "Total Jam:"}</span>
+                          <span className="font-medium">{isPMSMode ? `${duration} malam` : `${duration.toFixed(1)} jam`}</span>
+                        </div>
+                      )}
+                      {isMonthlyVariant && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Durasi:</span>
+                          <span className="font-medium">{selectedVariant?.booking_duration_value || 1} bulan</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {selectedProducts.length > 0 && (
                   <>
