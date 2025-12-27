@@ -61,6 +61,10 @@ interface RoomVariant {
   variant_name: string;
   duration: number;
   price: number;
+  visibility_type?: string | null;
+  visible_days?: number[] | null;
+  booking_duration_type?: string | null;
+  booking_duration_value?: number | null;
 }
 
 interface Product {
@@ -435,11 +439,82 @@ export default function BookingModal({
     }
   };
 
+  // Filter variants based on selected date's day of week
+  const getFilteredVariants = useMemo(() => {
+    const bookingDate = isPMSMode ? checkInDate : selectedDate;
+    if (!bookingDate) return roomVariants;
+
+    const dayOfWeek = bookingDate.getDay(); // 0 = Sunday, 6 = Saturday
+
+    return roomVariants.filter(variant => {
+      const visibilityType = variant.visibility_type || "all";
+      const visibleDays = variant.visible_days;
+
+      if (visibilityType === "all" || !visibilityType) {
+        return true;
+      }
+
+      if (visibilityType === "weekdays") {
+        // Show only on weekdays (Mon-Fri: 1-5)
+        return dayOfWeek >= 1 && dayOfWeek <= 5;
+      }
+
+      if (visibilityType === "weekends") {
+        // Show only on weekends (Sat-Sun: 0, 6)
+        return dayOfWeek === 0 || dayOfWeek === 6;
+      }
+
+      if (visibilityType === "specific_days" && visibleDays) {
+        // Show only on specific days
+        return visibleDays.includes(dayOfWeek);
+      }
+
+      return true;
+    });
+  }, [roomVariants, selectedDate, checkInDate, isPMSMode]);
+
+  // Calculate booking end date based on variant duration settings
+  const calculateBookingEndDate = (variant: RoomVariant, startDate: Date): Date => {
+    const durationType = variant.booking_duration_type || "hours";
+    const durationValue = variant.booking_duration_value || variant.duration || 1;
+
+    const endDate = new Date(startDate);
+
+    switch (durationType) {
+      case "months":
+        // Same date next month (not 30 days)
+        endDate.setMonth(endDate.getMonth() + durationValue);
+        break;
+      case "weeks":
+        endDate.setDate(endDate.getDate() + (durationValue * 7));
+        break;
+      case "days":
+        endDate.setDate(endDate.getDate() + durationValue);
+        break;
+      case "hours":
+      default:
+        // For hours, we don't modify the date, just time calculation happens elsewhere
+        endDate.setHours(endDate.getHours() + durationValue);
+        break;
+    }
+
+    return endDate;
+  };
+
   const handleVariantChange = (variantId: string) => {
     const selectedVariant = roomVariants.find(v => v.id === variantId);
     if (selectedVariant) {
-      // Calculate end time based on start time and duration
-      if (formData.start_time) {
+      // For PMS mode with duration types (months, weeks, days), auto-set checkout date
+      if (isPMSMode && checkInDate) {
+        const durationType = selectedVariant.booking_duration_type || "hours";
+        if (durationType !== "hours") {
+          const newCheckoutDate = calculateBookingEndDate(selectedVariant, checkInDate);
+          setCheckOutDate(newCheckoutDate);
+        }
+      }
+      
+      // Calculate end time based on start time and duration (for non-PMS mode)
+      if (formData.start_time && !isPMSMode) {
         const [startHour, startMinute] = formData.start_time.split(":").map(Number);
         const totalMinutes = startHour * 60 + startMinute + selectedVariant.duration * 60;
         const endHour = Math.floor(totalMinutes / 60) % 24;
@@ -1123,7 +1198,7 @@ export default function BookingModal({
           {formData.room_id && (
             <div className="space-y-2">
               <Label htmlFor="variant_id">Varian Kamar *</Label>
-              {roomVariants.length > 0 ? (
+              {getFilteredVariants.length > 0 ? (
                 <>
                   <Select
                     value={formData.variant_id}
@@ -1134,17 +1209,35 @@ export default function BookingModal({
                       <SelectValue placeholder="Pilih varian" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {roomVariants.map((variant) => (
-                        <SelectItem key={variant.id} value={variant.id}>
-                          {variant.variant_name} - Rp {variant.price.toLocaleString('id-ID')}
-                        </SelectItem>
-                      ))}
+                      {getFilteredVariants.map((variant) => {
+                        const durationType = variant.booking_duration_type || "hours";
+                        const durationValue = variant.booking_duration_value || variant.duration || 1;
+                        const durationLabel = durationType === "months" ? `${durationValue} bulan` :
+                                             durationType === "weeks" ? `${durationValue} minggu` :
+                                             durationType === "days" ? `${durationValue} hari` :
+                                             `${durationValue} jam`;
+                        
+                        return (
+                          <SelectItem key={variant.id} value={variant.id}>
+                            {variant.variant_name} - Rp {variant.price.toLocaleString('id-ID')} ({durationLabel})
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-muted-foreground">
+                    {roomVariants.length !== getFilteredVariants.length && (
+                      <span className="text-amber-600">
+                        {roomVariants.length - getFilteredVariants.length} varian tidak ditampilkan (tidak tersedia di hari ini). 
+                      </span>
+                    )}
                     Wajib memilih varian untuk mengisi harga otomatis
                   </p>
                 </>
+              ) : roomVariants.length > 0 ? (
+                <div className="text-sm text-amber-600 p-3 bg-amber-50 rounded-md border border-amber-200">
+                  Tidak ada varian yang tersedia untuk hari ini. Varian kamar ini hanya tersedia di hari-hari tertentu.
+                </div>
               ) : (
                 <div className="text-sm text-red-500 p-3 bg-red-50 rounded-md border border-red-200">
                   Belum ada varian untuk kamar ini. Silakan tambahkan varian kamar terlebih dahulu di menu Pengaturan.
