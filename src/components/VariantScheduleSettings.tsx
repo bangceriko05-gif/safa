@@ -34,11 +34,17 @@ interface RoomVariantExtended {
   visible_days: number[] | null;
   booking_duration_type: string | null;
   booking_duration_value: number | null;
+  room_name?: string;
 }
 
-interface Room {
-  id: string;
-  name: string;
+interface UniqueVariant {
+  variant_name: string;
+  visibility_type: string | null;
+  visible_days: number[] | null;
+  booking_duration_type: string | null;
+  booking_duration_value: number | null;
+  room_count: number;
+  rooms: string[];
 }
 
 interface VariantScheduleSettingsProps {
@@ -75,10 +81,8 @@ export default function VariantScheduleSettings({
   onClose,
 }: VariantScheduleSettingsProps) {
   const { currentStore } = useStore();
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [variants, setVariants] = useState<RoomVariantExtended[]>([]);
-  const [editingVariant, setEditingVariant] = useState<RoomVariantExtended | null>(null);
+  const [uniqueVariants, setUniqueVariants] = useState<UniqueVariant[]>([]);
+  const [editingVariant, setEditingVariant] = useState<UniqueVariant | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Form state
@@ -89,54 +93,66 @@ export default function VariantScheduleSettings({
 
   useEffect(() => {
     if (currentStore && isOpen) {
-      fetchRooms();
+      fetchAllVariants();
     }
   }, [currentStore, isOpen]);
 
-  useEffect(() => {
-    if (selectedRoom) {
-      fetchVariants(selectedRoom);
-    } else {
-      setVariants([]);
-    }
-  }, [selectedRoom]);
-
-  const fetchRooms = async () => {
-    if (!currentStore) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("id, name")
-        .eq("store_id", currentStore.id)
-        .order("name");
-
-      if (error) throw error;
-      setRooms(data || []);
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
-    }
-  };
-
-  const fetchVariants = async (roomId: string) => {
+  const fetchAllVariants = async () => {
     if (!currentStore) return;
 
     try {
+      // Fetch all variants with room names
       const { data, error } = await supabase
         .from("room_variants")
-        .select("*")
-        .eq("room_id", roomId)
+        .select(`
+          id,
+          room_id,
+          variant_name,
+          duration,
+          price,
+          is_active,
+          visibility_type,
+          visible_days,
+          booking_duration_type,
+          booking_duration_value,
+          rooms!inner(name)
+        `)
         .eq("store_id", currentStore.id)
         .order("variant_name");
 
       if (error) throw error;
-      setVariants(data as RoomVariantExtended[] || []);
+
+      // Group variants by name
+      const variantMap = new Map<string, UniqueVariant>();
+      
+      (data || []).forEach((variant: any) => {
+        const variantName = variant.variant_name;
+        const roomName = variant.rooms?.name || "Unknown";
+        
+        if (variantMap.has(variantName)) {
+          const existing = variantMap.get(variantName)!;
+          existing.room_count++;
+          existing.rooms.push(roomName);
+        } else {
+          variantMap.set(variantName, {
+            variant_name: variantName,
+            visibility_type: variant.visibility_type,
+            visible_days: variant.visible_days,
+            booking_duration_type: variant.booking_duration_type,
+            booking_duration_value: variant.booking_duration_value,
+            room_count: 1,
+            rooms: [roomName],
+          });
+        }
+      });
+
+      setUniqueVariants(Array.from(variantMap.values()));
     } catch (error) {
       console.error("Error fetching variants:", error);
     }
   };
 
-  const handleEditVariant = (variant: RoomVariantExtended) => {
+  const handleEditVariant = (variant: UniqueVariant) => {
     setEditingVariant(variant);
     setVisibilityType(variant.visibility_type || "all");
     setVisibleDays(variant.visible_days || []);
@@ -151,7 +167,7 @@ export default function VariantScheduleSettings({
   };
 
   const handleSaveSettings = async () => {
-    if (!editingVariant) return;
+    if (!editingVariant || !currentStore) return;
 
     setLoading(true);
     try {
@@ -164,18 +180,18 @@ export default function VariantScheduleSettings({
         booking_duration_value: parseInt(durationValue) || 1,
       };
 
+      // Update ALL variants with the same name in this store
       const { error } = await supabase
         .from("room_variants")
         .update(updateData)
-        .eq("id", editingVariant.id);
+        .eq("store_id", currentStore.id)
+        .eq("variant_name", editingVariant.variant_name);
 
       if (error) throw error;
 
-      toast.success("Pengaturan varian berhasil disimpan");
+      toast.success(`Pengaturan varian "${editingVariant.variant_name}" berhasil disimpan untuk ${editingVariant.room_count} kamar`);
       setEditingVariant(null);
-      if (selectedRoom) {
-        fetchVariants(selectedRoom);
-      }
+      fetchAllVariants();
     } catch (error: any) {
       toast.error(error.message || "Gagal menyimpan pengaturan");
     } finally {
@@ -183,15 +199,15 @@ export default function VariantScheduleSettings({
     }
   };
 
-  const getVisibilityLabel = (variant: RoomVariantExtended) => {
+  const getVisibilityLabel = (variant: UniqueVariant) => {
     const type = variant.visibility_type || "all";
     const option = VISIBILITY_OPTIONS.find((o) => o.value === type);
     return option?.label || "Semua Hari";
   };
 
-  const getDurationLabel = (variant: RoomVariantExtended) => {
+  const getDurationLabel = (variant: UniqueVariant) => {
     const type = variant.booking_duration_type || "hours";
-    const value = variant.booking_duration_value || variant.duration || 1;
+    const value = variant.booking_duration_value || 1;
     const typeOption = DURATION_TYPE_OPTIONS.find((o) => o.value === type);
     return `${value} ${typeOption?.label || "Jam"}`;
   };
@@ -207,75 +223,54 @@ export default function VariantScheduleSettings({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Room Selector */}
-          <div className="space-y-2">
-            <Label>Pilih Kamar</Label>
-            <Select
-              value={selectedRoom || ""}
-              onValueChange={(value) => {
-                setSelectedRoom(value);
-                setEditingVariant(null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kamar untuk melihat varian" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Variants List */}
-          {selectedRoom && (
-            <div className="space-y-3">
-              <Label>Varian Kamar</Label>
-              {variants.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  Belum ada varian untuk kamar ini.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {variants.map((variant) => (
-                    <Card
-                      key={variant.id}
-                      className={`cursor-pointer transition-all ${
-                        editingVariant?.id === variant.id
-                          ? "ring-2 ring-primary"
-                          : "hover:bg-muted/50"
-                      }`}
-                      onClick={() => handleEditVariant(variant)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{variant.variant_name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              Rp {variant.price.toLocaleString("id-ID")}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {getVisibilityLabel(variant)}
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {getDurationLabel(variant)}
-                            </Badge>
+          <div className="space-y-3">
+            <Label>Pilih Varian</Label>
+            <p className="text-sm text-muted-foreground">
+              Pengaturan akan berlaku untuk semua kamar yang memiliki varian ini.
+            </p>
+            {uniqueVariants.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Belum ada varian di outlet ini.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {uniqueVariants.map((variant) => (
+                  <Card
+                    key={variant.variant_name}
+                    className={`cursor-pointer transition-all ${
+                      editingVariant?.variant_name === variant.variant_name
+                        ? "ring-2 ring-primary"
+                        : "hover:bg-muted/50"
+                    }`}
+                    onClick={() => handleEditVariant(variant)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">{variant.variant_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Berlaku untuk {variant.room_count} kamar: {variant.rooms.slice(0, 3).join(", ")}
+                            {variant.rooms.length > 3 && ` +${variant.rooms.length - 3} lainnya`}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {getVisibilityLabel(variant)}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {getDurationLabel(variant)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Edit Form */}
           {editingVariant && (
