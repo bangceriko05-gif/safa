@@ -636,6 +636,24 @@ export default function BookingRequestsManagement() {
       if (newStatus === "check-out") {
         try {
           await updateBookingStatusFromRequest(request.id, user.id, 'CO');
+
+          // Mark room as "Kotor" ONLY for this booking date (date-specific)
+          if (request.room_id) {
+            const { error: dailyError } = await supabase
+              .from("room_daily_status")
+              .upsert(
+                {
+                  room_id: request.room_id,
+                  date: request.booking_date,
+                  status: "Kotor",
+                  updated_by: user.id,
+                },
+                { onConflict: "room_id,date" }
+              );
+
+            if (dailyError) throw dailyError;
+          }
+
           bookingCreatedOrUpdated = true;
         } catch (error: any) {
           console.error("Error during check-out:", error);

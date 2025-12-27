@@ -902,6 +902,8 @@ export default function BookingModal({
       }
 
       const roomName = rooms.find(r => r.id === formData.room_id)?.name || 'Unknown';
+      const previousStatus = editingBooking?.status || "BO";
+      const isCheckoutTransition = Boolean(editingBooking && formData.status === "CO" && previousStatus !== "CO");
 
       if (editingBooking) {
         // Log what we're updating for debugging
@@ -913,6 +915,23 @@ export default function BookingModal({
           .eq("id", editingBooking.id);
 
         if (error) throw error;
+
+        // If checked-out, mark room as "Kotor" ONLY for this booking date (date-specific)
+        if (isCheckoutTransition) {
+          const { error: dailyError } = await supabase
+            .from("room_daily_status")
+            .upsert(
+              {
+                room_id: formData.room_id,
+                date: dateStr,
+                status: "Kotor",
+                updated_by: userId,
+              },
+              { onConflict: "room_id,date" }
+            );
+
+          if (dailyError) throw dailyError;
+        }
 
         // Delete existing products
         await supabase
