@@ -29,6 +29,7 @@ import Reports from "./Reports";
 import PermissionManagement from "./PermissionManagement";
 import DisplaySettings from "./DisplaySettings";
 import NotificationSettings from "./NotificationSettings";
+import VariantScheduleSettings from "./VariantScheduleSettings";
 import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";

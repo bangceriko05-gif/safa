@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Monitor, Palette, ChevronDown, ChevronUp, Type, Store } from "lucide-react";
+import { Monitor, Palette, ChevronDown, ChevronUp, Type, Store, Bed } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/contexts/StoreContext";
 import StoreManagement from "./StoreManagement";
+import VariantScheduleSettings from "./VariantScheduleSettings";
 
 interface StatusColor {
   id: string;
@@ -27,6 +28,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
   const [isColorSettingsOpen, setIsColorSettingsOpen] = useState(false);
   const [isFontSettingsOpen, setIsFontSettingsOpen] = useState(false);
   const [isOutletSettingsOpen, setIsOutletSettingsOpen] = useState(false);
+  const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   const [fontFamily, setFontFamily] = useState<string>(() => {
     return localStorage.getItem("app-font-family") || "inter";
   });
@@ -588,6 +590,39 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
           </CardContent>
         )}
       </Card>
+
+      {/* Room Variant Schedule Settings - Admin/Leader Only */}
+      {(userRole === "admin" || userRole === "leader") && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bed className="h-5 w-5" />
+                  Pengaturan Jadwal Varian Kamar
+                </CardTitle>
+                <CardDescription>
+                  Atur kapan varian muncul (weekdays/weekends) dan durasi blokir (jam/hari/minggu/bulan)
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsRoomSettingsOpen(true)}
+                className="h-8"
+              >
+                Kelola
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
+      {/* Variant Schedule Settings Dialog */}
+      <VariantScheduleSettings 
+        isOpen={isRoomSettingsOpen}
+        onClose={() => setIsRoomSettingsOpen(false)}
+      />
 
       {/* Outlet Management - Admin Only */}
       {userRole === "admin" && (

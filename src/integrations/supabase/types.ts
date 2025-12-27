@@ -760,6 +760,8 @@ export type Database = {
       }
       room_variants: {
         Row: {
+          booking_duration_type: string | null
+          booking_duration_value: number | null
           created_at: string
           description: string | null
           duration: number
@@ -770,8 +772,12 @@ export type Database = {
           store_id: string | null
           updated_at: string
           variant_name: string
+          visibility_type: string | null
+          visible_days: number[] | null
         }
         Insert: {
+          booking_duration_type?: string | null
+          booking_duration_value?: number | null
           created_at?: string
           description?: string | null
           duration: number
@@ -782,8 +788,12 @@ export type Database = {
           store_id?: string | null
           updated_at?: string
           variant_name: string
+          visibility_type?: string | null
+          visible_days?: number[] | null
         }
         Update: {
+          booking_duration_type?: string | null
+          booking_duration_value?: number | null
           created_at?: string
           description?: string | null
           duration?: number
@@ -794,6 +804,8 @@ export type Database = {
           store_id?: string | null
           updated_at?: string
           variant_name?: string
+          visibility_type?: string | null
+          visible_days?: number[] | null
         }
         Relationships: [
           {
