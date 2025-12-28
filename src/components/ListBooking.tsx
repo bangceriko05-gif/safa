@@ -239,9 +239,15 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
         return;
       }
 
-      // Check if user is trying to change to/from BATAL
-      if ((currentStatus === "BATAL" || newStatus === "BATAL") && userRole !== "admin") {
-        toast.error("Hanya Admin yang dapat mengubah status BATAL");
+      // Check if user is trying to change to BATAL - requires cancel_bookings permission or admin
+      if (newStatus === "BATAL" && userRole !== "admin" && !hasPermission("cancel_bookings")) {
+        toast.error("Anda tidak memiliki izin untuk membatalkan booking");
+        return;
+      }
+
+      // Check if user is trying to restore from BATAL - requires admin only
+      if (currentStatus === "BATAL" && userRole !== "admin") {
+        toast.error("Hanya Admin yang dapat memulihkan booking yang dibatalkan");
         return;
       }
 
@@ -621,8 +627,8 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                             </DropdownMenuItem>
                           )}
                           
-                          {/* BATAL option - for admin or users with cancel_checkout_bookings permission for CO status */}
-                          {(userRole === "admin" || (hasPermission("cancel_checkout_bookings") && booking.status === "CO")) && 
+                          {/* BATAL option - for admin, users with cancel_bookings, or cancel_checkout_bookings for CO status */}
+                          {(userRole === "admin" || hasPermission("cancel_bookings") || (hasPermission("cancel_checkout_bookings") && booking.status === "CO")) && 
                             booking.status !== "BATAL" && (
                             <DropdownMenuItem 
                               onClick={() => handleStatusChange(booking.id, "BATAL", booking.status)}

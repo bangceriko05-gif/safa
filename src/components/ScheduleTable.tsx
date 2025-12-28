@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Edit, Trash2, User, Phone, Clock, DollarSign, FileText, Calendar, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, User, Phone, Clock, DollarSign, FileText, Calendar, Copy, ChevronDown, XCircle, Undo, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -22,6 +22,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { logActivity } from "@/utils/activityLogger";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ScheduleTableProps {
   selectedDate: Date;
@@ -100,6 +106,7 @@ export default function ScheduleTable({
     return localStorage.getItem("booking-text-color") || "#1F2937";
   });
   const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
+  const [updatingPopupStatus, setUpdatingPopupStatus] = useState<string | null>(null);
 
   const timeSlots = Array.from({ length: 20 }, (_, i) => {
     const hour = i + 9;
@@ -520,6 +527,97 @@ export default function ScheduleTable({
     }
   };
 
+  const handlePopupStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+    setUpdatingPopupStatus(bookingId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Anda harus login untuk mengubah status");
+        return;
+      }
+
+      const updateData: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (newStatus === "CI") {
+        updateData.checked_in_by = user.id;
+        updateData.checked_in_at = new Date().toISOString();
+      } else if (newStatus === "CO") {
+        updateData.checked_out_by = user.id;
+        updateData.checked_out_at = new Date().toISOString();
+
+        // Mark room as Kotor
+        if (bookingData.room_id) {
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          await supabase
+            .from("room_daily_status")
+            .upsert({
+              room_id: bookingData.room_id,
+              date: dateStr,
+              status: "Kotor",
+              updated_by: user.id,
+            }, { onConflict: "room_id,date" });
+          fetchRoomDailyStatus();
+        }
+      } else if (newStatus === "BO") {
+        updateData.confirmed_by = user.id;
+        updateData.confirmed_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from("bookings")
+        .update(updateData)
+        .eq("id", bookingId);
+
+      if (error) throw error;
+
+      const statusLabels: Record<string, string> = {
+        BO: "Reservasi",
+        CI: "Check In",
+        CO: "Check Out",
+        BATAL: "Batal",
+      };
+
+      await logActivity({
+        actionType: 'updated',
+        entityType: 'Booking',
+        entityId: bookingId,
+        description: `Mengubah status booking ${bookingData.customer_name} ke ${statusLabels[newStatus] || newStatus}`,
+      });
+
+      toast.success(`Status berhasil diubah ke ${statusLabels[newStatus] || newStatus}`);
+      fetchBookings();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      toast.error(error.message || "Gagal mengubah status");
+    } finally {
+      setUpdatingPopupStatus(null);
+    }
+  };
+
+  const getPopupAvailableStatuses = (currentStatus: string) => {
+    const transitions: Record<string, string[]> = {
+      BO: ["CI", "BATAL"],
+      CI: ["CO", "BATAL"],
+      CO: [],
+      BATAL: [],
+    };
+    return transitions[currentStatus] || [];
+  };
+
+  const getPopupStatusLabel = (status: string) => {
+    switch (status) {
+      case "BO": return "Reservasi";
+      case "CI": return "Check In";
+      case "CO": return "Check Out";
+      case "BATAL": return "BATAL";
+      default: return status;
+    }
+  };
+
   const handleRoomStatusChange = async (roomId: string, newStatus: string) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -898,15 +996,72 @@ export default function ScheduleTable({
                                     {/* Header with Status */}
                                     <div className="flex items-center justify-between pb-2 border-b">
                                       <h3 className="font-bold text-lg">Detail Booking</h3>
-                                      <div 
-                                        className="px-3 py-1 rounded-full text-xs font-bold"
-                                        style={{
-                                          backgroundColor: statusColor,
-                                          color: '#000'
-                                        }}
-                                      >
-                                        {status}
-                                      </div>
+                                      {getPopupAvailableStatuses(status).length > 0 ? (
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              disabled={updatingPopupStatus === booking.id}
+                                              className="gap-1 font-semibold h-7 px-2"
+                                              style={{
+                                                backgroundColor: statusColor,
+                                                color: status === "CO" || status === "BATAL" ? "#fff" : "#000",
+                                                borderColor: statusColor,
+                                              }}
+                                            >
+                                              {updatingPopupStatus === booking.id ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  {status}
+                                                  <ChevronDown className="h-3 w-3" />
+                                                </>
+                                              )}
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="bg-popover z-[100]">
+                                            {getPopupAvailableStatuses(status).map((newStatus) => (
+                                              <DropdownMenuItem
+                                                key={newStatus}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handlePopupStatusChange(booking.id, newStatus, booking);
+                                                }}
+                                                className={newStatus === "BATAL" ? "text-destructive" : ""}
+                                              >
+                                                <div
+                                                  className="w-3 h-3 rounded-full mr-2"
+                                                  style={{ backgroundColor: statusColors[newStatus] || "#ccc" }}
+                                                />
+                                                {getPopupStatusLabel(newStatus)}
+                                              </DropdownMenuItem>
+                                            ))}
+                                            {userRole === "admin" && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handlePopupStatusChange(booking.id, "BO", booking);
+                                                }}
+                                                className="text-muted-foreground"
+                                              >
+                                                <Undo className="h-3 w-3 mr-2" />
+                                                Reset ke Reservasi
+                                              </DropdownMenuItem>
+                                            )}
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      ) : (
+                                        <div 
+                                          className="px-3 py-1 rounded-full text-xs font-bold"
+                                          style={{
+                                            backgroundColor: statusColor,
+                                            color: status === "CO" || status === "BATAL" ? "#fff" : "#000"
+                                          }}
+                                        >
+                                          {status}
+                                        </div>
+                                      )}
                                     </div>
 
                                     {/* BID */}
