@@ -233,15 +233,9 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
 
   const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null) => {
     try {
-      // Check permission first
-      if (!hasPermission("edit_bookings")) {
+      // Check permission first (for non-BATAL status changes)
+      if (newStatus !== "BATAL" && !hasPermission("edit_bookings")) {
         toast.error("Anda tidak memiliki izin untuk mengubah status booking");
-        return;
-      }
-
-      // Check if user is trying to change to BATAL - requires cancel_bookings permission or admin
-      if (newStatus === "BATAL" && userRole !== "admin" && !hasPermission("cancel_bookings")) {
-        toast.error("Anda tidak memiliki izin untuk membatalkan booking");
         return;
       }
 
@@ -250,6 +244,8 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
         toast.error("Hanya Admin yang dapat memulihkan booking yang dibatalkan");
         return;
       }
+      
+      // All users can cancel bookings - no permission check for BATAL
 
       // Get booking details for logging
       const { data: bookingData } = await supabase
@@ -298,6 +294,23 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
             );
 
           if (dailyError) throw dailyError;
+        }
+      } else if (newStatus === "BATAL") {
+        // BATAL: Set room to ready (Aktif) directly, not Kotor
+        if (bookingForRoom?.room_id) {
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+          await supabase
+            .from("room_daily_status")
+            .upsert(
+              {
+                room_id: bookingForRoom.room_id,
+                date: dateStr,
+                status: "Aktif",
+                updated_by: user?.id,
+              },
+              { onConflict: "room_id,date" }
+            );
         }
       }
 

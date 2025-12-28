@@ -323,13 +323,13 @@ export default function ScheduleTable({
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-      // Fetch all bookings for the date (exclude CO status - they should not appear on calendar)
+      // Fetch all bookings for the date (exclude CO and BATAL status - they should not appear on calendar)
       const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select("*, bid")
         .eq("date", dateStr)
         .eq("store_id", currentStore.id)
-        .neq("status", "CO");
+        .not("status", "in", "(CO,BATAL)");
 
       if (error) throw error;
       
@@ -557,6 +557,20 @@ export default function ScheduleTable({
               room_id: bookingData.room_id,
               date: dateStr,
               status: "Kotor",
+              updated_by: user.id,
+            }, { onConflict: "room_id,date" });
+          fetchRoomDailyStatus();
+        }
+      } else if (newStatus === "BATAL") {
+        // BATAL: Set room to ready (Aktif) directly
+        if (bookingData.room_id) {
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          await supabase
+            .from("room_daily_status")
+            .upsert({
+              room_id: bookingData.room_id,
+              date: dateStr,
+              status: "Aktif",
               updated_by: user.id,
             }, { onConflict: "room_id,date" });
           fetchRoomDailyStatus();
