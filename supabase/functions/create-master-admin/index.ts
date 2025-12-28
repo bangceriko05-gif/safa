@@ -2,8 +2,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 Deno.serve(async (req) => {
@@ -14,9 +15,14 @@ Deno.serve(async (req) => {
   try {
     const { email, password, name, secret_key } = await req.json();
 
-    // Simple secret key check for initial setup
-    const expectedSecret = 'SETUP_MASTER_ADMIN_2024';
+    // Secure secret key check using environment variable
+    const expectedSecret = Deno.env.get('MASTER_ADMIN_SECRET_KEY');
+    if (!expectedSecret) {
+      console.error('MASTER_ADMIN_SECRET_KEY not configured');
+      throw new Error('Server configuration error');
+    }
     if (secret_key !== expectedSecret) {
+      console.warn(`Invalid secret key attempt for email: ${email}`);
       throw new Error('Invalid secret key');
     }
 

@@ -1074,6 +1074,7 @@ export type Database = {
         Args: { p_request: Record<string, unknown>; p_user_id: string }
         Returns: undefined
       }
+      cleanup_expired_booking_requests: { Args: never; Returns: number }
       create_booking_from_request:
         | { Args: { p_request_id: string; p_user_id: string }; Returns: string }
         | {
@@ -1133,6 +1134,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      safe_promote_first_admin: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       start_payment_timer: {
         Args: { p_minutes?: number; p_request_id: string }
         Returns: string
