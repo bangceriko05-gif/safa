@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // Helper to decode JWT and extract user ID
@@ -33,36 +34,26 @@ Deno.serve(async (req) => {
       throw new Error('Invalid token');
     }
 
-    // Update the user's role to admin using the service role client
+    // Use the service role client for admin operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Security check: Only allow first user to become admin
-    const { count, error: countError } = await supabaseAdmin
-      .from('user_roles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'admin');
+    // Use the safe database function with locking to prevent race conditions
+    const { data: promoted, error: rpcError } = await supabaseAdmin
+      .rpc('safe_promote_first_admin', { p_user_id: userId });
 
-    if (countError) {
-      throw countError;
+    if (rpcError) {
+      console.error('Error calling safe_promote_first_admin:', rpcError);
+      throw rpcError;
     }
 
-    if (count && count > 0) {
+    if (!promoted) {
       throw new Error('Admin already exists. Contact existing admin for privileges.');
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from('user_roles')
-      .update({ role: 'admin' })
-      .eq('user_id', userId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    console.log(`User ${userId} promoted to admin`);
+    console.log(`User ${userId} promoted to admin via safe_promote_first_admin`);
 
     return new Response(
       JSON.stringify({ 
