@@ -670,6 +670,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           }}
           bookingId={selectedBookingId}
           statusColors={statusColors}
+          onStatusChange={() => fetchBookings()}
         />
       </CardContent>
     </Card>
