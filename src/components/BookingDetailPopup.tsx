@@ -8,15 +8,26 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Trash2, Plus } from "lucide-react";
+import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Trash2, Plus, ChevronDown } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useStore } from "@/contexts/StoreContext";
+import { logActivity } from "@/utils/activityLogger";
 
 interface BookingDetailPopupProps {
   isOpen: boolean;
   onClose: () => void;
   bookingId: string | null;
   statusColors: Record<string, string>;
+  onStatusChange?: () => void;
 }
 
 interface BookingDetail {
@@ -40,6 +51,8 @@ interface BookingDetail {
   confirmed_at: string | null;
   confirmed_by: string | null;
   room_name: string;
+  room_id: string;
+  store_id: string | null;
   variant_name?: string;
   discount_type?: string | null;
   discount_value?: number | null;
@@ -68,9 +81,12 @@ export default function BookingDetailPopup({
   onClose,
   bookingId,
   statusColors,
+  onStatusChange,
 }: BookingDetailPopupProps) {
+  const { currentStore } = useStore();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
@@ -159,6 +175,108 @@ export default function BookingDetailPopup({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!booking || !bookingId) return;
+    
+    setUpdatingStatus(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "Anda harus login untuk mengubah status",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const updateData: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Add timestamp and user for specific status changes
+      if (newStatus === "CI") {
+        updateData.checked_in_at = new Date().toISOString();
+        updateData.checked_in_by = user.id;
+      } else if (newStatus === "CO") {
+        updateData.checked_out_at = new Date().toISOString();
+        updateData.checked_out_by = user.id;
+      } else if (newStatus === "BO") {
+        updateData.confirmed_at = new Date().toISOString();
+        updateData.confirmed_by = user.id;
+      }
+
+      const { error } = await supabase
+        .from("bookings")
+        .update(updateData)
+        .eq("id", bookingId);
+
+      if (error) throw error;
+
+      // Log activity
+      const statusLabels: Record<string, string> = {
+        BO: "Reservasi",
+        CI: "Check In",
+        CO: "Check Out",
+        BATAL: "Batal",
+      };
+
+      await logActivity({
+        actionType: "updated",
+        entityType: "Booking",
+        entityId: bookingId,
+        description: `Mengubah status booking ${booking.customer_name} ke ${statusLabels[newStatus] || newStatus}`,
+        storeId: booking.store_id || currentStore?.id,
+      });
+
+      // Update room_daily_status for CO status
+      if (newStatus === "CO" && booking.room_id) {
+        await supabase
+          .from("room_daily_status")
+          .upsert({
+            room_id: booking.room_id,
+            date: booking.date,
+            status: "Kotor",
+            updated_by: user.id,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "room_id,date" });
+      }
+
+      toast({
+        title: "Berhasil",
+        description: `Status berhasil diubah ke ${statusLabels[newStatus] || newStatus}`,
+      });
+
+      // Refresh booking data
+      await fetchBookingDetail();
+      
+      // Notify parent component
+      onStatusChange?.();
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Gagal",
+        description: error.message || "Gagal mengubah status",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const getAvailableStatuses = () => {
+    const currentStatus = booking?.status || "BO";
+    // Define valid status transitions
+    const transitions: Record<string, string[]> = {
+      BO: ["CI", "BATAL"],
+      CI: ["CO", "BATAL"],
+      CO: [], // Cannot change from CO
+      BATAL: [], // Cannot change from BATAL
+    };
+    return transitions[currentStatus] || [];
   };
 
   const getStatusLabel = (status: string | null) => {
@@ -257,14 +375,56 @@ export default function BookingDetailPopup({
             {/* Status */}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Status</span>
-              <Badge
-                style={{
-                  backgroundColor: getStatusColor(booking.status),
-                  color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937",
-                }}
-              >
-                {getStatusLabel(booking.status)}
-              </Badge>
+              {getAvailableStatuses().length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={updatingStatus}
+                      className="gap-1 font-semibold"
+                      style={{
+                        backgroundColor: getStatusColor(booking.status),
+                        color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937",
+                        borderColor: getStatusColor(booking.status),
+                      }}
+                    >
+                      {updatingStatus ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <>
+                          {getStatusLabel(booking.status)}
+                          <ChevronDown className="h-3 w-3" />
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {getAvailableStatuses().map((status) => (
+                      <DropdownMenuItem
+                        key={status}
+                        onClick={() => handleStatusChange(status)}
+                        className="cursor-pointer"
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{ backgroundColor: getStatusColor(status) }}
+                        />
+                        {getStatusLabel(status)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Badge
+                  style={{
+                    backgroundColor: getStatusColor(booking.status),
+                    color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937",
+                  }}
+                >
+                  {getStatusLabel(booking.status)}
+                </Badge>
+              )}
             </div>
 
             <Separator />
