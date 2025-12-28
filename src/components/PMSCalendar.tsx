@@ -298,14 +298,14 @@ export default function PMSCalendar({
       const startDate = format(visibleDates[0], "yyyy-MM-dd");
       const endDate = format(visibleDates[visibleDates.length - 1], "yyyy-MM-dd");
 
-      // Exclude CO (checked-out) bookings from calendar display
+      // Exclude CO (checked-out) and BATAL bookings from calendar display
       const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select("*, bid")
         .eq("store_id", currentStore.id)
         .gte("date", startDate)
         .lte("date", endDate)
-        .neq("status", "CO");
+        .not("status", "in", "(CO,BATAL)");
 
       if (error) throw error;
       
@@ -442,6 +442,18 @@ export default function PMSCalendar({
       } else if (newStatus === "BO") {
         updateData.confirmed_by = user.id;
         updateData.confirmed_at = new Date().toISOString();
+      } else if (newStatus === "BATAL" && bookingData.room_id) {
+        // BATAL: Set room to ready (Aktif) directly, not Kotor
+        await supabase
+          .from("room_daily_status")
+          .upsert({
+            room_id: bookingData.room_id,
+            date: bookingData.date,
+            status: "Aktif",
+            updated_by: user.id,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "room_id,date" });
+        fetchRoomDailyStatus();
       }
 
       const { error } = await supabase
