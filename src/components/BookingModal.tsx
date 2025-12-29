@@ -155,6 +155,20 @@ export default function BookingModal({
     }
   }, [currentStore, isOpen]);
 
+  // When rooms are loaded and we have a selectedSlot, ensure room_id is set
+  useEffect(() => {
+    if (isOpen && rooms.length > 0 && selectedSlot?.roomId && !editingBooking) {
+      // Check if the selected room exists in the rooms list
+      const roomExists = rooms.some(room => room.id === selectedSlot.roomId);
+      if (roomExists && formData.room_id !== selectedSlot.roomId) {
+        setFormData(prev => ({
+          ...prev,
+          room_id: selectedSlot.roomId,
+        }));
+      }
+    }
+  }, [isOpen, rooms, selectedSlot, editingBooking]);
+
   useEffect(() => {
     if (formData.room_id) {
       fetchRoomVariants(formData.room_id);
