@@ -106,7 +106,9 @@ export default function ScheduleTable({
     return localStorage.getItem("booking-text-color") || "#1F2937";
   });
   const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
+  const [roomDailyStatusData, setRoomDailyStatusData] = useState<Record<string, { status: string; updated_by_name?: string }>>({});
   const [updatingPopupStatus, setUpdatingPopupStatus] = useState<string | null>(null);
+  const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
 
   const timeSlots = Array.from({ length: 20 }, (_, i) => {
     const hour = i + 9;
@@ -282,16 +284,38 @@ export default function ScheduleTable({
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("room_daily_status")
-        .select("room_id, status")
+        .select("room_id, status, updated_by")
         .eq("date", dateStr);
 
       if (error) throw error;
 
       const map: Record<string, string> = {};
+      const dataMap: Record<string, { status: string; updated_by_name?: string }> = {};
+      
+      // Get user names for updated_by
+      const userIds = data?.map(r => r.updated_by).filter(Boolean) || [];
+      let userNames: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", userIds);
+        
+        profiles?.forEach(p => {
+          userNames[p.id] = p.name;
+        });
+      }
+      
       data?.forEach((row) => {
         map[row.room_id] = row.status;
+        dataMap[row.room_id] = {
+          status: row.status,
+          updated_by_name: row.updated_by ? userNames[row.updated_by] : undefined,
+        };
       });
       setRoomDailyStatus(map);
+      setRoomDailyStatusData(dataMap);
     } catch (error) {
       console.error("Error fetching room daily status:", error);
     }
@@ -632,22 +656,35 @@ export default function ScheduleTable({
     }
   };
 
-  const handleRoomStatusChange = async (roomId: string, newStatus: string) => {
+  const handleRoomStatusChange = async (roomId: string, newStatus: string, skipConfirmation = false) => {
+    // If changing to Ready/Aktif and not skipping confirmation, show dialog
+    if (newStatus === "Aktif" && !skipConfirmation) {
+      const room = rooms.find((r) => r.id === roomId);
+      setConfirmReadyRoom({ roomId, roomName: room?.name || "Unknown" });
+      return;
+    }
+    
     try {
       const room = rooms.find((r) => r.id === roomId);
       const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (newStatus === "Aktif") {
+        // Instead of deleting, update with status Aktif to track who set it ready
         const { error } = await supabase
           .from("room_daily_status")
-          .delete()
-          .eq("room_id", roomId)
-          .eq("date", dateStr);
+          .upsert(
+            {
+              room_id: roomId,
+              date: dateStr,
+              status: "Aktif",
+              updated_by: user?.id,
+            },
+            { onConflict: "room_id,date" }
+          );
 
         if (error) throw error;
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
-
         const { error } = await supabase
           .from("room_daily_status")
           .upsert(
@@ -672,10 +709,17 @@ export default function ScheduleTable({
 
       toast.success(`Status kamar ${room?.name} tanggal ${format(selectedDate, "dd MMM")} sudah ${newStatus === 'Aktif' ? 'Ready' : newStatus}`);
       fetchRoomDailyStatus();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
     } catch (error: any) {
       toast.error("Gagal mengubah status kamar");
       console.error(error);
     }
+  };
+
+  const handleConfirmReady = async () => {
+    if (!confirmReadyRoom) return;
+    await handleRoomStatusChange(confirmReadyRoom.roomId, "Aktif", true);
+    setConfirmReadyRoom(null);
   };
 
   // Check if a slot is the start of a booking
@@ -901,6 +945,10 @@ export default function ScheduleTable({
                               </div>
                             </PopoverContent>
                           </Popover>
+                        ) : roomDailyStatusData[room.id]?.status === "Aktif" && roomDailyStatusData[room.id]?.updated_by_name ? (
+                          <span className={`${size.fontSize} text-muted-foreground`} title={`Direadykan oleh: ${roomDailyStatusData[room.id].updated_by_name}`}>
+                            (Ready - {roomDailyStatusData[room.id].updated_by_name})
+                          </span>
                         ) : isBlocked ? (
                           <span className={`${size.fontSize} text-muted-foreground`}>
                             ({room.status})
@@ -1347,6 +1395,24 @@ export default function ScheduleTable({
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteBooking}>Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Housekeeping Confirmation Dialog */}
+      <AlertDialog open={!!confirmReadyRoom} onOpenChange={() => setConfirmReadyRoom(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Housekeeping</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin kamar <strong>{confirmReadyRoom?.roomName}</strong> sudah selesai di-housekeeping dan siap digunakan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tidak</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReady} className="bg-green-600 hover:bg-green-700">
+              Ya, Sudah Ready
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

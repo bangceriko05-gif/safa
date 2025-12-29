@@ -93,7 +93,9 @@ export default function PMSCalendar({
   });
   // Date-specific room status (from room_daily_status table)
   const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
+  const [roomDailyStatusData, setRoomDailyStatusData] = useState<Record<string, { status: string; updated_by_name?: string }>>({});
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string; date: Date } | null>(null);
 
   // Calculate visible date range (14 days centered on selected date)
   const visibleDates = useMemo(() => {
@@ -267,21 +269,49 @@ export default function PMSCalendar({
 
       const { data, error } = await supabase
         .from("room_daily_status")
-        .select("room_id, date, status")
+        .select("room_id, date, status, updated_by")
         .gte("date", startDate)
         .lte("date", endDate);
 
       if (error) throw error;
 
+      // Get user names for updated_by
+      const userIds = data?.map(r => r.updated_by).filter(Boolean) || [];
+      let userNames: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", userIds);
+        
+        profiles?.forEach(p => {
+          userNames[p.id] = p.name;
+        });
+      }
+
       // Create a map: "roomId-date" -> status
       const statusMap: Record<string, string> = {};
+      const dataMap: Record<string, { status: string; updated_by_name?: string }> = {};
       data?.forEach((item) => {
-        statusMap[`${item.room_id}-${item.date}`] = item.status;
+        const key = `${item.room_id}-${item.date}`;
+        statusMap[key] = item.status;
+        dataMap[key] = {
+          status: item.status,
+          updated_by_name: item.updated_by ? userNames[item.updated_by] : undefined,
+        };
       });
       setRoomDailyStatus(statusMap);
+      setRoomDailyStatusData(dataMap);
     } catch (error) {
       console.error("Error fetching room daily status:", error);
     }
+  };
+
+  // Helper to get room status data for a specific date
+  const getRoomStatusDataForDate = (roomId: string, date: Date): { status: string; updated_by_name?: string } | null => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return roomDailyStatusData[`${roomId}-${dateStr}`] || null;
   };
 
   // Helper to get room status for a specific date
@@ -373,24 +403,33 @@ export default function PMSCalendar({
     }
   };
 
-  const handleRoomStatusChange = async (roomId: string, newStatus: string, date: Date) => {
+  const handleRoomStatusChange = async (roomId: string, newStatus: string, date: Date, skipConfirmation = false) => {
+    // If changing to Ready/Aktif and not skipping confirmation, show dialog
+    if (newStatus === 'Aktif' && !skipConfirmation) {
+      const room = rooms.find(r => r.id === roomId);
+      setConfirmReadyRoom({ roomId, roomName: room?.name || "Unknown", date });
+      return;
+    }
+    
     try {
       const room = rooms.find(r => r.id === roomId);
       const dateStr = format(date, "yyyy-MM-dd");
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (newStatus === 'Aktif') {
-        // Delete the daily status record to mark as ready
+        // Instead of deleting, update with status Aktif to track who set it ready
         const { error } = await supabase
           .from("room_daily_status")
-          .delete()
-          .eq("room_id", roomId)
-          .eq("date", dateStr);
+          .upsert({
+            room_id: roomId,
+            date: dateStr,
+            status: "Aktif",
+            updated_by: user?.id,
+          }, { onConflict: 'room_id,date' });
 
         if (error) throw error;
       } else {
         // Insert or update the daily status
-        const { data: { user } } = await supabase.auth.getUser();
-        
         const { error } = await supabase
           .from("room_daily_status")
           .upsert({
@@ -417,6 +456,12 @@ export default function PMSCalendar({
       toast.error("Gagal mengubah status kamar");
       console.error(error);
     }
+  };
+
+  const handleConfirmReady = async () => {
+    if (!confirmReadyRoom) return;
+    await handleRoomStatusChange(confirmReadyRoom.roomId, "Aktif", confirmReadyRoom.date, true);
+    setConfirmReadyRoom(null);
   };
 
   const handleBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
@@ -966,7 +1011,9 @@ export default function PMSCalendar({
 
                           // Empty cell - show based on date-specific room status
                           const dailyStatus = getRoomStatusForDate(room.id, date);
+                          const dailyStatusData = getRoomStatusDataForDate(room.id, date);
                           const isKotor = dailyStatus === "Kotor";
+                          const isReady = dailyStatus === "Aktif";
                           
                           return (
                             <td 
@@ -988,10 +1035,16 @@ export default function PMSCalendar({
                                 // Room is available - show "Ready" button to add booking
                                 <Button
                                   variant="ghost"
-                                  className="w-full h-full min-h-[60px] bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary transition-all"
+                                  className="w-full h-full min-h-[60px] bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary transition-all flex flex-col items-center justify-center gap-0.5"
                                   onClick={() => onAddBooking(room.id, dateStr)}
+                                  title={isReady && dailyStatusData?.updated_by_name ? `Direadykan oleh: ${dailyStatusData.updated_by_name}` : undefined}
                                 >
                                   <span className="text-primary font-semibold text-xs">Ready</span>
+                                  {isReady && dailyStatusData?.updated_by_name && (
+                                    <span className="text-[9px] text-muted-foreground truncate max-w-full px-1">
+                                      {dailyStatusData.updated_by_name}
+                                    </span>
+                                  )}
                                 </Button>
                               ) : (
                                 <div className="w-full h-full min-h-[60px] flex items-center justify-center text-xs text-muted-foreground">
@@ -1025,6 +1078,24 @@ export default function PMSCalendar({
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Housekeeping Confirmation Dialog */}
+      <AlertDialog open={!!confirmReadyRoom} onOpenChange={() => setConfirmReadyRoom(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Housekeeping</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin kamar <strong>{confirmReadyRoom?.roomName}</strong> sudah selesai di-housekeeping dan siap digunakan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tidak</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReady} className="bg-green-600 hover:bg-green-700">
+              Ya, Sudah Ready
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

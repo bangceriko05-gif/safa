@@ -10,6 +10,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -57,6 +67,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<InfoCardType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -185,7 +196,12 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
     setDialogOpen(true);
   };
 
-  const handleSetRoomReady = async (roomId: string, roomName: string) => {
+  const handleSetRoomReady = async (roomId: string, roomName: string, skipConfirmation = false) => {
+    if (!skipConfirmation) {
+      setConfirmReadyRoom({ roomId, roomName });
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from("rooms")
@@ -208,6 +224,12 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       toast.error("Gagal mengubah status kamar");
       console.error(error);
     }
+  };
+
+  const handleConfirmReady = async () => {
+    if (!confirmReadyRoom) return;
+    await handleSetRoomReady(confirmReadyRoom.roomId, confirmReadyRoom.roomName, true);
+    setConfirmReadyRoom(null);
   };
 
   const getDialogTitle = () => {
@@ -451,6 +473,24 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Housekeeping Confirmation Dialog */}
+      <AlertDialog open={!!confirmReadyRoom} onOpenChange={() => setConfirmReadyRoom(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Housekeeping</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin kamar <strong>{confirmReadyRoom?.roomName}</strong> sudah selesai di-housekeeping dan siap digunakan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tidak</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReady} className="bg-green-600 hover:bg-green-700">
+              Ya, Sudah Ready
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
