@@ -28,7 +28,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle, CheckCircle, CalendarIcon } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
-import { format, addDays, differenceInDays } from "date-fns";
+import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { validateBookingInputs } from "@/utils/bookingValidation";
@@ -189,7 +189,7 @@ export default function BookingModal({
             return selectedVariant.price;
           }
           
-          const nights = differenceInDays(checkOutDate, checkInDate);
+          const nights = differenceInCalendarDays(checkOutDate, checkInDate);
           if (nights > 0) {
             return selectedVariant.price * nights;
           }
@@ -755,7 +755,7 @@ export default function BookingModal({
   // Calculate duration in nights/days for blocking calendar
   // For monthly variants, use the actual number of days between check-in and check-out
   const duration = isPMSMode 
-    ? (checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0)
+    ? (checkInDate && checkOutDate ? differenceInCalendarDays(checkOutDate, checkInDate) : 0)
     : calculateDuration(formData.start_time, formData.end_time);
   
   // Ensure duration is at least 1 for valid bookings
@@ -823,7 +823,7 @@ export default function BookingModal({
           setLoading(false);
           return;
         }
-        if (differenceInDays(checkOutDate, checkInDate) <= 0) {
+        if (differenceInCalendarDays(checkOutDate, checkInDate) <= 0) {
           toast.error("Tanggal Check Out harus setelah Check In");
           setLoading(false);
           return;
