@@ -1776,15 +1776,14 @@ export default function BookingModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reference_no">No. Reff {formData.payment_method !== "Cash" && "*"}</Label>
+              <Label htmlFor="reference_no">No. Reff</Label>
               <Input
                 id="reference_no"
                 value={formData.reference_no}
                 onChange={(e) =>
                   setFormData({ ...formData, reference_no: e.target.value })
                 }
-                placeholder="Nomor referensi"
-                required={formData.payment_method !== "Cash"}
+                placeholder="Nomor referensi (opsional)"
               />
             </div>
           </div>
@@ -1871,15 +1870,14 @@ export default function BookingModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reference_no_2">No. Reff Kedua {formData.payment_method_2 !== "Cash" && "*"}</Label>
+                  <Label htmlFor="reference_no_2">No. Reff Kedua</Label>
                   <Input
                     id="reference_no_2"
                     value={formData.reference_no_2}
                     onChange={(e) =>
                       setFormData({ ...formData, reference_no_2: e.target.value })
                     }
-                    placeholder="Nomor referensi kedua"
-                    required={formData.dual_payment && formData.payment_method_2 !== "Cash"}
+                    placeholder="Nomor referensi kedua (opsional)"
                   />
                 </div>
               </div>
