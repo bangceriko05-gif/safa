@@ -818,15 +818,22 @@ export default function PMSCalendar({
                             {isBlocked && <span className="text-xs text-muted-foreground">({room.status})</span>}
                           </div>
                         </td>
-                        {visibleDates.map((date) => {
-                          const booking = isBookingStart(room.id, date);
+                        {visibleDates.map((date, dateIndex) => {
+                          const bookingStart = isBookingStart(room.id, date);
                           const isOccupied = isDateOccupied(room.id, date);
                           const dateStr = format(date, "yyyy-MM-dd");
+                          const occupyingBooking = getOccupyingBooking(room.id, date);
                           
-                          // If this date is occupied by an ongoing booking, don't render a cell
-                          if (isOccupied) {
+                          // Check if booking started before visible range and this is the first visible date of that booking
+                          const isFirstVisibleDateOfOngoingBooking = dateIndex === 0 && isOccupied && occupyingBooking;
+                          
+                          // If this date is occupied by an ongoing booking and NOT the first visible date, skip rendering
+                          if (isOccupied && !isFirstVisibleDateOfOngoingBooking) {
                             return null;
                           }
+                          
+                          // Determine which booking to show (either starts here or continues from before)
+                          const booking = bookingStart || (isFirstVisibleDateOfOngoingBooking ? occupyingBooking : null);
                           
                           if (booking) {
                             const status = booking.status || 'BO';
@@ -835,6 +842,20 @@ export default function PMSCalendar({
                             const bgColor = isBatal ? `${statusColor}40` : `${statusColor}80`;
                             const nights = booking.duration || 1;
                             
+                            // Calculate colSpan: how many visible dates this booking covers
+                            const bookingStartDate = startOfDay(new Date(booking.date));
+                            const bookingEndDate = addDays(bookingStartDate, nights - 1);
+                            const visibleStartIndex = bookingStart ? dateIndex : 0;
+                            let colspan = 0;
+                            for (let i = visibleStartIndex; i < visibleDates.length; i++) {
+                              const checkDate = startOfDay(visibleDates[i]);
+                              if (checkDate <= bookingEndDate) {
+                                colspan++;
+                              } else {
+                                break;
+                              }
+                            }
+                            
                             return (
                               <td 
                                 key={date.toISOString()} 
@@ -842,7 +863,7 @@ export default function PMSCalendar({
                                   "p-1 align-top border-r border-border",
                                   isBatal && "opacity-60"
                                 )}
-                                colSpan={Math.min(nights, visibleDates.length - visibleDates.findIndex(d => isSameDay(d, date)))}
+                                colSpan={colspan}
                               >
                                 <Popover>
                                   <PopoverTrigger asChild>
