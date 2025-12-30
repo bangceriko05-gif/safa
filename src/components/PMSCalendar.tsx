@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy, Calendar as CalendarIcon, ChevronDown, XCircle, Undo, Loader2 } from "lucide-react";
-import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInDays, startOfDay, subDays } from "date-fns";
+import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInCalendarDays, startOfDay, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
