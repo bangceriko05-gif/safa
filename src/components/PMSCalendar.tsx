@@ -328,12 +328,19 @@ export default function PMSCalendar({
       const startDate = format(visibleDates[0], "yyyy-MM-dd");
       const endDate = format(visibleDates[visibleDates.length - 1], "yyyy-MM-dd");
 
+      // Calculate earliest possible start date for multi-night bookings
+      // A booking starting 60 days before could still span into our view
+      const earliestStartDate = format(addDays(visibleDates[0], -60), "yyyy-MM-dd");
+
+      // Fetch bookings that:
+      // 1. Start within the visible range, OR
+      // 2. Start before the range but could span into it (multi-night bookings)
       // Exclude CO (checked-out) and BATAL bookings from calendar display
       const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select("*, bid")
         .eq("store_id", currentStore.id)
-        .gte("date", startDate)
+        .gte("date", earliestStartDate)
         .lte("date", endDate)
         .not("status", "in", "(CO,BATAL)");
 
@@ -344,8 +351,27 @@ export default function PMSCalendar({
         return;
       }
 
+      // Filter to only include bookings that actually overlap with visible dates
+      const visibleStartDate = startOfDay(visibleDates[0]);
+      const visibleEndDate = startOfDay(visibleDates[visibleDates.length - 1]);
+      
+      const relevantBookings = bookingsData.filter(booking => {
+        const bookingStart = startOfDay(new Date(booking.date));
+        const nights = booking.duration || 1;
+        const bookingEnd = addDays(bookingStart, nights - 1);
+        
+        // Booking overlaps with visible range if:
+        // booking ends on or after visible start AND booking starts on or before visible end
+        return bookingEnd >= visibleStartDate && bookingStart <= visibleEndDate;
+      });
+
+      if (relevantBookings.length === 0) {
+        setBookings([]);
+        return;
+      }
+
       // Fetch admin names
-      const allUserIds = [...new Set(bookingsData.map(b => b.created_by).filter(Boolean))] as string[];
+      const allUserIds = [...new Set(relevantBookings.map(b => b.created_by).filter(Boolean))] as string[];
       
       const { data: profiles } = await supabase
         .from("profiles")
@@ -354,7 +380,7 @@ export default function PMSCalendar({
 
       const profileMap = new Map((profiles || []).map(p => [p.id, p.name]));
 
-      const bookingsWithAdmin: BookingWithAdmin[] = bookingsData.map(booking => ({
+      const bookingsWithAdmin: BookingWithAdmin[] = relevantBookings.map(booking => ({
         ...booking,
         admin_name: profileMap.get(booking.created_by || "") || "Unknown",
         nights: booking.duration || 1,
