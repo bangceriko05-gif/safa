@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CalendarCheck, LogIn, LogOut, AlertTriangle, CheckCircle, DollarSign } from "lucide-react";
-import { format } from "date-fns";
+import { addDays, format, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
@@ -155,21 +155,24 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       if (!currentStore) return;
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const earliestStartDate = format(addDays(selectedDate, -60), "yyyy-MM-dd");
 
       const [
         { data: bookingsData, error: bookingsError },
         { data: roomsData, error: roomsError },
         { data: dailyStatusData, error: dailyStatusError },
-        { data: allCIBookingsData, error: allCIBookingsError }
+        { data: ciRangeBookingsData, error: ciRangeBookingsError },
       ] = await Promise.all([
-        // Bookings for today's date (for statistics display)
+        // Bookings that START today (for the reservation cards)
         supabase
           .from("bookings")
-          .select(`
+          .select(
+            `
             id, bid, customer_name, phone, start_time, end_time, 
             duration, price, status, room_id,
             rooms (name)
-          `)
+          `
+          )
           .eq("date", dateStr)
           .eq("store_id", currentStore.id),
         supabase
@@ -182,19 +185,20 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .from("room_daily_status")
           .select("room_id, status")
           .eq("date", dateStr),
-        // Fetch ALL currently checked-in bookings (status = CI) for this store
-        // This captures multi-day bookings that are still occupied
+        // Fetch CI bookings that could overlap today (multi-night aware)
         supabase
           .from("bookings")
-          .select("room_id")
+          .select("room_id, date, duration")
           .eq("store_id", currentStore.id)
           .eq("status", "CI")
+          .gte("date", earliestStartDate)
+          .lte("date", dateStr),
       ]);
 
       if (bookingsError) throw bookingsError;
       if (roomsError) throw roomsError;
       if (dailyStatusError) throw dailyStatusError;
-      if (allCIBookingsError) throw allCIBookingsError;
+      if (ciRangeBookingsError) throw ciRangeBookingsError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
@@ -210,8 +214,16 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         room_name: b.rooms?.name || "Unknown",
       }));
 
-      // Get all currently occupied room IDs (from ALL CI bookings, not just today's)
-      const occupiedIds = (allCIBookingsData || []).map((b: any) => b.room_id);
+      // OCCUPIED TODAY (CI): bookings where today is within [start_date .. start_date + (nights-1)]
+      const today = startOfDay(selectedDate);
+      const occupiedIds = (ciRangeBookingsData || [])
+        .filter((b: any) => {
+          const bookingStart = startOfDay(new Date(b.date));
+          const nights = Number(b.duration) || 1;
+          const bookingEnd = addDays(bookingStart, nights - 1);
+          return today >= bookingStart && today <= bookingEnd;
+        })
+        .map((b: any) => b.room_id);
 
       setBookings(mappedBookings);
       setRooms(roomsData || []);
