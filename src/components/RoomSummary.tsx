@@ -70,6 +70,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [roomDailyStatus, setRoomDailyStatus] = useState<RoomDailyStatusData[]>([]);
+  const [occupiedRoomIds, setOccupiedRoomIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<InfoCardType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -158,8 +159,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       const [
         { data: bookingsData, error: bookingsError },
         { data: roomsData, error: roomsError },
-        { data: dailyStatusData, error: dailyStatusError }
+        { data: dailyStatusData, error: dailyStatusError },
+        { data: allCIBookingsData, error: allCIBookingsError }
       ] = await Promise.all([
+        // Bookings for today's date (for statistics display)
         supabase
           .from("bookings")
           .select(`
@@ -174,16 +177,24 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .select("id, name, status")
           .eq("store_id", currentStore.id)
           .order("name"),
-        // Fetch room_daily_status for TODAY (single source of truth)
+        // Fetch room_daily_status for TODAY (single source of truth for dirty rooms)
         supabase
           .from("room_daily_status")
           .select("room_id, status")
-          .eq("date", dateStr)
+          .eq("date", dateStr),
+        // Fetch ALL currently checked-in bookings (status = CI) for this store
+        // This captures multi-day bookings that are still occupied
+        supabase
+          .from("bookings")
+          .select("room_id")
+          .eq("store_id", currentStore.id)
+          .eq("status", "CI")
       ]);
 
       if (bookingsError) throw bookingsError;
       if (roomsError) throw roomsError;
       if (dailyStatusError) throw dailyStatusError;
+      if (allCIBookingsError) throw allCIBookingsError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
@@ -199,9 +210,13 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         room_name: b.rooms?.name || "Unknown",
       }));
 
+      // Get all currently occupied room IDs (from ALL CI bookings, not just today's)
+      const occupiedIds = (allCIBookingsData || []).map((b: any) => b.room_id);
+
       setBookings(mappedBookings);
       setRooms(roomsData || []);
       setRoomDailyStatus(dailyStatusData || []);
+      setOccupiedRoomIds(new Set(occupiedIds));
     } catch (error) {
       console.error("Error fetching room summary data:", error);
     }
@@ -227,17 +242,13 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       .map(rds => rds.room_id)
   );
 
-  // Get occupied room IDs from bookings with status CI (checked in)
-  const occupiedRoomIds = new Set(
-    ciBookings.map(b => b.room_id)
-  );
-
   // Calculate room lists based on correct logic
   // Kotor = rooms with status 'Kotor' in room_daily_status for today
   const kotorRooms = rooms.filter(r => dirtyRoomIds.has(r.id));
   
   // Available = Total - (Occupied + Dirty)
   // Room is available if NOT occupied AND NOT dirty
+  // occupiedRoomIds is from state - fetched from ALL CI bookings (multi-day aware)
   const availableRooms = rooms.filter(r => 
     !occupiedRoomIds.has(r.id) && !dirtyRoomIds.has(r.id)
   );
