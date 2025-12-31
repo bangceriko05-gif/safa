@@ -58,12 +58,18 @@ interface RoomData {
   status: string;
 }
 
+interface RoomDailyStatusData {
+  room_id: string;
+  status: string;
+}
+
 type InfoCardType = "total" | "bo" | "ci" | "co" | "kotor" | "available";
 
 export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const { currentStore } = useStore();
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [rooms, setRooms] = useState<RoomData[]>([]);
+  const [roomDailyStatus, setRoomDailyStatus] = useState<RoomDailyStatusData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<InfoCardType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,6 +117,23 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       )
       .subscribe();
 
+    // Realtime subscription for room_daily_status
+    const dailyStatusChannel = supabase
+      .channel(`room-summary-daily-status-${currentStore.id}-${format(selectedDate, "yyyy-MM-dd")}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_daily_status',
+        },
+        () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchData(), 500);
+        }
+      )
+      .subscribe();
+
     const handleBookingChange = () => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => fetchData(), 300);
@@ -121,6 +144,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       clearTimeout(debounceTimer);
       supabase.removeChannel(bookingsChannel);
       supabase.removeChannel(roomsChannel);
+      supabase.removeChannel(dailyStatusChannel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
   }, [selectedDate, currentStore]);
@@ -133,7 +157,8 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
       const [
         { data: bookingsData, error: bookingsError },
-        { data: roomsData, error: roomsError }
+        { data: roomsData, error: roomsError },
+        { data: dailyStatusData, error: dailyStatusError }
       ] = await Promise.all([
         supabase
           .from("bookings")
@@ -148,11 +173,17 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .from("rooms")
           .select("id, name, status")
           .eq("store_id", currentStore.id)
-          .order("name")
+          .order("name"),
+        // Fetch room_daily_status for TODAY (single source of truth)
+        supabase
+          .from("room_daily_status")
+          .select("room_id, status")
+          .eq("date", dateStr)
       ]);
 
       if (bookingsError) throw bookingsError;
       if (roomsError) throw roomsError;
+      if (dailyStatusError) throw dailyStatusError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
@@ -170,6 +201,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
       setBookings(mappedBookings);
       setRooms(roomsData || []);
+      setRoomDailyStatus(dailyStatusData || []);
     } catch (error) {
       console.error("Error fetching room summary data:", error);
     }
@@ -188,8 +220,27 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const coBookings = bookings.filter(b => b.status === "CO");
   const coRevenue = coBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
-  const kotorRooms = rooms.filter(r => r.status === "Kotor");
-  const availableRooms = rooms.filter(r => r.status === "Aktif");
+  // Get dirty room IDs from room_daily_status for TODAY (single source of truth)
+  const dirtyRoomIds = new Set(
+    roomDailyStatus
+      .filter(rds => rds.status === "Kotor")
+      .map(rds => rds.room_id)
+  );
+
+  // Get occupied room IDs from bookings with status CI (checked in)
+  const occupiedRoomIds = new Set(
+    ciBookings.map(b => b.room_id)
+  );
+
+  // Calculate room lists based on correct logic
+  // Kotor = rooms with status 'Kotor' in room_daily_status for today
+  const kotorRooms = rooms.filter(r => dirtyRoomIds.has(r.id));
+  
+  // Available = Total - (Occupied + Dirty)
+  // Room is available if NOT occupied AND NOT dirty
+  const availableRooms = rooms.filter(r => 
+    !occupiedRoomIds.has(r.id) && !dirtyRoomIds.has(r.id)
+  );
 
   const handleCardClick = (cardType: InfoCardType) => {
     setSelectedCard(cardType);
