@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -17,7 +18,12 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/contexts/StoreContext";
 
-type TimeRange = "today" | "yesterday" | "7days" | "thisMonth" | "lastMonth" | "custom";
+// Import sub-reports
+import SalesReport from "./reports/SalesReport";
+import IncomeExpenseReport from "./reports/IncomeExpenseReport";
+import PurchaseReport from "./reports/PurchaseReport";
+import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
+import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 
 interface ReportStats {
   totalHours: number;
@@ -78,18 +84,12 @@ interface BookingPaymentDetail {
   type: 'booking' | 'booking_2';
 }
 
-interface PaymentDetailItem {
-  id: string;
-  name: string;
-  amount: number;
-  date: string;
-  created_at: string;
-  type: 'booking' | 'income';
-}
+type ReportTab = "overview" | "sales" | "income-expense" | "purchase" | "employee";
 
 export default function Reports() {
   const { currentStore } = useStore();
-  const [timeRange, setTimeRange] = useState<TimeRange>("today");
+  const [activeTab, setActiveTab] = useState<ReportTab>("overview");
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
@@ -132,7 +132,7 @@ export default function Reports() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [selectedPaymentType, setSelectedPaymentType] = useState<'booking' | 'income' | null>(null);
 
-  const getDateRange = (range: TimeRange) => {
+  const getDateRangeInternal = (range: ReportTimeRange) => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
@@ -145,10 +145,6 @@ export default function Reports() {
       case "yesterday":
         startDate = subDays(now, 1);
         endDate = subDays(now, 1);
-        break;
-      case "7days":
-        startDate = subDays(now, 6);
-        endDate = now;
         break;
       case "thisMonth":
         startDate = startOfMonth(now);
@@ -178,10 +174,12 @@ export default function Reports() {
 
   useEffect(() => {
     if (!currentStore) return;
-    fetchData();
-    fetchProducts();
-    fetchCustomers();
-  }, [timeRange, customDateRange, currentStore]);
+    if (activeTab === "overview") {
+      fetchData();
+      fetchProducts();
+      fetchCustomers();
+    }
+  }, [timeRange, customDateRange, currentStore, activeTab]);
 
   const fetchProducts = async () => {
     if (!currentStore) return;
@@ -220,25 +218,12 @@ export default function Reports() {
     
     setLoading(true);
     try {
-      const { startDate, endDate } = getDateRange(timeRange);
+      const { startDate, endDate } = getDateRangeInternal(timeRange);
       const startDateStr = format(startDate, "yyyy-MM-dd");
       const endDateStr = format(endDate, "yyyy-MM-dd");
       const startTimestamp = startOfDay(startDate).toISOString();
       const endTimestamp = endOfDay(endDate).toISOString();
 
-      console.log("[Reports] Date Range Debug:", {
-        timeRange,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        startDateStr,
-        endDateStr,
-        startTimestamp,
-        endTimestamp,
-        storeId: currentStore.id,
-        storeName: currentStore.name
-      });
-
-      // **FIXED: Add store_id filter to all queries**
       const [bookingsResult, customersResult, expensesResult, incomesResult] = await Promise.all([
         supabase
           .from("bookings")
@@ -274,11 +259,10 @@ export default function Reports() {
       if (incomesResult.error) throw incomesResult.error;
 
       const bookings = bookingsResult.data || [];
-      const customers = customersResult.data || [];
+      const customersData = customersResult.data || [];
       const expensesData = (expensesResult.data || []) as any[];
       const incomesData = (incomesResult.data || []) as any[];
 
-      // Build list of unique creator IDs from expenses and incomes
       const creatorIds = Array.from(
         new Set([
           ...expensesData.map((e) => e.created_by).filter(Boolean),
@@ -289,19 +273,16 @@ export default function Reports() {
       let profilesById: Record<string, string> = {};
 
       if (creatorIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
+        const { data: profiles } = await supabase
           .from("profiles")
           .select("id, name")
           .in("id", creatorIds);
 
-        if (profilesError) {
-          console.error("[Reports] Error fetching creator profiles:", profilesError);
-        } else if (profiles) {
+        if (profiles) {
           profilesById = Object.fromEntries(profiles.map((p) => [p.id, p.name]));
         }
       }
 
-      // Map expenses and incomes with creator names
       const expensesWithCreator = expensesData.map((expense) => ({
         ...expense,
         creator_name: profilesById[expense.created_by] || "Unknown",
@@ -312,43 +293,11 @@ export default function Reports() {
         creator_name: profilesById[income.created_by] || "Unknown",
       }));
 
-      console.log("[Reports] Creator mapping:", { creatorIds, profilesById });
-
-      const expensesWithMeta = expensesWithCreator;
-      const incomesWithMeta = incomesWithCreator;
-
-      const expensesFinal = expensesWithMeta;
-      const incomesFinal = incomesWithMeta;
-
-      console.log("[Reports] Query Results:", {
-        bookingsCount: bookings.length,
-        customersCount: customers.length,
-        expensesCount: expensesFinal.length,
-        incomesCount: incomesFinal.length,
-      });
-
-      console.log("[Reports] Bookings Sample (first 5):", bookings.slice(0, 5).map(b => ({
-        date: b.date,
-        duration: b.duration,
-        price: b.price,
-        price_2: b.price_2
-      })));
-
-      // Calculate total hours
       const totalHours = bookings.reduce((sum, booking) => sum + (Number(booking.duration) || 0), 0);
       
-      console.log("[Reports] Total Hours Calculation:", {
-        totalHours,
-        bookingsWithDuration: bookings.filter(b => b.duration).length
-      });
-
-      // Calculate payment method totals from bookings and incomes
       const paymentTotals: { [key: string]: number } = {};
-      
-      // Build booking payment details for modal display
       const bookingPaymentDetails: BookingPaymentDetail[] = [];
       
-      // Add booking payment methods
       bookings.forEach((booking) => {
         if (booking.payment_method) {
           const method = booking.payment_method;
@@ -365,7 +314,6 @@ export default function Reports() {
             type: 'booking',
           });
         } else if (Number(booking.price) > 0) {
-          // Include bookings without payment method under "Belum Diisi"
           const price = Number(booking.price) || 0;
           paymentTotals["Belum Diisi"] = (paymentTotals["Belum Diisi"] || 0) + price;
           
@@ -395,7 +343,6 @@ export default function Reports() {
             type: 'booking_2',
           });
         } else if (Number(booking.price_2) > 0) {
-          // Include bookings without payment method 2 under "Belum Diisi"
           const price = Number(booking.price_2) || 0;
           paymentTotals["Belum Diisi"] = (paymentTotals["Belum Diisi"] || 0) + price;
           
@@ -411,16 +358,13 @@ export default function Reports() {
         }
       });
 
-      // Calculate total booking revenue BEFORE adding incomes to paymentTotals
       const totalBookingRevenue = Object.values(paymentTotals).reduce((sum, total) => sum + total, 0);
 
-      // Booking payment totals (without income)
       const paymentMethodTotals = Object.entries(paymentTotals).map(([method, total]) => ({
         method,
         total,
       }));
 
-      // Track additional income payment methods separately
       const incomePaymentTotals: { [key: string]: number } = {};
       incomesData.forEach((income) => {
         if (income.payment_method && income.amount) {
@@ -436,31 +380,20 @@ export default function Reports() {
       }));
 
       const totalExpenses = expensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
-      
-      // Calculate total additional income
       const totalAdditionalIncome = incomesData.reduce((sum, income) => sum + Number(income.amount), 0);
-
-      console.log("[Reports] Final Stats:", {
-        totalHours,
-        totalBookingRevenue,
-        paymentMethodCount: paymentMethodTotals.length,
-        totalExpenses,
-        totalAdditionalIncome,
-        netProfit: totalBookingRevenue + totalAdditionalIncome - totalExpenses
-      });
 
       setStats({
         totalHours,
         paymentMethodTotals,
         additionalIncomePaymentTotals,
-        newCustomers: customers.length,
+        newCustomers: customersData.length,
         totalExpenses,
         totalAdditionalIncome,
         totalBookingRevenue,
       });
 
-      setExpenses(expensesFinal);
-      setAdditionalIncomes(incomesFinal);
+      setExpenses(expensesWithCreator);
+      setAdditionalIncomes(incomesWithCreator);
       setBookingPayments(bookingPaymentDetails);
     } catch (error) {
       console.error("Error fetching report data:", error);
@@ -478,26 +411,6 @@ export default function Reports() {
     }).format(amount);
   };
 
-  const getTimeRangeLabel = (range: TimeRange) => {
-    switch (range) {
-      case "today":
-        return "1 Hari (Hari Ini)";
-      case "yesterday":
-        return "Kemarin";
-      case "7days":
-        return "7 Hari Terakhir";
-      case "thisMonth":
-        return "Bulan Ini";
-      case "lastMonth":
-        return "Bulan Lalu";
-      case "custom":
-        return "Sesuaikan";
-      default:
-        return "1 Hari";
-    }
-  };
-
-
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -513,11 +426,10 @@ export default function Reports() {
         return;
       }
 
-      const { startDate } = getDateRange(timeRange);
+      const { startDate } = getDateRangeInternal(timeRange);
       const dateStr = format(startDate, "yyyy-MM-dd");
 
       if (editingExpense) {
-        // Update existing expense
         const { error } = await supabase
           .from("expenses")
           .update({
@@ -530,7 +442,6 @@ export default function Reports() {
         if (error) throw error;
         toast.success("Pengeluaran berhasil diperbarui");
       } else {
-        // Insert new expense
         const { error } = await supabase
           .from("expenses")
           .insert([{
@@ -595,7 +506,6 @@ export default function Reports() {
       return;
     }
 
-    // Validation
     if (!incomeForm.customer_name.trim()) {
       toast.error("Nama pelanggan harus diisi");
       return;
@@ -606,7 +516,6 @@ export default function Reports() {
       return;
     }
 
-    // Validate reference number for QRIS and Transfer
     if ((incomeForm.payment_method === "QRIS" || incomeForm.payment_method === "Transfer") && !incomeForm.reference_no.trim()) {
       toast.error("Nomor referensi wajib diisi untuk metode QRIS dan Transfer");
       return;
@@ -619,16 +528,14 @@ export default function Reports() {
         return;
       }
 
-      const { startDate } = getDateRange(timeRange);
+      const { startDate } = getDateRangeInternal(timeRange);
       const dateStr = format(startDate, "yyyy-MM-dd");
 
-      // Calculate amount: use products total if products exist, otherwise use manual amount
       const calculatedAmount = selectedProducts.length > 0 
         ? calculateProductsTotal()
         : (incomeForm.amount ? parseFloat(incomeForm.amount.replace(/\./g, "")) : 0);
 
       if (editingIncome) {
-        // Update existing income
         const { error: incomeError } = await supabase
           .from("incomes")
           .update({
@@ -642,13 +549,11 @@ export default function Reports() {
 
         if (incomeError) throw incomeError;
 
-        // Delete old products
         await supabase
           .from("income_products")
           .delete()
           .eq("income_id", editingIncome.id);
 
-        // Insert new products if any
         if (selectedProducts.length > 0) {
           const productsToInsert = selectedProducts.map(p => ({
             income_id: editingIncome.id,
@@ -668,7 +573,6 @@ export default function Reports() {
 
         toast.success("Pemasukan berhasil diperbarui");
       } else {
-        // Insert new income
         const { data: incomeData, error: incomeError } = await supabase
           .from("incomes")
           .insert([{
@@ -686,7 +590,6 @@ export default function Reports() {
 
         if (incomeError) throw incomeError;
 
-        // Insert income products if any
         if (selectedProducts.length > 0 && incomeData) {
           const productsToInsert = selectedProducts.map(p => ({
             income_id: incomeData.id,
@@ -728,7 +631,6 @@ export default function Reports() {
       reference_no: income.reference_no || "",
     });
 
-    // Fetch income products
     try {
       const { data, error } = await supabase
         .from("income_products")
@@ -738,14 +640,14 @@ export default function Reports() {
       if (error) throw error;
 
       if (data) {
-        const products = data.map(p => ({
+        const productsList = data.map(p => ({
           product_id: p.product_id,
           product_name: p.product_name,
           product_price: p.product_price,
           quantity: p.quantity,
           subtotal: p.subtotal,
         }));
-        setSelectedProducts(products);
+        setSelectedProducts(productsList);
       }
     } catch (error) {
       console.error("Error fetching income products:", error);
@@ -756,7 +658,6 @@ export default function Reports() {
 
   const handleViewIncome = async (income: AdditionalIncome) => {
     try {
-      // Fetch income products
       const { data: incomeProducts, error } = await supabase
         .from('income_products')
         .select('*')
@@ -764,7 +665,7 @@ export default function Reports() {
 
       if (error) throw error;
 
-      const products: SelectedProduct[] = incomeProducts?.map(ip => ({
+      const productsList: SelectedProduct[] = incomeProducts?.map(ip => ({
         product_id: ip.product_id,
         product_name: ip.product_name,
         product_price: ip.product_price,
@@ -774,7 +675,7 @@ export default function Reports() {
 
       setViewingIncome({
         ...income,
-        products
+        products: productsList
       });
     } catch (error) {
       console.error("Error fetching income products:", error);
@@ -844,7 +745,6 @@ export default function Reports() {
     setShowCustomerSuggestions(false);
   };
 
-  // Close customer suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -879,8 +779,8 @@ export default function Reports() {
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
-  const getDateRangeDisplay = (range: TimeRange) => {
-    const { startDate, endDate } = getDateRange(range);
+  const getDateRangeDisplayLocal = (range: ReportTimeRange) => {
+    const { startDate, endDate } = getDateRangeInternal(range);
     
     if (range === "today" || range === "yesterday") {
       return format(startDate, "d MMMM yyyy", { locale: localeId });
@@ -893,102 +793,11 @@ export default function Reports() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center gap-3">
-        <div>
-          <h2 className="text-2xl font-bold">Laporan</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {getDateRangeDisplay(timeRange)}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Select value={timeRange} onValueChange={(value: TimeRange) => {
-            if (value === "custom") {
-              setPendingDateRange(customDateRange);
-              setShowCustomDatePicker(true);
-            }
-            setTimeRange(value);
-          }}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">1 Hari (Hari Ini)</SelectItem>
-              <SelectItem value="yesterday">Kemarin</SelectItem>
-              <SelectItem value="7days">7 Hari Terakhir</SelectItem>
-              <SelectItem value="thisMonth">Bulan Ini</SelectItem>
-              <SelectItem value="lastMonth">Bulan Lalu</SelectItem>
-              <SelectItem value="custom">Sesuaikan</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {timeRange === "custom" && (
-            <Popover open={showCustomDatePicker} onOpenChange={setShowCustomDatePicker}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "justify-start text-left font-normal",
-                    !customDateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {customDateRange?.from ? (
-                    customDateRange.to ? (
-                      <>
-                        {format(customDateRange.from, "dd MMM", { locale: localeId })} -{" "}
-                        {format(customDateRange.to, "dd MMM yyyy", { locale: localeId })}
-                      </>
-                    ) : (
-                      format(customDateRange.from, "dd MMM yyyy", { locale: localeId })
-                    )
-                  ) : (
-                    <span>Pilih tanggal</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-popover z-50" align="end">
-                <div className="flex flex-col">
-                  <Calendar
-                    mode="range"
-                    selected={pendingDateRange}
-                    onSelect={(range) => {
-                      setPendingDateRange(range);
-                    }}
-                    defaultMonth={pendingDateRange?.from || customDateRange?.from || new Date()}
-                    initialFocus
-                    numberOfMonths={2}
-                    locale={localeId}
-                    className="pointer-events-auto"
-                  />
-                  <div className="flex justify-end p-3 pt-0 border-t">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (pendingDateRange?.from) {
-                          setCustomDateRange(pendingDateRange);
-                          setShowCustomDatePicker(false);
-                        } else {
-                          toast.error("Pilih tanggal terlebih dahulu");
-                        }
-                      }}
-                      disabled={!pendingDateRange?.from}
-                    >
-                      OK
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="max-h-[calc(100vh-250px)] overflow-y-auto pr-2">
+  const renderOverviewContent = () => {
+    if (loading) {
+      return (
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Loading skeletons */}
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1002,382 +811,407 @@ export default function Reports() {
               </Card>
             ))}
           </div>
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            {/* Loading skeleton for expenses */}
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-            {/* Loading skeleton for incomes */}
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
         </div>
-      ) : (
-        <div className="max-h-[calc(100vh-250px)] overflow-y-auto pr-2">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Total Hours Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Jam</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalHours.toFixed(1)} jam</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {getDateRangeDisplay(timeRange)}
-                </p>
-              </CardContent>
-            </Card>
+      );
+    }
 
-            {/* New Customers Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pelanggan Baru</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.newCustomers}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {getDateRangeDisplay(timeRange)}
-                </p>
-              </CardContent>
-            </Card>
+    return (
+      <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Total Hours Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Jam</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalHours.toFixed(1)} jam</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {getDateRangeDisplayLocal(timeRange)}
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Payment Methods Card */}
-            <Card className="md:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total per Metode Payment</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {stats.paymentMethodTotals.length === 0 && stats.additionalIncomePaymentTotals.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada data</p>
-                ) : (
-                  <div className="space-y-2">
-                    {/* Booking Payment Methods */}
-                    {stats.paymentMethodTotals.map((item, index) => (
-                      <button
-                        key={`booking-${index}`}
-                        className="flex justify-between items-center w-full p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => {
-                          setSelectedPaymentMethod(item.method);
-                          setSelectedPaymentType('booking');
-                        }}
-                      >
-                        <div className="text-left">
-                          <span className="text-sm font-medium">{item.method}</span>
-                        </div>
-                        <span className="text-sm font-bold">{formatCurrency(item.total)}</span>
-                      </button>
-                    ))}
+          {/* New Customers Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pelanggan Baru</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.newCustomers}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {getDateRangeDisplayLocal(timeRange)}
+              </p>
+            </CardContent>
+          </Card>
 
-                    {/* Additional Income Payment Methods */}
-                    {stats.additionalIncomePaymentTotals.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        {stats.additionalIncomePaymentTotals.map((item, index) => (
-                          <button
-                            key={`income-${index}`}
-                            className="w-full text-left p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => {
-                              setSelectedPaymentMethod(item.method);
-                              setSelectedPaymentType('income');
-                            }}
-                          >
-                            <div className="text-sm text-muted-foreground">
-                              Pemasukan {item.method} (Tambahan)
-                            </div>
-                            <div className="text-sm font-bold">
-                              {formatCurrency(item.total)}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Total */}
-                    <div className="pt-2 mt-2 border-t">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold">Total Pemasukan</span>
-                        <span className="text-lg font-bold text-green-600">
-                          {formatCurrency(
-                            stats.paymentMethodTotals.reduce((sum, item) => sum + item.total, 0) +
-                            stats.additionalIncomePaymentTotals.reduce((sum, item) => sum + item.total, 0)
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {getDateRangeDisplay(timeRange)}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Expenses Card */}
-            <Card className="md:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pengeluaran</CardTitle>
-                <TrendingDown className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
+          {/* Payment Methods Card */}
+          <Card className="md:col-span-2 lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total per Metode Payment</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {stats.paymentMethodTotals.length === 0 && stats.additionalIncomePaymentTotals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Tidak ada data</p>
+              ) : (
                 <div className="space-y-2">
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(stats.totalExpenses)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {getDateRangeDisplay(timeRange)}
-                  </p>
-                  
-                  <Dialog open={showExpenseForm} onOpenChange={(open) => {
-                    setShowExpenseForm(open);
-                    if (!open) {
-                      setEditingExpense(null);
-                      setExpenseForm({ description: "", amount: "", category: "" });
-                    }
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="w-full mt-2">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Tambah Pengeluaran
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{editingExpense ? "Edit" : "Tambah"} Pengeluaran</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddExpense} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="description">Deskripsi</Label>
-                          <Input
-                            id="description"
-                            value={expenseForm.description}
-                            onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                            placeholder="Contoh: Listrik, Air, dll"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="amount">Jumlah</Label>
-                          <Input
-                            id="amount"
-                            value={expenseForm.amount}
-                            onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatExpenseAmount(e.target.value) })}
-                            placeholder="0"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="category">Kategori</Label>
-                          <Input
-                            id="category"
-                            value={expenseForm.category}
-                            onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                            placeholder="Contoh: Operasional, Utilitas"
-                          />
-                        </div>
-                        <Button type="submit" className="w-full">Simpan</Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  {stats.paymentMethodTotals.map((item, index) => (
+                    <button
+                      key={`booking-${index}`}
+                      className="flex justify-between items-center w-full p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedPaymentMethod(item.method);
+                        setSelectedPaymentType('booking');
+                      }}
+                    >
+                      <div className="text-left">
+                        <span className="text-sm font-medium">{item.method}</span>
+                      </div>
+                      <span className="text-sm font-bold">{formatCurrency(item.total)}</span>
+                    </button>
+                  ))}
 
-                  {expenses.length > 0 && (
-                    <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
-                      {expenses.map((expense) => (
-                        <div key={expense.id} className="flex justify-between items-start text-xs bg-muted/50 p-2 rounded">
-                          <div className="flex-1 cursor-pointer" onClick={() => handleViewExpense(expense)}>
-                            {expense.bid && (
-                              <div className="flex items-center gap-1 mb-1">
-                                <div className="text-[10px] font-mono text-primary">{expense.bid}</div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-4 w-4 p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(expense.bid || '');
-                                    toast.success("BID berhasil disalin");
-                                  }}
-                                  title="Salin BID"
-                                >
-                                  <Copy className="h-2.5 w-2.5" />
-                                </Button>
-                              </div>
-                            )}
-                            <div className="font-medium">{expense.description}</div>
-                            {expense.category && (
-                              <div className="text-muted-foreground">{expense.category}</div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Dibuat oleh: {expense.creator_name}
-                            </div>
+                  {stats.additionalIncomePaymentTotals.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {stats.additionalIncomePaymentTotals.map((item, index) => (
+                        <button
+                          key={`income-${index}`}
+                          className="w-full text-left p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setSelectedPaymentMethod(item.method);
+                            setSelectedPaymentType('income');
+                          }}
+                        >
+                          <div className="text-sm text-muted-foreground">
+                            Pemasukan {item.method} (Tambahan)
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold">{formatCurrency(expense.amount)}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleEditExpense(expense)}
-                              title="Edit"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleDeleteExpense(expense.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          <div className="text-sm font-bold">
+                            {formatCurrency(item.total)}
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Additional Income Card */}
-            <Card className="md:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pemasukan</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(stats.totalAdditionalIncome)}
+                  <div className="pt-2 mt-2 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold">Total Pemasukan</span>
+                      <span className="text-lg font-bold text-green-600">
+                        {formatCurrency(
+                          stats.paymentMethodTotals.reduce((sum, item) => sum + item.total, 0) +
+                          stats.additionalIncomePaymentTotals.reduce((sum, item) => sum + item.total, 0)
+                        )}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {getDateRangeDisplay(timeRange)}
-                  </p>
-                  
-                  <Dialog open={showIncomeForm} onOpenChange={(open) => {
-                    setShowIncomeForm(open);
-                    if (!open) {
-                      setEditingIncome(null);
-                      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "" });
-                      setSelectedProducts([]);
-                    }
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="w-full mt-2">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Tambah Pemasukan
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>{editingIncome ? "Edit" : "Tambah"} Pemasukan</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddIncome} className="space-y-4">
-                        <div className="space-y-2 relative">
-                          <Label htmlFor="income-customer-name">Nama Pelanggan <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="income-customer-name"
-                            value={incomeForm.customer_name}
-                            onChange={(e) => handleCustomerNameChange(e.target.value)}
-                            onFocus={() => {
-                              if (incomeForm.customer_name.trim().length > 0) {
-                                const filtered = customers.filter(
-                                  (customer) =>
-                                    customer.name.toLowerCase().includes(incomeForm.customer_name.toLowerCase()) ||
-                                    customer.phone.includes(incomeForm.customer_name)
-                                );
-                                setFilteredCustomers(filtered);
-                                setShowCustomerSuggestions(true);
-                              }
-                            }}
-                            placeholder="Nama pelanggan"
-                            required
-                            autoComplete="off"
-                          />
-                          {showCustomerSuggestions && filteredCustomers.length > 0 && (
-                            <div className="customer-suggestions absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                              {filteredCustomers.map((customer) => (
-                                <div
-                                  key={customer.id}
-                                  className="px-3 py-2 hover:bg-accent cursor-pointer"
-                                  onClick={() => selectCustomer(customer)}
-                                >
-                                  <div className="font-medium">{customer.name}</div>
-                                  <div className="text-sm text-muted-foreground">{customer.phone}</div>
-                                </div>
-                              ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Expenses Card */}
+          <Card className="md:col-span-2 lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pengeluaran</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(stats.totalExpenses)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {getDateRangeDisplayLocal(timeRange)}
+                </p>
+                
+                <Dialog open={showExpenseForm} onOpenChange={(open) => {
+                  setShowExpenseForm(open);
+                  if (!open) {
+                    setEditingExpense(null);
+                    setExpenseForm({ description: "", amount: "", category: "" });
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="w-full mt-2">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Tambah Pengeluaran
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingExpense ? "Edit" : "Tambah"} Pengeluaran</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddExpense} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Deskripsi</Label>
+                        <Input
+                          id="description"
+                          value={expenseForm.description}
+                          onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                          placeholder="Contoh: Listrik, Air, dll"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="amount">Jumlah</Label>
+                        <Input
+                          id="amount"
+                          value={expenseForm.amount}
+                          onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatExpenseAmount(e.target.value) })}
+                          placeholder="0"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Kategori</Label>
+                        <Input
+                          id="category"
+                          value={expenseForm.category}
+                          onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                          placeholder="Contoh: Operasional, Utilitas"
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">Simpan</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                {expenses.length > 0 && (
+                  <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                    {expenses.map((expense) => (
+                      <div key={expense.id} className="flex justify-between items-start text-xs bg-muted/50 p-2 rounded">
+                        <div className="flex-1 cursor-pointer" onClick={() => handleViewExpense(expense)}>
+                          {expense.bid && (
+                            <div className="flex items-center gap-1 mb-1">
+                              <div className="text-[10px] font-mono text-primary">{expense.bid}</div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(expense.bid || '');
+                                  toast.success("BID berhasil disalin");
+                                }}
+                                title="Salin BID"
+                              >
+                                <Copy className="h-2.5 w-2.5" />
+                              </Button>
                             </div>
                           )}
+                          <div className="font-medium">{expense.description}</div>
+                          {expense.category && (
+                            <div className="text-muted-foreground">{expense.category}</div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Dibuat oleh: {expense.creator_name}
+                          </div>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="income-payment-method">Metode Bayar <span className="text-red-500">*</span></Label>
-                          <Select
-                            value={incomeForm.payment_method}
-                            onValueChange={(value) => setIncomeForm({ ...incomeForm, payment_method: value })}
-                            required
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{formatCurrency(expense.amount)}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleEditExpense(expense)}
+                            title="Edit"
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih metode bayar" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover z-50">
-                              <SelectItem value="Cash">Cash</SelectItem>
-                              <SelectItem value="QRIS">QRIS</SelectItem>
-                              <SelectItem value="Transfer">Transfer</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleDeleteExpense(expense.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="income-reference-no">
-                            Nomor Referensi
-                            {(incomeForm.payment_method === "QRIS" || incomeForm.payment_method === "Transfer") && 
-                              <span className="text-red-500"> *</span>
+          {/* Additional Income Card */}
+          <Card className="md:col-span-2 lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pemasukan</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(stats.totalAdditionalIncome)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {getDateRangeDisplayLocal(timeRange)}
+                </p>
+                
+                <Dialog open={showIncomeForm} onOpenChange={(open) => {
+                  setShowIncomeForm(open);
+                  if (!open) {
+                    setEditingIncome(null);
+                    setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "" });
+                    setSelectedProducts([]);
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="w-full mt-2">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Tambah Pemasukan
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingIncome ? "Edit" : "Tambah"} Pemasukan</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddIncome} className="space-y-4">
+                      <div className="space-y-2 relative">
+                        <Label htmlFor="income-customer-name">Nama Pelanggan <span className="text-red-500">*</span></Label>
+                        <Input
+                          id="income-customer-name"
+                          value={incomeForm.customer_name}
+                          onChange={(e) => handleCustomerNameChange(e.target.value)}
+                          onFocus={() => {
+                            if (incomeForm.customer_name.trim().length > 0) {
+                              const filtered = customers.filter(
+                                (customer) =>
+                                  customer.name.toLowerCase().includes(incomeForm.customer_name.toLowerCase()) ||
+                                  customer.phone.includes(incomeForm.customer_name)
+                              );
+                              setFilteredCustomers(filtered);
+                              setShowCustomerSuggestions(true);
                             }
-                          </Label>
+                          }}
+                          placeholder="Nama pelanggan"
+                          required
+                          autoComplete="off"
+                        />
+                        {showCustomerSuggestions && filteredCustomers.length > 0 && (
+                          <div className="customer-suggestions absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            {filteredCustomers.map((customer) => (
+                              <div
+                                key={customer.id}
+                                className="px-3 py-2 hover:bg-accent cursor-pointer"
+                                onClick={() => selectCustomer(customer)}
+                              >
+                                <div className="font-medium">{customer.name}</div>
+                                <div className="text-sm text-muted-foreground">{customer.phone}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="income-payment-method">Metode Bayar <span className="text-red-500">*</span></Label>
+                        <Select
+                          value={incomeForm.payment_method}
+                          onValueChange={(value) => setIncomeForm({ ...incomeForm, payment_method: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih metode bayar" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            <SelectItem value="Cash">Cash</SelectItem>
+                            <SelectItem value="QRIS">QRIS</SelectItem>
+                            <SelectItem value="Transfer">Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(incomeForm.payment_method === "QRIS" || incomeForm.payment_method === "Transfer") && (
+                        <div className="space-y-2">
+                          <Label htmlFor="income-reference-no">Nomor Referensi <span className="text-red-500">*</span></Label>
                           <Input
                             id="income-reference-no"
                             value={incomeForm.reference_no}
                             onChange={(e) => setIncomeForm({ ...incomeForm, reference_no: e.target.value })}
-                            placeholder="Nomor referensi"
-                            required={incomeForm.payment_method === "QRIS" || incomeForm.payment_method === "Transfer"}
+                            placeholder="Nomor referensi pembayaran"
+                            required
                           />
                         </div>
+                      )}
 
-                        <div className="space-y-2">
-                          <Label htmlFor="income-description">Deskripsi</Label>
-                          <Input
-                            id="income-description"
-                            value={incomeForm.description}
-                            onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
-                            placeholder="Contoh: Take Away, Penjualan, dll"
-                          />
+                      <div className="space-y-2">
+                        <Label htmlFor="income-description">Deskripsi (opsional)</Label>
+                        <Input
+                          id="income-description"
+                          value={incomeForm.description}
+                          onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
+                          placeholder="Deskripsi pemasukan"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <Label>Produk (opsional)</Label>
+                          <Button type="button" size="sm" variant="outline" onClick={handleAddProduct}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Tambah Produk
+                          </Button>
                         </div>
 
+                        {selectedProducts.map((product, index) => (
+                          <div key={index} className="flex gap-2 items-start p-2 bg-muted/50 rounded">
+                            <div className="flex-1 space-y-2">
+                              <Select
+                                value={product.product_id}
+                                onValueChange={(value) => handleProductChange(index, value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Pilih produk" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover z-50">
+                                  {products.map((p) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.name} - {formatCurrency(p.price)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={product.quantity}
+                                  onChange={(e) => handleProductQuantityChange(index, parseInt(e.target.value) || 1)}
+                                  className="w-20"
+                                  placeholder="Qty"
+                                />
+                                <div className="flex-1 flex items-center justify-end text-sm font-medium">
+                                  {formatCurrency(product.subtotal)}
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleRemoveProduct(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+
+                        {selectedProducts.length > 0 && (
+                          <div className="flex justify-between items-center pt-2 border-t">
+                            <span className="font-medium">Total Produk</span>
+                            <span className="font-bold text-green-600">{formatCurrency(calculateProductsTotal())}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedProducts.length === 0 && (
                         <div className="space-y-2">
-                          <Label htmlFor="income-amount">Jumlah</Label>
+                          <Label htmlFor="income-amount">Jumlah (jika tidak pakai produk)</Label>
                           <Input
                             id="income-amount"
                             value={incomeForm.amount}
@@ -1385,185 +1219,182 @@ export default function Reports() {
                             placeholder="0"
                           />
                         </div>
+                      )}
 
-                        {/* Products Section (Optional) */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>Produk (Opsional)</Label>
-                            <Button type="button" size="sm" variant="outline" onClick={handleAddProduct}>
-                              <Plus className="h-4 w-4 mr-1" />
-                              Tambah Produk
-                            </Button>
-                          </div>
-                          
-                          {selectedProducts.length > 0 && (
-                            <div className="space-y-2 border rounded-md p-3">
-                              {selectedProducts.map((product, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                  <Select
-                                    value={product.product_id}
-                                    onValueChange={(value) => handleProductChange(index, value)}
-                                  >
-                                    <SelectTrigger className="flex-1">
-                                      <SelectValue placeholder="Pilih produk" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-popover z-50">
-                                      {products.map((p) => (
-                                        <SelectItem key={p.id} value={p.id}>
-                                          {p.name} - {formatCurrency(p.price)}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    value={product.quantity}
-                                    onChange={(e) => handleProductQuantityChange(index, parseInt(e.target.value) || 1)}
-                                    className="w-20"
-                                    placeholder="Qty"
-                                  />
-                                  <div className="text-sm font-medium w-32">
-                                    {formatCurrency(product.subtotal)}
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleRemoveProduct(index)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                              <div className="pt-2 border-t flex justify-between items-center">
-                                <span className="text-sm font-medium">Total Produk:</span>
-                                <span className="text-sm font-bold">{formatCurrency(calculateProductsTotal())}</span>
-                              </div>
+                      <Button type="submit" className="w-full">Simpan</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                {additionalIncomes.length > 0 && (
+                  <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                    {additionalIncomes.map((income) => (
+                      <div key={income.id} className="flex justify-between items-start text-xs bg-muted/50 p-2 rounded">
+                        <div className="flex-1 cursor-pointer" onClick={() => handleViewIncome(income)}>
+                          {income.bid && (
+                            <div className="flex items-center gap-1 mb-1">
+                              <div className="text-[10px] font-mono text-primary">{income.bid}</div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(income.bid || '');
+                                  toast.success("BID berhasil disalin");
+                                }}
+                                title="Salin BID"
+                              >
+                                <Copy className="h-2.5 w-2.5" />
+                              </Button>
                             </div>
                           )}
-                        </div>
-
-                        <Button type="submit" className="w-full">Simpan</Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-
-                  {additionalIncomes.length > 0 && (
-                    <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
-                      {additionalIncomes.map((income) => (
-                        <div key={income.id} className="flex justify-between items-start text-xs bg-muted/50 p-2 rounded">
-                          <div className="flex-1 cursor-pointer" onClick={() => handleViewIncome(income)}>
-                            {income.bid && (
-                              <div className="flex items-center gap-1 mb-1">
-                                <div className="text-[10px] font-mono text-primary">{income.bid}</div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-4 w-4 p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(income.bid || '');
-                                    toast.success("BID berhasil disalin");
-                                  }}
-                                  title="Salin BID"
-                                >
-                                  <Copy className="h-2.5 w-2.5" />
-                                </Button>
-                              </div>
-                            )}
-                            <div className="font-medium">{income.description}</div>
-                            {income.customer_name && (
-                              <div className="text-muted-foreground">Pelanggan: {income.customer_name}</div>
-                            )}
-                            {income.payment_method && (
-                              <div className="text-muted-foreground">
-                                {income.payment_method}
-                                {income.reference_no && ` - ${income.reference_no}`}
-                              </div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Dibuat oleh: {income.creator_name}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold">{formatCurrency(income.amount)}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleEditIncome(income)}
-                              title="Edit"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleDeleteIncome(income.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          <div className="font-medium">{income.customer_name || income.description}</div>
+                          {income.payment_method && (
+                            <div className="text-muted-foreground">{income.payment_method}</div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Dibuat oleh: {income.creator_name}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-green-600">{formatCurrency(income.amount)}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleEditIncome(income)}
+                            title="Edit"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleDeleteIncome(income.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Net Profit Card */}
+          <Card className="md:col-span-2 lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Bersih</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className={`text-2xl font-bold ${
+                  (stats.totalBookingRevenue + stats.totalAdditionalIncome - stats.totalExpenses) >= 0 
+                    ? "text-green-600" 
+                    : "text-red-600"
+                }`}>
+                  {formatCurrency(
+                    stats.totalBookingRevenue + stats.totalAdditionalIncome - stats.totalExpenses
                   )}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Net Profit Card */}
-            <Card className="md:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Bersih</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                <div className={`text-2xl font-bold ${
-                    (stats.totalBookingRevenue + stats.totalAdditionalIncome - stats.totalExpenses) >= 0 
-                      ? "text-green-600" 
-                      : "text-red-600"
-                  }`}>
-                    {formatCurrency(
-                      stats.totalBookingRevenue + stats.totalAdditionalIncome - stats.totalExpenses
-                    )}
+                <p className="text-xs text-muted-foreground">
+                  Pemasukan - Pengeluaran
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {getDateRangeDisplayLocal(timeRange)}
+                </p>
+                
+                <div className="mt-4 space-y-1 text-xs text-muted-foreground border-t pt-2">
+                  <div className="flex justify-between">
+                    <span>Pemasukan dari Booking:</span>
+                    <span className="font-medium text-green-600">
+                      {formatCurrency(stats.totalBookingRevenue)}
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Pemasukan - Pengeluaran
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {getDateRangeDisplay(timeRange)}
-                  </p>
-                  
-                  <div className="mt-4 space-y-1 text-xs text-muted-foreground border-t pt-2">
-                    <div className="flex justify-between">
-                      <span>Pemasukan dari Booking:</span>
-                      <span className="font-medium text-green-600">
-                        {formatCurrency(stats.totalBookingRevenue)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Pemasukan Tambahan:</span>
-                      <span className="font-medium text-green-600">
-                        {formatCurrency(stats.totalAdditionalIncome)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Pengeluaran:</span>
-                      <span className="font-medium text-red-600">
-                        {formatCurrency(stats.totalExpenses)}
-                      </span>
-                    </div>
+                  <div className="flex justify-between">
+                    <span>Pemasukan Tambahan:</span>
+                    <span className="font-medium text-green-600">
+                      {formatCurrency(stats.totalAdditionalIncome)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Pengeluaran:</span>
+                    <span className="font-medium text-red-600">
+                      {formatCurrency(stats.totalExpenses)}
+                    </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h2 className="text-2xl font-bold">Laporan</h2>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="flex items-center gap-1.5">
+            <LayoutGrid className="h-4 w-4" />
+            <span className="hidden sm:inline">Keseluruhan</span>
+          </TabsTrigger>
+          <TabsTrigger value="sales" className="flex items-center gap-1.5">
+            <DollarSign className="h-4 w-4" />
+            <span className="hidden sm:inline">Penjualan</span>
+          </TabsTrigger>
+          <TabsTrigger value="income-expense" className="flex items-center gap-1.5">
+            <Receipt className="h-4 w-4" />
+            <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
+          </TabsTrigger>
+          <TabsTrigger value="purchase" className="flex items-center gap-1.5">
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">Pembelian</span>
+          </TabsTrigger>
+          <TabsTrigger value="employee" className="flex items-center gap-1.5">
+            <UserCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Kinerja</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-4">
+          <div className="flex justify-end mb-4">
+            <ReportDateFilter
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+            />
+          </div>
+          {renderOverviewContent()}
+        </TabsContent>
+
+        <TabsContent value="sales" className="mt-4">
+          <SalesReport />
+        </TabsContent>
+
+        <TabsContent value="income-expense" className="mt-4">
+          <IncomeExpenseReport />
+        </TabsContent>
+
+        <TabsContent value="purchase" className="mt-4">
+          <PurchaseReport />
+        </TabsContent>
+
+        <TabsContent value="employee" className="mt-4">
+          <EmployeePerformanceReport />
+        </TabsContent>
+      </Tabs>
 
       {/* View Expense Detail Dialog */}
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
@@ -1704,7 +1535,6 @@ export default function Reports() {
                 <div className="text-sm">{viewingIncome.creator_name}</div>
               </div>
 
-              {/* Product Details Section */}
               {viewingIncome.products && viewingIncome.products.length > 0 && (
                 <div className="border-t pt-3 mt-3">
                   <Label className="text-muted-foreground text-xs">Detail Produk</Label>
@@ -1776,7 +1606,6 @@ export default function Reports() {
           </DialogHeader>
           {selectedPaymentMethod && selectedPaymentType && (() => {
             if (selectedPaymentType === 'booking') {
-              // Get only bookings for this payment method
               const bookingTransactions = bookingPayments
                 .filter(b => b.payment_method === selectedPaymentMethod)
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -1818,7 +1647,6 @@ export default function Reports() {
                     </div>
                   )}
                   
-                  {/* Footer with total */}
                   <div className="border-t pt-4">
                     <div className="flex justify-between text-base font-bold">
                       <span>Total Booking:</span>
@@ -1828,7 +1656,6 @@ export default function Reports() {
                 </div>
               );
             } else {
-              // Get only incomes for this payment method
               const incomeTransactions = additionalIncomes
                 .filter(i => i.payment_method === selectedPaymentMethod)
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -1878,7 +1705,6 @@ export default function Reports() {
                     </div>
                   )}
                   
-                  {/* Footer with total */}
                   <div className="border-t pt-4">
                     <div className="flex justify-between text-base font-bold">
                       <span>Total Pemasukan Tambahan:</span>
