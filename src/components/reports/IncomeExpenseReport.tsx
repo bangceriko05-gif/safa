@@ -1,0 +1,330 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, startOfDay, endOfDay } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import { useStore } from "@/contexts/StoreContext";
+import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
+import { DateRange } from "react-day-picker";
+
+interface ExpenseData {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  creator_name: string;
+}
+
+interface IncomeData {
+  id: string;
+  description: string;
+  amount: number;
+  customer_name: string;
+  payment_method: string;
+  date: string;
+  creator_name: string;
+}
+
+export default function IncomeExpenseReport() {
+  const { currentStore } = useStore();
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [loading, setLoading] = useState(true);
+  const [expenses, setExpenses] = useState<ExpenseData[]>([]);
+  const [incomes, setIncomes] = useState<IncomeData[]>([]);
+  const [stats, setStats] = useState({
+    totalExpenses: 0,
+    totalIncomes: 0,
+    netProfit: 0,
+    expenseCategories: [] as { category: string; total: number }[],
+    incomePaymentMethods: [] as { method: string; total: number }[],
+  });
+
+  useEffect(() => {
+    if (!currentStore) return;
+    fetchData();
+  }, [timeRange, customDateRange, currentStore]);
+
+  const fetchData = async () => {
+    if (!currentStore) return;
+    setLoading(true);
+    
+    try {
+      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
+      const startDateStr = format(startDate, "yyyy-MM-dd");
+      const endDateStr = format(endDate, "yyyy-MM-dd");
+
+      const [expensesResult, incomesResult] = await Promise.all([
+        supabase
+          .from("expenses")
+          .select("*")
+          .eq("store_id", currentStore.id)
+          .gte("date", startDateStr)
+          .lte("date", endDateStr)
+          .order("date", { ascending: false }),
+        supabase
+          .from("incomes")
+          .select("*")
+          .eq("store_id", currentStore.id)
+          .gte("date", startDateStr)
+          .lte("date", endDateStr)
+          .order("date", { ascending: false }),
+      ]);
+
+      if (expensesResult.error) throw expensesResult.error;
+      if (incomesResult.error) throw incomesResult.error;
+
+      const expensesData = expensesResult.data || [];
+      const incomesData = incomesResult.data || [];
+
+      // Get creator profiles
+      const creatorIds = Array.from(
+        new Set([
+          ...expensesData.map((e) => e.created_by),
+          ...incomesData.map((i) => i.created_by),
+        ].filter(Boolean))
+      );
+
+      let profilesById: Record<string, string> = {};
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", creatorIds);
+        if (profiles) {
+          profilesById = Object.fromEntries(profiles.map((p) => [p.id, p.name]));
+        }
+      }
+
+      const mappedExpenses: ExpenseData[] = expensesData.map((e) => ({
+        id: e.id,
+        description: e.description,
+        amount: Number(e.amount) || 0,
+        category: e.category || "Lainnya",
+        date: e.date,
+        creator_name: profilesById[e.created_by] || "Unknown",
+      }));
+
+      const mappedIncomes: IncomeData[] = incomesData.map((i) => ({
+        id: i.id,
+        description: i.description || "",
+        amount: Number(i.amount) || 0,
+        customer_name: i.customer_name || "",
+        payment_method: i.payment_method || "Lainnya",
+        date: i.date,
+        creator_name: profilesById[i.created_by] || "Unknown",
+      }));
+
+      // Calculate stats
+      const totalExpenses = mappedExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const totalIncomes = mappedIncomes.reduce((sum, i) => sum + i.amount, 0);
+
+      // Expense categories
+      const expenseByCategory: { [key: string]: number } = {};
+      mappedExpenses.forEach((e) => {
+        expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
+      });
+
+      // Income by payment method
+      const incomeByMethod: { [key: string]: number } = {};
+      mappedIncomes.forEach((i) => {
+        incomeByMethod[i.payment_method] = (incomeByMethod[i.payment_method] || 0) + i.amount;
+      });
+
+      setExpenses(mappedExpenses);
+      setIncomes(mappedIncomes);
+      setStats({
+        totalExpenses,
+        totalIncomes,
+        netProfit: totalIncomes - totalExpenses,
+        expenseCategories: Object.entries(expenseByCategory).map(([category, total]) => ({ category, total })),
+        incomePaymentMethods: Object.entries(incomeByMethod).map(([method, total]) => ({ method, total })),
+      });
+    } catch (error) {
+      console.error("Error fetching income/expense data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h3 className="text-lg font-semibold">Laporan Pengeluaran / Pemasukan</h3>
+          <p className="text-sm text-muted-foreground">
+            {getDateRangeDisplay(timeRange, customDateRange)}
+          </p>
+        </div>
+        <ReportDateFilter
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+        />
+      </div>
+
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalIncomes)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalExpenses)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Selisih Bersih</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${stats.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {formatCurrency(stats.netProfit)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Expense Categories */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Pengeluaran per Kategori</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {stats.expenseCategories.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                ) : (
+                  <div className="space-y-2">
+                    {stats.expenseCategories.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                        <span className="text-sm font-medium">{item.category}</span>
+                        <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Income by Payment Method */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Pemasukan per Metode Bayar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {stats.incomePaymentMethods.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
+                ) : (
+                  <div className="space-y-2">
+                    {stats.incomePaymentMethods.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                        <span className="text-sm font-medium">{item.method}</span>
+                        <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Expense List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Daftar Pengeluaran</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {expenses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {expenses.map((expense) => (
+                      <div key={expense.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
+                        <div>
+                          <div className="font-medium">{expense.description}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {expense.category} • {format(new Date(expense.date), "d MMM yyyy", { locale: localeId })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">oleh: {expense.creator_name}</div>
+                        </div>
+                        <div className="font-bold text-red-600">{formatCurrency(expense.amount)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Income List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Daftar Pemasukan</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {incomes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {incomes.map((income) => (
+                      <div key={income.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
+                        <div>
+                          <div className="font-medium">{income.customer_name || income.description || "Pemasukan"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {income.payment_method} • {format(new Date(income.date), "d MMM yyyy", { locale: localeId })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">oleh: {income.creator_name}</div>
+                        </div>
+                        <div className="font-bold text-green-600">{formatCurrency(income.amount)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
