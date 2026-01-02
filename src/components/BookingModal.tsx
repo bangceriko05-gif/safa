@@ -1060,12 +1060,80 @@ export default function BookingModal({
           if (productsError) throw productsError;
         }
         
+        // Build detailed change description
+        const changes: string[] = [];
+        
+        // Check status change
+        const statusLabels: { [key: string]: string } = { BO: "Booked", CI: "Check In", CO: "Check Out" };
+        if (editingBooking.status !== formData.status) {
+          changes.push(`status ke ${statusLabels[formData.status] || formData.status}`);
+        }
+        
+        // Check room change
+        if (editingBooking.room_id !== formData.room_id) {
+          const prevRoom = rooms.find(r => r.id === editingBooking.room_id)?.name || 'Unknown';
+          changes.push(`kamar dari ${prevRoom} ke ${roomName}`);
+        }
+        
+        // Check date change (for PMS mode)
+        const prevDateStr = editingBooking.date;
+        if (prevDateStr !== dateStr) {
+          changes.push(`tanggal dari ${prevDateStr} ke ${dateStr}`);
+        }
+        
+        // Check time change
+        const prevStartTime = editingBooking.start_time?.substring(0, 5);
+        const prevEndTime = editingBooking.end_time?.substring(0, 5);
+        if (prevStartTime !== formData.start_time || prevEndTime !== formData.end_time) {
+          if (!isPMSMode) {
+            changes.push(`waktu ke ${formData.start_time}-${formData.end_time}`);
+          }
+        }
+        
+        // Check price change
+        const prevPrice = editingBooking.price;
+        const newPrice = parseFloat(formData.price.replace(/\./g, '')) || 0;
+        if (prevPrice !== newPrice) {
+          changes.push(`harga ke Rp ${newPrice.toLocaleString('id-ID')}`);
+        }
+        
+        // Check payment method change
+        if (editingBooking.payment_method !== formData.payment_method) {
+          changes.push(`pembayaran ke ${formData.payment_method}`);
+        }
+        
+        // Check note change
+        if ((editingBooking.note || '') !== (formData.note || '')) {
+          changes.push(`catatan`);
+        }
+        
+        // Check discount change
+        const prevDiscount = editingBooking.discount_value || 0;
+        const newDiscount = parseFloat(formData.discount_value) || 0;
+        if (prevDiscount !== newDiscount) {
+          if (newDiscount > 0) {
+            changes.push(`diskon ${formData.discount_type === 'percentage' ? `${newDiscount}%` : `Rp ${newDiscount.toLocaleString('id-ID')}`}`);
+          } else {
+            changes.push(`hapus diskon`);
+          }
+        }
+        
+        // Build final description
+        let description = '';
+        if (changes.length === 0) {
+          description = `Menyimpan booking ${formData.customer_name}`;
+        } else if (changes.length === 1) {
+          description = `Mengubah ${changes[0]} booking ${formData.customer_name}`;
+        } else {
+          description = `Mengubah ${changes.join(', ')} booking ${formData.customer_name}`;
+        }
+        
         // Log activity
         await logActivity({
           actionType: 'updated',
           entityType: 'Booking',
           entityId: editingBooking.id,
-          description: `Mengubah booking ${formData.customer_name} di kamar ${roomName} pada ${dateStr}`,
+          description,
         });
         
         toast.success("Booking berhasil diupdate");
