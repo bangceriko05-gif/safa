@@ -69,13 +69,13 @@ export default function EmployeePerformanceReport() {
       const roomIds = roomsData.map((r) => r.id);
       const roomNameMap = Object.fromEntries(roomsData.map((r) => [r.id, r.name]));
 
-      // Get room daily status where status was set to 'Bersih' (ready)
-      // We look for records where status = 'Bersih' within the date range
+      // Get room daily status where status was set to 'Aktif' (ready/clean)
+      // We look for records where status = 'Aktif' within the date range
       const { data: statusData, error: statusError } = await supabase
         .from("room_daily_status")
         .select("room_id, status, updated_by, date, updated_at")
         .in("room_id", roomIds)
-        .eq("status", "Bersih")
+        .eq("status", "Aktif")
         .gte("date", startDateStr)
         .lte("date", endDateStr);
 
