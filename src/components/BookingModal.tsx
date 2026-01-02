@@ -96,6 +96,7 @@ export default function BookingModal({
   const [roomVariants, setRoomVariants] = useState<RoomVariant[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+  const [originalProducts, setOriginalProducts] = useState<SelectedProduct[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -320,6 +321,7 @@ export default function BookingModal({
         discount_applies_to: "variant",
       });
       setSelectedProducts([]);
+      setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
 
       // For PMS mode, initialize check-in date from selected date
@@ -358,6 +360,7 @@ export default function BookingModal({
         discount_applies_to: "variant",
       });
       setSelectedProducts([]);
+      setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
       
       // Reset check-in/out dates for PMS mode
@@ -438,6 +441,7 @@ export default function BookingModal({
       }));
 
       setSelectedProducts(bookingProducts);
+      setOriginalProducts(bookingProducts);
     } catch (error) {
       console.error("Error fetching booking products:", error);
     }
@@ -1060,73 +1064,139 @@ export default function BookingModal({
           if (productsError) throw productsError;
         }
         
-        // Build detailed change description
+        // Build detailed change description (singkat tapi jelas)
         const changes: string[] = [];
-        
-        // Check status change
-        const statusLabels: { [key: string]: string } = { BO: "Booked", CI: "Check In", CO: "Check Out" };
-        if (editingBooking.status !== formData.status) {
-          changes.push(`status ke ${statusLabels[formData.status] || formData.status}`);
-        }
-        
-        // Check room change
+
+        const shortText = (value: string, max = 24) => {
+          const v = (value || "").trim();
+          if (!v) return "-";
+          return v.length > max ? `${v.slice(0, max - 1)}…` : v;
+        };
+
+        const formatMoney = (value: number | null | undefined) => {
+          const n = Number(value || 0);
+          return `Rp ${n.toLocaleString("id-ID")}`;
+        };
+
+        const addChange = (label: string, from: string, to: string) => {
+          const f = from || "-";
+          const t = to || "-";
+          if (f === t) return;
+          changes.push(`${label} ${f}→${t}`);
+        };
+
+        const statusLabels: Record<string, string> = {
+          BO: "Reservasi",
+          CI: "Check In",
+          CO: "Check Out",
+          BATAL: "Batal",
+        };
+
+        addChange(
+          "status",
+          statusLabels[editingBooking.status] || editingBooking.status || "-",
+          statusLabels[formData.status] || formData.status || "-"
+        );
+
         if (editingBooking.room_id !== formData.room_id) {
-          const prevRoom = rooms.find(r => r.id === editingBooking.room_id)?.name || 'Unknown';
-          changes.push(`kamar dari ${prevRoom} ke ${roomName}`);
+          const prevRoomName = rooms.find((r) => r.id === editingBooking.room_id)?.name || "Unknown";
+          addChange("kamar", prevRoomName, roomName);
         }
-        
-        // Check date change (for PMS mode)
-        const prevDateStr = editingBooking.date;
-        if (prevDateStr !== dateStr) {
-          changes.push(`tanggal dari ${prevDateStr} ke ${dateStr}`);
+
+        addChange("tgl", editingBooking.date || "-", dateStr || "-");
+
+        const prevTime = `${editingBooking.start_time?.substring(0, 5) || "-"}-${editingBooking.end_time?.substring(0, 5) || "-"}`;
+        const newTime = `${formData.start_time || "-"}-${formData.end_time || "-"}`;
+        addChange("waktu", prevTime, newTime);
+
+        if ((editingBooking.variant_id || "") !== (formData.variant_id || "")) {
+          const prevVariant =
+            roomVariants.find((v) => v.id === editingBooking.variant_id)?.variant_name ||
+            editingBooking.variant_id ||
+            "-";
+          const nextVariant =
+            roomVariants.find((v) => v.id === formData.variant_id)?.variant_name ||
+            formData.variant_id ||
+            "-";
+          addChange("varian", prevVariant, nextVariant);
         }
-        
-        // Check time change
-        const prevStartTime = editingBooking.start_time?.substring(0, 5);
-        const prevEndTime = editingBooking.end_time?.substring(0, 5);
-        if (prevStartTime !== formData.start_time || prevEndTime !== formData.end_time) {
-          if (!isPMSMode) {
-            changes.push(`waktu ke ${formData.start_time}-${formData.end_time}`);
+
+        const pay1Old = `${editingBooking.payment_method || "-"}${editingBooking.reference_no ? ` (${editingBooking.reference_no})` : ""}`;
+        const pay1New = `${formData.payment_method || "-"}${formData.reference_no ? ` (${formData.reference_no})` : ""}`;
+        addChange("bayar", pay1Old, pay1New);
+
+        const dualOld = Boolean(editingBooking.dual_payment);
+        const dualNew = Boolean(formData.dual_payment);
+        if (dualOld !== dualNew) {
+          changes.push(`split ${dualOld ? "ON" : "OFF"}→${dualNew ? "ON" : "OFF"}`);
+        }
+
+        const prevPrice1 = Number(editingBooking.price || 0);
+        const newPrice1 = parseFloat(formData.price.replace(/\./g, "")) || 0;
+        if (prevPrice1 !== newPrice1) {
+          changes.push(`total1 ${formatMoney(prevPrice1)}→${formatMoney(newPrice1)}`);
+        }
+
+        const prevPrice2Num = editingBooking.price_2 == null ? null : Number(editingBooking.price_2);
+        const newPrice2Num = formData.price_2 ? parseFloat(formData.price_2.replace(/\./g, "")) || 0 : null;
+        const prevPrice2Str = prevPrice2Num == null ? "-" : formatMoney(prevPrice2Num);
+        const newPrice2Str = newPrice2Num == null ? "-" : formatMoney(newPrice2Num);
+        addChange("total2", prevPrice2Str, newPrice2Str);
+
+        const pay2Old = `${editingBooking.payment_method_2 || "-"}${editingBooking.reference_no_2 ? ` (${editingBooking.reference_no_2})` : ""}`;
+        const pay2New = `${formData.payment_method_2 || "-"}${formData.reference_no_2 ? ` (${formData.reference_no_2})` : ""}`;
+        addChange("bayar2", pay2Old, pay2New);
+
+        addChange("catatan", shortText(editingBooking.note || ""), shortText(formData.note || ""));
+
+        const formatDiscount = (type: string | null | undefined, value: number | null | undefined) => {
+          const v = Number(value || 0);
+          if (!v) return "-";
+          return type === "amount" ? formatMoney(v) : `${v}%`;
+        };
+        const prevDiscount = formatDiscount(editingBooking.discount_type, editingBooking.discount_value);
+        const nextDiscount = formatDiscount(formData.discount_type, parseFloat(formData.discount_value) || 0);
+        addChange("diskon", prevDiscount, nextDiscount);
+
+        // Products diff
+        const oldById = new Map(originalProducts.map((p) => [p.product_id, p] as const));
+        const newById = new Map(selectedProducts.map((p) => [p.product_id, p] as const));
+        const allIds = Array.from(new Set([...oldById.keys(), ...newById.keys()]));
+        const productChanges: string[] = [];
+
+        allIds.forEach((id) => {
+          const oldP = oldById.get(id);
+          const newP = newById.get(id);
+
+          if (!oldP && newP) {
+            productChanges.push(`+${newP.name} x${newP.quantity}`);
+            return;
           }
-        }
-        
-        // Check price change
-        const prevPrice = editingBooking.price;
-        const newPrice = parseFloat(formData.price.replace(/\./g, '')) || 0;
-        if (prevPrice !== newPrice) {
-          changes.push(`harga ke Rp ${newPrice.toLocaleString('id-ID')}`);
-        }
-        
-        // Check payment method change
-        if (editingBooking.payment_method !== formData.payment_method) {
-          changes.push(`pembayaran ke ${formData.payment_method}`);
-        }
-        
-        // Check note change
-        if ((editingBooking.note || '') !== (formData.note || '')) {
-          changes.push(`catatan`);
-        }
-        
-        // Check discount change
-        const prevDiscount = editingBooking.discount_value || 0;
-        const newDiscount = parseFloat(formData.discount_value) || 0;
-        if (prevDiscount !== newDiscount) {
-          if (newDiscount > 0) {
-            changes.push(`diskon ${formData.discount_type === 'percentage' ? `${newDiscount}%` : `Rp ${newDiscount.toLocaleString('id-ID')}`}`);
-          } else {
-            changes.push(`hapus diskon`);
+
+          if (oldP && !newP) {
+            productChanges.push(`-${oldP.name}`);
+            return;
           }
+
+          if (oldP && newP) {
+            if (oldP.quantity !== newP.quantity) {
+              productChanges.push(`${newP.name} x${oldP.quantity}→${newP.quantity}`);
+              return;
+            }
+          }
+        });
+
+        if (productChanges.length > 0) {
+          const shown = productChanges.slice(0, 3).join(", ");
+          const extra = productChanges.length > 3 ? ` +${productChanges.length - 3} lagi` : "";
+          changes.push(`produk ${shown}${extra}`);
         }
-        
-        // Build final description
-        let description = '';
-        if (changes.length === 0) {
-          description = `Menyimpan booking ${formData.customer_name}`;
-        } else if (changes.length === 1) {
-          description = `Mengubah ${changes[0]} booking ${formData.customer_name}`;
-        } else {
-          description = `Mengubah ${changes.join(', ')} booking ${formData.customer_name}`;
-        }
+
+        const bookingContext = `${formData.customer_name} (${roomName}, ${dateStr})`;
+        const description =
+          changes.length === 0
+            ? `Simpan booking ${bookingContext} (tanpa perubahan)`
+            : `Ubah booking ${bookingContext}: ${changes.join("; ")}`;
         
         // Log activity
         await logActivity({
@@ -1177,6 +1247,7 @@ export default function BookingModal({
 
       onClose();
       setSelectedProducts([]);
+      setOriginalProducts([]);
       setSelectedProductId("");
       setProductName("");
       setProductPrice("");
