@@ -693,9 +693,9 @@ export default function PMSCalendar({
       )}
       
       {!isLoading && (
-        <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden border-2 border-border">
-          {/* Date Navigation Bar */}
-          <div className="flex flex-wrap items-center justify-center gap-2 p-4 border-b-2 border-border bg-muted/50">
+        <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden border-2 border-border max-h-[calc(100vh-200px)] flex flex-col">
+          {/* Date Navigation Bar - Sticky */}
+          <div className="flex flex-wrap items-center justify-center gap-2 p-4 border-b-2 border-border bg-muted/50 sticky top-0 z-30">
             <div className="flex items-center bg-background rounded-lg border border-border overflow-hidden">
               <Button 
                 variant="ghost" 
@@ -769,46 +769,47 @@ export default function PMSCalendar({
             </Popover>
           </div>
 
-          <ScrollArea className="w-full">
-            <div className="min-w-max">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-border bg-muted/30">
-                    <th className="p-3 text-left font-semibold text-sm sticky left-0 bg-muted/30 z-20 border-r-2 border-border min-w-[150px]">
-                      Kamar
-                    </th>
-                    {visibleDates.map((date) => {
-                      const dayName = format(date, "EEE", { locale: idLocale });
-                      const dayNum = format(date, "d");
-                      const today = isToday(date);
-                      const selected = isSelected(date);
-                      
-                      return (
-                        <th 
-                          key={date.toISOString()} 
-                          className={`p-2 text-center font-medium text-xs min-w-[80px] border-r border-border cursor-pointer transition-colors hover:bg-primary/10 ${
-                            today ? "bg-primary/20" : ""
-                          } ${selected ? "ring-2 ring-primary ring-inset" : ""}`}
-                          onClick={() => handleDateClick(date)}
-                        >
-                          <div className={`text-xs uppercase ${today ? "text-primary font-bold" : "text-muted-foreground"}`}>
-                            {dayName}
-                          </div>
-                          <div className={`text-lg ${today ? "text-primary font-bold" : ""}`}>
-                            {dayNum}
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayRooms.map((room) => {
-                    const isBlocked = room.status !== "Aktif";
+          <div className="overflow-auto flex-1">
+            <table className="w-full border-collapse min-w-max">
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b-2 border-border bg-muted">
+                  <th className="p-3 text-left font-semibold text-sm sticky left-0 bg-muted z-30 border-r-2 border-border min-w-[150px]">
+                    Kamar
+                  </th>
+                  {visibleDates.map((date) => {
+                    const dayName = format(date, "EEE", { locale: idLocale });
+                    const dayNum = format(date, "d");
+                    const today = isToday(date);
+                    const selected = isSelected(date);
                     
                     return (
-                      <tr key={room.id} className="border-b border-border hover:bg-muted/20 transition-colors">
-                        <td className={`p-3 text-sm font-medium sticky left-0 bg-card border-r-2 border-border z-10 ${isBlocked ? "opacity-50" : ""}`}>
+                      <th 
+                        key={date.toISOString()} 
+                        className={cn(
+                          "p-2 text-center font-medium text-xs min-w-[80px] border-r border-border cursor-pointer transition-colors hover:bg-primary/10 bg-muted",
+                          today && "bg-primary/20",
+                          selected && "ring-2 ring-primary ring-inset"
+                        )}
+                        onClick={() => handleDateClick(date)}
+                      >
+                        <div className={`text-xs uppercase ${today ? "text-primary font-bold" : "text-muted-foreground"}`}>
+                          {dayName}
+                        </div>
+                        <div className={`text-lg ${today ? "text-primary font-bold" : ""}`}>
+                          {dayNum}
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {displayRooms.map((room) => {
+                  const isBlocked = room.status !== "Aktif";
+                  
+                  return (
+                    <tr key={room.id} className="border-b border-border hover:bg-muted/20 transition-colors">
+                      <td className={`p-3 text-sm font-medium sticky left-0 bg-card border-r-2 border-border z-10 ${isBlocked ? "opacity-50" : ""}`}>
                           <div className="flex items-center gap-2">
                             <div
                               className="w-2.5 h-2.5 rounded-full"
@@ -1104,11 +1105,9 @@ export default function PMSCalendar({
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
