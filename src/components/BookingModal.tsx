@@ -130,6 +130,7 @@ export default function BookingModal({
     discount_value: "",
     has_discount: false,
     discount_applies_to: "variant" as "variant" | "product",
+    booking_type: "walk_in" as "walk_in" | "ota",
   });
 
   // Check if PMS mode (SAFA store)
@@ -180,6 +181,11 @@ export default function BookingModal({
 
   // Calculate room subtotal based on variant price and duration (for display only)
   const calculateRoomSubtotal = () => {
+    // For OTA, return the manual price entered
+    if (formData.booking_type === "ota") {
+      return parseFloat(formData.price.replace(/\./g, '')) || 0;
+    }
+
     if (isPMSMode) {
       // For PMS mode, calculate based on nights
       if (formData.variant_id && checkInDate && checkOutDate) {
@@ -212,10 +218,11 @@ export default function BookingModal({
     }
   };
 
-  // Auto-fill Total Bayar with Grand Total (only if dual payment is NOT active)
+  // Auto-fill Total Bayar with Grand Total (only if dual payment is NOT active and NOT OTA)
   useEffect(() => {
     // Skip auto-fill if dual payment is active - user should manually split the payment
-    if (formData.dual_payment) return;
+    // Skip auto-fill if OTA - user inputs price manually
+    if (formData.dual_payment || formData.booking_type === "ota") return;
     
     const grandTotal = calculateGrandTotal();
     if (grandTotal > 0) {
@@ -224,7 +231,7 @@ export default function BookingModal({
         price: formatPrice(grandTotal.toString()),
       }));
     }
-  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode]);
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type]);
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
@@ -260,6 +267,9 @@ export default function BookingModal({
         return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
       };
       
+      // Determine booking type: if no variant, it's OTA
+      const isOTA = !editingBooking.variant_id;
+      
       setFormData({
         customer_name: editingBooking.customer_name,
         phone: editingBooking.phone,
@@ -280,6 +290,7 @@ export default function BookingModal({
         discount_value: editingBooking.discount_value ? editingBooking.discount_value.toString() : "",
         has_discount: !!editingBooking.discount_value && editingBooking.discount_value > 0,
         discount_applies_to: editingBooking.discount_applies_to || "variant",
+        booking_type: isOTA ? "ota" : "walk_in",
       });
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
@@ -319,6 +330,7 @@ export default function BookingModal({
         discount_value: "",
         has_discount: false,
         discount_applies_to: "variant",
+        booking_type: "walk_in",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -358,6 +370,7 @@ export default function BookingModal({
         discount_value: "",
         has_discount: false,
         discount_applies_to: "variant",
+        booking_type: "walk_in",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -791,9 +804,9 @@ export default function BookingModal({
         return;
       }
 
-      // Validate variant is selected
-      if (!formData.variant_id) {
-        toast.error("Varian kamar wajib dipilih");
+      // Validate variant is selected (only for walk_in type)
+      if (formData.booking_type === "walk_in" && !formData.variant_id) {
+        toast.error("Varian kamar wajib dipilih untuk Walk-in");
         setLoading(false);
         return;
       }
@@ -1272,6 +1285,7 @@ export default function BookingModal({
         discount_value: "",
         has_discount: false,
         discount_applies_to: "variant",
+        booking_type: "walk_in",
       });
 
       // Trigger refresh by dispatching a custom event
@@ -1294,6 +1308,29 @@ export default function BookingModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Booking Type Selection */}
+          <div className="space-y-2">
+            <Label>Tipe Booking *</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={formData.booking_type === "walk_in" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setFormData({ ...formData, booking_type: "walk_in", variant_id: "" })}
+              >
+                Walk-in
+              </Button>
+              <Button
+                type="button"
+                variant={formData.booking_type === "ota" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setFormData({ ...formData, booking_type: "ota", variant_id: "" })}
+              >
+                OTA
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="customer_name">Nama Pelanggan</Label>
             <div className="relative">
@@ -1362,7 +1399,8 @@ export default function BookingModal({
             </Select>
           </div>
 
-          {formData.room_id && (
+          {/* Varian Kamar - Only show for Walk-in */}
+          {formData.room_id && formData.booking_type === "walk_in" && (
             <div className="space-y-2">
               <Label htmlFor="variant_id">Varian Kamar *</Label>
               {getFilteredVariants.length > 0 ? (
@@ -1410,6 +1448,23 @@ export default function BookingModal({
                   Belum ada varian untuk kamar ini. Silakan tambahkan varian kamar terlebih dahulu di menu Pengaturan.
                 </div>
               )}
+            </div>
+          )}
+
+          {/* OTA Manual Price Input */}
+          {formData.room_id && formData.booking_type === "ota" && (
+            <div className="space-y-2">
+              <Label htmlFor="ota_price">Harga (Input Manual) *</Label>
+              <Input
+                id="ota_price"
+                value={formData.price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                placeholder="Masukkan harga"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Masukkan harga booking dari OTA secara manual
+              </p>
             </div>
           )}
 
@@ -1721,12 +1776,27 @@ export default function BookingModal({
             )}
           </div>
 
-          {duration > 0 && (
+          {(duration > 0 || formData.booking_type === "ota") && (
             <div className="border rounded-lg p-4 space-y-3 bg-card">
               <h3 className="font-semibold text-base border-b pb-2">Billing / Nota</h3>
               
               <div className="space-y-2 text-sm">
-                {formData.variant_id && roomVariants.length > 0 && (() => {
+                {/* OTA Info */}
+                {formData.booking_type === "ota" && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tipe:</span>
+                      <span className="font-medium text-blue-600">OTA</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{isPMSMode ? "Total Malam:" : "Total Jam:"}</span>
+                      <span className="font-medium">{isPMSMode ? `${finalDuration} malam` : `${duration > 0 ? duration.toFixed(1) : '-'} jam`}</span>
+                    </div>
+                  </>
+                )}
+
+                {/* Walk-in Variant Info */}
+                {formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
                   const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
                   const isMonthlyVariant = selectedVariant?.booking_duration_type === "months";
                   
@@ -1784,7 +1854,7 @@ export default function BookingModal({
                  
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Subtotal Kamar:</span>
+                    <span className="font-semibold">{formData.booking_type === "ota" ? "Harga OTA:" : "Subtotal Kamar:"}</span>
                     <span className="font-bold text-primary">
                       Rp {calculateRoomSubtotal().toLocaleString('id-ID')}
                     </span>
