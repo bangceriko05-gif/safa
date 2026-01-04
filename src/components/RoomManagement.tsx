@@ -642,7 +642,7 @@ export default function RoomManagement() {
                               <TableCell className="font-medium">
                                 {variant.variant_name}
                               </TableCell>
-                              <TableCell>{variant.duration} jam</TableCell>
+                              <TableCell>{variant.duration} malam</TableCell>
                               <TableCell>Rp {variant.price.toLocaleString('id-ID')}</TableCell>
                               <TableCell>
                                 <Badge variant={variant.is_active ? "default" : "secondary"}>
