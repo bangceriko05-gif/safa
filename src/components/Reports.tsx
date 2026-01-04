@@ -26,7 +26,7 @@ import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 
 interface ReportStats {
-  totalHours: number;
+  totalTransactions: number;
   paymentMethodTotals: { method: string; total: number }[];
   additionalIncomePaymentTotals: { method: string; total: number }[];
   newCustomers: number;
@@ -94,7 +94,7 @@ export default function Reports() {
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [stats, setStats] = useState<ReportStats>({
-    totalHours: 0,
+    totalTransactions: 0,
     paymentMethodTotals: [],
     additionalIncomePaymentTotals: [],
     newCustomers: 0,
@@ -293,7 +293,7 @@ export default function Reports() {
         creator_name: profilesById[income.created_by] || "Unknown",
       }));
 
-      const totalHours = bookings.reduce((sum, booking) => sum + (Number(booking.duration) || 0), 0);
+      const totalTransactions = bookings.filter(b => (b as any).status !== 'Cancelled' && (b as any).status !== 'BATAL').length;
       
       const paymentTotals: { [key: string]: number } = {};
       const bookingPaymentDetails: BookingPaymentDetail[] = [];
@@ -383,7 +383,7 @@ export default function Reports() {
       const totalAdditionalIncome = incomesData.reduce((sum, income) => sum + Number(income.amount), 0);
 
       setStats({
-        totalHours,
+        totalTransactions,
         paymentMethodTotals,
         additionalIncomePaymentTotals,
         newCustomers: customersData.length,
@@ -821,11 +821,11 @@ export default function Reports() {
           {/* Total Hours Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Jam</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+              <Receipt className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalHours.toFixed(1)} jam</div>
+              <div className="text-2xl font-bold">{stats.totalTransactions} transaksi</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {getDateRangeDisplayLocal(timeRange)}
               </p>

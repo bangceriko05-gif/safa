@@ -56,7 +56,6 @@ export default function SalesReport() {
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [stats, setStats] = useState({
     totalBookings: 0,
-    totalHours: 0,
     totalRevenue: 0,
     walkInCount: 0,
     walkInRevenue: 0,
@@ -164,7 +163,6 @@ export default function SalesReport() {
       const otaBookings = activeBookings.filter(b => b.variant_id === null);
 
       // Calculate stats
-      const totalHours = activeBookings.reduce((sum, b) => sum + b.duration, 0);
       const paymentTotals: { [key: string]: number } = {};
 
       activeBookings.forEach((booking) => {
@@ -193,7 +191,6 @@ export default function SalesReport() {
       setExpenses(mappedExpenses);
       setStats({
         totalBookings: activeBookings.length,
-        totalHours,
         totalRevenue,
         walkInCount: walkInBookings.length,
         walkInRevenue,
@@ -296,11 +293,11 @@ export default function SalesReport() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Jam</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalHours.toFixed(1)} jam</div>
+                <div className="text-2xl font-bold">{stats.totalBookings} transaksi</div>
               </CardContent>
             </Card>
 
@@ -654,7 +651,7 @@ export default function SalesReport() {
                         <TableRow>
                           <TableHead>Kamar</TableHead>
                           <TableHead className="text-center">Jumlah</TableHead>
-                          <TableHead className="text-center">Total Jam</TableHead>
+                          <TableHead className="text-center">Total Durasi</TableHead>
                           <TableHead className="text-right">Pendapatan</TableHead>
                         </TableRow>
                       </TableHeader>
