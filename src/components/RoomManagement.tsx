@@ -67,6 +67,7 @@ export default function RoomManagement() {
   const { currentStore, userRole } = useStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomVariants, setRoomVariants] = useState<Record<string, RoomVariant[]>>({});
+  const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
   const [categories, setCategories] = useState<RoomCategory[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
@@ -95,6 +96,7 @@ export default function RoomManagement() {
     if (currentStore) {
       fetchRooms();
       fetchCategories();
+      fetchAllVariantCounts();
     }
   }, [currentStore]);
 
@@ -105,6 +107,28 @@ export default function RoomManagement() {
       }
     });
   }, [expandedRooms, rooms]);
+
+  const fetchAllVariantCounts = async () => {
+    if (!currentStore) return;
+    try {
+      const { data, error } = await supabase
+        .from("room_variants")
+        .select("room_id")
+        .eq("store_id", currentStore.id)
+        .eq("is_active", true);
+
+      if (error) throw error;
+      
+      // Count variants per room
+      const counts: Record<string, number> = {};
+      (data || []).forEach((v) => {
+        counts[v.room_id] = (counts[v.room_id] || 0) + 1;
+      });
+      setVariantCounts(counts);
+    } catch (error) {
+      console.error("Error fetching variant counts:", error);
+    }
+  };
 
   const fetchCategories = async () => {
     if (!currentStore) return;
@@ -299,6 +323,7 @@ export default function RoomManagement() {
 
       toast.success("Varian berhasil dihapus");
       fetchRoomVariants(roomId);
+      fetchAllVariantCounts();
     } catch (error: any) {
       toast.error(error.message || "Gagal menghapus varian");
       console.error(error);
@@ -364,6 +389,7 @@ export default function RoomManagement() {
       }
 
       fetchRoomVariants(selectedRoomForVariant);
+      fetchAllVariantCounts();
       handleCloseVariantDialog();
     } catch (error: any) {
       toast.error(error.message || "Gagal menyimpan varian");
@@ -540,7 +566,7 @@ export default function RoomManagement() {
                     <div className="flex-1">
                       <div className="font-medium">{room.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {roomVariants[room.id]?.length || 0} varian
+                        {expandedRooms.has(room.id) ? (roomVariants[room.id]?.length || 0) : (variantCounts[room.id] || 0)} varian
                       </div>
                     </div>
                     <div className="flex gap-2 items-center">
