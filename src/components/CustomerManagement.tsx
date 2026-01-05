@@ -20,7 +20,15 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +49,9 @@ interface Customer {
   phone: string;
   email: string | null;
   notes: string | null;
+  identity_type: string | null;
+  identity_number: string | null;
+  identity_document_url: string | null;
   created_at: string;
   created_by: string;
 }
@@ -58,8 +69,14 @@ export default function CustomerManagement() {
     phone: "",
     email: "",
     notes: "",
+    identity_type: "",
+    identity_number: "",
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [identityFile, setIdentityFile] = useState<File | null>(null);
+  const [identityPreview, setIdentityPreview] = useState<string | null>(null);
+  const [uploadingIdentity, setUploadingIdentity] = useState(false);
+  const [viewingIdentity, setViewingIdentity] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -102,21 +119,107 @@ export default function CustomerManagement() {
     }
   };
 
+  const handleIdentityFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Ukuran file maksimal 5MB");
+        return;
+      }
+      setIdentityFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdentityPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadIdentityDocument = async (customerId: string): Promise<string | null> => {
+    if (!identityFile) return null;
+    
+    setUploadingIdentity(true);
+    try {
+      const fileExt = identityFile.name.split('.').pop();
+      const fileName = `${customerId}-${Date.now()}.${fileExt}`;
+      const filePath = `${currentStore?.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('identity-documents')
+        .upload(filePath, identityFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('identity-documents')
+        .getPublicUrl(filePath);
+
+      return filePath;
+    } catch (error) {
+      console.error("Error uploading identity:", error);
+      toast.error("Gagal mengupload dokumen identitas");
+      return null;
+    } finally {
+      setUploadingIdentity(false);
+    }
+  };
+
+  const getIdentityDocumentUrl = (path: string) => {
+    const { data } = supabase.storage
+      .from('identity-documents')
+      .getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate input
-    const validation = validateCustomerInput(formData);
+    const validation = validateCustomerInput({
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email,
+      notes: formData.notes,
+    });
     if (!validation.success) {
       setFormErrors(validation.errors);
       const firstError = Object.values(validation.errors)[0];
       toast.error(firstError);
       return;
     }
+
+    // Validate identity for new customers without existing identity
+    if (!editingCustomer && formData.identity_type && formData.identity_number) {
+      // Identity info provided - validate it has file too if new
+      if (!identityFile && !editingCustomer?.identity_document_url) {
+        // Check if this phone already has identity in database
+        const { data: existingCustomer } = await supabase
+          .from("customers")
+          .select("identity_document_url")
+          .eq("phone", formData.phone)
+          .maybeSingle();
+        
+        if (!existingCustomer?.identity_document_url && !identityFile) {
+          toast.error("Upload dokumen identitas wajib untuk pelanggan baru");
+          return;
+        }
+      }
+    }
+
     setFormErrors({});
 
     try {
       if (editingCustomer) {
+        let identityDocUrl = editingCustomer.identity_document_url;
+        
+        // Upload new identity if provided
+        if (identityFile) {
+          const uploadedPath = await uploadIdentityDocument(editingCustomer.id);
+          if (uploadedPath) {
+            identityDocUrl = uploadedPath;
+          }
+        }
+
         const { error } = await supabase
           .from("customers")
           .update({
@@ -124,6 +227,9 @@ export default function CustomerManagement() {
             phone: formData.phone,
             email: formData.email || null,
             notes: formData.notes || null,
+            identity_type: formData.identity_type || null,
+            identity_number: formData.identity_number || null,
+            identity_document_url: identityDocUrl,
           })
           .eq("id", editingCustomer.id);
 
@@ -143,12 +249,16 @@ export default function CustomerManagement() {
           return;
         }
 
+        // Create customer first
         const { data: newCustomer, error } = await supabase
           .from("customers")
           .insert([{
-            ...formData,
+            name: formData.name,
+            phone: formData.phone,
             email: formData.email || null,
             notes: formData.notes || null,
+            identity_type: formData.identity_type || null,
+            identity_number: formData.identity_number || null,
             created_by: userId,
             store_id: currentStore.id,
           }])
@@ -156,6 +266,17 @@ export default function CustomerManagement() {
           .single();
 
         if (error) throw error;
+
+        // Upload identity document if provided
+        if (identityFile && newCustomer) {
+          const uploadedPath = await uploadIdentityDocument(newCustomer.id);
+          if (uploadedPath) {
+            await supabase
+              .from("customers")
+              .update({ identity_document_url: uploadedPath })
+              .eq("id", newCustomer.id);
+          }
+        }
 
         await logActivity({
           actionType: 'created',
@@ -186,7 +307,12 @@ export default function CustomerManagement() {
       phone: customer.phone,
       email: customer.email || "",
       notes: customer.notes || "",
+      identity_type: customer.identity_type || "",
+      identity_number: customer.identity_number || "",
     });
+    if (customer.identity_document_url) {
+      setIdentityPreview(getIdentityDocumentUrl(customer.identity_document_url));
+    }
     setIsDialogOpen(true);
   };
 
@@ -230,8 +356,12 @@ export default function CustomerManagement() {
       phone: "",
       email: "",
       notes: "",
+      identity_type: "",
+      identity_number: "",
     });
     setFormErrors({});
+    setIdentityFile(null);
+    setIdentityPreview(null);
   };
 
   return (
@@ -261,6 +391,7 @@ export default function CustomerManagement() {
                 <TableRow className="bg-gray-50">
                   <TableHead>Nama</TableHead>
                   <TableHead>Nomor HP</TableHead>
+                  <TableHead>Identitas</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Catatan</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
@@ -269,7 +400,7 @@ export default function CustomerManagement() {
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                       Belum ada data pelanggan
                     </TableCell>
                   </TableRow>
@@ -281,6 +412,28 @@ export default function CustomerManagement() {
                       <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell>{customer.phone}</TableCell>
+                        <TableCell>
+                          {customer.identity_type && customer.identity_number ? (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {customer.identity_type}
+                              </Badge>
+                              <span className="text-sm">{customer.identity_number}</span>
+                              {customer.identity_document_url && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => setViewingIdentity(getIdentityDocumentUrl(customer.identity_document_url!))}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>{customer.email || "-"}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {customer.notes || "-"}
@@ -384,12 +537,106 @@ export default function CustomerManagement() {
               )}
             </div>
 
+            {/* Identity Section */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard className="h-4 w-4" />
+                <Label className="text-base font-semibold">Data Identitas</Label>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="identity_type">Jenis Identitas</Label>
+                  <Select
+                    value={formData.identity_type}
+                    onValueChange={(value) => setFormData({ ...formData, identity_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jenis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="KTP">KTP</SelectItem>
+                      <SelectItem value="SIM">SIM</SelectItem>
+                      <SelectItem value="PASSPORT">Passport</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="identity_number">Nomor Identitas</Label>
+                  <Input
+                    id="identity_number"
+                    value={formData.identity_number}
+                    onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
+                    placeholder="Masukkan nomor identitas"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 mt-4">
+                <Label>
+                  Upload Dokumen Identitas 
+                  {!editingCustomer?.identity_document_url && formData.identity_type && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
+                </Label>
+                
+                {identityPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={identityPreview} 
+                      alt="Preview identitas" 
+                      className="max-h-40 mx-auto object-contain rounded"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1"
+                      onClick={() => {
+                        setIdentityFile(null);
+                        setIdentityPreview(null);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                    <input
+                      type="file"
+                      id="identity_file"
+                      accept="image/*"
+                      onChange={handleIdentityFileChange}
+                      className="hidden"
+                    />
+                    <label 
+                      htmlFor="identity_file" 
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <Upload className="h-8 w-8 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        Klik untuk upload foto identitas
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        Format: JPG, PNG (Maks. 5MB)
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 Batal
               </Button>
-              <Button type="submit" className="bg-[#1f7acb] hover:bg-[#1a6ab0]">
-                {editingCustomer ? "Update" : "Simpan"}
+              <Button 
+                type="submit" 
+                className="bg-[#1f7acb] hover:bg-[#1a6ab0]"
+                disabled={uploadingIdentity}
+              >
+                {uploadingIdentity ? "Mengupload..." : editingCustomer ? "Update" : "Simpan"}
               </Button>
             </div>
           </form>
@@ -413,6 +660,24 @@ export default function CustomerManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View Identity Document Dialog */}
+      <Dialog open={!!viewingIdentity} onOpenChange={() => setViewingIdentity(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dokumen Identitas</DialogTitle>
+          </DialogHeader>
+          {viewingIdentity && (
+            <div className="flex justify-center">
+              <img 
+                src={viewingIdentity} 
+                alt="Dokumen identitas" 
+                className="max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
