@@ -21,12 +21,11 @@ export const customerInputSchema = z.object({
     .optional()
     .or(z.literal('')),
   identity_type: z.string()
-    .optional()
-    .or(z.literal('')),
+    .min(1, 'Jenis identitas wajib dipilih'),
   identity_number: z.string()
-    .max(50, 'Nomor identitas maksimal 50 karakter')
-    .optional()
-    .or(z.literal('')),
+    .trim()
+    .min(1, 'Nomor identitas wajib diisi')
+    .max(50, 'Nomor identitas maksimal 50 karakter'),
 });
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
