@@ -188,21 +188,18 @@ export default function CustomerManagement() {
       return;
     }
 
-    // Validate identity for new customers without existing identity
-    if (!editingCustomer && formData.identity_type && formData.identity_number) {
-      // Identity info provided - validate it has file too if new
-      if (!identityFile && !editingCustomer?.identity_document_url) {
-        // Check if this phone already has identity in database
-        const { data: existingCustomer } = await supabase
-          .from("customers")
-          .select("identity_document_url")
-          .eq("phone", formData.phone)
-          .maybeSingle();
-        
-        if (!existingCustomer?.identity_document_url && !identityFile) {
-          toast.error("Upload dokumen identitas wajib untuk pelanggan baru");
-          return;
-        }
+    // Validate identity document is required for all customers
+    if (!editingCustomer) {
+      // New customer - identity file is mandatory
+      if (!identityFile) {
+        toast.error("Upload dokumen identitas wajib diisi");
+        return;
+      }
+    } else {
+      // Existing customer - only required if no existing document
+      if (!editingCustomer.identity_document_url && !identityFile) {
+        toast.error("Upload dokumen identitas wajib diisi");
+        return;
       }
     }
 
@@ -541,17 +538,17 @@ export default function CustomerManagement() {
             <div className="border-t pt-4 mt-4">
               <div className="flex items-center gap-2 mb-4">
                 <CreditCard className="h-4 w-4" />
-                <Label className="text-base font-semibold">Data Identitas</Label>
+                <Label className="text-base font-semibold">Data Identitas *</Label>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="identity_type">Jenis Identitas</Label>
+                  <Label htmlFor="identity_type">Jenis Identitas *</Label>
                   <Select
                     value={formData.identity_type}
                     onValueChange={(value) => setFormData({ ...formData, identity_type: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={formErrors.identity_type ? "border-red-500" : ""}>
                       <SelectValue placeholder="Pilih jenis" />
                     </SelectTrigger>
                     <SelectContent>
@@ -560,25 +557,29 @@ export default function CustomerManagement() {
                       <SelectItem value="PASSPORT">Passport</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formErrors.identity_type && (
+                    <p className="text-sm text-red-500">{formErrors.identity_type}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="identity_number">Nomor Identitas</Label>
+                  <Label htmlFor="identity_number">Nomor Identitas *</Label>
                   <Input
                     id="identity_number"
                     value={formData.identity_number}
                     onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
                     placeholder="Masukkan nomor identitas"
+                    className={formErrors.identity_number ? "border-red-500" : ""}
                   />
+                  {formErrors.identity_number && (
+                    <p className="text-sm text-red-500">{formErrors.identity_number}</p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2 mt-4">
                 <Label>
-                  Upload Dokumen Identitas 
-                  {!editingCustomer?.identity_document_url && formData.identity_type && (
-                    <span className="text-red-500 ml-1">*</span>
-                  )}
+                  Upload Dokumen Identitas *
                 </Label>
                 
                 {identityPreview ? (
