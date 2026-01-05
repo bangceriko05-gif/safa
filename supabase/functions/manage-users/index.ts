@@ -67,8 +67,11 @@ Deno.serve(async (req) => {
       throw new Error('Failed to verify user permissions');
     }
 
-    if (roleData.role !== 'admin') {
-      throw new Error('Only admins can manage users');
+    const isAdmin = roleData.role === 'admin';
+    const isLeader = roleData.role === 'leader';
+
+    if (!isAdmin && !isLeader) {
+      throw new Error('Only admins and leaders can manage users');
     }
 
     const body: RequestBody = await req.json();
@@ -79,6 +82,11 @@ Deno.serve(async (req) => {
 
       if (!email || !password || !name) {
         throw new Error('Missing required fields: email, password, or name');
+      }
+
+      // Leader cannot create admin users
+      if (isLeader && role === 'admin') {
+        throw new Error('Leaders cannot create admin users');
       }
 
       // Create auth user
@@ -144,6 +152,19 @@ Deno.serve(async (req) => {
       // Prevent self-deletion
       if (userId === requestingUserId) {
         throw new Error('Cannot delete your own account');
+      }
+
+      // Check if target user is an admin (leaders cannot delete admins)
+      if (isLeader) {
+        const { data: targetRoleData } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .single();
+        
+        if (targetRoleData?.role === 'admin') {
+          throw new Error('Leaders cannot delete admin users');
+        }
       }
 
       // Delete user role first
