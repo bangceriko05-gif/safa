@@ -354,6 +354,9 @@ export type Database = {
           created_by: string
           email: string | null
           id: string
+          identity_document_url: string | null
+          identity_number: string | null
+          identity_type: string | null
           name: string
           notes: string | null
           phone: string
@@ -365,6 +368,9 @@ export type Database = {
           created_by: string
           email?: string | null
           id?: string
+          identity_document_url?: string | null
+          identity_number?: string | null
+          identity_type?: string | null
           name: string
           notes?: string | null
           phone: string
@@ -376,6 +382,9 @@ export type Database = {
           created_by?: string
           email?: string | null
           id?: string
+          identity_document_url?: string | null
+          identity_number?: string | null
+          identity_type?: string | null
           name?: string
           notes?: string | null
           phone?: string

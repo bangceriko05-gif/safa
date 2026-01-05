@@ -20,6 +20,13 @@ export const customerInputSchema = z.object({
     .max(500, 'Catatan maksimal 500 karakter')
     .optional()
     .or(z.literal('')),
+  identity_type: z.string()
+    .optional()
+    .or(z.literal('')),
+  identity_number: z.string()
+    .max(50, 'Nomor identitas maksimal 50 karakter')
+    .optional()
+    .or(z.literal('')),
 });
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
