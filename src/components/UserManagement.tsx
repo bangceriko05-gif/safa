@@ -324,8 +324,20 @@ export default function UserManagement() {
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        // Handle edge function error - extract message from context if available
+        const errorMessage = error.message || "Unknown error";
+        if (errorMessage.includes("already been registered") || errorMessage.includes("email_exists")) {
+          throw new Error("Email sudah terdaftar, gunakan email lain");
+        }
+        throw error;
+      }
+      if (data?.error) {
+        if (data.error.includes("already been registered") || data.error.includes("email_exists")) {
+          throw new Error("Email sudah terdaftar, gunakan email lain");
+        }
+        throw new Error(data.error);
+      }
 
       await logActivity({
         actionType: 'created',
