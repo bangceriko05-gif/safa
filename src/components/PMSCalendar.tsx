@@ -548,13 +548,14 @@ export default function PMSCalendar({
         description: `Mengubah status booking ${bookingData.customer_name} ke ${statusLabels[newStatus] || newStatus}`,
       });
 
-      // Update room_daily_status for CO status
+      // Update room_daily_status for CO status - use TODAY as the checkout date
       if (newStatus === "CO" && bookingData.room_id) {
+        const todayStr = format(new Date(), "yyyy-MM-dd");
         await supabase
           .from("room_daily_status")
           .upsert({
             room_id: bookingData.room_id,
-            date: bookingData.date,
+            date: todayStr,
             status: "Kotor",
             updated_by: user.id,
             updated_at: new Date().toISOString(),

@@ -277,16 +277,16 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
         updateData.checked_out_by = user?.id;
         updateData.checked_out_at = new Date().toISOString();
 
-        // Mark room as "Kotor" ONLY for this booking date (date-specific)
+        // Mark room as "Kotor" for TODAY (the actual checkout date)
         if (bookingForRoom?.room_id) {
-          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          const todayStr = format(new Date(), "yyyy-MM-dd");
 
           const { error: dailyError } = await supabase
             .from("room_daily_status")
             .upsert(
               {
                 room_id: bookingForRoom.room_id,
-                date: dateStr,
+                date: todayStr,
                 status: "Kotor",
                 updated_by: user?.id,
               },

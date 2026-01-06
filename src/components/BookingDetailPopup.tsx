@@ -232,13 +232,14 @@ export default function BookingDetailPopup({
         storeId: booking.store_id || currentStore?.id,
       });
 
-      // Update room_daily_status for CO status
+      // Update room_daily_status for CO status - use TODAY as the checkout date
       if (newStatus === "CO" && booking.room_id) {
+        const todayStr = format(new Date(), "yyyy-MM-dd");
         await supabase
           .from("room_daily_status")
           .upsert({
             room_id: booking.room_id,
-            date: booking.date,
+            date: todayStr,
             status: "Kotor",
             updated_by: user.id,
             updated_at: new Date().toISOString(),
