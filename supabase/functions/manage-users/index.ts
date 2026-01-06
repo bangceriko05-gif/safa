@@ -30,7 +30,12 @@ interface DeleteUserRequest {
   userId: string;
 }
 
-type RequestBody = CreateUserRequest | DeleteUserRequest;
+interface CleanupOrphanRequest {
+  action: 'cleanup_orphan';
+  email: string;
+}
+
+type RequestBody = CreateUserRequest | DeleteUserRequest | CleanupOrphanRequest;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -89,6 +94,50 @@ Deno.serve(async (req) => {
         throw new Error('Leaders cannot create admin users');
       }
 
+      // First, check if user already exists in auth and try to clean up orphaned records
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      
+      if (existingUser) {
+        // Check if this user has a profile record
+        const { data: profileExists } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .eq('id', existingUser.id)
+          .single();
+        
+        // Check if this user has a role record
+        const { data: roleExists } = await supabaseAdmin
+          .from('user_roles')
+          .select('id')
+          .eq('user_id', existingUser.id)
+          .single();
+        
+        // If user exists in auth but not in profiles or user_roles, it's an orphan - delete it
+        if (!profileExists || !roleExists) {
+          console.log(`Found orphaned auth user ${existingUser.id} for email ${email}, cleaning up...`);
+          
+          // Clean up all related data first
+          await supabaseAdmin.from('user_store_access').delete().eq('user_id', existingUser.id);
+          await supabaseAdmin.from('user_permissions').delete().eq('user_id', existingUser.id);
+          await supabaseAdmin.from('user_temp_passwords').delete().eq('user_id', existingUser.id);
+          await supabaseAdmin.from('user_roles').delete().eq('user_id', existingUser.id);
+          await supabaseAdmin.from('profiles').delete().eq('id', existingUser.id);
+          
+          // Delete the orphaned auth user
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id);
+          if (deleteError) {
+            console.error('Error deleting orphaned user:', deleteError);
+            throw new Error('Email sudah terdaftar tapi tidak bisa dibersihkan. Coba lagi nanti.');
+          }
+          
+          console.log(`Orphaned user ${existingUser.id} cleaned up successfully`);
+        } else {
+          // User exists and has proper records, this is a real duplicate
+          throw new Error('Email sudah terdaftar, gunakan email lain');
+        }
+      }
+
       // Create auth user
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -99,6 +148,9 @@ Deno.serve(async (req) => {
 
       if (authError) {
         console.error('Auth error creating user:', authError);
+        if (authError.message.includes('already been registered') || authError.code === 'email_exists') {
+          throw new Error('Email sudah terdaftar, gunakan email lain');
+        }
         throw new Error(authError.message);
       }
       
@@ -167,7 +219,50 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Delete user role first
+      console.log(`Starting full deletion for user: ${userId}`);
+
+      // Delete all related data in order
+      // 1. Delete user store access
+      const { error: storeAccessError } = await supabaseAdmin
+        .from('user_store_access')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (storeAccessError) {
+        console.error('Error deleting user_store_access:', storeAccessError);
+      }
+
+      // 2. Delete user permissions
+      const { error: permissionsError } = await supabaseAdmin
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (permissionsError) {
+        console.error('Error deleting user_permissions:', permissionsError);
+      }
+
+      // 3. Delete user temp passwords
+      const { error: tempPassError } = await supabaseAdmin
+        .from('user_temp_passwords')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (tempPassError) {
+        console.error('Error deleting user_temp_passwords:', tempPassError);
+      }
+
+      // 4. Delete notification preferences
+      const { error: notifError } = await supabaseAdmin
+        .from('notification_preferences')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (notifError) {
+        console.error('Error deleting notification_preferences:', notifError);
+      }
+
+      // 5. Delete user role
       const { error: roleDeleteError } = await supabaseAdmin
         .from('user_roles')
         .delete()
@@ -175,10 +270,9 @@ Deno.serve(async (req) => {
 
       if (roleDeleteError) {
         console.error('Error deleting user role:', roleDeleteError);
-        // Continue anyway, role might not exist
       }
 
-      // Delete profile
+      // 6. Delete profile
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .delete()
@@ -186,10 +280,9 @@ Deno.serve(async (req) => {
 
       if (profileError) {
         console.error('Error deleting profile:', profileError);
-        // Continue anyway
       }
 
-      // Delete auth user
+      // 7. Finally delete auth user
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
       if (authError) {
@@ -197,7 +290,7 @@ Deno.serve(async (req) => {
         throw new Error(authError.message);
       }
 
-      console.log(`User deleted: ${userId}`);
+      console.log(`User fully deleted: ${userId}`);
 
       return new Response(
         JSON.stringify({ 
