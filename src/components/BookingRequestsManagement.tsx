@@ -637,14 +637,15 @@ export default function BookingRequestsManagement() {
         try {
           await updateBookingStatusFromRequest(request.id, user.id, 'CO');
 
-          // Mark room as "Kotor" ONLY for this booking date (date-specific)
+          // Mark room as "Kotor" for TODAY (the actual checkout date)
           if (request.room_id) {
+            const todayStr = format(new Date(), "yyyy-MM-dd");
             const { error: dailyError } = await supabase
               .from("room_daily_status")
               .upsert(
                 {
                   room_id: request.room_id,
-                  date: request.booking_date,
+                  date: todayStr,
                   status: "Kotor",
                   updated_by: user.id,
                 },

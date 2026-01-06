@@ -504,16 +504,16 @@ export default function ScheduleTable({
         updateData.checked_out_by = user?.id;
         updateData.checked_out_at = new Date().toISOString();
 
-        // Mark room as "Kotor" ONLY for this date (date-specific)
+        // Mark room as "Kotor" for TODAY (the actual checkout date)
         if (bookingData?.room_id) {
-          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          const todayStr = format(new Date(), "yyyy-MM-dd");
 
           const { error: dailyError } = await supabase
             .from("room_daily_status")
             .upsert(
               {
                 room_id: bookingData.room_id,
-                date: dateStr,
+                date: todayStr,
                 status: "Kotor",
                 updated_by: user?.id,
               },
@@ -572,14 +572,14 @@ export default function ScheduleTable({
         updateData.checked_out_by = user.id;
         updateData.checked_out_at = new Date().toISOString();
 
-        // Mark room as Kotor
+        // Mark room as Kotor for TODAY (the actual checkout date)
         if (bookingData.room_id) {
-          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          const todayStr = format(new Date(), "yyyy-MM-dd");
           await supabase
             .from("room_daily_status")
             .upsert({
               room_id: bookingData.room_id,
-              date: dateStr,
+              date: todayStr,
               status: "Kotor",
               updated_by: user.id,
             }, { onConflict: "room_id,date" });

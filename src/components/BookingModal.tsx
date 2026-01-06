@@ -1036,14 +1036,15 @@ export default function BookingModal({
 
         if (error) throw error;
 
-        // If checked-out, mark room as "Kotor" ONLY for this booking date (date-specific)
+        // If checked-out, mark room as "Kotor" for TODAY (the actual checkout date)
         if (isCheckoutTransition) {
+          const todayStr = format(new Date(), "yyyy-MM-dd");
           const { error: dailyError } = await supabase
             .from("room_daily_status")
             .upsert(
               {
                 room_id: formData.room_id,
-                date: dateStr,
+                date: todayStr,
                 status: "Kotor",
                 updated_by: userId,
               },
