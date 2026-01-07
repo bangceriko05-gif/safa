@@ -23,6 +23,7 @@ interface CreateUserRequest {
   password: string;
   name: string;
   role: 'admin' | 'leader' | 'user';
+  storeId: string; // Store where user is being registered
 }
 
 interface DeleteUserRequest {
@@ -83,10 +84,14 @@ Deno.serve(async (req) => {
     console.log('Received request:', body.action);
 
     if (body.action === 'create') {
-      const { email, password, name, role } = body as CreateUserRequest;
+      const { email, password, name, role, storeId } = body as CreateUserRequest;
 
       if (!email || !password || !name) {
         throw new Error('Missing required fields: email, password, or name');
+      }
+
+      if (!storeId) {
+        throw new Error('Store ID is required for user registration');
       }
 
       // Leader cannot create admin users
@@ -180,6 +185,23 @@ Deno.serve(async (req) => {
       if (roleUpdateError) {
         console.error('Error updating role:', roleUpdateError);
         throw new Error('Failed to set user role');
+      }
+
+      // Automatically grant access to the store where user is being registered
+      const storeRole = role === 'admin' ? 'admin' : 'staff';
+      const { error: storeAccessError } = await supabaseAdmin
+        .from('user_store_access')
+        .insert({
+          user_id: authData.user.id,
+          store_id: storeId,
+          role: storeRole,
+        });
+
+      if (storeAccessError) {
+        console.error('Error granting store access:', storeAccessError);
+        // Don't throw, user is created but store access failed - can be added manually
+      } else {
+        console.log(`Store access granted for user ${authData.user.id} to store ${storeId}`);
       }
 
       return new Response(
