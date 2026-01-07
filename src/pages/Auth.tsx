@@ -17,6 +17,14 @@ interface ValidationErrors {
   password?: string;
 }
 
+interface LoginSettings {
+  company_name: string;
+  subtitle: string;
+  logo_url: string | null;
+  primary_color: string;
+  background_color: string;
+}
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -26,9 +34,42 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [loginSettings, setLoginSettings] = useState<LoginSettings>({
+    company_name: 'Safa Kost & Guesthouse',
+    subtitle: 'Masukkan email dan password Anda',
+    logo_url: null,
+    primary_color: '#3b82f6',
+    background_color: '#f8fafc',
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Load login settings from database
+    const loadLoginSettings = async () => {
+      try {
+        const { data } = await supabase
+          .from('login_settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (data) {
+          setLoginSettings({
+            company_name: data.company_name,
+            subtitle: data.subtitle,
+            logo_url: data.logo_url,
+            primary_color: data.primary_color,
+            background_color: data.background_color,
+          });
+        }
+      } catch (error) {
+        // Use default settings if none found
+        console.log('Using default login settings');
+      }
+    };
+
+    loadLoginSettings();
+    
     // Load saved email only (password should never be stored)
     const savedEmail = localStorage.getItem("treebox_email");
     
@@ -154,15 +195,30 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-main)" }}>
+    <div 
+      className="min-h-screen flex items-center justify-center p-4" 
+      style={{ backgroundColor: loginSettings.background_color }}
+    >
       <Card className="w-full max-w-md shadow-[var(--shadow-card)]">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? "Masuk ke Treebox" : "Daftar Treebox"}
+          {loginSettings.logo_url && (
+            <div className="flex justify-center mb-2">
+              <img 
+                src={loginSettings.logo_url} 
+                alt="Logo" 
+                className="w-16 h-16 object-contain"
+              />
+            </div>
+          )}
+          <CardTitle 
+            className="text-2xl font-bold text-center"
+            style={{ color: loginSettings.primary_color }}
+          >
+            {isLogin ? `Masuk ke ${loginSettings.company_name}` : `Daftar ${loginSettings.company_name}`}
           </CardTitle>
           <CardDescription className="text-center">
             {isLogin
-              ? "Masukkan email dan password Anda"
+              ? loginSettings.subtitle
               : "Buat akun baru untuk mengakses dashboard"}
           </CardDescription>
         </CardHeader>
@@ -259,7 +315,7 @@ export default function Auth() {
                 setPassword("");
                 setErrors({});
               }}
-              className="text-primary hover:underline"
+              style={{ color: loginSettings.primary_color }}
             >
               {isLogin
                 ? "Belum punya akun? Daftar di sini"
