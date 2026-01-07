@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Loader2, UserCog, Pencil, Key, Trash2, UserPlus, Building2, X } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useStore } from "@/contexts/StoreContext";
 
 interface User {
   id: string;
@@ -43,6 +44,7 @@ interface TempPassword {
 }
 
 export default function UserManagement() {
+  const { currentStore } = useStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -313,6 +315,10 @@ export default function UserManagement() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      if (!currentStore?.id) {
+        throw new Error("Pilih toko terlebih dahulu");
+      }
+
       // Use edge function for secure user creation
       const { data, error } = await supabase.functions.invoke('manage-users', {
         body: {
@@ -321,6 +327,7 @@ export default function UserManagement() {
           password: addFormData.password,
           name: addFormData.name,
           role: addFormData.role,
+          storeId: currentStore.id,
         },
       });
 
