@@ -26,6 +26,7 @@ import { logActivity } from "@/utils/activityLogger";
 interface Store {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   location: string | null;
   is_active: boolean;
@@ -136,7 +137,7 @@ export default function StoreManagement() {
     e.preventDefault();
 
     try {
-      const storeData = {
+      const storeData: any = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
         location: formData.location.trim() || null,
