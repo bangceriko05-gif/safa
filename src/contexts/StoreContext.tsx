@@ -24,6 +24,9 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ["/booking", "/auth"];
 
+// Protected routes that handle their own authentication
+const SELF_MANAGED_ROUTES = ["/pengaturan"];
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [currentStore, setCurrentStoreState] = useState<Store | null>(null);
   const [userStores, setUserStores] = useState<Store[]>([]);
@@ -40,13 +43,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Check if current route is public
+      // Check if current route is public or self-managed
       const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
+      const isSelfManagedRoute = SELF_MANAGED_ROUTES.some(route => location.pathname.startsWith(route));
       
       if (!user) {
         setIsLoading(false);
-        // Only redirect to auth if NOT on a public route
-        if (!isPublicRoute) {
+        // Only redirect to auth if NOT on a public or self-managed route
+        if (!isPublicRoute && !isSelfManagedRoute) {
           navigate("/auth");
         }
         return;
