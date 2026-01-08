@@ -4,13 +4,21 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { StoreProvider } from "@/contexts/StoreContext";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import SelectStore from "./pages/SelectStore";
+
+// Main pages
+import StoreSelector from "./pages/StoreSelector";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import NotFound from "./pages/NotFound";
+
+// Store-specific pages
+import StoreAuth from "./pages/store/StoreAuth";
+import StoreDashboard from "./pages/store/StoreDashboard";
+import StoreSettings from "./pages/store/StoreSettings";
+import StoreBooking from "./pages/store/StoreBooking";
+
+// Legacy pages (will be deprecated)
 import Booking from "./pages/Booking";
 import BookingConfirmation from "./pages/BookingConfirmation";
-import Pengaturan from "./pages/Pengaturan";
-import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -22,12 +30,21 @@ const App = () => (
       <BrowserRouter>
         <StoreProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/select-store" element={<SelectStore />} />
-            <Route path="/booking" element={<Booking />} />
+            {/* Public store selector */}
+            <Route path="/" element={<StoreSelector />} />
+            
+            {/* Super Admin Dashboard */}
+            <Route path="/admin" element={<SuperAdminDashboard />} />
+            
+            {/* Store-specific routes */}
+            <Route path="/:storeSlug" element={<StoreDashboard />} />
+            <Route path="/:storeSlug/auth" element={<StoreAuth />} />
+            <Route path="/:storeSlug/pengaturan" element={<StoreSettings />} />
+            <Route path="/:storeSlug/booking" element={<StoreBooking />} />
+            
+            {/* Legacy booking confirmation (redirect or keep for now) */}
             <Route path="/booking/confirm" element={<BookingConfirmation />} />
-            <Route path="/pengaturan" element={<Pengaturan />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
