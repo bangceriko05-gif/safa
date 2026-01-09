@@ -52,29 +52,32 @@ export default function StoreSettings() {
         return;
       }
 
-      // Check if super admin
+      // Check if super admin - redirect to main dashboard
       const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
         _user_id: user.id
       });
 
       if (isSuperAdmin) {
-        setHasAccess(true);
-      } else {
-        // Check if user is admin for this store
-        const { data: access } = await supabase
-          .from('user_store_access')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('store_id', store.id)
-          .single();
-
-        if (access?.role !== 'admin') {
-          toast.error('Hanya admin yang dapat mengakses halaman ini');
-          navigate(`/${storeSlug}`);
-          return;
-        }
-        setHasAccess(true);
+        toast.info("Super Admin akan diarahkan ke dashboard utama");
+        navigate("/dashboard");
+        return;
       }
+      
+      // Check if user has access to THIS store
+      const { data: access } = await supabase
+        .from('user_store_access')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('store_id', store.id)
+        .single();
+
+      if (!access) {
+        toast.error(`Anda tidak memiliki akses ke ${store.name}`);
+        navigate(`/${storeSlug}/auth`);
+        return;
+      }
+      
+      setHasAccess(true);
 
       // Load existing settings
       const { data: existingSettings } = await supabase
@@ -194,8 +197,8 @@ export default function StoreSettings() {
             <p className="text-muted-foreground mb-4">
               URL "{storeSlug}" tidak valid atau toko tidak aktif.
             </p>
-            <Button onClick={() => navigate("/")}>
-              Kembali ke Beranda
+            <Button onClick={() => navigate("/auth")}>
+              Kembali ke Login
             </Button>
           </CardContent>
         </Card>
@@ -363,7 +366,7 @@ export default function StoreSettings() {
 
         {/* Actions */}
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => navigate(`/${storeSlug}`)}>
+          <Button variant="outline" onClick={() => navigate(`/${storeSlug}/dashboard`)}>
             Batal
           </Button>
           <Button onClick={handleSave} disabled={saving}>
