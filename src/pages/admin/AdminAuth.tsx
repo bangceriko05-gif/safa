@@ -78,33 +78,38 @@ export default function AdminAuth() {
       setRememberMe(true);
     }
 
-    // Listen to auth state changes
+    // Listen to auth state changes (avoid async callback to prevent deadlocks)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          // Check if super admin
-          const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
-            _user_id: session.user.id
-          });
+      (event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          setTimeout(async () => {
+            try {
+              const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
+                _user_id: session.user.id,
+              });
 
-          if (isSuperAdmin) {
-            navigate("/dashboard");
-          } else {
-            // Check for store access
-            const { data: storeAccess } = await supabase
-              .from("user_store_access")
-              .select("store_id, stores(slug)")
-              .eq("user_id", session.user.id)
-              .limit(1)
-              .single();
+              if (isSuperAdmin) {
+                navigate("/dashboard");
+                return;
+              }
 
-            if (storeAccess?.stores) {
-              navigate(`/${(storeAccess.stores as any).slug}/dashboard`);
-            } else {
-              toast.error("Anda tidak memiliki akses ke sistem ini");
-              await supabase.auth.signOut();
+              const { data: storeAccess } = await supabase
+                .from("user_store_access")
+                .select("store_id, stores(slug)")
+                .eq("user_id", session.user.id)
+                .limit(1)
+                .single();
+
+              if (storeAccess?.stores) {
+                navigate(`/${(storeAccess.stores as any).slug}/dashboard`);
+              } else {
+                toast.error("Anda tidak memiliki akses ke sistem ini");
+                await supabase.auth.signOut();
+              }
+            } catch (err) {
+              console.error("Post-login routing error:", err);
             }
-          }
+          }, 0);
         }
       }
     );
