@@ -48,8 +48,11 @@ export default function StoreAdminAuth() {
     if (store) {
       checkExistingAuth();
       loadLoginSettings();
+    } else if (!storeLoading) {
+      // Ensure we don't get stuck on spinner if store lookup fails
+      setCheckingAuth(false);
     }
-  }, [store]);
+  }, [store, storeLoading]);
 
   const checkExistingAuth = async () => {
     if (!store) return;
@@ -115,34 +118,38 @@ export default function StoreAdminAuth() {
       setRememberMe(true);
     }
 
-    // Listen to auth state changes
+    // Listen to auth state changes (avoid async callback to prevent deadlocks)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session && store) {
-          // Check if super admin - redirect to main dashboard
-          const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
-            _user_id: session.user.id
-          });
+      (event, session) => {
+        if (event === "SIGNED_IN" && session && store) {
+          setTimeout(async () => {
+            try {
+              const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
+                _user_id: session.user.id,
+              });
 
-          if (isSuperAdmin) {
-            navigate("/dashboard");
-            return;
-          }
+              if (isSuperAdmin) {
+                navigate("/dashboard");
+                return;
+              }
 
-          // Check access to this store
-          const { data: access } = await supabase
-            .from("user_store_access")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("store_id", store.id)
-            .single();
+              const { data: access } = await supabase
+                .from("user_store_access")
+                .select("role")
+                .eq("user_id", session.user.id)
+                .eq("store_id", store.id)
+                .single();
 
-          if (access) {
-            navigate(`/${storeSlug}/dashboard`);
-          } else {
-            toast.error(`Anda tidak memiliki akses ke ${store.name}`);
-            await supabase.auth.signOut();
-          }
+              if (access) {
+                navigate(`/${storeSlug}/dashboard`);
+              } else {
+                toast.error(`Anda tidak memiliki akses ke ${store.name}`);
+                await supabase.auth.signOut();
+              }
+            } catch (err) {
+              console.error("Post-login routing error:", err);
+            }
+          }, 0);
         }
       }
     );
@@ -270,7 +277,7 @@ export default function StoreAdminAuth() {
     }
   };
 
-  if (storeLoading || checkingAuth) {
+  if (storeLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -285,7 +292,7 @@ export default function StoreAdminAuth() {
           <CardContent className="py-12 text-center">
             <h2 className="text-xl font-bold mb-2">Toko Tidak Ditemukan</h2>
             <p className="text-muted-foreground mb-4">
-              URL "{storeSlug}" tidak valid atau toko tidak aktif.
+              {storeError || `URL "${storeSlug}" tidak valid atau toko tidak aktif.`}
             </p>
             <Button onClick={() => navigate("/auth")}>
               Kembali ke Login
@@ -295,6 +302,15 @@ export default function StoreAdminAuth() {
       </div>
     );
   }
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
 
   return (
     <div 
