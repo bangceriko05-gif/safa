@@ -68,7 +68,7 @@ export default function StoreAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN' && session && store) {
-          navigate(`/${storeSlug}`);
+          navigate(`/${storeSlug}/dashboard`);
         }
       }
     );
@@ -376,7 +376,7 @@ export default function StoreAuth() {
             <Button 
               variant="link" 
               size="sm"
-              onClick={() => navigate(`/${storeSlug}/booking`)}
+              onClick={() => navigate(`/${storeSlug}`)}
             >
               Buat booking tanpa login →
             </Button>

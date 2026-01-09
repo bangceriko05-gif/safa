@@ -37,10 +37,10 @@ const App = () => (
             <Route path="/admin" element={<SuperAdminDashboard />} />
             
             {/* Store-specific routes */}
-            <Route path="/:storeSlug" element={<StoreDashboard />} />
+            <Route path="/:storeSlug" element={<StoreBooking />} />
             <Route path="/:storeSlug/auth" element={<StoreAuth />} />
+            <Route path="/:storeSlug/dashboard" element={<StoreDashboard />} />
             <Route path="/:storeSlug/pengaturan" element={<StoreSettings />} />
-            <Route path="/:storeSlug/booking" element={<StoreBooking />} />
             
             {/* Legacy booking confirmation (redirect or keep for now) */}
             <Route path="/booking/confirm" element={<BookingConfirmation />} />
