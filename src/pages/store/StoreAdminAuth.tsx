@@ -9,11 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
-import { signupSchema, loginSchema } from "@/utils/authValidation";
+import { loginSchema } from "@/utils/authValidation";
 import { useStoreBySlug } from "@/hooks/useStoreBySlug";
 
 interface ValidationErrors {
-  name?: string;
   email?: string;
   password?: string;
 }
@@ -26,20 +25,19 @@ interface LoginSettings {
   background_color: string;
 }
 
-export default function StoreAuth() {
+export default function StoreAdminAuth() {
   const { store, isLoading: storeLoading, error: storeError, storeSlug } = useStoreBySlug();
   const navigate = useNavigate();
   
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [loginSettings, setLoginSettings] = useState<LoginSettings>({
-    company_name: 'Safa Kost & Guesthouse',
+    company_name: '',
     subtitle: 'Masukkan email dan password Anda',
     logo_url: null,
     primary_color: '#3b82f6',
@@ -48,27 +46,103 @@ export default function StoreAuth() {
 
   useEffect(() => {
     if (store) {
+      checkExistingAuth();
       loadLoginSettings();
     }
   }, [store]);
 
-  useEffect(() => {
-    // Load saved email only (password should never be stored)
-    const savedEmail = localStorage.getItem("treebox_email");
+  const checkExistingAuth = async () => {
+    if (!store) return;
     
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Check if super admin - they should not be here
+        const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
+          _user_id: user.id
+        });
+
+        if (isSuperAdmin) {
+          // Redirect to main admin dashboard
+          navigate("/dashboard");
+          return;
+        }
+
+        // Check if user has access to THIS store
+        const { data: access } = await supabase
+          .from("user_store_access")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("store_id", store.id)
+          .single();
+
+        if (access) {
+          navigate(`/${storeSlug}/dashboard`);
+          return;
+        }
+
+        // User is logged in but doesn't have access to this store
+        // Check if they have access to another store
+        const { data: otherAccess } = await supabase
+          .from("user_store_access")
+          .select("store_id, stores(slug)")
+          .eq("user_id", user.id)
+          .limit(1)
+          .single();
+
+        if (otherAccess?.stores) {
+          toast.error(`Anda tidak memiliki akses ke ${store.name}`);
+          navigate(`/${(otherAccess.stores as any).slug}/dashboard`);
+          return;
+        }
+
+        // No access anywhere
+        await supabase.auth.signOut();
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load saved email
+    const savedEmail = localStorage.getItem(`store_email_${storeSlug}`);
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
-    
-    // Clean up any previously stored passwords
-    localStorage.removeItem("treebox_password");
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (event === 'SIGNED_IN' && session && store) {
-          navigate(`/${storeSlug}/dashboard`);
+          // Check if super admin - redirect to main dashboard
+          const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
+            _user_id: session.user.id
+          });
+
+          if (isSuperAdmin) {
+            navigate("/dashboard");
+            return;
+          }
+
+          // Check access to this store
+          const { data: access } = await supabase
+            .from("user_store_access")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("store_id", store.id)
+            .single();
+
+          if (access) {
+            navigate(`/${storeSlug}/dashboard`);
+          } else {
+            toast.error(`Anda tidak memiliki akses ke ${store.name}`);
+            await supabase.auth.signOut();
+          }
         }
       }
     );
@@ -95,17 +169,15 @@ export default function StoreAuth() {
           background_color: data.background_color || '#f8fafc',
         });
       } else {
-        // Use store name as default
         setLoginSettings(prev => ({
           ...prev,
           company_name: store.name
         }));
       }
     } catch (error) {
-      // Use store name as fallback
       setLoginSettings(prev => ({
         ...prev,
-        company_name: store?.name || 'Safa Kost & Guesthouse'
+        company_name: store?.name || ''
       }));
     }
   };
@@ -114,11 +186,7 @@ export default function StoreAuth() {
     setErrors({});
     
     try {
-      if (isLogin) {
-        loginSchema.parse({ email, password });
-      } else {
-        signupSchema.parse({ name, email, password });
-      }
+      loginSchema.parse({ email, password });
       return true;
     } catch (error: any) {
       if (error.errors) {
@@ -138,78 +206,63 @@ export default function StoreAuth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateForm() || !store) {
       return;
     }
     
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-        if (error) throw error;
-        
-        // Save or remove email based on remember me (never store password)
-        if (rememberMe) {
-          localStorage.setItem("treebox_email", email.trim());
-        } else {
-          localStorage.removeItem("treebox_email");
-        }
+      if (error) throw error;
+      
+      // Check if super admin - redirect to main dashboard
+      const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
+        _user_id: data.user.id
+      });
 
-        // Save current store to localStorage
-        if (store) {
-          localStorage.setItem("current_store_id", store.id);
-        }
-        
-        // Log login activity
-        await logActivity({
-          actionType: 'login',
-          entityType: 'System',
-          description: `Login ke ${store?.name || 'sistem'}`,
-          storeId: store?.id,
-        });
-        
-        toast.success("Login berhasil!");
-        navigate(`/${storeSlug}`);
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/${storeSlug}`,
-            data: {
-              name: name.trim(),
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        // Auto-promote to admin
-        if (data.session) {
-          try {
-            await supabase.functions.invoke('setup-admin', {
-              headers: {
-                Authorization: `Bearer ${data.session.access_token}`
-              }
-            });
-            toast.success("Akun admin berhasil dibuat! Silakan login.");
-          } catch (adminError) {
-            toast.success("Akun berhasil dibuat! Silakan login.");
-          }
-        } else {
-          toast.success("Akun berhasil dibuat! Silakan login.");
-        }
-        
-        setIsLogin(true);
-        setName("");
-        setPassword("");
-        setErrors({});
+      if (isSuperAdmin) {
+        toast.info("Super Admin akan diarahkan ke dashboard utama");
+        navigate("/dashboard");
+        return;
       }
+
+      // Check access to this store
+      const { data: access } = await supabase
+        .from("user_store_access")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("store_id", store.id)
+        .single();
+
+      if (!access) {
+        toast.error(`Anda tidak memiliki akses ke ${store.name}`);
+        await supabase.auth.signOut();
+        return;
+      }
+
+      // Save email if remember me
+      if (rememberMe) {
+        localStorage.setItem(`store_email_${storeSlug}`, email.trim());
+      } else {
+        localStorage.removeItem(`store_email_${storeSlug}`);
+      }
+
+      localStorage.setItem("current_store_id", store.id);
+      
+      await logActivity({
+        actionType: 'login',
+        entityType: 'System',
+        description: `Login ke ${store.name}`,
+        storeId: store.id,
+      });
+      
+      toast.success("Login berhasil!");
+      navigate(`/${storeSlug}/dashboard`);
     } catch (error: any) {
       toast.error(error.message || "Terjadi kesalahan");
     } finally {
@@ -217,7 +270,7 @@ export default function StoreAuth() {
     }
   };
 
-  if (storeLoading) {
+  if (storeLoading || checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -227,15 +280,15 @@ export default function StoreAuth() {
 
   if (storeError || !store) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <h2 className="text-xl font-bold mb-2">Toko Tidak Ditemukan</h2>
             <p className="text-muted-foreground mb-4">
               URL "{storeSlug}" tidak valid atau toko tidak aktif.
             </p>
-            <Button onClick={() => navigate("/")}>
-              Kembali ke Beranda
+            <Button onClick={() => navigate("/auth")}>
+              Kembali ke Login
             </Button>
           </CardContent>
         </Card>
@@ -248,7 +301,7 @@ export default function StoreAuth() {
       className="min-h-screen flex items-center justify-center p-4" 
       style={{ backgroundColor: loginSettings.background_color }}
     >
-      <Card className="w-full max-w-md shadow-[var(--shadow-card)]">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           {loginSettings.logo_url && (
             <div className="flex justify-center mb-2">
@@ -263,32 +316,14 @@ export default function StoreAuth() {
             className="text-2xl font-bold text-center"
             style={{ color: loginSettings.primary_color }}
           >
-            {isLogin ? `Masuk ke ${loginSettings.company_name}` : `Daftar ${loginSettings.company_name}`}
+            {loginSettings.company_name}
           </CardTitle>
           <CardDescription className="text-center">
-            {isLogin
-              ? loginSettings.subtitle
-              : "Buat akun baru untuk mengakses dashboard"}
+            {loginSettings.subtitle}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Nama</Label>
-                <Input
-                  id="name"
-                  placeholder="Nama lengkap"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={100}
-                  className={errors.name ? "border-destructive" : ""}
-                />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
-                )}
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -326,61 +361,31 @@ export default function StoreAuth() {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
-              {!isLogin && !errors.password && (
-                <p className="text-xs text-muted-foreground">
-                  Minimal 8 karakter, mengandung huruf besar dan angka
-                </p>
-              )}
             </div>
             
-            {isLogin && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                />
-                <Label
-                  htmlFor="remember"
-                  className="text-sm font-normal cursor-pointer"
-                >
-                  Ingat email saya
-                </Label>
-              </div>
-            )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <Label
+                htmlFor="remember"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Ingat email saya
+              </Label>
+            </div>
             
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLogin ? "Masuk" : "Daftar"}
+              Masuk
             </Button>
           </form>
 
-          <div className="mt-4 text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setName("");
-                setPassword("");
-                setErrors({});
-              }}
-              style={{ color: loginSettings.primary_color }}
-            >
-              {isLogin
-                ? "Belum punya akun? Daftar di sini"
-                : "Sudah punya akun? Masuk di sini"}
-            </button>
-          </div>
-
-          <div className="mt-4 pt-4 border-t text-center">
-            <Button 
-              variant="link" 
-              size="sm"
-              onClick={() => navigate(`/${storeSlug}`)}
-            >
-              Buat booking tanpa login →
-            </Button>
-          </div>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Hanya untuk admin {store.name}
+          </p>
         </CardContent>
       </Card>
     </div>

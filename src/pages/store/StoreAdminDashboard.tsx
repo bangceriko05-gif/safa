@@ -6,16 +6,18 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Dashboard from "@/components/Dashboard";
+import { toast } from "sonner";
 
-export default function StoreDashboard() {
+export default function StoreAdminDashboard() {
   const { store, isLoading: storeLoading, error: storeError, storeSlug } = useStoreBySlug();
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    checkAuth();
+    if (store) {
+      checkAuth();
+    }
   }, [store]);
 
   const checkAuth = async () => {
@@ -29,22 +31,18 @@ export default function StoreDashboard() {
         return;
       }
 
-      setIsAuthenticated(true);
-
-      // Check if super admin
+      // Check if super admin - redirect to main dashboard
       const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
         _user_id: user.id
       });
 
       if (isSuperAdmin) {
-        setHasAccess(true);
-        // Set current store in localStorage
-        localStorage.setItem("current_store_id", store.id);
-        setIsCheckingAuth(false);
+        toast.info("Super Admin akan diarahkan ke dashboard utama");
+        navigate("/dashboard");
         return;
       }
 
-      // Check if user has access to this store
+      // Check if user has access to THIS store
       const { data: access } = await supabase
         .from("user_store_access")
         .select("role")
@@ -56,10 +54,26 @@ export default function StoreDashboard() {
         setHasAccess(true);
         localStorage.setItem("current_store_id", store.id);
       } else {
-        setHasAccess(false);
+        // Check if user has access to another store
+        const { data: otherAccess } = await supabase
+          .from("user_store_access")
+          .select("store_id, stores(slug)")
+          .eq("user_id", user.id)
+          .limit(1)
+          .single();
+
+        if (otherAccess?.stores) {
+          toast.error(`Anda tidak memiliki akses ke ${store.name}`);
+          navigate(`/${(otherAccess.stores as any).slug}/dashboard`);
+        } else {
+          toast.error("Anda tidak memiliki akses ke sistem ini");
+          await supabase.auth.signOut();
+          navigate(`/${storeSlug}/auth`);
+        }
       }
     } catch (error) {
       console.error("Error checking auth:", error);
+      navigate(`/${storeSlug}/auth`);
     } finally {
       setIsCheckingAuth(false);
     }
@@ -75,15 +89,15 @@ export default function StoreDashboard() {
 
   if (storeError || !store) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <h2 className="text-xl font-bold mb-2">Toko Tidak Ditemukan</h2>
             <p className="text-muted-foreground mb-4">
               URL "{storeSlug}" tidak valid atau toko tidak aktif.
             </p>
-            <Button onClick={() => navigate("/")}>
-              Kembali ke Beranda
+            <Button onClick={() => navigate("/auth")}>
+              Kembali ke Login
             </Button>
           </CardContent>
         </Card>
@@ -93,12 +107,12 @@ export default function StoreDashboard() {
 
   if (!hasAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <h2 className="text-xl font-bold mb-2">Akses Ditolak</h2>
             <p className="text-muted-foreground mb-4">
-              Anda tidak memiliki akses ke toko "{store.name}".
+              Anda tidak memiliki akses ke {store.name}
             </p>
             <div className="flex gap-2 justify-center">
               <Button variant="outline" onClick={() => navigate(`/${storeSlug}/auth`)}>
@@ -114,7 +128,5 @@ export default function StoreDashboard() {
     );
   }
 
-  // Render the existing Dashboard component
-  // The Dashboard will read currentStore from localStorage/StoreContext
   return <Dashboard />;
 }
