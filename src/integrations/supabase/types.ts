@@ -552,50 +552,6 @@ export type Database = {
           },
         ]
       }
-      login_settings: {
-        Row: {
-          background_color: string | null
-          company_name: string
-          created_at: string
-          id: string
-          logo_url: string | null
-          primary_color: string | null
-          store_id: string | null
-          subtitle: string | null
-          updated_at: string
-        }
-        Insert: {
-          background_color?: string | null
-          company_name?: string
-          created_at?: string
-          id?: string
-          logo_url?: string | null
-          primary_color?: string | null
-          store_id?: string | null
-          subtitle?: string | null
-          updated_at?: string
-        }
-        Update: {
-          background_color?: string | null
-          company_name?: string
-          created_at?: string
-          id?: string
-          logo_url?: string | null
-          primary_color?: string | null
-          store_id?: string | null
-          subtitle?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "login_settings_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: true
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -966,7 +922,6 @@ export type Database = {
           is_active: boolean
           location: string | null
           name: string
-          slug: string
           updated_at: string
         }
         Insert: {
@@ -977,7 +932,6 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name: string
-          slug: string
           updated_at?: string
         }
         Update: {
@@ -988,7 +942,6 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name?: string
-          slug?: string
           updated_at?: string
         }
         Relationships: []
