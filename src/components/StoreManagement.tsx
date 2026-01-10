@@ -141,6 +141,7 @@ export default function StoreManagement() {
         description: formData.description.trim() || null,
         location: formData.location.trim() || null,
         image_url: formData.image_url || null,
+        slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
       if (editingStore) {

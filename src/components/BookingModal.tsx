@@ -33,6 +33,7 @@ import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { validateBookingInputs } from "@/utils/bookingValidation";
 import { cn } from "@/lib/utils";
+import PaymentProofUpload from "@/components/PaymentProofUpload";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -110,6 +111,7 @@ export default function BookingModal({
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
+  const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
@@ -292,6 +294,8 @@ export default function BookingModal({
         discount_applies_to: editingBooking.discount_applies_to || "variant",
         booking_type: isOTA ? "ota" : "walk_in",
       });
+      // Set payment proof URL from existing booking
+      setPaymentProofUrl(editingBooking.payment_proof_url || null);
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
@@ -335,6 +339,7 @@ export default function BookingModal({
       setSelectedProducts([]);
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
+      setPaymentProofUrl(null);
 
       // For PMS mode, initialize check-in date from selected date
       if (isPMSMode) {
@@ -375,6 +380,7 @@ export default function BookingModal({
       setSelectedProducts([]);
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
+      setPaymentProofUrl(null);
       
       // Reset check-in/out dates for PMS mode
       if (isPMSMode) {
@@ -818,6 +824,13 @@ export default function BookingModal({
         return;
       }
 
+      // Validate payment proof is uploaded
+      if (!paymentProofUrl) {
+        toast.error("Bukti bayar wajib diupload");
+        setLoading(false);
+        return;
+      }
+
       // Validate dual payment
       if (formData.dual_payment) {
         const price2Value = parseFloat(formData.price_2.replace(/\./g, '')) || 0;
@@ -961,6 +974,7 @@ export default function BookingModal({
         discount_value: formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
         store_id: currentStore.id,
+        payment_proof_url: paymentProofUrl,
       };
 
       // Only set created_by for NEW bookings, never update it for existing bookings
@@ -1966,6 +1980,14 @@ export default function BookingModal({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Payment Proof Upload */}
+          <PaymentProofUpload
+            value={paymentProofUrl}
+            onChange={setPaymentProofUrl}
+            required
+            disabled={loading}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
