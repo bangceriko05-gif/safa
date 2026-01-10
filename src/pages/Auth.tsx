@@ -93,7 +93,24 @@ export default function Auth() {
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // Handle specific error messages
+          if (error.message === "Invalid login credentials") {
+            // Check if email exists by attempting password reset (doesn't reveal if email exists in error)
+            // For better UX, we show specific field errors
+            setErrors({
+              email: "Email atau password salah",
+              password: "Periksa kembali email dan password Anda"
+            });
+            toast.error("Email atau password salah");
+          } else if (error.message.includes("Email not confirmed")) {
+            toast.error("Email belum dikonfirmasi. Cek inbox email Anda.");
+          } else {
+            toast.error(error.message || "Terjadi kesalahan");
+          }
+          setLoading(false);
+          return;
+        }
         
         // Save or remove email based on remember me (never store password)
         if (rememberMe) {
@@ -123,7 +140,16 @@ export default function Auth() {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("already registered")) {
+            setErrors({ email: "Email sudah terdaftar" });
+            toast.error("Email sudah terdaftar, silakan login");
+          } else {
+            toast.error(error.message || "Terjadi kesalahan");
+          }
+          setLoading(false);
+          return;
+        }
 
         // Auto-promote to admin
         if (data.session) {
