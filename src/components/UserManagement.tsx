@@ -331,19 +331,45 @@ export default function UserManagement() {
         },
       });
 
+      // Handle edge function errors properly
+      // When edge function returns 400, error contains the FunctionsHttpError
+      // and data may contain the JSON response body
       if (error) {
-        // Handle edge function error - extract message from context if available
+        console.error('Edge function error:', error);
         const errorMessage = error.message || "Unknown error";
-        if (errorMessage.includes("already been registered") || errorMessage.includes("email_exists")) {
-          throw new Error("Email sudah terdaftar, gunakan email lain");
+        
+        // Check if error message contains our custom messages
+        if (errorMessage.includes("sudah terdaftar") || 
+            errorMessage.includes("already been registered") || 
+            errorMessage.includes("email_exists")) {
+          toast.error("Email sudah terdaftar, gunakan email lain");
+          return;
         }
-        throw error;
+        
+        // Try to parse error context if available
+        if (error.context) {
+          try {
+            const context = typeof error.context === 'string' 
+              ? JSON.parse(error.context) 
+              : error.context;
+            if (context?.error) {
+              toast.error(context.error);
+              return;
+            }
+          } catch (e) {
+            // Context parsing failed, continue with default error
+          }
+        }
+        
+        toast.error("Gagal menambah pengguna: " + errorMessage);
+        return;
       }
+      
+      // Check if data contains an error (edge function returned error in body)
       if (data?.error) {
-        if (data.error.includes("already been registered") || data.error.includes("email_exists")) {
-          throw new Error("Email sudah terdaftar, gunakan email lain");
-        }
-        throw new Error(data.error);
+        console.error('Edge function returned error in data:', data.error);
+        toast.error(data.error);
+        return;
       }
 
       await logActivity({
@@ -357,7 +383,8 @@ export default function UserManagement() {
       fetchUsers();
       handleCloseAddDialog();
     } catch (error: any) {
-      toast.error("Gagal menambah pengguna: " + error.message);
+      console.error('Unexpected error in handleAddUser:', error);
+      toast.error("Gagal menambah pengguna: " + (error.message || "Terjadi kesalahan"));
     }
   };
 
