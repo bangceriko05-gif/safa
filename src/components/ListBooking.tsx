@@ -23,7 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
 import BookingDetailPopup from "./BookingDetailPopup";
+import CancelledBookings from "./CancelledBookings";
 
 interface ListBookingProps {
   userRole: string | null;
@@ -55,6 +57,7 @@ interface BookingWithRoom {
 
 export default function ListBooking({ userRole, onEditBooking }: ListBookingProps) {
   const { currentStore } = useStore();
+  const [activeSubTab, setActiveSubTab] = useState("active");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -432,15 +435,32 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
 
   const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
 
+  // Filter out BATAL status from active bookings list
+  const activeBookings = bookings.filter(b => b.status !== "BATAL");
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5" />
-          List Booking
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="active" className="gap-2">
+            <List className="h-4 w-4" />
+            Aktif
+          </TabsTrigger>
+          <TabsTrigger value="cancelled" className="gap-2">
+            <XCircle className="h-4 w-4" />
+            Batal
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                List Booking Aktif
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
         {/* Date Filter */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1">
@@ -508,7 +528,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : bookings.length === 0 ? (
+        ) : activeBookings.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             Tidak ada booking untuk tanggal ini
           </div>
@@ -527,7 +547,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.map((booking) => (
+                {activeBookings.map((booking) => (
                   <TableRow 
                     key={booking.id}
                     className={cn(
@@ -680,18 +700,25 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           </div>
         )}
 
-        {/* Booking Detail Popup */}
-        <BookingDetailPopup
-          isOpen={detailPopupOpen}
-          onClose={() => {
-            setDetailPopupOpen(false);
-            setSelectedBookingId(null);
-          }}
-          bookingId={selectedBookingId}
-          statusColors={statusColors}
-          onStatusChange={() => fetchBookings()}
-        />
-      </CardContent>
-    </Card>
+            {/* Booking Detail Popup */}
+            <BookingDetailPopup
+              isOpen={detailPopupOpen}
+              onClose={() => {
+                setDetailPopupOpen(false);
+                setSelectedBookingId(null);
+              }}
+              bookingId={selectedBookingId}
+              statusColors={statusColors}
+              onStatusChange={() => fetchBookings()}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="cancelled" className="mt-4">
+        <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} />
+      </TabsContent>
+    </Tabs>
+  </div>
   );
 }

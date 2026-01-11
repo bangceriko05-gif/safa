@@ -588,6 +588,7 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2 items-center">
+                        {/* Admin can do everything */}
                         {currentUserRole === "admin" && (
                           <>
                             <Button
@@ -634,7 +635,28 @@ export default function UserManagement() {
                             </Select>
                           </>
                         )}
-                        {(currentUserRole === "admin" || currentUserRole === "leader") && (
+                        {/* Leader can only change role for "user" type users */}
+                        {currentUserRole === "leader" && user.role === "user" && (
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user")}
+                            disabled={updating === user.id}
+                          >
+                            <SelectTrigger className="w-32">
+                              {updating === user.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <SelectValue />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {/* Leader can only set user to user role - cannot promote to leader or admin */}
+                              <SelectItem value="user">User</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {/* Admin can delete anyone. Leader can only delete "user" type users */}
+                        {(currentUserRole === "admin" || (currentUserRole === "leader" && user.role === "user")) && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -817,11 +839,20 @@ export default function UserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="leader">Leader</SelectItem>
+                  {currentUserRole === "admin" && (
+                    <>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="leader">Leader</SelectItem>
+                    </>
+                  )}
                   <SelectItem value="user">User</SelectItem>
                 </SelectContent>
               </Select>
+              {currentUserRole === "leader" && (
+                <p className="text-xs text-muted-foreground">
+                  Sebagai Leader, Anda hanya dapat menambahkan pengguna dengan role User
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 justify-end">
