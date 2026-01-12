@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Bell, Bed, Store, Palette, Type } from "lucide-react";
+import { Monitor, Bell, Bed, Store, Palette, Type, Printer } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
+import PrintSettingsComponent from "./PrintSettings";
 
 interface StatusColor {
   id: string;
@@ -271,8 +272,8 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full" style={{ 
           gridTemplateColumns: userRole === "admin" 
-            ? "repeat(5, 1fr)" 
-            : (userRole === "leader" ? "repeat(4, 1fr)" : "repeat(3, 1fr)")
+            ? "repeat(6, 1fr)" 
+            : (userRole === "leader" ? "repeat(5, 1fr)" : "repeat(3, 1fr)")
         }}>
           <TabsTrigger value="display" className="text-xs sm:text-sm">
             <Monitor className="mr-1 sm:mr-2 h-4 w-4" />
@@ -287,10 +288,16 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             <span className="hidden sm:inline">Notifikasi</span>
           </TabsTrigger>
           {(userRole === "admin" || userRole === "leader") && (
-            <TabsTrigger value="rooms" className="text-xs sm:text-sm">
-              <Bed className="mr-1 sm:mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Kamar</span>
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="print" className="text-xs sm:text-sm">
+                <Printer className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Nota</span>
+              </TabsTrigger>
+              <TabsTrigger value="rooms" className="text-xs sm:text-sm">
+                <Bed className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Kamar</span>
+              </TabsTrigger>
+            </>
           )}
           {userRole === "admin" && (
             <TabsTrigger value="outlet" className="text-xs sm:text-sm">
@@ -485,6 +492,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         <TabsContent value="notifications" className="mt-4">
           <NotificationSettings />
         </TabsContent>
+
+        {/* Print Settings */}
+        {(userRole === "admin" || userRole === "leader") && (
+          <TabsContent value="print" className="mt-4">
+            <PrintSettingsComponent />
+          </TabsContent>
+        )}
 
         {/* Room Settings */}
         {(userRole === "admin" || userRole === "leader") && (

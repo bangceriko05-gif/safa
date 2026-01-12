@@ -650,6 +650,65 @@ export type Database = {
         }
         Relationships: []
       }
+      print_settings: {
+        Row: {
+          business_address: string | null
+          business_name: string | null
+          business_phone: string | null
+          created_at: string
+          footer_text: string | null
+          id: string
+          logo_url: string | null
+          manager_name: string | null
+          paper_size: string | null
+          show_logo: boolean | null
+          show_manager_signature: boolean | null
+          show_qr_code: boolean | null
+          store_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_address?: string | null
+          business_name?: string | null
+          business_phone?: string | null
+          created_at?: string
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          manager_name?: string | null
+          paper_size?: string | null
+          show_logo?: boolean | null
+          show_manager_signature?: boolean | null
+          show_qr_code?: boolean | null
+          store_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_address?: string | null
+          business_name?: string | null
+          business_phone?: string | null
+          created_at?: string
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          manager_name?: string | null
+          paper_size?: string | null
+          show_logo?: boolean | null
+          show_manager_signature?: boolean | null
+          show_qr_code?: boolean | null
+          store_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string

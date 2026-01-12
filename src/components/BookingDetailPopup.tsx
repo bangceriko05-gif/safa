@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Trash2, Plus, ChevronDown } from "lucide-react";
+import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Trash2, Plus, ChevronDown, Printer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
@@ -353,16 +353,35 @@ export default function BookingDetailPopup({
     return format(new Date(dateString), "d MMM yyyy HH:mm", { locale: idLocale });
   };
 
+  const handlePrintReceipt = () => {
+    if (booking) {
+      window.open(`/receipt?id=${booking.id}`, '_blank');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Detail Booking
-            {booking?.bid && (
-              <Badge variant="outline" className="font-mono">
-                {booking.bid}
-              </Badge>
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              Detail Booking
+              {booking?.bid && (
+                <Badge variant="outline" className="font-mono">
+                  {booking.bid}
+                </Badge>
+              )}
+            </div>
+            {booking && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintReceipt}
+                className="gap-1"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
             )}
           </DialogTitle>
         </DialogHeader>
