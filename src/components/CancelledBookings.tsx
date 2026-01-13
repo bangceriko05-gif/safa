@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, Eye, Undo, Trash2, ChevronDown, XCircle, Search } from "lucide-react";
+import { CalendarIcon, Eye, Undo, Trash2, ChevronDown, XCircle, Search, ImageIcon } from "lucide-react";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
@@ -53,6 +53,7 @@ interface BookingWithRoom {
   price: number;
   created_at: string;
   updated_at: string;
+  payment_proof_url: string | null;
 }
 
 export default function CancelledBookings({ userRole, onEditBooking }: CancelledBookingsProps) {
@@ -156,6 +157,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
           price,
           created_at,
           updated_at,
+          payment_proof_url,
           rooms (name)
         `)
         .eq("status", "BATAL")
@@ -181,6 +183,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
         price: b.price,
         created_at: b.created_at,
         updated_at: b.updated_at,
+        payment_proof_url: b.payment_proof_url,
       }));
 
       setBookings(mappedBookings);
@@ -395,6 +398,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                   <TableHead>Kamar</TableHead>
                   <TableHead>Tanggal Booking</TableHead>
                   <TableHead>{isPMSMode ? "Durasi" : "Jam"}</TableHead>
+                  <TableHead>Bukti Bayar</TableHead>
                   <TableHead>Dibatalkan</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
@@ -432,6 +436,25 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                         ? `${booking.duration} malam`
                         : `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
                       }
+                    </TableCell>
+                    <TableCell>
+                      {booking.payment_proof_url ? (
+                        <a
+                          href={booking.payment_proof_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
+                          title="Lihat Bukti Bayar"
+                        >
+                          <img
+                            src={booking.payment_proof_url}
+                            alt="Bukti Bayar"
+                            className="w-6 h-6 rounded object-cover border"
+                          />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(booking.updated_at), "d MMM yyyy HH:mm", { locale: idLocale })}
