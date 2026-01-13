@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer } from "lucide-react";
-import { format, addDays, subDays } from "date-fns";
+import { format, addDays, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -61,8 +62,10 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "custom">("today");
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [tempDate, setTempDate] = useState<Date | undefined>(new Date());
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
@@ -131,7 +134,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
       supabase.removeChannel(channel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
-  }, [selectedDate, currentStore]);
+  }, [selectedDate, dateFilter, customDateRange, currentStore]);
 
   const fetchStatusColors = async () => {
     try {
@@ -161,9 +164,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
       if (!currentStore) return;
       setIsLoading(true);
 
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
-
-      const { data, error } = await supabase
+      let query = supabase
         .from("bookings")
         .select(`
           id,
@@ -180,9 +181,27 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           created_at,
           rooms (name)
         `)
-        .eq("date", dateStr)
-        .eq("store_id", currentStore.id)
-        .order("start_time");
+        .eq("store_id", currentStore.id);
+
+      // Apply date filter based on current filter type
+      if (dateFilter === "today" || dateFilter === "yesterday") {
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        query = query.eq("date", dateStr);
+      } else if (dateFilter === "thisMonth") {
+        const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+        const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
+        query = query.gte("date", monthStart).lte("date", monthEnd);
+      } else if (dateFilter === "custom" && customDateRange?.from) {
+        const startDate = format(customDateRange.from, "yyyy-MM-dd");
+        const endDate = format(customDateRange.to || customDateRange.from, "yyyy-MM-dd");
+        query = query.gte("date", startDate).lte("date", endDate);
+      } else {
+        // Default to today if no filter
+        const dateStr = format(new Date(), "yyyy-MM-dd");
+        query = query.eq("date", dateStr);
+      }
+
+      const { data, error } = await query.order("date", { ascending: false }).order("start_time");
 
       if (error) throw error;
 
@@ -211,27 +230,28 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
     }
   };
 
-  const handleYesterday = () => {
-    setSelectedDate(subDays(new Date(), 1));
-  };
-
-  const handleToday = () => {
-    setSelectedDate(new Date());
-  };
-
-  const handleTomorrow = () => {
-    setSelectedDate(addDays(new Date(), 1));
-  };
-
-  const handleCalendarSelect = (date: Date | undefined) => {
-    setTempDate(date);
-  };
-
-  const handleCalendarConfirm = () => {
-    if (tempDate) {
-      setSelectedDate(tempDate);
+  const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "custom") => {
+    setDateFilter(filter);
+    if (filter === "today") {
+      setSelectedDate(new Date());
+    } else if (filter === "yesterday") {
+      setSelectedDate(subDays(new Date(), 1));
+    } else if (filter === "thisMonth") {
+      setSelectedDate(new Date());
+    } else if (filter === "custom") {
+      setPendingDateRange(customDateRange);
+      setCalendarOpen(true);
     }
-    setCalendarOpen(false);
+  };
+
+  const handleCustomDateConfirm = () => {
+    if (pendingDateRange?.from) {
+      setCustomDateRange(pendingDateRange);
+      setSelectedDate(pendingDateRange.from);
+      setCalendarOpen(false);
+    } else {
+      toast.error("Pilih tanggal terlebih dahulu");
+    }
   };
 
   const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null) => {
@@ -467,19 +487,9 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
             <Button
               variant="outline"
               size="sm"
-              onClick={handleYesterday}
+              onClick={() => handleDateFilterChange("today")}
               className={cn(
-                format(selectedDate, "yyyy-MM-dd") === format(subDays(new Date(), 1), "yyyy-MM-dd") && "bg-primary text-primary-foreground"
-              )}
-            >
-              Kemarin
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToday}
-              className={cn(
-                format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") && "bg-primary text-primary-foreground"
+                dateFilter === "today" && "bg-primary text-primary-foreground"
               )}
             >
               Hari Ini
@@ -487,35 +497,67 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
             <Button
               variant="outline"
               size="sm"
-              onClick={handleTomorrow}
+              onClick={() => handleDateFilterChange("yesterday")}
               className={cn(
-                format(selectedDate, "yyyy-MM-dd") === format(addDays(new Date(), 1), "yyyy-MM-dd") && "bg-primary text-primary-foreground"
+                dateFilter === "yesterday" && "bg-primary text-primary-foreground"
               )}
             >
-              Besok
+              Kemarin
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("thisMonth")}
+              className={cn(
+                dateFilter === "thisMonth" && "bg-primary text-primary-foreground"
+              )}
+            >
+              Bulan Ini
             </Button>
           </div>
           
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn(
+                  "gap-2",
+                  dateFilter === "custom" && "bg-primary text-primary-foreground"
+                )}
+                onClick={() => handleDateFilterChange("custom")}
+              >
                 <CalendarIcon className="h-4 w-4" />
-                {format(selectedDate, "d MMMM yyyy", { locale: idLocale })}
+                {dateFilter === "custom" && customDateRange?.from ? (
+                  customDateRange.to ? (
+                    <>
+                      {format(customDateRange.from, "d MMM", { locale: idLocale })} -{" "}
+                      {format(customDateRange.to, "d MMM yyyy", { locale: idLocale })}
+                    </>
+                  ) : (
+                    format(customDateRange.from, "d MMMM yyyy", { locale: idLocale })
+                  )
+                ) : (
+                  "Custom Tanggal"
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
-                mode="single"
-                selected={tempDate}
-                onSelect={handleCalendarSelect}
+                mode="range"
+                selected={pendingDateRange}
+                onSelect={(range) => setPendingDateRange(range)}
+                defaultMonth={pendingDateRange?.from || new Date()}
                 initialFocus
+                numberOfMonths={2}
                 locale={idLocale}
+                className="pointer-events-auto"
               />
-              <div className="flex justify-end gap-2 p-2 border-t">
+              <div className="flex justify-end gap-2 p-3 border-t">
                 <Button variant="outline" size="sm" onClick={() => setCalendarOpen(false)}>
                   Batal
                 </Button>
-                <Button size="sm" onClick={handleCalendarConfirm}>
+                <Button size="sm" onClick={handleCustomDateConfirm} disabled={!pendingDateRange?.from}>
                   OK
                 </Button>
               </div>
