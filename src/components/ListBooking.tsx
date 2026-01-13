@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer } from "lucide-react";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer, ImageIcon } from "lucide-react";
 import { format, addDays, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
@@ -54,6 +54,7 @@ interface BookingWithRoom {
   room_name: string;
   price: number;
   created_at: string;
+  payment_proof_url: string | null;
 }
 
 export default function ListBooking({ userRole, onEditBooking }: ListBookingProps) {
@@ -179,6 +180,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           room_id,
           price,
           created_at,
+          payment_proof_url,
           rooms (name)
         `)
         .eq("store_id", currentStore.id);
@@ -219,6 +221,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
         room_name: b.rooms?.name || "Unknown",
         price: b.price,
         created_at: b.created_at,
+        payment_proof_url: b.payment_proof_url,
       }));
 
       setBookings(mappedBookings);
@@ -585,6 +588,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                   <TableHead>Kamar</TableHead>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>{isPMSMode ? "Durasi" : "Jam"}</TableHead>
+                  <TableHead>Bukti Bayar</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
@@ -624,6 +628,25 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                         ? `${booking.duration} malam`
                         : `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
                       }
+                    </TableCell>
+                    <TableCell>
+                      {booking.payment_proof_url ? (
+                        <a
+                          href={booking.payment_proof_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
+                          title="Lihat Bukti Bayar"
+                        >
+                          <img
+                            src={booking.payment_proof_url}
+                            alt="Bukti Bayar"
+                            className="w-6 h-6 rounded object-cover border"
+                          />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
