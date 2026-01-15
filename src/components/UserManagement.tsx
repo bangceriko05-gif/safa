@@ -78,32 +78,58 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch all profiles with their roles
+      if (!currentStore?.id) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch users who have access to the current store
+      const { data: storeAccessData, error: storeAccessError } = await supabase
+        .from("user_store_access")
+        .select("user_id, store_id, stores(name)")
+        .eq("store_id", currentStore.id);
+
+      if (storeAccessError) throw storeAccessError;
+
+      // Get unique user IDs that have access to this store
+      const userIdsWithAccess = [...new Set(storeAccessData?.map((sa: any) => sa.user_id) || [])];
+
+      if (userIdsWithAccess.length === 0) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch profiles only for users with access to current store
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
+        .in("id", userIdsWithAccess)
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Fetch all user roles
+      // Fetch user roles for these users
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("*");
+        .select("*")
+        .in("user_id", userIdsWithAccess);
 
       if (rolesError) throw rolesError;
 
-      // Fetch user store access
-      const { data: storeAccess, error: storeAccessError } = await supabase
+      // Fetch all store access for these users (to show all their stores)
+      const { data: allStoreAccess, error: allStoreAccessError } = await supabase
         .from("user_store_access")
-        .select("user_id, stores(name)");
+        .select("user_id, stores(name)")
+        .in("user_id", userIdsWithAccess);
 
-      if (storeAccessError) throw storeAccessError;
+      if (allStoreAccessError) throw allStoreAccessError;
 
       // Combine the data
       const usersWithRoles = profiles?.map((profile) => {
         const userRole = roles?.find((r) => r.user_id === profile.id);
-        const userStores = storeAccess?.filter((sa: any) => sa.user_id === profile.id)
+        const userStores = allStoreAccess?.filter((sa: any) => sa.user_id === profile.id)
           .map((sa: any) => sa.stores?.name)
           .filter(Boolean) || [];
         
@@ -126,10 +152,12 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    if (currentStore?.id) {
+      fetchUsers();
+    }
     getCurrentUserRole();
     fetchAllStores();
-  }, []);
+  }, [currentStore?.id]);
 
   const fetchAllStores = async () => {
     try {
