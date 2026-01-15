@@ -360,11 +360,18 @@ export default function UserManagement() {
       });
 
       // Handle edge function errors properly
-      // When edge function returns 400, error contains the FunctionsHttpError
-      // and data may contain the JSON response body
-      if (error) {
-        console.error('Edge function error:', error);
-        const errorMessage = error.message || "Unknown error";
+      // When edge function returns non-2xx, error is set but data may also contain the response
+      if (error || data?.error) {
+        console.error('Edge function error:', error, data);
+        
+        // First check if data contains the error message (from JSON response body)
+        if (data?.error) {
+          toast.error(data.error);
+          return;
+        }
+        
+        // Then check error message
+        const errorMessage = error?.message || "Unknown error";
         
         // Check if error message contains our custom messages
         if (errorMessage.includes("sudah terdaftar") || 
@@ -375,7 +382,7 @@ export default function UserManagement() {
         }
         
         // Try to parse error context if available
-        if (error.context) {
+        if (error?.context) {
           try {
             const context = typeof error.context === 'string' 
               ? JSON.parse(error.context) 
@@ -390,13 +397,6 @@ export default function UserManagement() {
         }
         
         toast.error("Gagal menambah pengguna: " + errorMessage);
-        return;
-      }
-      
-      // Check if data contains an error (edge function returned error in body)
-      if (data?.error) {
-        console.error('Edge function returned error in data:', data.error);
-        toast.error(data.error);
         return;
       }
 
