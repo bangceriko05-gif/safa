@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,6 +48,7 @@ const permissionCategories: Record<string, string[]> = {
 };
 
 export default function PermissionManagement() {
+  const { currentStore } = useStore();
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -62,7 +64,7 @@ export default function PermissionManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentStore?.id]);
 
   useEffect(() => {
     if (selectedUserId) {
@@ -89,14 +91,38 @@ export default function PermissionManagement() {
       if (permError) throw permError;
       setPermissions(permData || []);
 
-      // Fetch all users with their profiles
-      const { data: userData, error: userError } = await supabase
-        .from("profiles")
-        .select("id, name, email")
-        .order("name");
+      // Filter users by current store access
+      if (currentStore?.id) {
+        // First get user IDs that have access to the current store
+        const { data: storeAccessData, error: storeAccessError } = await supabase
+          .from("user_store_access")
+          .select("user_id")
+          .eq("store_id", currentStore.id);
 
-      if (userError) throw userError;
-      setUsers(userData || []);
+        if (storeAccessError) throw storeAccessError;
+
+        const userIds = storeAccessData?.map(access => access.user_id) || [];
+
+        if (userIds.length > 0) {
+          // Fetch profiles for users with access to this store
+          const { data: userData, error: userError } = await supabase
+            .from("profiles")
+            .select("id, name, email")
+            .in("id", userIds)
+            .order("name");
+
+          if (userError) throw userError;
+          setUsers(userData || []);
+        } else {
+          setUsers([]);
+        }
+      } else {
+        // No store selected, show no users
+        setUsers([]);
+      }
+      
+      // Reset selected user when store changes
+      setSelectedUserId("");
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast.error("Gagal memuat data");

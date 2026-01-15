@@ -138,8 +138,50 @@ Deno.serve(async (req) => {
           
           console.log(`Orphaned user ${existingUser.id} cleaned up successfully`);
         } else {
-          // User exists and has proper records, this is a real duplicate
-          throw new Error('Email sudah terdaftar, gunakan email lain');
+          // User exists and has proper records - check if they already have access to this store
+          const { data: existingStoreAccess } = await supabaseAdmin
+            .from('user_store_access')
+            .select('id')
+            .eq('user_id', existingUser.id)
+            .eq('store_id', storeId)
+            .single();
+          
+          if (existingStoreAccess) {
+            // User already has access to this store
+            throw new Error('Pengguna dengan email ini sudah memiliki akses ke toko ini');
+          }
+          
+          // User exists but doesn't have access to this store - just add store access
+          console.log(`User ${existingUser.id} exists, adding access to store ${storeId}`);
+          
+          const storeRole = role === 'admin' ? 'admin' : 'staff';
+          const { error: storeAccessError } = await supabaseAdmin
+            .from('user_store_access')
+            .insert({
+              user_id: existingUser.id,
+              store_id: storeId,
+              role: storeRole,
+            });
+
+          if (storeAccessError) {
+            console.error('Error granting store access:', storeAccessError);
+            throw new Error('Gagal menambahkan akses toko untuk pengguna');
+          }
+
+          console.log(`Store access granted for existing user ${existingUser.id} to store ${storeId}`);
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              user: { id: existingUser.id, email: existingUser.email },
+              message: 'Akses toko berhasil ditambahkan untuk pengguna yang sudah terdaftar',
+              addedToStore: true
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200 
+            }
+          );
         }
       }
 
