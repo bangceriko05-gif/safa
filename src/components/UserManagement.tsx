@@ -348,7 +348,7 @@ export default function UserManagement() {
       }
 
       // Use edge function for secure user creation
-      const { data, error } = await supabase.functions.invoke('manage-users', {
+      const response = await supabase.functions.invoke('manage-users', {
         body: {
           action: 'create',
           email: addFormData.email,
@@ -358,6 +358,8 @@ export default function UserManagement() {
           storeId: currentStore.id,
         },
       });
+
+      const { data, error } = response;
 
       // Handle edge function errors properly
       // When edge function returns non-2xx, error is set but data may also contain the response
@@ -374,10 +376,12 @@ export default function UserManagement() {
         const errorMessage = error?.message || "Unknown error";
         
         // Check if error message contains our custom messages
-        if (errorMessage.includes("sudah terdaftar") || 
-            errorMessage.includes("already been registered") || 
+        if (errorMessage.includes("sudah") || 
+            errorMessage.includes("already") || 
             errorMessage.includes("email_exists")) {
-          toast.error("Email sudah terdaftar, gunakan email lain");
+          toast.error(errorMessage.includes("akses") 
+            ? "Pengguna dengan email ini sudah memiliki akses ke toko ini"
+            : "Email sudah terdaftar, gunakan email lain");
           return;
         }
         
@@ -400,14 +404,19 @@ export default function UserManagement() {
         return;
       }
 
+      // Handle successful response - check if added to existing user or new user
+      const successMessage = data?.addedToStore 
+        ? `Akses toko berhasil ditambahkan untuk ${addFormData.name}`
+        : `Pengguna baru ${addFormData.name} berhasil ditambahkan!`;
+
       await logActivity({
-        actionType: 'created',
+        actionType: data?.addedToStore ? 'updated' : 'created',
         entityType: 'User',
         entityId: data?.user?.id,
-        description: `Menambah pengguna baru ${addFormData.name}`,
+        description: successMessage,
       });
 
-      toast.success("Pengguna berhasil ditambahkan!");
+      toast.success(successMessage);
       fetchUsers();
       handleCloseAddDialog();
     } catch (error: any) {
