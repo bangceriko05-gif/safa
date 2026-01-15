@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Edit, Trash2, User, Phone, Clock, DollarSign, FileText, Calendar, Copy, ChevronDown, XCircle, Undo, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, User, Phone, Clock, DollarSign, FileText, Calendar, Copy, ChevronDown, XCircle, Undo, Loader2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -109,6 +109,7 @@ export default function ScheduleTable({
   const [roomDailyStatusData, setRoomDailyStatusData] = useState<Record<string, { status: string; updated_by_name?: string }>>({});
   const [updatingPopupStatus, setUpdatingPopupStatus] = useState<string | null>(null);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
+  const [roomsWithCheckout, setRoomsWithCheckout] = useState<Set<string>>(new Set());
 
   const timeSlots = Array.from({ length: 20 }, (_, i) => {
     const hour = i + 9;
@@ -321,9 +322,34 @@ export default function ScheduleTable({
     }
   };
 
+  // Fetch rooms that have had checkouts today (to show "was used" indicator)
+  const fetchRoomsWithCheckout = async () => {
+    try {
+      if (!currentStore) return;
+
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      
+      // Fetch bookings with CO status for the selected date
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("room_id")
+        .eq("date", dateStr)
+        .eq("store_id", currentStore.id)
+        .eq("status", "CO");
+
+      if (error) throw error;
+
+      const roomIds = new Set(data?.map(b => b.room_id) || []);
+      setRoomsWithCheckout(roomIds);
+    } catch (error) {
+      console.error("Error fetching rooms with checkout:", error);
+    }
+  };
+
   useEffect(() => {
     if (!currentStore) return;
     fetchRoomDailyStatus();
+    fetchRoomsWithCheckout();
 
     const channel = supabase
       .channel(
@@ -333,6 +359,11 @@ export default function ScheduleTable({
         "postgres_changes",
         { event: "*", schema: "public", table: "room_daily_status" },
         () => fetchRoomDailyStatus()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        () => fetchRoomsWithCheckout()
       )
       .subscribe();
 
@@ -909,17 +940,40 @@ export default function ScheduleTable({
                   const isBlocked = room.status !== "Aktif";
                   const dailyStatus = roomDailyStatus[room.id] || null;
                   const isKotor = dailyStatus === "Kotor";
+                  const wasUsedToday = roomsWithCheckout.has(room.id);
+                  const isReadyAfterUse = wasUsedToday && dailyStatus === "Aktif";
+
+                  // Determine dot color: 
+                  // - Red if Kotor
+                  // - Green/Teal if Ready after use (was used today)
+                  // - Gray if blocked
+                  // - Blue if normal available
+                  const getDotColor = () => {
+                    if (isKotor) return "#EF4444";
+                    if (isBlocked) return "#9CA3AF";
+                    if (isReadyAfterUse) return "#14B8A6"; // Teal for "cleaned after use"
+                    return "#3B82F6";
+                  };
 
                   return (
                     <th 
                       key={room.id} 
-                      className={`${size.headerPadding} text-left font-medium ${size.headerFont} ${size.minWidth} border-r-2 border-border sticky top-0 bg-muted/50 z-10 ${isBlocked ? "opacity-50" : ""}`}
+                      className={`${size.headerPadding} text-left font-medium ${size.headerFont} ${size.minWidth} border-r-2 border-border sticky top-0 z-10 ${isBlocked ? "opacity-50" : ""} ${isReadyAfterUse ? "bg-teal-50 dark:bg-teal-950/30" : "bg-muted/50"}`}
                     >
                       <div className={`flex items-center ${size.gapSize}`}> 
-                        <div
-                          className={`${size.dotSize} rounded-full`}
-                          style={{ backgroundColor: isKotor ? "#EF4444" : isBlocked ? "#9CA3AF" : "#3B82F6" }}
-                        />
+                        <div className="relative">
+                          <div
+                            className={`${size.dotSize} rounded-full`}
+                            style={{ backgroundColor: getDotColor() }}
+                          />
+                          {/* Small sparkle icon for rooms that were used and cleaned */}
+                          {isReadyAfterUse && (
+                            <Sparkles 
+                              className="absolute -top-1 -right-1 w-2.5 h-2.5 text-teal-500" 
+                              style={{ filter: "drop-shadow(0 0 2px rgba(20, 184, 166, 0.5))" }}
+                            />
+                          )}
+                        </div>
                         {room.name}
 
                         {isKotor ? (
@@ -945,6 +999,13 @@ export default function ScheduleTable({
                               </div>
                             </PopoverContent>
                           </Popover>
+                        ) : isReadyAfterUse && roomDailyStatusData[room.id]?.updated_by_name ? (
+                          <span 
+                            className={`${size.fontSize} text-teal-600 dark:text-teal-400 font-medium`} 
+                            title={`Sudah dibersihkan oleh: ${roomDailyStatusData[room.id].updated_by_name}`}
+                          >
+                            ✓ Bersih
+                          </span>
                         ) : roomDailyStatusData[room.id]?.status === "Aktif" && roomDailyStatusData[room.id]?.updated_by_name ? (
                           <span className={`${size.fontSize} text-muted-foreground`} title={`Direadykan oleh: ${roomDailyStatusData[room.id].updated_by_name}`}>
                             (Ready - {roomDailyStatusData[room.id].updated_by_name})
