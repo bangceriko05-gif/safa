@@ -9,6 +9,7 @@ interface Store {
   location: string | null;
   is_active: boolean;
   image_url?: string | null;
+  calendar_type?: string | null;
 }
 
 interface StoreContextType {

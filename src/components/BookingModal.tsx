@@ -135,8 +135,8 @@ export default function BookingModal({
     booking_type: "walk_in" as "walk_in" | "ota",
   });
 
-  // Check if PMS mode (SAFA store)
-  const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
+  // Check if PMS mode based on store calendar_type
+  const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
   // Fetch data when modal opens or store changes
   useEffect(() => {

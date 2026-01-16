@@ -157,7 +157,7 @@ export default function Dashboard() {
 
   const handleAddBooking = (roomId: string, timeOrDate: string) => {
     // Check if this is a PMS calendar call (date format) or time-based call
-    const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
+    const isPMSMode = currentStore?.calendar_type === "pms";
     
     if (isPMSMode) {
       // For PMS mode, timeOrDate is a date string
@@ -428,9 +428,9 @@ export default function Dashboard() {
             {/* Room Summary - shown for all store types */}
             <RoomSummary selectedDate={selectedDate} />
 
-            {/* Conditional rendering based on store type */}
-            {currentStore?.name?.toLowerCase().includes("safa") ? (
-              /* PMS Calendar for SAFA Kost */
+            {/* Conditional rendering based on store calendar type */}
+            {currentStore?.calendar_type === "pms" ? (
+              /* PMS Calendar for hotel/kost type stores */
               <PMSCalendar
                 selectedDate={selectedDate}
                 userRole={userRole}
@@ -439,7 +439,7 @@ export default function Dashboard() {
                 onDateChange={setSelectedDate}
               />
             ) : (
-              /* Regular schedule table for other stores */
+              /* Regular schedule table for hourly booking stores */
               <>
                 {/* Date Navigation */}
                 <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
