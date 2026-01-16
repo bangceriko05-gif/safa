@@ -115,7 +115,14 @@ export default function StoreDuplication() {
     try {
       const sourceStore = stores.find(s => s.id === selectedStoreId);
       
-      // 1. Create new store
+      // Fetch source store's calendar_type
+      const { data: sourceStoreData } = await supabase
+        .from("stores")
+        .select("calendar_type")
+        .eq("id", selectedStoreId)
+        .single();
+      
+      // 1. Create new store with same calendar_type as source
       const { data: newStore, error: storeError } = await supabase
         .from("stores")
         .insert([{
@@ -123,12 +130,13 @@ export default function StoreDuplication() {
           location: newStoreLocation.trim() || null,
           is_active: true,
           slug: newStoreName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          calendar_type: sourceStoreData?.calendar_type || 'schedule',
         }])
         .select()
         .single();
 
       if (storeError) throw storeError;
-      details.push(`✓ Outlet "${newStoreName}" berhasil dibuat`);
+      details.push(`✓ Outlet "${newStoreName}" berhasil dibuat (tipe kalender: ${sourceStoreData?.calendar_type || 'schedule'})`);
 
       // 2. Copy categories if selected
       if (options.categories) {

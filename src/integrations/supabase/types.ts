@@ -1021,6 +1021,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          calendar_type: string | null
           created_at: string
           description: string | null
           id: string
@@ -1032,6 +1033,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          calendar_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1043,6 +1045,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          calendar_type?: string | null
           created_at?: string
           description?: string | null
           id?: string

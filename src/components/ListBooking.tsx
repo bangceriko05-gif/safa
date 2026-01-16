@@ -456,7 +456,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
     return true;
   };
 
-  const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
+  const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
   // Filter out BATAL status from active bookings list
   const activeBookings = bookings.filter(b => b.status !== "BATAL");

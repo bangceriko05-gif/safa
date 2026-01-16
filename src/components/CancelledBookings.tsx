@@ -289,7 +289,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
     }
   };
 
-  const isPMSMode = currentStore?.name?.toLowerCase().includes("safa");
+  const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
   const filteredBookings = bookings.filter((booking) => {
     if (!searchQuery) return true;
