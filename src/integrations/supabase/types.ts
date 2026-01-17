@@ -873,6 +873,75 @@ export type Database = {
           },
         ]
       }
+      room_deposits: {
+        Row: {
+          amount: number | null
+          created_at: string
+          created_by: string
+          deposit_type: string
+          id: string
+          identity_owner_name: string | null
+          identity_type: string | null
+          notes: string | null
+          photo_url: string | null
+          returned_at: string | null
+          returned_by: string | null
+          room_id: string
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          created_by: string
+          deposit_type: string
+          id?: string
+          identity_owner_name?: string | null
+          identity_type?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          room_id: string
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string
+          deposit_type?: string
+          id?: string
+          identity_owner_name?: string | null
+          identity_type?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          room_id?: string
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_deposits_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_deposits_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_variants: {
         Row: {
           booking_duration_type: string | null
