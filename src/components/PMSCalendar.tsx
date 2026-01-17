@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy, Calendar as CalendarIcon, ChevronDown, XCircle, Undo, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy, Calendar as CalendarIcon, ChevronDown, XCircle, Undo, Loader2, Shield } from "lucide-react";
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInCalendarDays, startOfDay, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
@@ -95,6 +95,8 @@ export default function PMSCalendar({
   const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
   const [roomDailyStatusData, setRoomDailyStatusData] = useState<Record<string, { status: string; updated_by_name?: string }>>({});
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  // Room deposits - map roomId -> true if has active deposit
+  const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string; date: Date } | null>(null);
 
   // Calculate visible date range (14 days centered on selected date)
@@ -110,6 +112,7 @@ export default function PMSCalendar({
     fetchRooms();
     fetchUserPermissions();
     fetchStatusColors();
+    fetchRoomDeposits();
 
     // Realtime subscription for rooms
     const roomsChannel = supabase
@@ -128,8 +131,26 @@ export default function PMSCalendar({
       )
       .subscribe();
 
+    // Realtime subscription for deposits
+    const depositsChannel = supabase
+      .channel(`pms-deposits-${currentStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_deposits',
+          filter: `store_id=eq.${currentStore.id}`,
+        },
+        () => {
+          fetchRoomDeposits();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(roomsChannel);
+      supabase.removeChannel(depositsChannel);
     };
   }, [currentStore]);
 
@@ -257,6 +278,25 @@ export default function PMSCalendar({
       setRooms(uniqueRooms);
     } catch (error) {
       console.error("Error fetching rooms:", error);
+    }
+  };
+
+  const fetchRoomDeposits = async () => {
+    try {
+      if (!currentStore) return;
+
+      const { data, error } = await supabase
+        .from("room_deposits")
+        .select("room_id")
+        .eq("store_id", currentStore.id)
+        .eq("status", "active");
+
+      if (error) throw error;
+
+      const depositSet = new Set(data?.map(d => d.room_id) || []);
+      setRoomDeposits(depositSet);
+    } catch (error) {
+      console.error("Error fetching room deposits:", error);
     }
   };
 
@@ -807,6 +847,7 @@ export default function PMSCalendar({
               <tbody>
                 {displayRooms.map((room) => {
                   const isBlocked = room.status !== "Aktif";
+                  const hasDeposit = roomDeposits.has(room.id);
                   
                   return (
                     <tr key={room.id} className="border-b border-border hover:bg-muted/20 transition-colors">
@@ -817,6 +858,14 @@ export default function PMSCalendar({
                               style={{ backgroundColor: isBlocked ? "#9CA3AF" : "#3B82F6" }}
                             />
                             {room.name}
+                            {hasDeposit && (
+                              <div 
+                                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300" 
+                                title="Deposit aktif"
+                              >
+                                <Shield className="w-3 h-3 text-amber-600" />
+                              </div>
+                            )}
                             {isBlocked && <span className="text-xs text-muted-foreground">({room.status})</span>}
                           </div>
                         </td>

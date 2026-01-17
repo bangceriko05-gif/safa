@@ -55,6 +55,8 @@ export default function Dashboard() {
   });
   const [showDateConfirmation, setShowDateConfirmation] = useState(false);
   const [pendingBookingSlot, setPendingBookingSlot] = useState<{ roomId: string; time: string } | null>(null);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositRefreshTrigger, setDepositRefreshTrigger] = useState(0);
   const navigate = useNavigate();
 
   // Calculate days difference from today
@@ -369,10 +371,16 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-2">
             {(userRole === "admin" || userRole === "leader") && (
-              <Button onClick={handleExportToExcel} variant="outline">
-                <FileDown className="mr-2 h-4 w-4" />
-                Export Excel
-              </Button>
+              <>
+                <Button onClick={() => setShowDepositModal(true)} variant="outline">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Deposit
+                </Button>
+                <Button onClick={handleExportToExcel} variant="outline">
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export Excel
+                </Button>
+              </>
             )}
             <Button onClick={handleLogout} variant="outline">
               <LogOut className="mr-2 h-4 w-4" />
@@ -383,9 +391,9 @@ export default function Dashboard() {
 
         {/* Tabs for Bookings and User Management */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-6xl" style={{ 
+          <TabsList className="grid w-full max-w-7xl" style={{ 
             gridTemplateColumns: 
-              (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
+              (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
               "1fr 1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
@@ -413,6 +421,10 @@ export default function Dashboard() {
                 <TabsTrigger value="rooms">
                   <Package className="mr-2 h-4 w-4" />
                   Produk & Inventori
+                </TabsTrigger>
+                <TabsTrigger value="deposits">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Deposit
                 </TabsTrigger>
                 <TabsTrigger value="activity">
                   <History className="mr-2 h-4 w-4" />
@@ -480,6 +492,10 @@ export default function Dashboard() {
                 <RoomManagement />
               </TabsContent>
               
+              <TabsContent value="deposits" className="mt-6">
+                <DepositManagement refreshTrigger={depositRefreshTrigger} />
+              </TabsContent>
+              
               <TabsContent value="activity" className="mt-6">
                 <ActivityLog />
               </TabsContent>
@@ -493,6 +509,13 @@ export default function Dashboard() {
             </>
           )}
         </Tabs>
+
+        {/* Deposit Modal */}
+        <DepositModal
+          open={showDepositModal}
+          onClose={() => setShowDepositModal(false)}
+          onSuccess={() => setDepositRefreshTrigger(prev => prev + 1)}
+        />
 
         {/* Booking Modal */}
         <BookingModal
