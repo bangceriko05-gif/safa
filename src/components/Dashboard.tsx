@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, List } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, List, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -32,6 +32,8 @@ import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
 import ListBooking from "./ListBooking";
+import DepositModal from "./deposit/DepositModal";
+import DepositManagement from "./deposit/DepositManagement";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
