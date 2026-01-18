@@ -796,7 +796,7 @@ export default function BookingModal({
         reference_no: formData.reference_no,
         reference_no_2: formData.reference_no_2,
         note: formData.note,
-      });
+      }, formData.booking_type === "ota");
 
       if (!inputValidation.success) {
         inputValidation.errors.forEach(error => toast.error(error));
@@ -1376,14 +1376,16 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Nomor HP</Label>
+            <Label htmlFor="phone">
+              Nomor HP {formData.booking_type !== "ota" && "*"}
+            </Label>
             <div className="relative">
               <Input
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
-                placeholder="Ketik nomor HP..."
-                required
+                placeholder={formData.booking_type === "ota" ? "Opsional untuk OTA..." : "Ketik nomor HP..."}
+                required={formData.booking_type !== "ota"}
               />
             </div>
           </div>
