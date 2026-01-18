@@ -32,7 +32,7 @@ import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
 import ListBooking from "./ListBooking";
-import DepositModal from "./deposit/DepositModal";
+import DepositFormModal from "./deposit/DepositFormModal";
 import DepositManagement from "./deposit/DepositManagement";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
@@ -55,7 +55,10 @@ export default function Dashboard() {
   });
   const [showDateConfirmation, setShowDateConfirmation] = useState(false);
   const [pendingBookingSlot, setPendingBookingSlot] = useState<{ roomId: string; time: string } | null>(null);
-  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositMode, setDepositMode] = useState(false);
+  const [depositRoomId, setDepositRoomId] = useState<string | null>(null);
+  const [depositRoomName, setDepositRoomName] = useState("");
+  const [showDepositFormModal, setShowDepositFormModal] = useState(false);
   const [depositRefreshTrigger, setDepositRefreshTrigger] = useState(0);
   const navigate = useNavigate();
 
@@ -372,9 +375,13 @@ export default function Dashboard() {
           <div className="flex gap-2">
             {(userRole === "admin" || userRole === "leader") && (
               <>
-                <Button onClick={() => setShowDepositModal(true)} variant="outline">
+                <Button 
+                  onClick={() => setDepositMode(!depositMode)} 
+                  variant={depositMode ? "default" : "outline"}
+                  className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                >
                   <Shield className="mr-2 h-4 w-4" />
-                  Deposit
+                  {depositMode ? "Batal Pilih" : "Deposit"}
                 </Button>
                 <Button onClick={handleExportToExcel} variant="outline">
                   <FileDown className="mr-2 h-4 w-4" />
@@ -445,13 +452,36 @@ export default function Dashboard() {
             {/* Conditional rendering based on store calendar type */}
             {currentStore?.calendar_type === "pms" ? (
               /* PMS Calendar for hotel/kost type stores */
-              <PMSCalendar
-                selectedDate={selectedDate}
-                userRole={userRole}
-                onAddBooking={handleAddBooking}
-                onEditBooking={handleEditBooking}
-                onDateChange={setSelectedDate}
-              />
+              <>
+                {depositMode && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-amber-600" />
+                    <span className="text-amber-800 font-medium">
+                      Mode Deposit: Klik pada baris kamar untuk menambahkan deposit
+                    </span>
+                  </div>
+                )}
+                <PMSCalendar
+                  selectedDate={selectedDate}
+                  userRole={userRole}
+                  onAddBooking={handleAddBooking}
+                  onEditBooking={handleEditBooking}
+                  onDateChange={setSelectedDate}
+                  depositMode={depositMode}
+                  onDepositModeChange={setDepositMode}
+                  onDepositRoomSelect={async (roomId) => {
+                    const { data: room } = await supabase
+                      .from("rooms")
+                      .select("name")
+                      .eq("id", roomId)
+                      .single();
+                    
+                    setDepositRoomId(roomId);
+                    setDepositRoomName(room?.name || "Unknown");
+                    setShowDepositFormModal(true);
+                  }}
+                />
+              </>
             ) : (
               /* Regular schedule table for hourly booking stores */
               <>
@@ -510,11 +540,21 @@ export default function Dashboard() {
           )}
         </Tabs>
 
-        {/* Deposit Modal */}
-        <DepositModal
-          open={showDepositModal}
-          onClose={() => setShowDepositModal(false)}
-          onSuccess={() => setDepositRefreshTrigger(prev => prev + 1)}
+        {/* Deposit Form Modal */}
+        <DepositFormModal
+          open={showDepositFormModal}
+          roomId={depositRoomId}
+          roomName={depositRoomName}
+          onClose={() => {
+            setShowDepositFormModal(false);
+            setDepositRoomId(null);
+            setDepositRoomName("");
+            setDepositMode(false);
+          }}
+          onSuccess={() => {
+            setDepositRefreshTrigger(prev => prev + 1);
+            setDepositMode(false);
+          }}
         />
 
         {/* Booking Modal */}
