@@ -39,6 +39,9 @@ interface PMSCalendarProps {
   onAddBooking: (roomId: string, date: string) => void;
   onEditBooking: (booking: any) => void;
   onDateChange: (date: Date) => void;
+  depositMode?: boolean;
+  onDepositModeChange?: (mode: boolean) => void;
+  onDepositRoomSelect?: (roomId: string) => void;
 }
 
 interface Room {
@@ -78,6 +81,9 @@ export default function PMSCalendar({
   onAddBooking,
   onEditBooking,
   onDateChange,
+  depositMode = false,
+  onDepositModeChange,
+  onDepositRoomSelect,
 }: PMSCalendarProps) {
   const { currentStore } = useStore();
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -845,26 +851,54 @@ export default function PMSCalendar({
                 </tr>
               </thead>
               <tbody>
-                {displayRooms.map((room) => {
+              {displayRooms.map((room) => {
                   const isBlocked = room.status !== "Aktif";
                   const hasDeposit = roomDeposits.has(room.id);
+                  const canSelectForDeposit = depositMode && !hasDeposit && !isBlocked;
                   
                   return (
-                    <tr key={room.id} className="border-b border-border hover:bg-muted/20 transition-colors">
-                      <td className={`p-3 text-sm font-medium sticky left-0 bg-card border-r-2 border-border z-10 ${isBlocked ? "opacity-50" : ""}`}>
+                    <tr 
+                      key={room.id} 
+                      className={cn(
+                        "border-b border-border hover:bg-muted/20 transition-colors",
+                        depositMode && canSelectForDeposit && "cursor-pointer hover:bg-amber-50",
+                        depositMode && hasDeposit && "bg-amber-50/50"
+                      )}
+                      onClick={canSelectForDeposit ? () => onDepositRoomSelect?.(room.id) : undefined}
+                    >
+                      <td className={cn(
+                        "p-3 text-sm font-medium sticky left-0 bg-card border-r-2 border-border z-10",
+                        isBlocked && "opacity-50",
+                        depositMode && canSelectForDeposit && "bg-amber-50/50",
+                        depositMode && hasDeposit && "bg-amber-100/50"
+                      )}>
                           <div className="flex items-center gap-2">
+                            {depositMode && (
+                              <div className={cn(
+                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                hasDeposit ? "bg-amber-500 border-amber-500" : "border-muted-foreground/30"
+                              )}>
+                                {hasDeposit && <Shield className="w-3 h-3 text-white" />}
+                              </div>
+                            )}
                             <div
                               className="w-2.5 h-2.5 rounded-full"
                               style={{ backgroundColor: isBlocked ? "#9CA3AF" : "#3B82F6" }}
                             />
                             {room.name}
-                            {hasDeposit && (
+                            {!depositMode && hasDeposit && (
                               <div 
                                 className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300" 
                                 title="Deposit aktif"
                               >
                                 <Shield className="w-3 h-3 text-amber-600" />
                               </div>
+                            )}
+                            {depositMode && hasDeposit && (
+                              <span className="text-xs text-amber-600 font-medium">Sudah ada deposit</span>
+                            )}
+                            {depositMode && canSelectForDeposit && (
+                              <span className="text-xs text-muted-foreground">Klik untuk pilih</span>
                             )}
                             {isBlocked && <span className="text-xs text-muted-foreground">({room.status})</span>}
                           </div>
