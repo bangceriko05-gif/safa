@@ -1336,6 +1336,10 @@ export type Database = {
         Args: { p_new_status: string; p_request_id: string; p_user_id: string }
         Returns: undefined
       }
+      user_has_store_admin_access: {
+        Args: { _store_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "leader"
