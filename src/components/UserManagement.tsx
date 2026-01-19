@@ -298,34 +298,31 @@ export default function UserManagement() {
     if (!passwordUser || !newPassword) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Store temp password
-      const { error } = await supabase
-        .from("user_temp_passwords")
-        .insert({
-          user_id: passwordUser.id,
-          temp_password: newPassword,
-          created_by: user.id,
-        });
+      // Use edge function to actually reset password in auth system
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userId: passwordUser.id,
+          newPassword: newPassword,
+        },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       await logActivity({
         actionType: 'updated',
         entityType: 'User',
         entityId: passwordUser.id,
-        description: `Mengatur password baru untuk ${passwordUser.name}`,
+        description: `Mereset password untuk ${passwordUser.name}`,
       });
 
-      toast.success("Password berhasil disimpan!");
+      toast.success("Password berhasil direset! Pengguna sekarang bisa login dengan password baru.");
       setNewPassword("");
       
       // Refresh temp passwords
       handleShowPassword(passwordUser);
     } catch (error: any) {
-      toast.error("Gagal menyimpan password: " + error.message);
+      toast.error("Gagal mereset password: " + error.message);
     }
   };
 
