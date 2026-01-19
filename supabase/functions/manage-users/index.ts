@@ -309,8 +309,7 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
 
       // 7. Nullify references in other tables (instead of deleting)
-      // Update bookings created by this user
-      await supabaseAdmin.from('bookings').update({ created_by: null }).eq('created_by', userId);
+      // Update bookings created by this user - set to null for nullable columns
       await supabaseAdmin.from('bookings').update({ checked_in_by: null }).eq('checked_in_by', userId);
       await supabaseAdmin.from('bookings').update({ checked_out_by: null }).eq('checked_out_by', userId);
       await supabaseAdmin.from('bookings').update({ confirmed_by: null }).eq('confirmed_by', userId);
@@ -318,12 +317,12 @@ Deno.serve(async (req) => {
       // Update booking requests
       await supabaseAdmin.from('booking_requests').update({ processed_by: null }).eq('processed_by', userId);
       
-      // Update other tables
-      await supabaseAdmin.from('customers').update({ created_by: userId }).eq('created_by', userId);
-      await supabaseAdmin.from('expenses').update({ created_by: userId }).eq('created_by', userId);
-      await supabaseAdmin.from('incomes').update({ created_by: userId }).eq('created_by', userId);
-      await supabaseAdmin.from('products').update({ created_by: userId }).eq('created_by', userId);
+      // Update room_daily_status
       await supabaseAdmin.from('room_daily_status').update({ updated_by: null }).eq('updated_by', userId);
+      
+      // Delete room_deposits created by this user
+      await supabaseAdmin.from('room_deposits').delete().eq('created_by', userId);
+      await supabaseAdmin.from('room_deposits').update({ returned_by: null }).eq('returned_by', userId);
 
       // 8. Delete profile
       const { error: profileError } = await supabaseAdmin
