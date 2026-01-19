@@ -43,9 +43,18 @@ interface TempPassword {
   is_used: boolean;
 }
 
+interface OrphanUser {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+  role: "admin" | "leader" | "user";
+}
+
 export default function UserManagement() {
   const { currentStore } = useStore();
   const [users, setUsers] = useState<User[]>([]);
+  const [orphanUsers, setOrphanUsers] = useState<OrphanUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -55,6 +64,8 @@ export default function UserManagement() {
   const [tempPasswords, setTempPasswords] = useState<TempPassword[]>([]);
   const [newPassword, setNewPassword] = useState("");
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [showOrphanTab, setShowOrphanTab] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -158,6 +169,70 @@ export default function UserManagement() {
     getCurrentUserRole();
     fetchAllStores();
   }, [currentStore?.id]);
+
+  // Fetch orphan users (users without store access) for super admins
+  const fetchOrphanUsers = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if user is super admin
+      const { data: superAdminData } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+      
+      if (!superAdminData) {
+        setIsSuperAdmin(false);
+        return;
+      }
+      
+      setIsSuperAdmin(true);
+
+      // Get all profiles
+      const { data: allProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Get all users who have store access
+      const { data: usersWithAccess, error: accessError } = await supabase
+        .from("user_store_access")
+        .select("user_id");
+
+      if (accessError) throw accessError;
+
+      const userIdsWithAccess = new Set(usersWithAccess?.map((ua: any) => ua.user_id) || []);
+
+      // Filter out users who don't have any store access
+      const orphans = allProfiles?.filter(profile => !userIdsWithAccess.has(profile.id)) || [];
+
+      // Get roles for orphan users
+      const orphanIds = orphans.map(o => o.id);
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("*")
+        .in("user_id", orphanIds);
+
+      const orphansWithRoles: OrphanUser[] = orphans.map(profile => {
+        const userRole = roles?.find((r: any) => r.user_id === profile.id);
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          created_at: profile.created_at,
+          role: userRole?.role || "user",
+        };
+      });
+
+      setOrphanUsers(orphansWithRoles);
+    } catch (error: any) {
+      console.error("Error fetching orphan users:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrphanUsers();
+  }, []);
 
   const fetchAllStores = async () => {
     try {
@@ -456,6 +531,7 @@ export default function UserManagement() {
 
       toast.success("Pengguna berhasil dihapus!");
       fetchUsers();
+      fetchOrphanUsers(); // Also refresh orphan users
       handleCloseDeleteDialog();
     } catch (error: any) {
       toast.error("Gagal menghapus pengguna: " + error.message);
@@ -515,6 +591,7 @@ export default function UserManagement() {
       setSelectedStore("");
       setSelectedStoreRole("staff");
       fetchUsers();
+      fetchOrphanUsers(); // Refresh orphan users list since user now has access
     } catch (error: any) {
       if (error.code === "23505") {
         toast.error("User sudah memiliki akses ke cabang ini");
@@ -570,6 +647,41 @@ export default function UserManagement() {
     );
   }
 
+  const handleDeleteOrphanUser = async (user: OrphanUser) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'delete',
+          userId: user.id,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'User',
+        entityId: user.id,
+        description: `Menghapus pengguna orphan ${user.name} (${user.email})`,
+      });
+
+      toast.success("Pengguna berhasil dihapus!");
+      fetchOrphanUsers();
+    } catch (error: any) {
+      toast.error("Gagal menghapus pengguna: " + error.message);
+    }
+  };
+
+  const handleAddStoreAccessToOrphan = async (user: OrphanUser) => {
+    setStoreAccessUser({
+      ...user,
+      stores: [],
+    });
+    setUserStoreAccess([]);
+    setIsStoreAccessDialogOpen(true);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -583,15 +695,118 @@ export default function UserManagement() {
               </CardDescription>
             </div>
           </div>
-          {(currentUserRole === "admin" || currentUserRole === "leader") && (
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Tambah Pengguna
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && orphanUsers.length > 0 && (
+              <Button
+                variant={showOrphanTab ? "default" : "outline"}
+                onClick={() => setShowOrphanTab(!showOrphanTab)}
+              >
+                <UserCog className="h-4 w-4 mr-2" />
+                User Orphan ({orphanUsers.length})
+              </Button>
+            )}
+            {(currentUserRole === "admin" || currentUserRole === "leader") && (
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Tambah Pengguna
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
+        {/* Orphan Users Tab */}
+        {showOrphanTab && isSuperAdmin && (
+          <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500">
+                  Super Admin Only
+                </Badge>
+                <CardTitle className="text-lg">User Tanpa Akses Cabang</CardTitle>
+              </div>
+              <CardDescription>
+                Pengguna ini terdaftar di sistem tapi tidak memiliki akses ke cabang manapun. 
+                Mereka tidak bisa login ke cabang apapun. Anda bisa menambahkan akses cabang atau menghapusnya.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Terdaftar</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orphanUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Tidak ada user orphan
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      orphanUsers.map((user) => (
+                        <TableRow key={user.id} className="bg-amber-500/5">
+                          <TableCell className="font-medium">{user.name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              user.role === "admin" ? "default" : 
+                              user.role === "leader" ? "destructive" : 
+                              "secondary"
+                            }>
+                              {user.role === "admin" ? "Admin" : 
+                               user.role === "leader" ? "Leader" : 
+                               "User"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(user.created_at).toLocaleDateString("id-ID", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAddStoreAccessToOrphan(user)}
+                                title="Tambah Akses Cabang"
+                              >
+                                <Building2 className="h-4 w-4 mr-1" />
+                                Beri Akses
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  setDeletingUser(user);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                                title="Hapus Pengguna"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Main Users Table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -607,7 +822,7 @@ export default function UserManagement() {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Tidak ada pengguna ditemukan
                   </TableCell>
                 </TableRow>
