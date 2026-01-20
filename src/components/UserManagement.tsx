@@ -170,7 +170,8 @@ export default function UserManagement() {
     fetchAllStores();
   }, [currentStore?.id]);
 
-  // Fetch orphan users (users without store access) for super admins
+  // Fetch orphan users - users in profiles but without access to current store
+  // Visible to admin/leader of each store, not just super admin
   const fetchOrphanUsers = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -178,13 +179,13 @@ export default function UserManagement() {
 
       // Check if user is super admin
       const { data: superAdminData } = await supabase.rpc('is_super_admin', { _user_id: user.id });
-      
-      if (!superAdminData) {
-        setIsSuperAdmin(false);
+      setIsSuperAdmin(!!superAdminData);
+
+      // Only admin/leader can see orphan users
+      if (currentUserRole !== 'admin' && currentUserRole !== 'leader' && !superAdminData) {
+        setOrphanUsers([]);
         return;
       }
-      
-      setIsSuperAdmin(true);
 
       // Get all profiles
       const { data: allProfiles, error: profilesError } = await supabase
@@ -194,26 +195,55 @@ export default function UserManagement() {
 
       if (profilesError) throw profilesError;
 
-      // Get all users who have store access
-      const { data: usersWithAccess, error: accessError } = await supabase
-        .from("user_store_access")
-        .select("user_id");
+      // For super admin: show users without ANY store access (global orphans)
+      // For admin/leader: show users without access to CURRENT store
+      let orphans: typeof allProfiles = [];
+      
+      if (superAdminData) {
+        // Global orphans - no store access at all
+        const { data: usersWithAccess, error: accessError } = await supabase
+          .from("user_store_access")
+          .select("user_id");
 
-      if (accessError) throw accessError;
+        if (accessError) throw accessError;
 
-      const userIdsWithAccess = new Set(usersWithAccess?.map((ua: any) => ua.user_id) || []);
+        const userIdsWithAccess = new Set(usersWithAccess?.map((ua: any) => ua.user_id) || []);
+        orphans = allProfiles?.filter(profile => !userIdsWithAccess.has(profile.id)) || [];
+      } else if (currentStore?.id) {
+        // Users without access to current store - potential orphans for this branch
+        const { data: usersWithCurrentStoreAccess, error: accessError } = await supabase
+          .from("user_store_access")
+          .select("user_id")
+          .eq("store_id", currentStore.id);
 
-      // Filter out users who don't have any store access
-      const orphans = allProfiles?.filter(profile => !userIdsWithAccess.has(profile.id)) || [];
+        if (accessError) throw accessError;
+
+        const userIdsWithCurrentStoreAccess = new Set(usersWithCurrentStoreAccess?.map((ua: any) => ua.user_id) || []);
+        
+        // Get users who have NO store access at all (truly orphaned users)
+        const { data: allUsersWithAccess } = await supabase
+          .from("user_store_access")
+          .select("user_id");
+        
+        const allUserIdsWithAnyAccess = new Set(allUsersWithAccess?.map((ua: any) => ua.user_id) || []);
+        
+        // Only show users who have no access anywhere (global orphans) - visible to branch admin/leader
+        orphans = allProfiles?.filter(profile => !allUserIdsWithAnyAccess.has(profile.id)) || [];
+      }
 
       // Get roles for orphan users
-      const orphanIds = orphans.map(o => o.id);
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("*")
-        .in("user_id", orphanIds);
+      const orphanIds = orphans?.map(o => o.id) || [];
+      let roles: any[] = [];
+      
+      if (orphanIds.length > 0) {
+        const { data: rolesData } = await supabase
+          .from("user_roles")
+          .select("*")
+          .in("user_id", orphanIds);
+        roles = rolesData || [];
+      }
 
-      const orphansWithRoles: OrphanUser[] = orphans.map(profile => {
+      const orphansWithRoles: OrphanUser[] = (orphans || []).map(profile => {
         const userRole = roles?.find((r: any) => r.user_id === profile.id);
         return {
           id: profile.id,
@@ -231,8 +261,10 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    fetchOrphanUsers();
-  }, []);
+    if (currentUserRole) {
+      fetchOrphanUsers();
+    }
+  }, [currentUserRole, currentStore?.id]);
 
   const fetchAllStores = async () => {
     try {
@@ -696,13 +728,15 @@ export default function UserManagement() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isSuperAdmin && orphanUsers.length > 0 && (
+            {/* Show orphan button to admin/leader - always visible for awareness */}
+            {(currentUserRole === "admin" || currentUserRole === "leader") && (
               <Button
                 variant={showOrphanTab ? "default" : "outline"}
                 onClick={() => setShowOrphanTab(!showOrphanTab)}
+                className={orphanUsers.length > 0 ? "border-amber-500 text-amber-600 hover:bg-amber-50" : ""}
               >
                 <UserCog className="h-4 w-4 mr-2" />
-                User Orphan ({orphanUsers.length})
+                User Orphan {orphanUsers.length > 0 && `(${orphanUsers.length})`}
               </Button>
             )}
             {(currentUserRole === "admin" || currentUserRole === "leader") && (
@@ -715,14 +749,16 @@ export default function UserManagement() {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Orphan Users Tab */}
-        {showOrphanTab && isSuperAdmin && (
+        {/* Orphan Users Tab - visible to admin/leader */}
+        {showOrphanTab && (currentUserRole === "admin" || currentUserRole === "leader") && (
           <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500">
-                  Super Admin Only
-                </Badge>
+                {isSuperAdmin && (
+                  <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500">
+                    Global View
+                  </Badge>
+                )}
                 <CardTitle className="text-lg">User Tanpa Akses Cabang</CardTitle>
               </div>
               <CardDescription>
