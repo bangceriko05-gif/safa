@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useStore } from "@/contexts/StoreContext";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,9 +35,11 @@ interface ActivityLog {
   entity_id: string | null;
   description: string;
   created_at: string;
+  store_id: string | null;
 }
 
 export const ActivityLog = () => {
+  const { currentStore } = useStore();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,15 +49,20 @@ export const ActivityLog = () => {
   const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
-    fetchLogs();
-  }, []);
+    if (currentStore?.id) {
+      fetchLogs();
+    }
+  }, [currentStore?.id]);
 
   const fetchLogs = async () => {
+    if (!currentStore?.id) return;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("activity_logs")
         .select("*")
+        .eq("store_id", currentStore.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
