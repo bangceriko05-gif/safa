@@ -86,6 +86,9 @@ export default function UserManagement() {
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [selectedStoreRole, setSelectedStoreRole] = useState<string>("staff");
 
+  const [repairEmail, setRepairEmail] = useState<string>("");
+  const [repairing, setRepairing] = useState<boolean>(false);
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -714,6 +717,40 @@ export default function UserManagement() {
     setIsStoreAccessDialogOpen(true);
   };
 
+  const handleRepairByEmail = async () => {
+    if (!currentStore?.id) {
+      toast.error("Pilih cabang terlebih dahulu");
+      return;
+    }
+    if (!repairEmail.trim()) {
+      toast.error("Masukkan email");
+      return;
+    }
+
+    setRepairing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'repair',
+          email: repairEmail.trim(),
+          storeId: currentStore.id,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("User berhasil diperbaiki & diberi akses cabang ini");
+      setRepairEmail("");
+      fetchUsers();
+      fetchOrphanUsers();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal memperbaiki user");
+    } finally {
+      setRepairing(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -767,6 +804,25 @@ export default function UserManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-end mb-4">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="repairEmail">Perbaiki user berdasarkan email</Label>
+                  <Input
+                    id="repairEmail"
+                    placeholder="contoh: ddoonnaa0397@gmail.com"
+                    value={repairEmail}
+                    onChange={(e) => setRepairEmail(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleRepairByEmail}
+                  disabled={repairing}
+                >
+                  {repairing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Perbaiki & Beri Akses
+                </Button>
+              </div>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>

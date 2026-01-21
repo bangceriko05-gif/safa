@@ -36,7 +36,15 @@ interface CleanupOrphanRequest {
   email: string;
 }
 
-type RequestBody = CreateUserRequest | DeleteUserRequest | CleanupOrphanRequest;
+interface RepairUserRequest {
+  action: 'repair';
+  email: string;
+  storeId: string;
+  name?: string;
+  role?: 'admin' | 'leader' | 'user';
+}
+
+type RequestBody = CreateUserRequest | DeleteUserRequest | CleanupOrphanRequest | RepairUserRequest;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -83,6 +91,92 @@ Deno.serve(async (req) => {
     const body: RequestBody = await req.json();
     console.log('Received request:', body.action);
 
+    if (body.action === 'repair') {
+      const { email, storeId, name, role } = body as RepairUserRequest;
+
+      if (!email) throw new Error('Email is required');
+      if (!storeId) throw new Error('Store ID is required');
+
+      // Leader cannot create/administer admin users
+      if (isLeader && role === 'admin') {
+        throw new Error('Leaders cannot create admin users');
+      }
+
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      if (!existingUser) {
+        throw new Error('User tidak ditemukan di sistem');
+      }
+
+      const displayName = name || (existingUser.user_metadata as any)?.name || existingUser.email || email;
+      const desiredRole = role || 'user';
+
+      // Ensure profile exists (upsert)
+      const { error: upsertProfileError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: existingUser.id,
+          email: existingUser.email || email,
+          name: displayName,
+        });
+
+      if (upsertProfileError) {
+        console.error('Error upserting profile:', upsertProfileError);
+        throw new Error('Gagal memperbaiki profile user');
+      }
+
+      // Ensure role exists (upsert)
+      const { error: upsertRoleError } = await supabaseAdmin
+        .from('user_roles')
+        .upsert({ user_id: existingUser.id, role: desiredRole }, { onConflict: 'user_id' });
+
+      if (upsertRoleError) {
+        console.error('Error upserting role:', upsertRoleError);
+        throw new Error('Gagal memperbaiki role user');
+      }
+
+      // Ensure store access exists
+      const { data: existingStoreAccess, error: existingStoreAccessError } = await supabaseAdmin
+        .from('user_store_access')
+        .select('id')
+        .eq('user_id', existingUser.id)
+        .eq('store_id', storeId)
+        .maybeSingle();
+
+      if (existingStoreAccessError) {
+        console.error('Error checking store access:', existingStoreAccessError);
+        throw new Error('Gagal memeriksa akses cabang');
+      }
+
+      if (!existingStoreAccess) {
+        const storeRole = desiredRole === 'admin' ? 'admin' : 'staff';
+        const { error: storeAccessError } = await supabaseAdmin
+          .from('user_store_access')
+          .insert({
+            user_id: existingUser.id,
+            store_id: storeId,
+            role: storeRole,
+          });
+
+        if (storeAccessError) {
+          console.error('Error granting store access:', storeAccessError);
+          throw new Error('Gagal menambahkan akses cabang untuk user');
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user: { id: existingUser.id, email: existingUser.email },
+          message: 'User berhasil diperbaiki dan dipastikan punya akses cabang',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
     if (body.action === 'create') {
       const { email, password, name, role, storeId } = body as CreateUserRequest;
 
@@ -99,7 +193,7 @@ Deno.serve(async (req) => {
         throw new Error('Leaders cannot create admin users');
       }
 
-      // First, check if user already exists in auth and try to clean up orphaned records
+      // First, check if user already exists in auth
       const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
       const existingUser = existingUsers?.users?.find(u => u.email === email);
       
@@ -109,80 +203,86 @@ Deno.serve(async (req) => {
           .from('profiles')
           .select('id')
           .eq('id', existingUser.id)
-          .single();
+          .maybeSingle();
         
         // Check if this user has a role record
         const { data: roleExists } = await supabaseAdmin
           .from('user_roles')
           .select('id')
           .eq('user_id', existingUser.id)
-          .single();
+          .maybeSingle();
         
-        // If user exists in auth but not in profiles or user_roles, it's an orphan - delete it
+        // If user exists in auth but missing profile/role, repair it instead of deleting
         if (!profileExists || !roleExists) {
-          console.log(`Found orphaned auth user ${existingUser.id} for email ${email}, cleaning up...`);
-          
-          // Clean up all related data first
-          await supabaseAdmin.from('user_store_access').delete().eq('user_id', existingUser.id);
-          await supabaseAdmin.from('user_permissions').delete().eq('user_id', existingUser.id);
-          await supabaseAdmin.from('user_temp_passwords').delete().eq('user_id', existingUser.id);
-          await supabaseAdmin.from('user_roles').delete().eq('user_id', existingUser.id);
-          await supabaseAdmin.from('profiles').delete().eq('id', existingUser.id);
-          
-          // Delete the orphaned auth user
-          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id);
-          if (deleteError) {
-            console.error('Error deleting orphaned user:', deleteError);
-            throw new Error('Email sudah terdaftar tapi tidak bisa dibersihkan. Coba lagi nanti.');
-          }
-          
-          console.log(`Orphaned user ${existingUser.id} cleaned up successfully`);
-        } else {
-          // User exists and has proper records - check if they already have access to this store
-          const { data: existingStoreAccess } = await supabaseAdmin
-            .from('user_store_access')
-            .select('id')
-            .eq('user_id', existingUser.id)
-            .eq('store_id', storeId)
-            .single();
-          
-          if (existingStoreAccess) {
-            // User already has access to this store
-            throw new Error('Pengguna dengan email ini sudah memiliki akses ke toko ini');
-          }
-          
-          // User exists but doesn't have access to this store - just add store access
-          console.log(`User ${existingUser.id} exists, adding access to store ${storeId}`);
-          
-          const storeRole = role === 'admin' ? 'admin' : 'staff';
-          const { error: storeAccessError } = await supabaseAdmin
-            .from('user_store_access')
-            .insert({
-              user_id: existingUser.id,
-              store_id: storeId,
-              role: storeRole,
+          console.log(`Found auth user without complete records ${existingUser.id} for email ${email}, repairing...`);
+
+          const displayName = name || (existingUser.user_metadata as any)?.name || existingUser.email || email;
+
+          const { error: upsertProfileError } = await supabaseAdmin
+            .from('profiles')
+            .upsert({
+              id: existingUser.id,
+              email: existingUser.email || email,
+              name: displayName,
             });
 
-          if (storeAccessError) {
-            console.error('Error granting store access:', storeAccessError);
-            throw new Error('Gagal menambahkan akses toko untuk pengguna');
+          if (upsertProfileError) {
+            console.error('Error upserting profile:', upsertProfileError);
+            throw new Error('Gagal memperbaiki profile user');
           }
 
-          console.log(`Store access granted for existing user ${existingUser.id} to store ${storeId}`);
+          const { error: upsertRoleError } = await supabaseAdmin
+            .from('user_roles')
+            .upsert({ user_id: existingUser.id, role }, { onConflict: 'user_id' });
 
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              user: { id: existingUser.id, email: existingUser.email },
-              message: 'Akses toko berhasil ditambahkan untuk pengguna yang sudah terdaftar',
-              addedToStore: true
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 200 
-            }
-          );
+          if (upsertRoleError) {
+            console.error('Error upserting role:', upsertRoleError);
+            throw new Error('Gagal memperbaiki role user');
+          }
         }
+
+        // User exists - check if they already have access to this store
+        const { data: existingStoreAccess } = await supabaseAdmin
+          .from('user_store_access')
+          .select('id')
+          .eq('user_id', existingUser.id)
+          .eq('store_id', storeId)
+          .maybeSingle();
+
+        if (existingStoreAccess) {
+          throw new Error('Pengguna dengan email ini sudah memiliki akses ke toko ini');
+        }
+
+        console.log(`User ${existingUser.id} exists, adding access to store ${storeId}`);
+
+        const storeRole = role === 'admin' ? 'admin' : 'staff';
+        const { error: storeAccessError } = await supabaseAdmin
+          .from('user_store_access')
+          .insert({
+            user_id: existingUser.id,
+            store_id: storeId,
+            role: storeRole,
+          });
+
+        if (storeAccessError) {
+          console.error('Error granting store access:', storeAccessError);
+          throw new Error('Gagal menambahkan akses toko untuk pengguna');
+        }
+
+        console.log(`Store access granted for existing user ${existingUser.id} to store ${storeId}`);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            user: { id: existingUser.id, email: existingUser.email },
+            message: 'Akses toko berhasil ditambahkan untuk pengguna yang sudah terdaftar',
+            addedToStore: true,
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
       }
 
       // Create auth user
@@ -207,22 +307,24 @@ Deno.serve(async (req) => {
 
       console.log(`User created: ${authData.user.id}`);
 
-      // Update profile with name
+      // Ensure profile exists + upsert name/email
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ name })
-        .eq('id', authData.user.id);
+        .upsert({
+          id: authData.user.id,
+          email: authData.user.email ?? email,
+          name,
+        });
 
       if (profileError) {
         console.error('Error updating profile:', profileError);
         // Don't throw, profile was likely created by trigger
       }
 
-      // Set user role
+      // Set user role (upsert)
       const { error: roleUpdateError } = await supabaseAdmin
         .from('user_roles')
-        .update({ role })
-        .eq('user_id', authData.user.id);
+        .upsert({ user_id: authData.user.id, role }, { onConflict: 'user_id' });
 
       if (roleUpdateError) {
         console.error('Error updating role:', roleUpdateError);
