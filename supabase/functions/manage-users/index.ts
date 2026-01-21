@@ -44,7 +44,16 @@ interface RepairUserRequest {
   role?: 'admin' | 'leader' | 'user';
 }
 
-type RequestBody = CreateUserRequest | DeleteUserRequest | CleanupOrphanRequest | RepairUserRequest;
+interface ListAuthOrphansRequest {
+  action: 'list_auth_orphans';
+}
+
+interface DeleteAuthOrphanRequest {
+  action: 'delete_auth_orphan';
+  email: string;
+}
+
+type RequestBody = CreateUserRequest | DeleteUserRequest | CleanupOrphanRequest | RepairUserRequest | ListAuthOrphansRequest | DeleteAuthOrphanRequest;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -90,6 +99,139 @@ Deno.serve(async (req) => {
 
     const body: RequestBody = await req.json();
     console.log('Received request:', body.action);
+
+    if (body.action === 'list_auth_orphans') {
+      // List all Auth users without a profile record
+      const allAuthUsers: any[] = [];
+      let page = 1;
+      const perPage = 100;
+      
+      while (true) {
+        const { data: usersPage, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+        
+        if (listError) {
+          console.error('Error listing users:', listError);
+          throw new Error('Gagal mengambil daftar user');
+        }
+        
+        if (usersPage?.users) {
+          allAuthUsers.push(...usersPage.users);
+        }
+        
+        if (!usersPage?.users?.length || usersPage.users.length < perPage) {
+          break;
+        }
+        
+        page++;
+        if (page > 50) break;
+      }
+      
+      // Get all profile IDs
+      const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from('profiles')
+        .select('id');
+      
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw new Error('Gagal mengambil daftar profile');
+      }
+      
+      const profileIds = new Set((profiles || []).map(p => p.id));
+      
+      // Find Auth users without profile
+      const orphans = allAuthUsers
+        .filter(u => !profileIds.has(u.id))
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          created_at: u.created_at,
+          name: (u.user_metadata as any)?.name || u.email,
+        }));
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          orphans,
+          count: orphans.length,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
+    if (body.action === 'delete_auth_orphan') {
+      const { email } = body as DeleteAuthOrphanRequest;
+      
+      if (!email) throw new Error('Email is required');
+      
+      // Find the auth user
+      let targetUser = null;
+      let page = 1;
+      const perPage = 100;
+      
+      while (!targetUser) {
+        const { data: usersPage } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+        
+        const found = usersPage?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) {
+          targetUser = found;
+          break;
+        }
+        
+        if (!usersPage?.users?.length || usersPage.users.length < perPage) break;
+        page++;
+        if (page > 50) break;
+      }
+      
+      if (!targetUser) {
+        throw new Error('User tidak ditemukan di Auth');
+      }
+      
+      // Verify it's truly an orphan (no profile)
+      const { data: profileExists } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', targetUser.id)
+        .maybeSingle();
+      
+      if (profileExists) {
+        throw new Error('User ini memiliki profile. Gunakan hapus user biasa.');
+      }
+      
+      // Clean up any potential related data (just in case)
+      await supabaseAdmin.from('user_store_access').delete().eq('user_id', targetUser.id);
+      await supabaseAdmin.from('user_roles').delete().eq('user_id', targetUser.id);
+      await supabaseAdmin.from('user_permissions').delete().eq('user_id', targetUser.id);
+      await supabaseAdmin.from('activity_logs').delete().eq('user_id', targetUser.id);
+      await supabaseAdmin.from('notification_preferences').delete().eq('user_id', targetUser.id);
+      await supabaseAdmin.from('user_temp_passwords').delete().eq('user_id', targetUser.id);
+      
+      // Delete auth user
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(targetUser.id);
+      
+      if (authError) {
+        console.error('Error deleting auth user:', authError);
+        throw new Error('Gagal menghapus user dari Auth: ' + authError.message);
+      }
+      
+      console.log(`Auth orphan deleted: ${email} (${targetUser.id})`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `User ${email} berhasil dihapus permanen dari sistem`,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
 
     if (body.action === 'repair') {
       const { email, storeId, name, role } = body as RepairUserRequest;

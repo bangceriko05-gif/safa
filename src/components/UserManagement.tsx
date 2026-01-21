@@ -51,11 +51,20 @@ interface OrphanUser {
   role: "admin" | "leader" | "user";
 }
 
+interface AuthOrphan {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+}
+
 export default function UserManagement() {
   const { currentStore } = useStore();
   const [users, setUsers] = useState<User[]>([]);
   const [orphanUsers, setOrphanUsers] = useState<OrphanUser[]>([]);
+  const [authOrphans, setAuthOrphans] = useState<AuthOrphan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAuthOrphans, setLoadingAuthOrphans] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -66,6 +75,7 @@ export default function UserManagement() {
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [showOrphanTab, setShowOrphanTab] = useState(false);
+  const [showAuthOrphansTab, setShowAuthOrphansTab] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -268,6 +278,34 @@ export default function UserManagement() {
       fetchOrphanUsers();
     }
   }, [currentUserRole, currentStore?.id]);
+
+  // Fetch Auth orphans - users in Auth but not in profiles table
+  const fetchAuthOrphans = async () => {
+    if (currentUserRole !== 'admin') return;
+    
+    setLoadingAuthOrphans(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: { action: 'list_auth_orphans' },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setAuthOrphans(data?.orphans || []);
+    } catch (error: any) {
+      console.error("Error fetching auth orphans:", error);
+      toast.error("Gagal memuat Auth orphans: " + error.message);
+    } finally {
+      setLoadingAuthOrphans(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUserRole === 'admin' && showAuthOrphansTab) {
+      fetchAuthOrphans();
+    }
+  }, [currentUserRole, showAuthOrphansTab]);
 
   const fetchAllStores = async () => {
     try {
@@ -751,6 +789,35 @@ export default function UserManagement() {
     }
   };
 
+  const handleDeleteAuthOrphan = async (email: string) => {
+    if (!confirm(`Hapus permanen ${email} dari sistem? User ini akan dihapus dari Auth dan tidak bisa login lagi.`)) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'delete_auth_orphan',
+          email,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'Auth User',
+        description: `Menghapus permanen Auth orphan: ${email}`,
+      });
+
+      toast.success(`${email} berhasil dihapus permanen dari sistem`);
+      fetchAuthOrphans();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal menghapus user");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -764,7 +831,18 @@ export default function UserManagement() {
               </CardDescription>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Auth Orphans button - admin only */}
+            {currentUserRole === "admin" && (
+              <Button
+                variant={showAuthOrphansTab ? "default" : "outline"}
+                onClick={() => setShowAuthOrphansTab(!showAuthOrphansTab)}
+                className={authOrphans.length > 0 ? "border-destructive text-destructive hover:bg-destructive/10" : ""}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Auth Orphans {authOrphans.length > 0 && `(${authOrphans.length})`}
+              </Button>
+            )}
             {/* Show orphan button to admin/leader - always visible for awareness */}
             {(currentUserRole === "admin" || currentUserRole === "leader") && (
               <Button
@@ -786,6 +864,99 @@ export default function UserManagement() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Auth Orphans Tab - admin only - users in Auth but not in profiles */}
+        {showAuthOrphansTab && currentUserRole === "admin" && (
+          <Card className="mb-6 border-destructive/50 bg-destructive/5">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg text-destructive">Auth Orphans (Backend)</CardTitle>
+                  <CardDescription>
+                    User yang ada di Auth (backend) tapi tidak memiliki profile record. 
+                    User ini tidak terlihat di aplikasi. Hapus permanen untuk membersihkan sistem.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchAuthOrphans}
+                  disabled={loadingAuthOrphans}
+                >
+                  {loadingAuthOrphans ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingAuthOrphans ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Nama (dari metadata)</TableHead>
+                        <TableHead>Dibuat</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {authOrphans.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            Tidak ada Auth orphan - semua user Auth memiliki profile
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        authOrphans.map((user) => (
+                          <TableRow key={user.id} className="bg-destructive/5">
+                            <TableCell className="font-medium">{user.email}</TableCell>
+                            <TableCell>{user.name}</TableCell>
+                            <TableCell>
+                              {new Date(user.created_at).toLocaleDateString("id-ID", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setRepairEmail(user.email);
+                                    setShowOrphanTab(true);
+                                  }}
+                                  title="Perbaiki & Beri Akses"
+                                >
+                                  <UserPlus className="h-4 w-4 mr-1" />
+                                  Perbaiki
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteAuthOrphan(user.email)}
+                                  title="Hapus Permanen dari Auth"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Hapus
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Orphan Users Tab - visible to admin/leader */}
         {showOrphanTab && (currentUserRole === "admin" || currentUserRole === "leader") && (
           <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
