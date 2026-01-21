@@ -102,10 +102,41 @@ Deno.serve(async (req) => {
         throw new Error('Leaders cannot create admin users');
       }
 
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      // Search for user across all pages
+      let existingUser = null;
+      let page = 1;
+      const perPage = 100;
+      
+      while (!existingUser) {
+        const { data: usersPage, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+        
+        if (listError) {
+          console.error('Error listing users:', listError);
+          throw new Error('Gagal mencari user di sistem');
+        }
+        
+        const found = usersPage?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) {
+          existingUser = found;
+          break;
+        }
+        
+        // No more pages
+        if (!usersPage?.users?.length || usersPage.users.length < perPage) {
+          break;
+        }
+        
+        page++;
+        
+        // Safety limit
+        if (page > 50) break;
+      }
+      
       if (!existingUser) {
-        throw new Error('User tidak ditemukan di sistem');
+        throw new Error('User tidak ditemukan di sistem. Pastikan email benar atau daftarkan user baru.');
       }
 
       const displayName = name || (existingUser.user_metadata as any)?.name || existingUser.email || email;
@@ -193,9 +224,38 @@ Deno.serve(async (req) => {
         throw new Error('Leaders cannot create admin users');
       }
 
-      // First, check if user already exists in auth
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      // Search for existing user across all pages
+      let existingUser = null;
+      let page = 1;
+      const perPage = 100;
+      
+      while (!existingUser) {
+        const { data: usersPage, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+        
+        if (listError) {
+          console.error('Error listing users:', listError);
+          break;
+        }
+        
+        const found = usersPage?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) {
+          existingUser = found;
+          break;
+        }
+        
+        // No more pages
+        if (!usersPage?.users?.length || usersPage.users.length < perPage) {
+          break;
+        }
+        
+        page++;
+        
+        // Safety limit
+        if (page > 50) break;
+      }
       
       if (existingUser) {
         // Check if this user has a profile record
