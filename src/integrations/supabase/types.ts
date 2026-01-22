@@ -1265,6 +1265,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_booking_requests: { Args: never; Returns: number }
+      cleanup_storage_for_deleted_user: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       create_booking_from_request:
         | { Args: { p_request_id: string; p_user_id: string }; Returns: string }
         | {
