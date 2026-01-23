@@ -37,13 +37,13 @@ interface RolePermission {
 
 // Permission categories for better organization
 const permissionCategories: Record<string, string[]> = {
-  "Booking": ["create_bookings", "edit_bookings", "delete_bookings", "view_bookings", "checkin_bookings", "checkout_bookings", "cancel_bookings"],
+  "Booking": ["create_bookings", "edit_bookings", "delete_bookings", "view_bookings", "checkin_bookings", "checkout_bookings", "cancel_bookings", "cancel_checkout_bookings"],
   "Kamar": ["manage_rooms", "view_rooms"],
   "Pelanggan": ["manage_customers", "view_customers"],
   "Keuangan": ["manage_income", "manage_expense", "view_reports"],
   "Produk": ["manage_products", "view_products"],
   "Toko": ["manage_stores", "view_stores"],
-  "Pengguna": ["manage_users", "manage_permissions"],
+  "Pengguna": ["manage_users", "manage_permissions", "view_auth_orphans", "view_user_orphans"],
   "Pengaturan": ["manage_settings", "view_activity_logs"],
 };
 
@@ -567,6 +567,104 @@ export default function PermissionManagement() {
     }
   };
 
+  // Select all role permissions
+  const handleRoleSelectAll = async () => {
+    if (!selectedRole) {
+      toast.error("Pilih role terlebih dahulu");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Get permissions that role doesn't have yet
+      const permissionsToAdd = permissions.filter(
+        (perm) => !hasRolePermission(perm.id)
+      );
+
+      if (permissionsToAdd.length === 0) {
+        toast.info("Role sudah memiliki semua permission");
+        setSaving(false);
+        return;
+      }
+
+      // Add all missing permissions to role_permissions table
+      for (const perm of permissionsToAdd) {
+        await supabase.from("role_permissions").insert({
+          role: selectedRole,
+          permission_id: perm.id,
+        });
+      }
+
+      await logActivity({
+        actionType: "created",
+        entityType: "Permission",
+        description: `Memberikan semua permission ke role ${selectedRole}`,
+      });
+
+      toast.success(`${permissionsToAdd.length} permission berhasil diberikan ke role ${selectedRole}`);
+      fetchRolePermissions(selectedRole);
+    } catch (error: any) {
+      console.error("Error selecting all role permissions:", error);
+      toast.error("Gagal memberikan semua permission");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Deselect all role permissions
+  const handleRoleDeselectAll = async () => {
+    if (!selectedRole) {
+      toast.error("Pilih role terlebih dahulu");
+      return;
+    }
+
+    if (rolePermissions.length === 0) {
+      toast.info("Role tidak memiliki permission");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Remove all permissions from role_permissions table
+      const { error } = await supabase
+        .from("role_permissions")
+        .delete()
+        .eq("role", selectedRole);
+
+      if (error) throw error;
+
+      // Also remove from all existing users with this role
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", selectedRole);
+
+      if (userRoles && userRoles.length > 0) {
+        const userIds = userRoles.map(ur => ur.user_id);
+        const permIds = rolePermissions.map(rp => rp.permission_id);
+        await supabase
+          .from("user_permissions")
+          .delete()
+          .in("permission_id", permIds)
+          .in("user_id", userIds);
+      }
+
+      await logActivity({
+        actionType: "deleted",
+        entityType: "Permission",
+        description: `Mencabut semua permission dari role ${selectedRole}`,
+      });
+
+      toast.success(`Semua permission berhasil dicabut dari role ${selectedRole}`);
+      fetchRolePermissions(selectedRole);
+    } catch (error: any) {
+      console.error("Error deselecting all role permissions:", error);
+      toast.error("Gagal mencabut semua permission");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const selectedUser = users.find((u) => u.id === selectedUserId);
 
   if (loading) {
@@ -737,13 +835,36 @@ export default function PermissionManagement() {
 
             {selectedRole && (
               <div className="space-y-4">
-                <div className="pb-2 border-b">
-                  <h3 className="font-semibold capitalize">
-                    Permissions untuk role {selectedRole}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Permissions ini akan otomatis diberikan ke semua user baru dengan role {selectedRole}
-                  </p>
+                <div className="flex items-center justify-between pb-2 border-b">
+                  <div>
+                    <h3 className="font-semibold capitalize">
+                      Permissions untuk role {selectedRole}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Permissions ini akan otomatis diberikan ke semua user baru dengan role {selectedRole}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {rolePermissions.length} dari {permissions.length} permission aktif
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRoleSelectAll}
+                      disabled={saving || rolePermissions.length === permissions.length}
+                    >
+                      Pilih Semua
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRoleDeselectAll}
+                      disabled={saving || rolePermissions.length === 0}
+                    >
+                      Hapus Semua
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-6">
