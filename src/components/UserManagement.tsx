@@ -253,20 +253,12 @@ export default function UserManagement() {
         const userIdsWithAccess = new Set(usersWithAccess?.map((ua: any) => ua.user_id) || []);
         orphans = allProfiles?.filter(profile => !userIdsWithAccess.has(profile.id)) || [];
       } else if (currentStore?.id) {
-        // Users without access to current store - potential orphans for this branch
-        const { data: usersWithCurrentStoreAccess, error: accessError } = await supabase
-          .from("user_store_access")
-          .select("user_id")
-          .eq("store_id", currentStore.id);
-
-        if (accessError) throw accessError;
-
-        const userIdsWithCurrentStoreAccess = new Set(usersWithCurrentStoreAccess?.map((ua: any) => ua.user_id) || []);
-        
         // Get users who have NO store access at all (truly orphaned users)
-        const { data: allUsersWithAccess } = await supabase
-          .from("user_store_access")
-          .select("user_id");
+        // Use RPC function with SECURITY DEFINER to bypass RLS and see all store access
+        const { data: allUsersWithAccess, error: accessError } = await supabase
+          .rpc('get_user_ids_with_any_store_access');
+        
+        if (accessError) throw accessError;
         
         const allUserIdsWithAnyAccess = new Set(allUsersWithAccess?.map((ua: any) => ua.user_id) || []);
         
