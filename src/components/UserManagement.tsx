@@ -76,6 +76,7 @@ export default function UserManagement() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [showOrphanTab, setShowOrphanTab] = useState(false);
   const [showAuthOrphansTab, setShowAuthOrphansTab] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -98,6 +99,11 @@ export default function UserManagement() {
 
   const [repairEmail, setRepairEmail] = useState<string>("");
   const [repairing, setRepairing] = useState<boolean>(false);
+
+  // Helper function to check permissions
+  const hasPermission = (permissionName: string) => {
+    return userPermissions.includes(permissionName) || currentUserRole === "admin";
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -175,16 +181,39 @@ export default function UserManagement() {
     }
   };
 
+  // Fetch user permissions
+  const fetchUserPermissions = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("user_permissions")
+        .select("permissions(name)")
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      const permissionNames = data
+        ?.map((p: any) => p.permissions?.name)
+        .filter(Boolean) || [];
+      setUserPermissions(permissionNames);
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+    }
+  };
+
   useEffect(() => {
     if (currentStore?.id) {
       fetchUsers();
     }
     getCurrentUserRole();
     fetchAllStores();
+    fetchUserPermissions();
   }, [currentStore?.id]);
 
   // Fetch orphan users - users in profiles but without access to current store
-  // Visible to admin/leader of each store, not just super admin
+  // Visible to users with view_user_orphans permission or admin role
   const fetchOrphanUsers = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -194,8 +223,9 @@ export default function UserManagement() {
       const { data: superAdminData } = await supabase.rpc('is_super_admin', { _user_id: user.id });
       setIsSuperAdmin(!!superAdminData);
 
-      // Only admin/leader can see orphan users
-      if (currentUserRole !== 'admin' && currentUserRole !== 'leader' && !superAdminData) {
+      // Check permission for viewing user orphans
+      const canViewUserOrphans = hasPermission('view_user_orphans') || superAdminData;
+      if (!canViewUserOrphans) {
         setOrphanUsers([]);
         return;
       }
@@ -274,14 +304,15 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    if (currentUserRole) {
+    if (currentUserRole || userPermissions.length > 0) {
       fetchOrphanUsers();
     }
-  }, [currentUserRole, currentStore?.id]);
+  }, [currentUserRole, currentStore?.id, userPermissions]);
 
   // Fetch Auth orphans - users in Auth but not in profiles table
   const fetchAuthOrphans = async () => {
-    if (currentUserRole !== 'admin') return;
+    // Check permission for viewing auth orphans
+    if (!hasPermission('view_auth_orphans')) return;
     
     setLoadingAuthOrphans(true);
     try {
@@ -302,10 +333,10 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    if (currentUserRole === 'admin' && showAuthOrphansTab) {
+    if (hasPermission('view_auth_orphans') && showAuthOrphansTab) {
       fetchAuthOrphans();
     }
-  }, [currentUserRole, showAuthOrphansTab]);
+  }, [currentUserRole, showAuthOrphansTab, userPermissions]);
 
   const fetchAllStores = async () => {
     try {
@@ -832,8 +863,8 @@ export default function UserManagement() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Auth Orphans button - admin only */}
-            {currentUserRole === "admin" && (
+            {/* Auth Orphans button - permission-based */}
+            {hasPermission('view_auth_orphans') && (
               <Button
                 variant={showAuthOrphansTab ? "default" : "outline"}
                 onClick={() => setShowAuthOrphansTab(!showAuthOrphansTab)}
@@ -843,8 +874,8 @@ export default function UserManagement() {
                 Auth Orphans {authOrphans.length > 0 && `(${authOrphans.length})`}
               </Button>
             )}
-            {/* Show orphan button to admin/leader - always visible for awareness */}
-            {(currentUserRole === "admin" || currentUserRole === "leader") && (
+            {/* Show orphan button - permission-based */}
+            {hasPermission('view_user_orphans') && (
               <Button
                 variant={showOrphanTab ? "default" : "outline"}
                 onClick={() => setShowOrphanTab(!showOrphanTab)}
@@ -864,8 +895,8 @@ export default function UserManagement() {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Auth Orphans Tab - admin only - users in Auth but not in profiles */}
-        {showAuthOrphansTab && currentUserRole === "admin" && (
+        {/* Auth Orphans Tab - permission-based - users in Auth but not in profiles */}
+        {showAuthOrphansTab && hasPermission('view_auth_orphans') && (
           <Card className="mb-6 border-destructive/50 bg-destructive/5">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -957,8 +988,8 @@ export default function UserManagement() {
           </Card>
         )}
 
-        {/* Orphan Users Tab - visible to admin/leader */}
-        {showOrphanTab && (currentUserRole === "admin" || currentUserRole === "leader") && (
+        {/* Orphan Users Tab - permission-based */}
+        {showOrphanTab && hasPermission('view_user_orphans') && (
           <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
