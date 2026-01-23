@@ -1301,6 +1301,12 @@ export type Database = {
         }[]
       }
       get_store_code: { Args: { store_id: string }; Returns: string }
+      get_user_ids_with_any_store_access: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
