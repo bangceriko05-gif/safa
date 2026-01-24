@@ -1232,6 +1232,7 @@ export default function BookingModal({
           entityType: 'Booking',
           entityId: editingBooking.id,
           description,
+          storeId: currentStore?.id,
         });
         
         toast.success("Booking berhasil diupdate");
@@ -1268,6 +1269,7 @@ export default function BookingModal({
           entityType: 'Booking',
           entityId: newBooking.id,
           description: `Membuat booking ${formData.customer_name} di kamar ${roomName} pada ${dateStr}`,
+          storeId: currentStore?.id,
         });
         
         toast.success("Booking berhasil ditambahkan");

@@ -278,6 +278,7 @@ export default function PermissionManagement() {
         actionType: "updated",
         entityType: "Permission",
         description: `Mengubah ${toAdd.length + toRemove.length} permission untuk pengguna`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Perubahan permission berhasil disimpan");
@@ -331,6 +332,7 @@ export default function PermissionManagement() {
         actionType: "updated",
         entityType: "Permission",
         description: `Mengubah ${toAdd.length + toRemove.length} permission untuk role ${selectedRole}`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Perubahan permission role berhasil disimpan");
@@ -372,6 +374,7 @@ export default function PermissionManagement() {
           entityType: "Permission",
           entityId: existingPermission.id,
           description: `Mencabut permission '${permissionName}' dari pengguna`,
+          storeId: currentStore?.id,
         });
 
         toast.success("Permission berhasil dicabut");
@@ -392,6 +395,7 @@ export default function PermissionManagement() {
           entityType: "Permission",
           entityId: permissionId,
           description: `Memberikan permission '${permissionName}' ke pengguna`,
+          storeId: currentStore?.id,
         });
 
         toast.success("Permission berhasil diberikan");

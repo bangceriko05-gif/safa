@@ -462,6 +462,7 @@ export default function PMSCalendar({
           entityType: 'Booking',
           entityId: deleteBookingId,
           description: `Menghapus booking ${bookingToDelete.customer_name} di kamar ${roomName} pada ${bookingToDelete.date}`,
+          storeId: currentStore?.id,
         });
       }
 

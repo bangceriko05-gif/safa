@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, Loader2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/utils/activityLogger";
 
 interface StoreData {
   id: string;
@@ -86,8 +87,17 @@ export default function SelectStore() {
     }
   };
 
-  const handleSelectStore = (store: StoreData) => {
+  const handleSelectStore = async (store: StoreData) => {
     setCurrentStore(store);
+    
+    // Log login activity for this specific store
+    await logActivity({
+      actionType: 'login',
+      entityType: 'System',
+      description: `Login ke ${store.name}`,
+      storeId: store.id,
+    });
+    
     navigate("/");
   };
 

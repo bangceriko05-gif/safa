@@ -155,6 +155,7 @@ export default function DepositManagement({ refreshTrigger }: DepositManagementP
         entityType: "Deposit",
         entityId: returnDepositId,
         description: `Menandai deposit kamar ${deposit?.room_name} sebagai dikembalikan`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Deposit berhasil ditandai dikembalikan");
@@ -184,6 +185,7 @@ export default function DepositManagement({ refreshTrigger }: DepositManagementP
         entityType: "Deposit",
         entityId: deleteDepositId,
         description: `Menghapus deposit kamar ${deposit?.room_name}`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Deposit berhasil dihapus");

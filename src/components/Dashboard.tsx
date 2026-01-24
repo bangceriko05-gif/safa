@@ -136,11 +136,12 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      // Log logout activity
+      // Log logout activity with current store
       await logActivity({
         actionType: 'login',
         entityType: 'System',
-        description: 'Logout dari sistem',
+        description: `Logout dari ${currentStore?.name || 'sistem'}`,
+        storeId: currentStore?.id,
       });
 
       // Sign out from Supabase first

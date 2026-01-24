@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import { logActivity } from "@/utils/activityLogger";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/contexts/StoreContext";
@@ -483,12 +484,21 @@ export default function Reports() {
 
   const handleDeleteExpense = async (id: string) => {
     try {
+      const expense = expenses.find(e => e.id === id);
       const { error } = await supabase
         .from("expenses")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'Pengeluaran',
+        entityId: id,
+        description: `Menghapus pengeluaran: ${expense?.description || 'Unknown'}`,
+        storeId: currentStore?.id,
+      });
 
       toast.success("Pengeluaran berhasil dihapus");
       fetchData();
@@ -765,6 +775,14 @@ export default function Reports() {
         .eq("id", id);
 
       if (error) throw error;
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'Pemasukan',
+        entityId: id,
+        description: `Menghapus data pemasukan`,
+        storeId: currentStore?.id,
+      });
 
       toast.success("Pemasukan berhasil dihapus");
       fetchData();

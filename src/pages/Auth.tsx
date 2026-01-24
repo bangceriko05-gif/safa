@@ -119,13 +119,7 @@ export default function Auth() {
           localStorage.removeItem("treebox_email");
         }
         
-        // Log login activity
-        await logActivity({
-          actionType: 'login',
-          entityType: 'System',
-          description: 'Login ke sistem',
-        });
-        
+        // Login activity will be logged in SelectStore when user selects a store
         toast.success("Login berhasil!");
         navigate("/select-store");
       } else {

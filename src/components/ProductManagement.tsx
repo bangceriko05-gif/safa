@@ -122,6 +122,7 @@ export default function ProductManagement() {
           entityType: 'Produk',
           entityId: editingProduct.id,
           description: `Mengubah produk ${productData.name} dengan harga Rp ${productData.price.toLocaleString('id-ID')}`,
+          storeId: currentStore?.id,
         });
         
         toast.success("Produk berhasil diupdate");
@@ -139,6 +140,7 @@ export default function ProductManagement() {
           entityType: 'Produk',
           entityId: newProduct.id,
           description: `Menambahkan produk baru: ${productData.name} dengan harga Rp ${productData.price.toLocaleString('id-ID')}`,
+          storeId: currentStore?.id,
         });
         
         toast.success("Produk berhasil ditambahkan");
@@ -177,6 +179,7 @@ export default function ProductManagement() {
         entityType: 'Produk',
         entityId: product.id,
         description: `Menghapus produk ${product.name}`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Produk berhasil dihapus");
