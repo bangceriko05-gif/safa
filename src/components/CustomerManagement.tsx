@@ -237,6 +237,7 @@ export default function CustomerManagement() {
           entityType: 'Pelanggan',
           entityId: editingCustomer.id,
           description: `Mengubah data pelanggan ${formData.name}`,
+          storeId: currentStore?.id,
         });
 
         toast.success("Pelanggan berhasil diupdate");
@@ -280,6 +281,7 @@ export default function CustomerManagement() {
           entityType: 'Pelanggan',
           entityId: newCustomer.id,
           description: `Menambahkan pelanggan baru: ${formData.name}`,
+          storeId: currentStore?.id,
         });
 
         toast.success("Pelanggan berhasil ditambahkan");
@@ -332,6 +334,7 @@ export default function CustomerManagement() {
           entityType: 'Pelanggan',
           entityId: deleteCustomerId,
           description: `Menghapus pelanggan: ${customerToDelete.name}`,
+          storeId: currentStore?.id,
         });
       }
 

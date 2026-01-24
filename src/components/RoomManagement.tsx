@@ -206,6 +206,7 @@ export default function RoomManagement() {
           entityType: 'Kamar',
           entityId: editingRoom.id,
           description: `Mengubah data kamar ${formData.name} (status: ${formData.status})`,
+          storeId: currentStore?.id,
         });
         
         toast.success("Ruangan berhasil diupdate");
@@ -224,6 +225,7 @@ export default function RoomManagement() {
           entityType: 'Kamar',
           entityId: newRoom.id,
           description: `Menambahkan kamar baru: ${formData.name}`,
+          storeId: currentStore?.id,
         });
         
         toast.success("Ruangan berhasil ditambahkan");
@@ -266,6 +268,7 @@ export default function RoomManagement() {
         entityType: 'Kamar',
         entityId: room.id,
         description: `Menghapus kamar ${room.name}`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Kamar berhasil dihapus");

@@ -119,6 +119,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
           entityType: "RoomCategory",
           entityId: editingCategory.id,
           description: `Mengubah kategori kamar: ${formData.name}`,
+          storeId: currentStore?.id,
         });
 
         toast.success("Kategori berhasil diupdate");
@@ -141,6 +142,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
           entityType: "RoomCategory",
           entityId: newCategory.id,
           description: `Menambahkan kategori kamar baru: ${formData.name}`,
+          storeId: currentStore?.id,
         });
 
         toast.success("Kategori berhasil ditambahkan");
@@ -216,6 +218,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
         entityType: "RoomCategory",
         entityId: deleteCategory.id,
         description: `Menghapus kategori kamar: ${deleteCategory.name}`,
+        storeId: currentStore?.id,
       });
 
       toast.success("Kategori berhasil dihapus");

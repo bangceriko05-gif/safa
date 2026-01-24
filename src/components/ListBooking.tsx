@@ -349,11 +349,13 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
 
       if (bookingData) {
         const roomName = (bookingData as any).rooms?.name || 'Unknown';
+        const actionType = newStatus === 'CI' ? 'check-in' : newStatus === 'CO' ? 'check-out' : 'updated';
         await logActivity({
-          actionType: 'updated',
+          actionType,
           entityType: 'Booking',
           entityId: bookingId,
           description: `Mengubah status booking ${bookingData.customer_name} di kamar ${roomName} dari ${currentStatus || 'BO'} menjadi ${newStatus}`,
+          storeId: currentStore?.id,
         });
       }
 

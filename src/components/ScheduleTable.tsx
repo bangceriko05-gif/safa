@@ -496,6 +496,7 @@ export default function ScheduleTable({
           entityType: 'Booking',
           entityId: deleteBookingId,
           description: `Menghapus booking ${bookingToDelete.customer_name} di kamar ${roomName} pada ${bookingToDelete.date}`,
+          storeId: currentStore?.id,
         });
       }
 
@@ -564,11 +565,13 @@ export default function ScheduleTable({
 
       if (bookingData) {
         const roomName = (bookingData as any).rooms?.name || 'Unknown';
+        const actionType = newStatus === 'CI' ? 'check-in' : newStatus === 'CO' ? 'check-out' : 'updated';
         await logActivity({
-          actionType: 'updated',
+          actionType,
           entityType: 'Booking',
           entityId: bookingId,
           description: `Mengubah status booking ${bookingData.customer_name} di kamar ${roomName} menjadi ${newStatus}`,
+          storeId: currentStore?.id,
         });
       }
 

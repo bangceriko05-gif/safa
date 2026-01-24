@@ -138,6 +138,7 @@ export default function DepositFormModal({
         actionType: "created",
         entityType: "Deposit",
         description: `Menambahkan deposit ${depositType === "uang" ? `Rp ${amount}` : `Identitas (${identityType})`} untuk kamar: ${roomName}`,
+        storeId: currentStore?.id,
       });
 
       toast.success(`Deposit berhasil ditambahkan untuk kamar ${roomName}`);

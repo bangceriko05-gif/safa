@@ -76,23 +76,49 @@ export const ActivityLog = () => {
   };
 
   const getActionBadge = (action: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       created: "bg-green-100 text-green-800 border-green-200",
       updated: "bg-blue-100 text-blue-800 border-blue-200",
       deleted: "bg-red-100 text-red-800 border-red-200",
       login: "bg-gray-100 text-gray-800 border-gray-200",
+      "check-in": "bg-emerald-100 text-emerald-800 border-emerald-200",
+      "check-out": "bg-orange-100 text-orange-800 border-orange-200",
+      confirm: "bg-purple-100 text-purple-800 border-purple-200",
     };
 
-    const labels = {
+    const labels: Record<string, string> = {
       created: "Dibuat",
       updated: "Diubah",
       deleted: "Dihapus",
       login: "Login",
+      "check-in": "Check-In",
+      "check-out": "Check-Out",
+      confirm: "Konfirmasi",
     };
 
     return (
-      <Badge variant="outline" className={colors[action as keyof typeof colors]}>
-        {labels[action as keyof typeof labels] || action}
+      <Badge variant="outline" className={colors[action] || "bg-gray-100 text-gray-800 border-gray-200"}>
+        {labels[action] || action}
+      </Badge>
+    );
+  };
+
+  const getRoleBadge = (role: string) => {
+    const roleLabels: Record<string, string> = {
+      admin: "Admin",
+      leader: "Leader",
+      user: "User",
+    };
+    
+    const roleColors: Record<string, string> = {
+      admin: "bg-purple-100 text-purple-800 border-purple-200",
+      leader: "bg-blue-100 text-blue-800 border-blue-200",
+      user: "bg-gray-100 text-gray-800 border-gray-200",
+    };
+    
+    return (
+      <Badge variant="outline" className={roleColors[role] || "bg-gray-100 text-gray-800 border-gray-200"}>
+        {roleLabels[role] || role}
       </Badge>
     );
   };
@@ -173,6 +199,9 @@ export const ActivityLog = () => {
               <SelectItem value="updated">Diubah</SelectItem>
               <SelectItem value="deleted">Dihapus</SelectItem>
               <SelectItem value="login">Login</SelectItem>
+              <SelectItem value="check-in">Check-In</SelectItem>
+              <SelectItem value="check-out">Check-Out</SelectItem>
+              <SelectItem value="confirm">Konfirmasi</SelectItem>
             </SelectContent>
           </Select>
 
@@ -229,9 +258,7 @@ export const ActivityLog = () => {
                   <TableRow key={log.id}>
                     <TableCell className="font-medium">{log.user_name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {log.user_role === "admin" ? "Admin" : "User"}
-                      </Badge>
+                      {getRoleBadge(log.user_role)}
                     </TableCell>
                     <TableCell>{getActionBadge(log.action_type)}</TableCell>
                     <TableCell>{log.entity_type}</TableCell>

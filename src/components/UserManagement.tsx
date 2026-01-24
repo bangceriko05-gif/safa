@@ -384,6 +384,7 @@ export default function UserManagement() {
           entityType: 'User',
           entityId: userId,
           description: `Mengubah role ${user.name} menjadi ${newRole}`,
+          storeId: currentStore?.id,
         });
       }
 
@@ -582,6 +583,7 @@ export default function UserManagement() {
         entityType: 'User',
         entityId: data?.user?.id,
         description: successMessage,
+        storeId: currentStore?.id,
       });
 
       toast.success(successMessage);
