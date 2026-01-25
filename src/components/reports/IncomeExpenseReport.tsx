@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Download } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import { exportIncomeExpenseReport, IncomeExpenseExportData } from "@/utils/reportExport";
+import { toast } from "sonner";
 
 interface ExpenseData {
   id: string;
@@ -158,6 +161,39 @@ export default function IncomeExpenseReport() {
     }).format(amount);
   };
 
+  const handleExport = () => {
+    if (!currentStore) return;
+    
+    const exportData: IncomeExpenseExportData = {
+      incomes: incomes.map(i => ({
+        customer_name: i.customer_name,
+        description: i.description,
+        amount: i.amount,
+        payment_method: i.payment_method,
+        date: i.date,
+        creator_name: i.creator_name,
+      })),
+      expenses: expenses.map(e => ({
+        description: e.description,
+        category: e.category,
+        amount: e.amount,
+        date: e.date,
+        creator_name: e.creator_name,
+      })),
+      summary: {
+        total_incomes: stats.totalIncomes,
+        total_expenses: stats.totalExpenses,
+        net_profit: stats.netProfit,
+        expense_categories: stats.expenseCategories,
+        income_payment_methods: stats.incomePaymentMethods,
+      },
+    };
+
+    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+    exportIncomeExpenseReport(exportData, currentStore.name, dateRangeStr);
+    toast.success("Laporan berhasil di-export!");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -167,12 +203,23 @@ export default function IncomeExpenseReport() {
             {getDateRangeDisplay(timeRange, customDateRange)}
           </p>
         </div>
-        <ReportDateFilter
-          timeRange={timeRange}
-          onTimeRangeChange={setTimeRange}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={setCustomDateRange}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={loading || (incomes.length === 0 && expenses.length === 0)}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+        </div>
       </div>
 
       {loading ? (

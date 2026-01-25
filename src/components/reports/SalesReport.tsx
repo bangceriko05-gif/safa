@@ -2,16 +2,18 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag } from "lucide-react";
+import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Download } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
+import { exportSalesReport, SalesExportData } from "@/utils/reportExport";
+import { toast } from "sonner";
 interface BookingData {
   id: string;
   bid: string;
@@ -247,6 +249,56 @@ export default function SalesReport() {
 
   const netProfit = stats.totalRevenue - stats.totalExpenses;
 
+  const handleExport = () => {
+    if (!currentStore) return;
+    
+    const exportData: SalesExportData = {
+      bookings: bookings.map(b => ({
+        bid: b.bid,
+        customer_name: b.customer_name,
+        room_name: b.room_name,
+        date: b.date,
+        duration: b.duration,
+        price: b.price,
+        price_2: b.price_2,
+        payment_method: b.payment_method,
+        payment_method_2: b.payment_method_2,
+        status: b.status,
+        source: b.variant_id ? 'Walk-in' : 'OTA',
+      })),
+      expenses: expenses.map(e => ({
+        description: e.description,
+        category: e.category,
+        amount: e.amount,
+        date: e.date,
+      })),
+      products: bookingProducts.map(p => ({
+        product_name: p.product_name,
+        quantity: p.quantity,
+        subtotal: p.subtotal,
+        booking_id: p.booking_id,
+      })),
+      summary: {
+        total_booking: stats.totalBookings,
+        total_revenue: stats.totalRevenue,
+        walk_in_count: stats.walkInCount,
+        walk_in_revenue: stats.walkInRevenue,
+        ota_count: stats.otaCount,
+        ota_revenue: stats.otaRevenue,
+        cancelled_count: stats.cancelledCount,
+        cancelled_revenue: stats.cancelledRevenue,
+        total_expenses: stats.totalExpenses,
+        net_profit: netProfit,
+        product_sales_count: stats.productSalesCount,
+        product_sales_revenue: stats.productSalesRevenue,
+      },
+    };
+
+    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+    exportSalesReport(exportData, currentStore.name, dateRangeStr);
+    toast.success("Laporan berhasil di-export!");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -256,12 +308,23 @@ export default function SalesReport() {
             {getDateRangeDisplay(timeRange, customDateRange)}
           </p>
         </div>
-        <ReportDateFilter
-          timeRange={timeRange}
-          onTimeRangeChange={setTimeRange}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={setCustomDateRange}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={loading || bookings.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+        </div>
       </div>
 
       {loading ? (
