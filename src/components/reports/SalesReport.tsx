@@ -12,7 +12,15 @@ import { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { exportSalesReport, SalesExportData } from "@/utils/reportExport";
+import { 
+  SalesExportData, 
+  exportSalesDetailsTab, 
+  exportSalesSourceTab, 
+  exportSalesProfitLossTab,
+  exportSalesCancelledTab,
+  exportSalesItemsTab,
+  SalesTabType 
+} from "@/utils/reportExport";
 import { toast } from "sonner";
 interface BookingData {
   id: string;
@@ -249,10 +257,21 @@ export default function SalesReport() {
 
   const netProfit = stats.totalRevenue - stats.totalExpenses;
 
-  const handleExport = () => {
-    if (!currentStore) return;
-    
-    const exportData: SalesExportData = {
+  // Create products lookup by booking_id
+  const productsByBookingId = bookingProducts.reduce((acc, p) => {
+    if (!acc[p.booking_id]) {
+      acc[p.booking_id] = [];
+    }
+    acc[p.booking_id].push({
+      product_name: p.product_name,
+      quantity: p.quantity,
+      subtotal: p.subtotal,
+    });
+    return acc;
+  }, {} as { [key: string]: { product_name: string; quantity: number; subtotal: number }[] });
+
+  const getExportData = (): SalesExportData => {
+    return {
       bookings: bookings.map(b => ({
         bid: b.bid,
         customer_name: b.customer_name,
@@ -265,6 +284,7 @@ export default function SalesReport() {
         payment_method_2: b.payment_method_2,
         status: b.status,
         source: b.variant_id ? 'Walk-in' : 'OTA',
+        products: productsByBookingId[b.id] || [],
       })),
       expenses: expenses.map(e => ({
         description: e.description,
@@ -292,11 +312,49 @@ export default function SalesReport() {
         product_sales_count: stats.productSalesCount,
         product_sales_revenue: stats.productSalesRevenue,
       },
+      paymentMethodTotals: stats.paymentMethodTotals,
+      groupedRooms,
+      groupedProducts,
     };
+  };
 
+  const handleExport = () => {
+    if (!currentStore) return;
+    
+    const exportData = getExportData();
     const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
-    exportSalesReport(exportData, currentStore.name, dateRangeStr);
-    toast.success("Laporan berhasil di-export!");
+    
+    // Export based on active tab
+    switch (activeTab) {
+      case 'details':
+        exportSalesDetailsTab(exportData, currentStore.name, dateRangeStr);
+        break;
+      case 'source':
+        exportSalesSourceTab(exportData, currentStore.name, dateRangeStr);
+        break;
+      case 'profit-loss':
+        exportSalesProfitLossTab(exportData, currentStore.name, dateRangeStr);
+        break;
+      case 'cancelled':
+        exportSalesCancelledTab(exportData, currentStore.name, dateRangeStr);
+        break;
+      case 'items':
+        exportSalesItemsTab(exportData, currentStore.name, dateRangeStr);
+        break;
+    }
+    
+    toast.success(`Laporan ${getTabLabel(activeTab)} berhasil di-export!`);
+  };
+
+  const getTabLabel = (tab: SalesTab): string => {
+    switch (tab) {
+      case 'details': return 'Rincian';
+      case 'source': return 'Sumber';
+      case 'profit-loss': return 'Laba/Rugi';
+      case 'cancelled': return 'Dibatalkan';
+      case 'items': return 'Item';
+      default: return 'Penjualan';
+    }
   };
 
   return (
@@ -309,15 +367,6 @@ export default function SalesReport() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={loading || bookings.length === 0}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
           <ReportDateFilter
             timeRange={timeRange}
             onTimeRangeChange={setTimeRange}
@@ -377,28 +426,39 @@ export default function SalesReport() {
 
           {/* Tabs for different reports */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="details" className="text-xs sm:text-sm">
-                <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
-                Rincian
-              </TabsTrigger>
-              <TabsTrigger value="source" className="text-xs sm:text-sm">
-                <MapPin className="h-4 w-4 mr-1 hidden sm:inline" />
-                Sumber
-              </TabsTrigger>
-              <TabsTrigger value="profit-loss" className="text-xs sm:text-sm">
-                <TrendingDown className="h-4 w-4 mr-1 hidden sm:inline" />
-                Laba/Rugi
-              </TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
-                <XCircle className="h-4 w-4 mr-1 hidden sm:inline" />
-                Dibatalkan
-              </TabsTrigger>
-              <TabsTrigger value="items" className="text-xs sm:text-sm">
-                <ShoppingBag className="h-4 w-4 mr-1 hidden sm:inline" />
-                Item
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+              <TabsList className="grid w-full sm:w-auto grid-cols-5">
+                <TabsTrigger value="details" className="text-xs sm:text-sm">
+                  <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
+                  Rincian
+                </TabsTrigger>
+                <TabsTrigger value="source" className="text-xs sm:text-sm">
+                  <MapPin className="h-4 w-4 mr-1 hidden sm:inline" />
+                  Sumber
+                </TabsTrigger>
+                <TabsTrigger value="profit-loss" className="text-xs sm:text-sm">
+                  <TrendingDown className="h-4 w-4 mr-1 hidden sm:inline" />
+                  Laba/Rugi
+                </TabsTrigger>
+                <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
+                  <XCircle className="h-4 w-4 mr-1 hidden sm:inline" />
+                  Dibatalkan
+                </TabsTrigger>
+                <TabsTrigger value="items" className="text-xs sm:text-sm">
+                  <ShoppingBag className="h-4 w-4 mr-1 hidden sm:inline" />
+                  Item
+                </TabsTrigger>
+              </TabsList>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={loading || bookings.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export {getTabLabel(activeTab)}
+              </Button>
+            </div>
 
             {/* Rincian Penjualan */}
             <TabsContent value="details" className="space-y-4">
