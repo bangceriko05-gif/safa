@@ -39,33 +39,42 @@ export const getExportFileName = (reportType: string, storeName: string, dateRan
   return `${reportType}_${sanitizedStore}_${dateRange}_${timestamp}`;
 };
 
-// Sales Report Export
+// Sales Report Export Types
+export type SalesTabType = 'details' | 'source' | 'profit-loss' | 'cancelled' | 'items';
+
+export interface BookingExportData {
+  bid: string;
+  customer_name: string;
+  room_name: string;
+  date: string;
+  duration: number;
+  price: number;
+  price_2: number;
+  payment_method: string;
+  payment_method_2: string;
+  status: string;
+  source: string;
+  products?: { product_name: string; quantity: number; subtotal: number }[];
+}
+
+export interface ExpenseExportData {
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+}
+
+export interface ProductExportData {
+  product_name: string;
+  quantity: number;
+  subtotal: number;
+  booking_id: string;
+}
+
 export interface SalesExportData {
-  bookings: {
-    bid: string;
-    customer_name: string;
-    room_name: string;
-    date: string;
-    duration: number;
-    price: number;
-    price_2: number;
-    payment_method: string;
-    payment_method_2: string;
-    status: string;
-    source: string;
-  }[];
-  expenses: {
-    description: string;
-    category: string;
-    amount: number;
-    date: string;
-  }[];
-  products: {
-    product_name: string;
-    quantity: number;
-    subtotal: number;
-    booking_id: string;
-  }[];
+  bookings: BookingExportData[];
+  expenses: ExpenseExportData[];
+  products: ProductExportData[];
   summary: {
     total_booking: number;
     total_revenue: number;
@@ -80,11 +89,296 @@ export interface SalesExportData {
     product_sales_count: number;
     product_sales_revenue: number;
   };
+  paymentMethodTotals: { method: string; total: number }[];
+  groupedRooms: { [key: string]: { count: number; hours: number; revenue: number } };
+  groupedProducts: { [key: string]: { quantity: number; subtotal: number } };
 }
 
-export const exportSalesReport = (data: SalesExportData, storeName: string, dateRange: string) => {
+// Export Rincian (Details) Tab
+export const exportSalesDetailsTab = (data: SalesExportData, storeName: string, dateRange: string) => {
+  const activeBookings = data.bookings.filter(b => b.status !== 'BATAL');
+  
   const summarySheet = [{
-    'Ringkasan': 'Laporan Penjualan',
+    'Laporan': 'Rincian Penjualan',
+    'Periode': dateRange,
+    'Cabang': storeName,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': 'Total Booking',
+    'Periode': data.summary.total_booking,
+  }, {
+    'Laporan': 'Total Pendapatan',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.total_revenue)}`,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': '--- Breakdown per Metode Pembayaran ---',
+    'Periode': '',
+  }, ...data.paymentMethodTotals.map(p => ({
+    'Laporan': p.method,
+    'Periode': `Rp ${formatCurrencyPlain(p.total)}`,
+  }))];
+
+  const bookingsSheet = activeBookings.map(b => ({
+    'No. Booking': b.bid,
+    'Nama Pelanggan': b.customer_name,
+    'Kamar': b.room_name,
+    'Tanggal': b.date,
+    'Durasi (jam)': b.duration,
+    'Harga 1': b.price,
+    'Metode Bayar 1': b.payment_method || '-',
+    'Harga 2': b.price_2 || 0,
+    'Metode Bayar 2': b.payment_method_2 || '-',
+    'Total': b.price + b.price_2,
+    'Sumber': b.source,
+  }));
+
+  // Detail per BID dengan produk
+  const detailPerBidSheet: Record<string, unknown>[] = [];
+  activeBookings.forEach(b => {
+    detailPerBidSheet.push({
+      'No. Booking': b.bid,
+      'Nama Pelanggan': b.customer_name,
+      'Kamar': b.room_name,
+      'Tanggal': b.date,
+      'Durasi (jam)': b.duration,
+      'Sumber': b.source,
+      'Status': b.status || 'Aktif',
+      'Harga Kamar': b.price + b.price_2,
+      'Produk': '-',
+      'Qty Produk': '-',
+      'Harga Produk': '-',
+    });
+    // Add products for this booking
+    if (b.products && b.products.length > 0) {
+      b.products.forEach(p => {
+        detailPerBidSheet.push({
+          'No. Booking': b.bid,
+          'Nama Pelanggan': '',
+          'Kamar': '',
+          'Tanggal': '',
+          'Durasi (jam)': '',
+          'Sumber': '',
+          'Status': '',
+          'Harga Kamar': '',
+          'Produk': p.product_name,
+          'Qty Produk': p.quantity,
+          'Harga Produk': p.subtotal,
+        });
+      });
+    }
+  });
+
+  exportMultipleSheets([
+    { name: 'Ringkasan', data: summarySheet },
+    { name: 'Daftar Booking', data: bookingsSheet },
+    { name: 'Detail per BID', data: detailPerBidSheet },
+  ], getExportFileName('Rincian_Penjualan', storeName, dateRange));
+};
+
+// Export Sumber (Source) Tab
+export const exportSalesSourceTab = (data: SalesExportData, storeName: string, dateRange: string) => {
+  const activeBookings = data.bookings.filter(b => b.status !== 'BATAL');
+  const walkInBookings = activeBookings.filter(b => b.source === 'Walk-in');
+  const otaBookings = activeBookings.filter(b => b.source === 'OTA');
+
+  const summarySheet = [{
+    'Laporan': 'Sumber Penjualan',
+    'Periode': dateRange,
+    'Cabang': storeName,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': 'Walk-in',
+    'Periode': `${data.summary.walk_in_count} booking`,
+  }, {
+    'Laporan': 'Pendapatan Walk-in',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.walk_in_revenue)}`,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': 'OTA',
+    'Periode': `${data.summary.ota_count} booking`,
+  }, {
+    'Laporan': 'Pendapatan OTA',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.ota_revenue)}`,
+  }];
+
+  const walkInSheet = walkInBookings.map(b => ({
+    'No. Booking': b.bid,
+    'Nama Pelanggan': b.customer_name,
+    'Kamar': b.room_name,
+    'Tanggal': b.date,
+    'Durasi (jam)': b.duration,
+    'Total': b.price + b.price_2,
+    'Metode Bayar': b.payment_method || '-',
+  }));
+
+  const otaSheet = otaBookings.map(b => ({
+    'No. Booking': b.bid,
+    'Nama Pelanggan': b.customer_name,
+    'Kamar': b.room_name,
+    'Tanggal': b.date,
+    'Durasi (jam)': b.duration,
+    'Total': b.price + b.price_2,
+    'Metode Bayar': b.payment_method || '-',
+  }));
+
+  exportMultipleSheets([
+    { name: 'Ringkasan', data: summarySheet },
+    { name: 'Walk-in', data: walkInSheet },
+    { name: 'OTA', data: otaSheet },
+  ], getExportFileName('Sumber_Penjualan', storeName, dateRange));
+};
+
+// Export Laba/Rugi (Profit-Loss) Tab
+export const exportSalesProfitLossTab = (data: SalesExportData, storeName: string, dateRange: string) => {
+  const roomRevenue = data.summary.total_revenue - data.summary.product_sales_revenue;
+  
+  const summarySheet = [{
+    'Laporan': 'Laba/Rugi',
+    'Periode': dateRange,
+    'Cabang': storeName,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': '=== PENDAPATAN ===',
+    'Periode': '',
+  }, {
+    'Laporan': 'Penjualan Kamar',
+    'Periode': `Rp ${formatCurrencyPlain(roomRevenue)}`,
+  }, {
+    'Laporan': 'Penjualan Produk',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.product_sales_revenue)}`,
+  }, {
+    'Laporan': 'Total Pendapatan',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.total_revenue)}`,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': '=== PENGELUARAN ===',
+    'Periode': '',
+  }, {
+    'Laporan': 'Total Pengeluaran',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.total_expenses)}`,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': '=== LABA BERSIH ===',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.net_profit)}`,
+  }];
+
+  const expensesSheet = data.expenses.map(e => ({
+    'Deskripsi': e.description,
+    'Kategori': e.category,
+    'Jumlah': e.amount,
+    'Tanggal': e.date,
+  }));
+
+  exportMultipleSheets([
+    { name: 'Ringkasan Laba Rugi', data: summarySheet },
+    { name: 'Rincian Pengeluaran', data: expensesSheet },
+  ], getExportFileName('Laba_Rugi', storeName, dateRange));
+};
+
+// Export Dibatalkan (Cancelled) Tab
+export const exportSalesCancelledTab = (data: SalesExportData, storeName: string, dateRange: string) => {
+  const cancelledBookings = data.bookings.filter(b => b.status === 'BATAL');
+
+  const summarySheet = [{
+    'Laporan': 'Booking Dibatalkan',
+    'Periode': dateRange,
+    'Cabang': storeName,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': 'Total Dibatalkan',
+    'Periode': `${data.summary.cancelled_count} booking`,
+  }, {
+    'Laporan': 'Potensi Pendapatan Hilang',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.cancelled_revenue)}`,
+  }];
+
+  const cancelledSheet = cancelledBookings.map(b => ({
+    'No. Booking': b.bid,
+    'Nama Pelanggan': b.customer_name,
+    'Kamar': b.room_name,
+    'Tanggal': b.date,
+    'Durasi (jam)': b.duration,
+    'Harga': b.price + b.price_2,
+    'Metode Bayar': b.payment_method || '-',
+    'Status': 'BATAL',
+  }));
+
+  exportMultipleSheets([
+    { name: 'Ringkasan', data: summarySheet },
+    { name: 'Daftar Dibatalkan', data: cancelledSheet },
+  ], getExportFileName('Booking_Dibatalkan', storeName, dateRange));
+};
+
+// Export Item Tab
+export const exportSalesItemsTab = (data: SalesExportData, storeName: string, dateRange: string) => {
+  const roomRevenue = data.summary.total_revenue - data.summary.product_sales_revenue;
+
+  const summarySheet = [{
+    'Laporan': 'Penjualan Item',
+    'Periode': dateRange,
+    'Cabang': storeName,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': 'Penjualan Kamar',
+    'Periode': `${data.summary.total_booking} kamar`,
+  }, {
+    'Laporan': 'Pendapatan Kamar',
+    'Periode': `Rp ${formatCurrencyPlain(roomRevenue)}`,
+  }, {
+    'Laporan': '',
+    'Periode': '',
+  }, {
+    'Laporan': 'Penjualan Produk',
+    'Periode': `${data.summary.product_sales_count} item`,
+  }, {
+    'Laporan': 'Pendapatan Produk',
+    'Periode': `Rp ${formatCurrencyPlain(data.summary.product_sales_revenue)}`,
+  }];
+
+  const roomsSheet = Object.entries(data.groupedRooms).map(([name, d]) => ({
+    'Nama Kamar': name,
+    'Jumlah Booking': d.count,
+    'Total Durasi (jam)': d.hours.toFixed(1),
+    'Pendapatan': d.revenue,
+  }));
+
+  const productsSheet = Object.entries(data.groupedProducts).map(([name, d]) => ({
+    'Nama Produk': name,
+    'Qty Terjual': d.quantity,
+    'Pendapatan': d.subtotal,
+  }));
+
+  exportMultipleSheets([
+    { name: 'Ringkasan', data: summarySheet },
+    { name: 'Penjualan Kamar', data: roomsSheet },
+    { name: 'Penjualan Produk', data: productsSheet },
+  ], getExportFileName('Penjualan_Item', storeName, dateRange));
+};
+
+// Legacy export function (all data)
+export const exportSalesReport = (data: SalesExportData, storeName: string, dateRange: string) => {
+  const activeBookings = data.bookings.filter(b => b.status !== 'BATAL');
+  
+  const summarySheet = [{
+    'Ringkasan': 'Laporan Penjualan (Lengkap)',
     'Periode': dateRange,
     'Cabang': storeName,
     '': '',
@@ -114,20 +408,44 @@ export const exportSalesReport = (data: SalesExportData, storeName: string, date
     'Periode': `${data.summary.product_sales_count} item (Rp ${formatCurrencyPlain(data.summary.product_sales_revenue)})`,
   }];
 
-  const bookingsSheet = data.bookings.map(b => ({
-    'No. Booking': b.bid,
-    'Nama Pelanggan': b.customer_name,
-    'Kamar': b.room_name,
-    'Tanggal': b.date,
-    'Durasi (jam)': b.duration,
-    'Harga': b.price,
-    'Harga 2': b.price_2,
-    'Total': b.price + b.price_2,
-    'Metode Bayar 1': b.payment_method || '-',
-    'Metode Bayar 2': b.payment_method_2 || '-',
-    'Status': b.status || 'Aktif',
-    'Sumber': b.source,
-  }));
+  // Detail per BID dengan produk
+  const detailPerBidSheet: Record<string, unknown>[] = [];
+  activeBookings.forEach(b => {
+    detailPerBidSheet.push({
+      'No. Booking': b.bid,
+      'Nama Pelanggan': b.customer_name,
+      'Kamar': b.room_name,
+      'Tanggal': b.date,
+      'Durasi (jam)': b.duration,
+      'Sumber': b.source,
+      'Status': b.status || 'Aktif',
+      'Harga Kamar': b.price + b.price_2,
+      'Metode Bayar 1': b.payment_method || '-',
+      'Metode Bayar 2': b.payment_method_2 || '-',
+      'Produk': '-',
+      'Qty Produk': '-',
+      'Harga Produk': '-',
+    });
+    if (b.products && b.products.length > 0) {
+      b.products.forEach(p => {
+        detailPerBidSheet.push({
+          'No. Booking': b.bid,
+          'Nama Pelanggan': '',
+          'Kamar': '',
+          'Tanggal': '',
+          'Durasi (jam)': '',
+          'Sumber': '',
+          'Status': '',
+          'Harga Kamar': '',
+          'Metode Bayar 1': '',
+          'Metode Bayar 2': '',
+          'Produk': p.product_name,
+          'Qty Produk': p.quantity,
+          'Harga Produk': p.subtotal,
+        });
+      });
+    }
+  });
 
   const expensesSheet = data.expenses.map(e => ({
     'Deskripsi': e.description,
@@ -136,18 +454,11 @@ export const exportSalesReport = (data: SalesExportData, storeName: string, date
     'Tanggal': e.date,
   }));
 
-  const productsSheet = data.products.map(p => ({
-    'Nama Produk': p.product_name,
-    'Qty': p.quantity,
-    'Subtotal': p.subtotal,
-  }));
-
   exportMultipleSheets([
     { name: 'Ringkasan', data: summarySheet },
-    { name: 'Daftar Booking', data: bookingsSheet },
+    { name: 'Detail per BID', data: detailPerBidSheet },
     { name: 'Pengeluaran', data: expensesSheet },
-    { name: 'Penjualan Produk', data: productsSheet },
-  ], getExportFileName('Laporan_Penjualan', storeName, dateRange));
+  ], getExportFileName('Laporan_Penjualan_Lengkap', storeName, dateRange));
 };
 
 // Income/Expense Report Export
