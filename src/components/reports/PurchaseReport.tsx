@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { ShoppingCart, Package } from "lucide-react";
+import { ShoppingCart, Package, Download } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import { exportPurchaseReport, PurchaseExportData } from "@/utils/reportExport";
+import { toast } from "sonner";
 
 interface ProductSale {
   product_id: string;
@@ -136,6 +139,35 @@ export default function PurchaseReport() {
     }).format(amount);
   };
 
+  const handleExport = () => {
+    if (!currentStore) return;
+    
+    const exportData: PurchaseExportData = {
+      transactions: transactions.map(t => ({
+        product_name: t.product_name,
+        quantity: t.quantity,
+        product_price: t.product_price,
+        subtotal: t.subtotal,
+        customer_name: t.customer_name,
+        date: t.date,
+      })),
+      productSales: productSales.map(p => ({
+        product_name: p.product_name,
+        total_quantity: p.total_quantity,
+        total_revenue: p.total_revenue,
+      })),
+      summary: {
+        total_transactions: stats.totalTransactions,
+        total_products_sold: stats.totalProductsSold,
+        total_revenue: stats.totalRevenue,
+      },
+    };
+
+    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+    exportPurchaseReport(exportData, currentStore.name, dateRangeStr);
+    toast.success("Laporan berhasil di-export!");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -145,12 +177,23 @@ export default function PurchaseReport() {
             {getDateRangeDisplay(timeRange, customDateRange)}
           </p>
         </div>
-        <ReportDateFilter
-          timeRange={timeRange}
-          onTimeRangeChange={setTimeRange}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={setCustomDateRange}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={loading || transactions.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+        </div>
       </div>
 
       {loading ? (

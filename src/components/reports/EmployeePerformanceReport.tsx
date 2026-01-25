@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { Users, CheckCircle, Award } from "lucide-react";
+import { Users, CheckCircle, Award, Download } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import { exportEmployeePerformanceReport, EmployeePerformanceExportData } from "@/utils/reportExport";
+import { toast } from "sonner";
 
 interface EmployeePerformance {
   user_id: string;
@@ -143,6 +146,32 @@ export default function EmployeePerformanceReport() {
     }
   };
 
+  const handleExport = () => {
+    if (!currentStore) return;
+    
+    const exportData: EmployeePerformanceExportData = {
+      performances: performances.map((p, idx) => ({
+        rank: idx + 1,
+        user_name: p.user_name,
+        rooms_cleaned: p.rooms_cleaned,
+        rooms_list: p.rooms_list,
+      })),
+      logs: logs.map(l => ({
+        room_name: l.room_name,
+        user_name: l.user_name,
+        date: l.date,
+      })),
+      summary: {
+        total_rooms_cleaned: stats.totalRoomsCleaned,
+        total_employees: stats.totalEmployees,
+      },
+    };
+
+    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+    exportEmployeePerformanceReport(exportData, currentStore.name, dateRangeStr);
+    toast.success("Laporan berhasil di-export!");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -152,12 +181,23 @@ export default function EmployeePerformanceReport() {
             Berdasarkan kamar yang di-set Ready • {getDateRangeDisplay(timeRange, customDateRange)}
           </p>
         </div>
-        <ReportDateFilter
-          timeRange={timeRange}
-          onTimeRangeChange={setTimeRange}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={setCustomDateRange}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={loading || performances.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+        </div>
       </div>
 
       {loading ? (
