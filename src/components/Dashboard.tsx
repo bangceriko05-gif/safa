@@ -34,6 +34,7 @@ import BookingRequestsManagement from "./BookingRequestsManagement";
 import ListBooking from "./ListBooking";
 import DepositFormModal from "./deposit/DepositFormModal";
 import DepositManagement from "./deposit/DepositManagement";
+import StoreInactiveNotice from "./StoreInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
@@ -41,7 +42,7 @@ import { format, differenceInDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 export default function Dashboard() {
-  const { currentStore, isLoading: storeLoading } = useStore();
+  const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName } = useStore();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -338,6 +339,16 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Show inactive store notice
+  if (isStoreInactive) {
+    return (
+      <StoreInactiveNotice 
+        storeName={inactiveStoreName || undefined} 
+        onLogout={handleLogout} 
+      />
     );
   }
 

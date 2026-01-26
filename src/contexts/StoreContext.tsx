@@ -18,6 +18,8 @@ interface StoreContextType {
   setCurrentStore: (store: Store) => void;
   isLoading: boolean;
   userRole: string | null;
+  isStoreInactive: boolean;
+  inactiveStoreName: string | null;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -30,6 +32,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [userStores, setUserStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isStoreInactive, setIsStoreInactive] = useState(false);
+  const [inactiveStoreName, setInactiveStoreName] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -71,7 +75,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       let stores: Store[] = [];
 
       if (isSuperAdmin) {
-        // Super admin can access all stores
+        // Super admin can access all active stores
         const { data, error } = await supabase
           .from("stores")
           .select("*")
@@ -81,7 +85,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
         stores = data || [];
       } else {
-        // Regular users can only access stores they have access to
+        // Regular users - fetch all stores they have access to (including inactive)
         const { data, error } = await supabase
           .from("user_store_access")
           .select(`
@@ -93,12 +97,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         if (error) throw error;
 
-        stores = data
+        const allUserStores = data
           ?.map((access: any) => access.stores)
-          .filter((store: any) => store && store.is_active) || [];
+          .filter((store: any) => store) || [];
+        
+        // Only show active stores in the list
+        stores = allUserStores.filter((store: any) => store.is_active);
+        
+        // Check if user's saved store is inactive
+        const savedStoreId = localStorage.getItem("current_store_id");
+        if (savedStoreId) {
+          const savedStore = allUserStores.find((s: Store) => s.id === savedStoreId);
+          if (savedStore && !savedStore.is_active) {
+            // The user's current store is inactive - show the notice
+            setIsStoreInactive(true);
+            setInactiveStoreName(savedStore.name);
+            setIsLoading(false);
+            return;
+          }
+        }
       }
 
       setUserStores(stores);
+      setIsStoreInactive(false);
+      setInactiveStoreName(null);
 
       // Set current store from localStorage or first available store
       const savedStoreId = localStorage.getItem("current_store_id");
@@ -119,12 +141,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const setCurrentStore = (store: Store) => {
+    // Check if store is active
+    if (!store.is_active) {
+      setIsStoreInactive(true);
+      setInactiveStoreName(store.name);
+      return;
+    }
+    
     setCurrentStoreState(store);
+    setIsStoreInactive(false);
+    setInactiveStoreName(null);
     localStorage.setItem("current_store_id", store.id);
   };
 
   return (
-    <StoreContext.Provider value={{ currentStore, userStores, setCurrentStore, isLoading, userRole }}>
+    <StoreContext.Provider value={{ 
+      currentStore, 
+      userStores, 
+      setCurrentStore, 
+      isLoading, 
+      userRole,
+      isStoreInactive,
+      inactiveStoreName
+    }}>
       {children}
     </StoreContext.Provider>
   );

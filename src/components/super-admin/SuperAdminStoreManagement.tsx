@@ -260,10 +260,20 @@ export default function SuperAdminStoreManagement() {
   };
 
   const handleToggleActive = async (store: Store) => {
+    const newStatus = !store.is_active;
+    const actionText = newStatus ? 'mengaktifkan' : 'menonaktifkan (jatuh tempo pembayaran)';
+    
+    if (!newStatus) {
+      // Confirm before deactivating
+      if (!confirm(`Yakin ingin menonaktifkan outlet "${store.name}"?\n\nSemua pengguna tidak akan dapat mengakses PMS di outlet ini dan akan melihat pesan jatuh tempo pembayaran.`)) {
+        return;
+      }
+    }
+    
     try {
       const { error } = await supabase
         .from("stores")
-        .update({ is_active: !store.is_active })
+        .update({ is_active: newStatus })
         .eq("id", store.id);
 
       if (error) throw error;
@@ -272,12 +282,13 @@ export default function SuperAdminStoreManagement() {
         actionType: 'updated',
         entityType: 'Outlet',
         entityId: store.id,
-        description: `[Super Admin] ${!store.is_active ? 'Mengaktifkan' : 'Menonaktifkan'} outlet ${store.name}`,
+        description: `[Super Admin] ${newStatus ? 'Mengaktifkan' : 'Menonaktifkan (jatuh tempo)'} outlet ${store.name}`,
       });
 
-      toast.success(`Outlet ${!store.is_active ? 'diaktifkan' : 'dinonaktifkan'}`);
+      toast.success(`Outlet berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`);
       fetchStores();
     } catch (error: any) {
+      console.error("Error toggling store status:", error);
       toast.error(error.message || "Gagal mengubah status outlet");
     }
   };
