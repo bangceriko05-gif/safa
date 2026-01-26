@@ -189,7 +189,7 @@ export default function SelectStore() {
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                a.n. ANKA Management
+                A/N. FAUZAN ASSIDDIQI
               </p>
             </div>
 
@@ -300,7 +300,7 @@ export default function SelectStore() {
                     >
                       {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                     </Button>
-                    <span className="text-xs text-muted-foreground">a.n. ANKA Management</span>
+                    <span className="text-xs text-muted-foreground">A/N. FAUZAN ASSIDDIQI</span>
                   </div>
                 </div>
               </div>
