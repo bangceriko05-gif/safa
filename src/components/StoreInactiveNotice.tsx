@@ -81,7 +81,7 @@ export default function StoreInactiveNotice({ storeName, onLogout }: StoreInacti
             </div>
 
             <p className="text-xs text-center text-muted-foreground">
-              a.n. FAUZAN ASSIDDIQI
+              A/N. FAUZAN ASSIDDIQI
             </p>
           </div>
 
