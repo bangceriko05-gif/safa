@@ -1275,10 +1275,15 @@ export type Database = {
             Args: { p_request_id: string; p_status?: string; p_user_id: string }
             Returns: string
           }
-      generate_booking_bid: {
-        Args: { booking_date: string; p_store_id: string }
-        Returns: string
-      }
+      generate_booking_bid:
+        | {
+            Args: { booking_date: string; p_store_id: string }
+            Returns: string
+          }
+        | {
+            Args: { booking_date: string; is_ota?: boolean; p_store_id: string }
+            Returns: string
+          }
       generate_booking_request_bid: {
         Args: { p_store_id: string; request_date: string }
         Returns: string
