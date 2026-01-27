@@ -111,8 +111,7 @@ export default function SalesReport() {
           status, variant_id,
           checked_in_at, checked_in_by, checked_out_at, checked_out_by,
           discount_type, discount_value, discount_applies_to,
-          rooms (name, category_id, room_categories (name)),
-          room_variants (variant_name)
+          rooms (name, category_id, room_categories (name))
         `)
         .eq("store_id", currentStore.id)
         .gte("date", startDateStr)
@@ -120,6 +119,25 @@ export default function SalesReport() {
         .order("date", { ascending: false });
 
       if (bookingsError) throw bookingsError;
+
+      // Fetch variant names separately for bookings with variant_id
+      const variantIds = (bookingsData || [])
+        .map((b: any) => b.variant_id)
+        .filter((id: string | null) => id !== null);
+      
+      let variantNameMap: { [key: string]: string } = {};
+      if (variantIds.length > 0) {
+        const { data: variants } = await supabase
+          .from("room_variants")
+          .select("id, variant_name")
+          .in("id", variantIds);
+        
+        if (variants) {
+          variants.forEach((v: any) => {
+            variantNameMap[v.id] = v.variant_name;
+          });
+        }
+      }
 
       // Fetch user names for checked_in_by and checked_out_by
       const userIds = new Set<string>();
@@ -181,7 +199,7 @@ export default function SalesReport() {
         end_time: b.end_time || "",
         room_name: b.rooms?.name || "Unknown",
         room_category: b.rooms?.room_categories?.name || "-",
-        variant_name: b.room_variants?.variant_name || "-",
+        variant_name: b.variant_id ? variantNameMap[b.variant_id] || "-" : "-",
         status: b.status || "",
         variant_id: b.variant_id,
         checked_in_at: b.checked_in_at,
