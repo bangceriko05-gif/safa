@@ -12,29 +12,37 @@ import { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { 
-  SalesExportData, 
-  exportSalesDetailsTab, 
-  exportSalesSourceTab, 
-  exportSalesProfitLossTab,
-  exportSalesCancelledTab,
-  exportSalesItemsTab,
-  SalesTabType 
-} from "@/utils/reportExport";
+import { SalesExportData } from "@/utils/reportExport";
 import { toast } from "sonner";
+import * as XLSX from 'xlsx';
+
 interface BookingData {
   id: string;
   bid: string;
   customer_name: string;
+  phone: string;
   duration: number;
   price: number;
   price_2: number;
   payment_method: string;
   payment_method_2: string;
   date: string;
+  start_time: string;
+  end_time: string;
   room_name: string;
+  room_category: string;
+  variant_name: string;
   status: string;
   variant_id: string | null;
+  checked_in_at: string | null;
+  checked_in_by: string | null;
+  checked_out_at: string | null;
+  checked_out_by: string | null;
+  discount_type: string | null;
+  discount_value: number | null;
+  discount_applies_to: string | null;
+  checked_in_by_name?: string;
+  checked_out_by_name?: string;
 }
 
 interface BookingProductData {
@@ -98,9 +106,13 @@ export default function SalesReport() {
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
-          id, bid, customer_name, duration, price, price_2, 
-          payment_method, payment_method_2, date, status, variant_id,
-          rooms (name)
+          id, bid, customer_name, phone, duration, price, price_2, 
+          payment_method, payment_method_2, date, start_time, end_time,
+          status, variant_id,
+          checked_in_at, checked_in_by, checked_out_at, checked_out_by,
+          discount_type, discount_value, discount_applies_to,
+          rooms (name, category_id, room_categories (name)),
+          room_variants (variant_name)
         `)
         .eq("store_id", currentStore.id)
         .gte("date", startDateStr)
@@ -108,6 +120,27 @@ export default function SalesReport() {
         .order("date", { ascending: false });
 
       if (bookingsError) throw bookingsError;
+
+      // Fetch user names for checked_in_by and checked_out_by
+      const userIds = new Set<string>();
+      (bookingsData || []).forEach((b: any) => {
+        if (b.checked_in_by) userIds.add(b.checked_in_by);
+        if (b.checked_out_by) userIds.add(b.checked_out_by);
+      });
+
+      let userNameMap: { [key: string]: string } = {};
+      if (userIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", Array.from(userIds));
+        
+        if (profiles) {
+          profiles.forEach((p: any) => {
+            userNameMap[p.id] = p.name;
+          });
+        }
+      }
 
       // Fetch booking products
       const bookingIds = (bookingsData || []).map((b: any) => b.id);
@@ -137,15 +170,29 @@ export default function SalesReport() {
         id: b.id,
         bid: b.bid || "-",
         customer_name: b.customer_name,
+        phone: b.phone || "-",
         duration: Number(b.duration) || 0,
         price: Number(b.price) || 0,
         price_2: Number(b.price_2) || 0,
         payment_method: b.payment_method || "",
         payment_method_2: b.payment_method_2 || "",
         date: b.date,
+        start_time: b.start_time || "",
+        end_time: b.end_time || "",
         room_name: b.rooms?.name || "Unknown",
+        room_category: b.rooms?.room_categories?.name || "-",
+        variant_name: b.room_variants?.variant_name || "-",
         status: b.status || "",
         variant_id: b.variant_id,
+        checked_in_at: b.checked_in_at,
+        checked_in_by: b.checked_in_by,
+        checked_out_at: b.checked_out_at,
+        checked_out_by: b.checked_out_by,
+        discount_type: b.discount_type,
+        discount_value: b.discount_value,
+        discount_applies_to: b.discount_applies_to,
+        checked_in_by_name: b.checked_in_by ? userNameMap[b.checked_in_by] || "-" : "-",
+        checked_out_by_name: b.checked_out_by ? userNameMap[b.checked_out_by] || "-" : "-",
       }));
 
       const mappedProducts: BookingProductData[] = productsData.map((p: any) => ({
@@ -318,32 +365,73 @@ export default function SalesReport() {
     };
   };
 
-  const handleExport = () => {
+  const handleExportBookings = () => {
     if (!currentStore) return;
     
-    const exportData = getExportData();
     const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
     
-    // Export based on active tab
-    switch (activeTab) {
-      case 'details':
-        exportSalesDetailsTab(exportData, currentStore.name, dateRangeStr);
-        break;
-      case 'source':
-        exportSalesSourceTab(exportData, currentStore.name, dateRangeStr);
-        break;
-      case 'profit-loss':
-        exportSalesProfitLossTab(exportData, currentStore.name, dateRangeStr);
-        break;
-      case 'cancelled':
-        exportSalesCancelledTab(exportData, currentStore.name, dateRangeStr);
-        break;
-      case 'items':
-        exportSalesItemsTab(exportData, currentStore.name, dateRangeStr);
-        break;
-    }
+    // Prepare export data with all requested fields
+    const exportData = activeBookings.map(b => {
+      // Calculate discount
+      let discountDisplay = "-";
+      if (b.discount_value && b.discount_value > 0) {
+        if (b.discount_type === "percent") {
+          discountDisplay = `${b.discount_value}%`;
+        } else {
+          discountDisplay = `Rp ${new Intl.NumberFormat("id-ID").format(b.discount_value)}`;
+        }
+        if (b.discount_applies_to) {
+          discountDisplay += ` (${b.discount_applies_to})`;
+        }
+      }
+
+      // Calculate final total after discount
+      const totalBeforeDiscount = b.price + b.price_2;
+      let totalAfterDiscount = totalBeforeDiscount;
+      if (b.discount_value && b.discount_value > 0) {
+        if (b.discount_type === "percent") {
+          totalAfterDiscount = totalBeforeDiscount - (totalBeforeDiscount * b.discount_value / 100);
+        } else {
+          totalAfterDiscount = totalBeforeDiscount - b.discount_value;
+        }
+      }
+
+      return {
+        'BID': b.bid,
+        'Tanggal Booking': format(new Date(b.date), "dd/MM/yyyy", { locale: localeId }),
+        'Jam Booking': b.start_time ? format(new Date(`2000-01-01T${b.start_time}`), "HH:mm") : "-",
+        'Tanggal Check In': b.checked_in_at ? format(new Date(b.checked_in_at), "dd/MM/yyyy", { locale: localeId }) : "-",
+        'Jam Check In': b.checked_in_at ? format(new Date(b.checked_in_at), "HH:mm", { locale: localeId }) : "-",
+        'Tanggal Check Out': b.checked_out_at ? format(new Date(b.checked_out_at), "dd/MM/yyyy", { locale: localeId }) : "-",
+        'Jam Check Out': b.checked_out_at ? format(new Date(b.checked_out_at), "HH:mm", { locale: localeId }) : "-",
+        'Durasi Menginap (Jam)': b.duration,
+        'Check In Oleh': b.checked_in_by_name || "-",
+        'Check Out Oleh': b.checked_out_by_name || "-",
+        'Nama Tamu': b.customer_name,
+        'Nomor HP': b.phone || "-",
+        'Sumber Booking': b.variant_id ? 'Walk-in' : 'OTA',
+        'Tipe Kamar': b.room_category || "-",
+        'Nama Kamar': b.room_name,
+        'Varian Kamar': b.variant_name || "-",
+        'Metode Pembayaran 1': b.payment_method || "-",
+        'Total Pembayaran 1': b.price,
+        'Metode Pembayaran 2': b.payment_method_2 || "-",
+        'Total Pembayaran 2': b.price_2 || 0,
+        'Diskon': discountDisplay,
+        'Total Setelah Diskon': totalAfterDiscount,
+      };
+    });
+
+    // Export to Excel
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Daftar Booking');
     
-    toast.success(`Laporan ${getTabLabel(activeTab)} berhasil di-export!`);
+    const sanitizedStore = currentStore.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const timestamp = format(new Date(), 'yyyyMMdd_HHmm');
+    XLSX.writeFile(workbook, `Daftar_Booking_${sanitizedStore}_${dateRangeStr}_${timestamp}.xlsx`);
+    
+    toast.success("Daftar booking berhasil di-export!");
   };
 
   const getTabLabel = (tab: SalesTab): string => {
@@ -426,39 +514,29 @@ export default function SalesReport() {
 
           {/* Tabs for different reports */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
-              <TabsList className="grid w-full sm:w-auto grid-cols-5">
-                <TabsTrigger value="details" className="text-xs sm:text-sm">
-                  <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
-                  Rincian
-                </TabsTrigger>
-                <TabsTrigger value="source" className="text-xs sm:text-sm">
-                  <MapPin className="h-4 w-4 mr-1 hidden sm:inline" />
-                  Sumber
-                </TabsTrigger>
-                <TabsTrigger value="profit-loss" className="text-xs sm:text-sm">
-                  <TrendingDown className="h-4 w-4 mr-1 hidden sm:inline" />
-                  Laba/Rugi
-                </TabsTrigger>
-                <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
-                  <XCircle className="h-4 w-4 mr-1 hidden sm:inline" />
-                  Dibatalkan
-                </TabsTrigger>
-                <TabsTrigger value="items" className="text-xs sm:text-sm">
-                  <ShoppingBag className="h-4 w-4 mr-1 hidden sm:inline" />
-                  Item
-                </TabsTrigger>
-              </TabsList>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={loading || bookings.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export {getTabLabel(activeTab)}
-              </Button>
-            </div>
+            <TabsList className="grid w-full sm:w-auto grid-cols-5 mb-2">
+              <TabsTrigger value="details" className="text-xs sm:text-sm">
+                <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
+                Rincian
+              </TabsTrigger>
+              <TabsTrigger value="source" className="text-xs sm:text-sm">
+                <MapPin className="h-4 w-4 mr-1 hidden sm:inline" />
+                Sumber
+              </TabsTrigger>
+              <TabsTrigger value="profit-loss" className="text-xs sm:text-sm">
+                <TrendingDown className="h-4 w-4 mr-1 hidden sm:inline" />
+                Laba/Rugi
+              </TabsTrigger>
+              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
+                <XCircle className="h-4 w-4 mr-1 hidden sm:inline" />
+                Dibatalkan
+              </TabsTrigger>
+              <TabsTrigger value="items" className="text-xs sm:text-sm">
+                <ShoppingBag className="h-4 w-4 mr-1 hidden sm:inline" />
+                Item
+              </TabsTrigger>
+            </TabsList>
+
 
             {/* Rincian Penjualan */}
             <TabsContent value="details" className="space-y-4">
@@ -483,8 +561,17 @@ export default function SalesReport() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Daftar Booking</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportBookings}
+                    disabled={loading || activeBookings.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   {activeBookings.length === 0 ? (
