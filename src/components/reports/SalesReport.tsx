@@ -43,6 +43,8 @@ interface BookingData {
   discount_applies_to: string | null;
   checked_in_by_name?: string;
   checked_out_by_name?: string;
+  booking_duration_type?: string;
+  booking_duration_value?: number;
 }
 
 interface BookingProductData {
@@ -120,21 +122,25 @@ export default function SalesReport() {
 
       if (bookingsError) throw bookingsError;
 
-      // Fetch variant names separately for bookings with variant_id
+      // Fetch variant data separately for bookings with variant_id
       const variantIds = (bookingsData || [])
         .map((b: any) => b.variant_id)
         .filter((id: string | null) => id !== null);
       
-      let variantNameMap: { [key: string]: string } = {};
+      let variantDataMap: { [key: string]: { variant_name: string; booking_duration_type: string | null; booking_duration_value: number | null } } = {};
       if (variantIds.length > 0) {
         const { data: variants } = await supabase
           .from("room_variants")
-          .select("id, variant_name")
+          .select("id, variant_name, booking_duration_type, booking_duration_value")
           .in("id", variantIds);
         
         if (variants) {
           variants.forEach((v: any) => {
-            variantNameMap[v.id] = v.variant_name;
+            variantDataMap[v.id] = {
+              variant_name: v.variant_name,
+              booking_duration_type: v.booking_duration_type,
+              booking_duration_value: v.booking_duration_value,
+            };
           });
         }
       }
@@ -184,34 +190,39 @@ export default function SalesReport() {
 
       if (expensesError) throw expensesError;
 
-      const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
-        id: b.id,
-        bid: b.bid || "-",
-        customer_name: b.customer_name,
-        phone: b.phone || "-",
-        duration: Number(b.duration) || 0,
-        price: Number(b.price) || 0,
-        price_2: Number(b.price_2) || 0,
-        payment_method: b.payment_method || "",
-        payment_method_2: b.payment_method_2 || "",
-        date: b.date,
-        start_time: b.start_time || "",
-        end_time: b.end_time || "",
-        room_name: b.rooms?.name || "Unknown",
-        room_category: b.rooms?.room_categories?.name || "-",
-        variant_name: b.variant_id ? variantNameMap[b.variant_id] || "-" : "-",
-        status: b.status || "",
-        variant_id: b.variant_id,
-        checked_in_at: b.checked_in_at,
-        checked_in_by: b.checked_in_by,
-        checked_out_at: b.checked_out_at,
-        checked_out_by: b.checked_out_by,
-        discount_type: b.discount_type,
-        discount_value: b.discount_value,
-        discount_applies_to: b.discount_applies_to,
-        checked_in_by_name: b.checked_in_by ? userNameMap[b.checked_in_by] || "-" : "-",
-        checked_out_by_name: b.checked_out_by ? userNameMap[b.checked_out_by] || "-" : "-",
-      }));
+      const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => {
+        const variantData = b.variant_id ? variantDataMap[b.variant_id] : null;
+        return {
+          id: b.id,
+          bid: b.bid || "-",
+          customer_name: b.customer_name,
+          phone: b.phone || "-",
+          duration: Number(b.duration) || 0,
+          price: Number(b.price) || 0,
+          price_2: Number(b.price_2) || 0,
+          payment_method: b.payment_method || "",
+          payment_method_2: b.payment_method_2 || "",
+          date: b.date,
+          start_time: b.start_time || "",
+          end_time: b.end_time || "",
+          room_name: b.rooms?.name || "Unknown",
+          room_category: b.rooms?.room_categories?.name || "-",
+          variant_name: variantData?.variant_name || "-",
+          status: b.status || "",
+          variant_id: b.variant_id,
+          checked_in_at: b.checked_in_at,
+          checked_in_by: b.checked_in_by,
+          checked_out_at: b.checked_out_at,
+          checked_out_by: b.checked_out_by,
+          discount_type: b.discount_type,
+          discount_value: b.discount_value,
+          discount_applies_to: b.discount_applies_to,
+          checked_in_by_name: b.checked_in_by ? userNameMap[b.checked_in_by] || "-" : "-",
+          checked_out_by_name: b.checked_out_by ? userNameMap[b.checked_out_by] || "-" : "-",
+          booking_duration_type: variantData?.booking_duration_type || "hours",
+          booking_duration_value: variantData?.booking_duration_value || b.duration,
+        };
+      });
 
       const mappedProducts: BookingProductData[] = productsData.map((p: any) => ({
         id: p.id,
@@ -292,6 +303,37 @@ export default function SalesReport() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatDuration = (booking: BookingData) => {
+    const type = booking.booking_duration_type || "hours";
+    const value = booking.booking_duration_value || booking.duration;
+    
+    switch (type) {
+      case "months":
+        return `${value} bulan`;
+      case "weeks":
+        return `${value} minggu`;
+      case "days":
+        return `${value} hari`;
+      case "hours":
+      default:
+        return `${value} jam`;
+    }
+  };
+
+  const getDurationLabel = (type: string) => {
+    switch (type) {
+      case "months":
+        return "Bulan";
+      case "weeks":
+        return "Minggu";
+      case "days":
+        return "Hari";
+      case "hours":
+      default:
+        return "Jam";
+    }
   };
 
   const activeBookings = bookings.filter(b => b.status !== "BATAL");
@@ -422,7 +464,8 @@ export default function SalesReport() {
         'Jam Check In': b.checked_in_at ? format(new Date(b.checked_in_at), "HH:mm", { locale: localeId }) : "-",
         'Tanggal Check Out': b.checked_out_at ? format(new Date(b.checked_out_at), "dd/MM/yyyy", { locale: localeId }) : "-",
         'Jam Check Out': b.checked_out_at ? format(new Date(b.checked_out_at), "HH:mm", { locale: localeId }) : "-",
-        'Durasi Menginap (Jam)': b.duration,
+        'Durasi Menginap': b.booking_duration_value || b.duration,
+        'Satuan Durasi': getDurationLabel(b.booking_duration_type || "hours"),
         'Check In Oleh': b.checked_in_by_name || "-",
         'Check Out Oleh': b.checked_out_by_name || "-",
         'Nama Tamu': b.customer_name,
@@ -606,7 +649,7 @@ export default function SalesReport() {
                               </Badge>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {booking.bid} • {booking.room_name} • {booking.duration} jam
+                              {booking.bid} • {booking.room_name} • {formatDuration(booking)}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}
@@ -819,7 +862,7 @@ export default function SalesReport() {
                               <Badge variant="destructive" className="text-xs">BATAL</Badge>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {booking.bid} • {booking.room_name} • {booking.duration} jam
+                              {booking.bid} • {booking.room_name} • {formatDuration(booking)}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}
