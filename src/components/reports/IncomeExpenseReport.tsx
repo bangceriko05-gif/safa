@@ -3,37 +3,46 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { TrendingUp, TrendingDown, DollarSign, Download } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
-import { exportIncomeExpenseReport, IncomeExpenseExportData } from "@/utils/reportExport";
+import { 
+  exportToExcel, 
+  getExportFileName,
+  formatCurrencyPlain
+} from "@/utils/reportExport";
 import { toast } from "sonner";
 
 interface ExpenseData {
   id: string;
+  bid: string;
   description: string;
   amount: number;
   category: string;
   date: string;
+  created_at: string;
   creator_name: string;
 }
 
 interface IncomeData {
   id: string;
+  bid: string;
   description: string;
   amount: number;
   customer_name: string;
   payment_method: string;
   date: string;
+  created_at: string;
   creator_name: string;
+  products: { product_name: string; quantity: number; subtotal: number }[];
 }
 
 export default function IncomeExpenseReport() {
   const { currentStore } = useStore();
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
@@ -102,23 +111,52 @@ export default function IncomeExpenseReport() {
         }
       }
 
+      // Fetch income products for all incomes
+      const incomeIds = incomesData.map(i => i.id);
+      let incomeProductsMap: Record<string, { product_name: string; quantity: number; subtotal: number }[]> = {};
+      
+      if (incomeIds.length > 0) {
+        const { data: incomeProducts } = await supabase
+          .from("income_products")
+          .select("income_id, product_name, quantity, subtotal")
+          .in("income_id", incomeIds);
+        
+        if (incomeProducts) {
+          incomeProducts.forEach(ip => {
+            if (!incomeProductsMap[ip.income_id]) {
+              incomeProductsMap[ip.income_id] = [];
+            }
+            incomeProductsMap[ip.income_id].push({
+              product_name: ip.product_name,
+              quantity: ip.quantity,
+              subtotal: ip.subtotal,
+            });
+          });
+        }
+      }
+
       const mappedExpenses: ExpenseData[] = expensesData.map((e) => ({
         id: e.id,
+        bid: e.bid || '-',
         description: e.description,
         amount: Number(e.amount) || 0,
         category: e.category || "Lainnya",
         date: e.date,
+        created_at: e.created_at,
         creator_name: profilesById[e.created_by] || "Unknown",
       }));
 
       const mappedIncomes: IncomeData[] = incomesData.map((i) => ({
         id: i.id,
+        bid: i.bid || '-',
         description: i.description || "",
         amount: Number(i.amount) || 0,
         customer_name: i.customer_name || "",
         payment_method: i.payment_method || "Lainnya",
         date: i.date,
+        created_at: i.created_at,
         creator_name: profilesById[i.created_by] || "Unknown",
+        products: incomeProductsMap[i.id] || [],
       }));
 
       // Calculate stats
@@ -161,37 +199,58 @@ export default function IncomeExpenseReport() {
     }).format(amount);
   };
 
-  const handleExport = () => {
-    if (!currentStore) return;
+  const handleExportIncomeDetail = () => {
+    if (!currentStore || incomes.length === 0) return;
     
-    const exportData: IncomeExpenseExportData = {
-      incomes: incomes.map(i => ({
-        customer_name: i.customer_name,
-        description: i.description,
-        amount: i.amount,
-        payment_method: i.payment_method,
-        date: i.date,
-        creator_name: i.creator_name,
-      })),
-      expenses: expenses.map(e => ({
-        description: e.description,
-        category: e.category,
-        amount: e.amount,
-        date: e.date,
-        creator_name: e.creator_name,
-      })),
-      summary: {
-        total_incomes: stats.totalIncomes,
-        total_expenses: stats.totalExpenses,
-        net_profit: stats.netProfit,
-        expense_categories: stats.expenseCategories,
-        income_payment_methods: stats.incomePaymentMethods,
-      },
-    };
-
     const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
-    exportIncomeExpenseReport(exportData, currentStore.name, dateRangeStr);
-    toast.success("Laporan berhasil di-export!");
+    
+    // Export pemasukan detail: BID, jam & tanggal pembuatan, nama pelanggan, metode bayar, jumlah, produk, deskripsi
+    const incomeDetailData: Record<string, unknown>[] = [];
+    
+    incomes.forEach(income => {
+      const createdAtDate = new Date(income.created_at);
+      const productsText = income.products.length > 0 
+        ? income.products.map(p => `${p.product_name} (${p.quantity}x Rp ${formatCurrencyPlain(p.subtotal)})`).join(', ')
+        : '-';
+      
+      incomeDetailData.push({
+        'BID': income.bid,
+        'Tanggal Dibuat': format(createdAtDate, 'dd/MM/yyyy', { locale: localeId }),
+        'Jam Dibuat': format(createdAtDate, 'HH:mm', { locale: localeId }),
+        'Nama Pelanggan': income.customer_name || '-',
+        'Metode Bayar': income.payment_method || '-',
+        'Jumlah': income.amount,
+        'Produk': productsText,
+        'Deskripsi': income.description || '-',
+      });
+    });
+    
+    exportToExcel(
+      incomeDetailData, 
+      'Pemasukan Detail', 
+      getExportFileName('Pemasukan_Detail', currentStore.name, dateRangeStr)
+    );
+    toast.success("Export pemasukan detail berhasil!");
+  };
+
+  const handleExportExpense = () => {
+    if (!currentStore || expenses.length === 0) return;
+    
+    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+    
+    // Export pengeluaran: deskripsi, jumlah, kategori
+    const expenseData = expenses.map(expense => ({
+      'Deskripsi': expense.description,
+      'Jumlah': expense.amount,
+      'Kategori': expense.category,
+    }));
+    
+    exportToExcel(
+      expenseData, 
+      'Pengeluaran', 
+      getExportFileName('Pengeluaran', currentStore.name, dateRangeStr)
+    );
+    toast.success("Export pengeluaran berhasil!");
   };
 
   return (
@@ -204,15 +263,6 @@ export default function IncomeExpenseReport() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={loading || (incomes.length === 0 && expenses.length === 0)}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
           <ReportDateFilter
             timeRange={timeRange}
             onTimeRangeChange={setTimeRange}
@@ -295,8 +345,17 @@ export default function IncomeExpenseReport() {
 
             {/* Income by Payment Method */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Pemasukan per Metode Bayar</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportIncomeDetail}
+                  disabled={loading || incomes.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Pemasukan
+                </Button>
               </CardHeader>
               <CardContent>
                 {stats.incomePaymentMethods.length === 0 ? (
@@ -318,8 +377,17 @@ export default function IncomeExpenseReport() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* Expense List */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Daftar Pengeluaran</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportExpense}
+                  disabled={loading || expenses.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Pengeluaran
+                </Button>
               </CardHeader>
               <CardContent>
                 {expenses.length === 0 ? (
