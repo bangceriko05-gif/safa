@@ -306,6 +306,16 @@ export default function SalesReport() {
   };
 
   const formatDuration = (booking: BookingData) => {
+    // OTA bookings (variant_id is null) always use days
+    const isOta = booking.variant_id === null;
+    // Oak Hotel (store slug) always uses days for all bookings
+    const isOakHotel = currentStore?.slug === "oak-hotel";
+    
+    if (isOta || isOakHotel) {
+      const value = booking.booking_duration_value || booking.duration;
+      return `${value} hari`;
+    }
+    
     const type = booking.booking_duration_type || "hours";
     const value = booking.booking_duration_value || booking.duration;
     
@@ -322,7 +332,17 @@ export default function SalesReport() {
     }
   };
 
-  const getDurationLabel = (type: string) => {
+  const getDurationLabel = (booking: BookingData) => {
+    // OTA bookings (variant_id is null) always use days
+    const isOta = booking.variant_id === null;
+    // Oak Hotel (store slug) always uses days for all bookings
+    const isOakHotel = currentStore?.slug === "oak-hotel";
+    
+    if (isOta || isOakHotel) {
+      return "Hari";
+    }
+    
+    const type = booking.booking_duration_type || "hours";
     switch (type) {
       case "months":
         return "Bulan";
@@ -335,6 +355,7 @@ export default function SalesReport() {
         return "Jam";
     }
   };
+
 
   const activeBookings = bookings.filter(b => b.status !== "BATAL");
   const cancelledBookings = bookings.filter(b => b.status === "BATAL");
@@ -465,7 +486,7 @@ export default function SalesReport() {
         'Tanggal Check Out': b.checked_out_at ? format(new Date(b.checked_out_at), "dd/MM/yyyy", { locale: localeId }) : "-",
         'Jam Check Out': b.checked_out_at ? format(new Date(b.checked_out_at), "HH:mm", { locale: localeId }) : "-",
         'Durasi Menginap': b.booking_duration_value || b.duration,
-        'Satuan Durasi': getDurationLabel(b.booking_duration_type || "hours"),
+        'Satuan Durasi': getDurationLabel(b),
         'Check In Oleh': b.checked_in_by_name || "-",
         'Check Out Oleh': b.checked_out_by_name || "-",
         'Nama Tamu': b.customer_name,

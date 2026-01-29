@@ -11,6 +11,7 @@ import { logActivity } from "@/utils/activityLogger";
 interface StoreData {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   location: string | null;
   is_active: boolean;
