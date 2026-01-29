@@ -818,88 +818,169 @@ export default function PMSCalendar({
       
       {!isLoading && (
         <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden border-2 border-border max-h-[calc(100vh-200px)] flex flex-col">
-          {/* Search Bar */}
-          <div className="p-4 border-b border-border bg-muted/30">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari BID, nama tamu, atau nomor HP..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSearch();
-                  }
-                }}
-                className="pl-10 pr-20"
-              />
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
-                {searchQuery && (
+          {/* Date Navigation Bar with Search - Sticky */}
+          <div className="flex flex-col gap-2 p-3 md:p-4 border-b-2 border-border bg-muted/50 sticky top-0 z-30">
+            {/* Row 1: Search and Date Navigation */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Search Input - Compact */}
+              <div className="relative flex-1 sm:max-w-[240px] md:max-w-[280px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari BID, nama, HP..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
+                  className="h-8 pl-8 pr-16 text-sm"
+                />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={handleClearSearch}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
                   <Button
-                    variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={handleClearSearch}
+                    className="h-6 px-2 text-xs"
+                    onClick={handleSearch}
+                    disabled={isSearching}
                   >
-                    <X className="h-4 w-4" />
+                    {isSearching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
                   </Button>
-                )}
-                <Button
-                  size="sm"
-                  className="h-7 px-3"
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                >
-                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cari"}
-                </Button>
+                </div>
+              </div>
+
+              {/* Date Navigation - Compact */}
+              <div className="flex items-center justify-center sm:justify-start gap-1.5 flex-wrap">
+                <div className="flex items-center bg-background rounded-md border border-border overflow-hidden">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleYesterday}
+                    className="rounded-none border-r border-border h-8 px-2 md:px-3 text-xs hover:bg-muted"
+                  >
+                    <ChevronLeft className="h-3 w-3 md:mr-1" />
+                    <span className="hidden md:inline">Kemarin</span>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleToday}
+                    className={cn(
+                      "rounded-none border-r border-border h-8 px-2 md:px-3 text-xs hover:bg-muted",
+                      isSameDay(selectedDate, new Date()) && "bg-primary/10 text-primary font-semibold"
+                    )}
+                  >
+                    Hari Ini
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleTomorrow}
+                    className="rounded-none h-8 px-2 md:px-3 text-xs hover:bg-muted"
+                  >
+                    <span className="hidden md:inline">Besok</span>
+                    <ChevronRight className="h-3 w-3 md:ml-1" />
+                  </Button>
+                </div>
+
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="h-8 gap-1.5 px-2 md:px-3 text-xs"
+                      onClick={() => setTempDate(selectedDate)}
+                    >
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                      <span className="hidden xs:inline">{format(selectedDate, "d MMM yyyy", { locale: idLocale })}</span>
+                      <span className="xs:hidden">{format(selectedDate, "d/M", { locale: idLocale })}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center">
+                    <div className="p-3 space-y-3">
+                      <Calendar
+                        mode="single"
+                        selected={tempDate}
+                        onSelect={handleCalendarSelect}
+                        initialFocus
+                        locale={idLocale}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                      <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setCalendarOpen(false)}
+                        >
+                          Batal
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          onClick={handleCalendarConfirm}
+                        >
+                          OK
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             
-            {/* Search Results */}
+            {/* Search Results - Below navigation */}
             {showSearchResults && (
-              <div className="mt-3 bg-background rounded-lg border border-border max-h-64 overflow-y-auto">
+              <div className="bg-background rounded-lg border border-border max-h-48 md:max-h-64 overflow-y-auto">
                 {isSearching ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    Mencari...
+                  <div className="p-3 text-center text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-1" />
+                    <span className="text-xs">Mencari...</span>
                   </div>
                 ) : searchResults.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Tidak ada hasil ditemukan untuk "{searchQuery}"
+                  <div className="p-3 text-center text-muted-foreground text-xs">
+                    Tidak ada hasil untuk "{searchQuery}"
                   </div>
                 ) : (
                   <div className="divide-y divide-border">
-                    <div className="px-3 py-2 bg-muted/50 text-xs text-muted-foreground font-medium">
-                      Ditemukan {searchResults.length} hasil
+                    <div className="px-2 py-1.5 bg-muted/50 text-[10px] text-muted-foreground font-medium">
+                      {searchResults.length} hasil
                     </div>
                     {searchResults.map((result) => (
                       <div
                         key={result.id}
-                        className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                        className="p-2 hover:bg-muted/50 cursor-pointer transition-colors"
                         onClick={() => handleSearchResultClick(result)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-semibold text-sm">{result.customer_name}</div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-xs truncate">{result.customer_name}</div>
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                               <span className="font-mono text-primary">{result.bid}</span>
                               {result.phone && (
                                 <>
                                   <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <Phone className="h-3 w-3" />
+                                  <span className="flex items-center gap-0.5">
+                                    <Phone className="h-2.5 w-2.5" />
                                     {result.phone}
                                   </span>
                                 </>
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-xs text-muted-foreground">
-                              {format(new Date(result.date), "dd MMM yyyy", { locale: idLocale })}
+                          <div className="text-right shrink-0">
+                            <div className="text-[10px] text-muted-foreground">
+                              {format(new Date(result.date), "dd/MM/yy", { locale: idLocale })}
                             </div>
                             <div
-                              className="text-[10px] font-bold px-2 py-0.5 rounded inline-block mt-1"
+                              className="text-[9px] font-bold px-1.5 py-0.5 rounded inline-block mt-0.5"
                               style={{
                                 backgroundColor: statusColors[result.status || 'BO'] || '#3B82F6',
                                 color: result.status === 'CO' || result.status === 'BATAL' ? '#fff' : '#000',
@@ -915,81 +996,6 @@ export default function PMSCalendar({
                 )}
               </div>
             )}
-          </div>
-          
-          {/* Date Navigation Bar - Sticky */}
-          <div className="flex flex-wrap items-center justify-center gap-2 p-4 border-b-2 border-border bg-muted/50 sticky top-0 z-30">
-            <div className="flex items-center bg-background rounded-lg border border-border overflow-hidden">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleYesterday}
-                className="rounded-none border-r border-border px-4 hover:bg-muted"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Kemarin
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleToday}
-                className={cn(
-                  "rounded-none border-r border-border px-4 hover:bg-muted",
-                  isSameDay(selectedDate, new Date()) && "bg-primary/10 text-primary font-semibold"
-                )}
-              >
-                Hari Ini
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleTomorrow}
-                className="rounded-none px-4 hover:bg-muted"
-              >
-                Besok
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="gap-2 px-4"
-                  onClick={() => setTempDate(selectedDate)}
-                >
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(selectedDate, "d MMMM yyyy", { locale: idLocale })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center">
-                <div className="p-3 space-y-3">
-                  <Calendar
-                    mode="single"
-                    selected={tempDate}
-                    onSelect={handleCalendarSelect}
-                    initialFocus
-                    locale={idLocale}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                  <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setCalendarOpen(false)}
-                    >
-                      Batal
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={handleCalendarConfirm}
-                    >
-                      OK
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
           </div>
 
           <div className="overflow-auto flex-1">
