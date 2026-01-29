@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy, Calendar as CalendarIcon, ChevronDown, XCircle, Undo, Loader2, Shield } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Edit, Trash2, User, Phone, ChevronLeft, ChevronRight, Copy, Calendar as CalendarIcon, ChevronDown, XCircle, Undo, Loader2, Shield, Search, X } from "lucide-react";
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInCalendarDays, startOfDay, subDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
@@ -104,6 +105,12 @@ export default function PMSCalendar({
   // Room deposits - map roomId -> true if has active deposit
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string; date: Date } | null>(null);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<BookingWithAdmin[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Calculate visible date range (14 days centered on selected date)
   const visibleDates = useMemo(() => {
@@ -723,6 +730,75 @@ export default function PMSCalendar({
       setTempDate(date);
     }
   };
+  
+  // Search functionality - search across all bookings without date limit
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !currentStore) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    
+    setIsSearching(true);
+    setShowSearchResults(true);
+    
+    try {
+      const searchTerm = searchQuery.trim().toLowerCase();
+      
+      // Search bookings by BID, customer_name, or phone - no date restriction
+      const { data: searchData, error } = await supabase
+        .from("bookings")
+        .select("*, bid, rooms (name)")
+        .eq("store_id", currentStore.id)
+        .or(`bid.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+        .order("date", { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      
+      // Fetch admin names
+      const userIds = [...new Set((searchData || []).map(b => b.created_by).filter(Boolean))] as string[];
+      let profileMap = new Map<string, string>();
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", userIds);
+        
+        profileMap = new Map((profiles || []).map(p => [p.id, p.name]));
+      }
+      
+      const resultsWithAdmin: BookingWithAdmin[] = (searchData || []).map(booking => ({
+        ...booking,
+        admin_name: profileMap.get(booking.created_by || "") || "Unknown",
+        nights: booking.duration || 1,
+      }));
+      
+      setSearchResults(resultsWithAdmin);
+    } catch (error) {
+      console.error("Error searching bookings:", error);
+      toast.error("Gagal mencari booking");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+  
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+  };
+  
+  const handleSearchResultClick = (booking: BookingWithAdmin) => {
+    // Navigate to the booking date and close search
+    const bookingDate = new Date(booking.date);
+    onDateChange(bookingDate);
+    setShowSearchResults(false);
+    
+    // Optionally show booking details via edit
+    onEditBooking(booking);
+  };
 
   const handleCalendarConfirm = () => {
     onDateChange(tempDate);
@@ -742,6 +818,105 @@ export default function PMSCalendar({
       
       {!isLoading && (
         <div className="bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden border-2 border-border max-h-[calc(100vh-200px)] flex flex-col">
+          {/* Search Bar */}
+          <div className="p-4 border-b border-border bg-muted/30">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari BID, nama tamu, atau nomor HP..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearch();
+                  }
+                }}
+                className="pl-10 pr-20"
+              />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={handleClearSearch}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="h-7 px-3"
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                >
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cari"}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Search Results */}
+            {showSearchResults && (
+              <div className="mt-3 bg-background rounded-lg border border-border max-h-64 overflow-y-auto">
+                {isSearching ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Mencari...
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Tidak ada hasil ditemukan untuk "{searchQuery}"
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    <div className="px-3 py-2 bg-muted/50 text-xs text-muted-foreground font-medium">
+                      Ditemukan {searchResults.length} hasil
+                    </div>
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => handleSearchResultClick(result)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-sm">{result.customer_name}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-2">
+                              <span className="font-mono text-primary">{result.bid}</span>
+                              {result.phone && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    {result.phone}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(result.date), "dd MMM yyyy", { locale: idLocale })}
+                            </div>
+                            <div
+                              className="text-[10px] font-bold px-2 py-0.5 rounded inline-block mt-1"
+                              style={{
+                                backgroundColor: statusColors[result.status || 'BO'] || '#3B82F6',
+                                color: result.status === 'CO' || result.status === 'BATAL' ? '#fff' : '#000',
+                              }}
+                            >
+                              {result.status || 'BO'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
           {/* Date Navigation Bar - Sticky */}
           <div className="flex flex-wrap items-center justify-center gap-2 p-4 border-b-2 border-border bg-muted/50 sticky top-0 z-30">
             <div className="flex items-center bg-background rounded-lg border border-border overflow-hidden">

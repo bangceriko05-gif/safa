@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 interface Store {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   location: string | null;
   is_active: boolean;
