@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, differenceInMinutes, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { Users, CheckCircle, Award, Download } from "lucide-react";
@@ -25,6 +25,13 @@ interface RoomReadyLog {
   updated_by: string;
   user_name: string;
   date: string;
+  updated_at: string;
+  // Booking info
+  bid: string | null;
+  customer_name: string | null;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  turnaround_minutes: number | null;
 }
 
 export default function EmployeePerformanceReport() {
@@ -37,6 +44,7 @@ export default function EmployeePerformanceReport() {
   const [stats, setStats] = useState({
     totalRoomsCleaned: 0,
     totalEmployees: 0,
+    avgTurnaroundMinutes: 0,
   });
 
   useEffect(() => {
@@ -64,7 +72,7 @@ export default function EmployeePerformanceReport() {
       if (!roomsData || roomsData.length === 0) {
         setPerformances([]);
         setLogs([]);
-        setStats({ totalRoomsCleaned: 0, totalEmployees: 0 });
+        setStats({ totalRoomsCleaned: 0, totalEmployees: 0, avgTurnaroundMinutes: 0 });
         setLoading(false);
         return;
       }
@@ -73,7 +81,6 @@ export default function EmployeePerformanceReport() {
       const roomNameMap = Object.fromEntries(roomsData.map((r) => [r.id, r.name]));
 
       // Get room daily status where status was set to 'Aktif' (ready/clean)
-      // We look for records where status = 'Aktif' within the date range
       const { data: statusData, error: statusError } = await supabase
         .from("room_daily_status")
         .select("room_id, status, updated_by, date, updated_at")
@@ -87,7 +94,7 @@ export default function EmployeePerformanceReport() {
       if (!statusData || statusData.length === 0) {
         setPerformances([]);
         setLogs([]);
-        setStats({ totalRoomsCleaned: 0, totalEmployees: 0 });
+        setStats({ totalRoomsCleaned: 0, totalEmployees: 0, avgTurnaroundMinutes: 0 });
         setLoading(false);
         return;
       }
@@ -106,14 +113,58 @@ export default function EmployeePerformanceReport() {
         }
       }
 
-      // Map logs
-      const mappedLogs: RoomReadyLog[] = statusData.map((s) => ({
-        room_id: s.room_id,
-        room_name: roomNameMap[s.room_id] || "Unknown",
-        updated_by: s.updated_by || "",
-        user_name: profilesById[s.updated_by || ""] || "Unknown",
-        date: s.date,
-      }));
+      // Get bookings that checked out on these dates for these rooms
+      // We need to find the booking that was checked out before the room was cleaned
+      const { data: bookingsData } = await supabase
+        .from("bookings")
+        .select("id, bid, room_id, customer_name, date, checked_in_at, checked_out_at")
+        .in("room_id", roomIds)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr)
+        .not("checked_out_at", "is", null)
+        .order("checked_out_at", { ascending: false });
+
+      // Create a map of room_id + date -> most recent checkout booking
+      const bookingsByRoomDate: Record<string, typeof bookingsData[0]> = {};
+      if (bookingsData) {
+        bookingsData.forEach((b) => {
+          const key = `${b.room_id}_${b.date}`;
+          // Only keep the most recent one per room/date
+          if (!bookingsByRoomDate[key]) {
+            bookingsByRoomDate[key] = b;
+          }
+        });
+      }
+
+      // Map logs with booking info
+      const mappedLogs: RoomReadyLog[] = statusData.map((s) => {
+        const roomKey = `${s.room_id}_${s.date}`;
+        const booking = bookingsByRoomDate[roomKey];
+        
+        let turnaroundMinutes: number | null = null;
+        if (booking?.checked_out_at && s.updated_at) {
+          turnaroundMinutes = differenceInMinutes(
+            parseISO(s.updated_at),
+            parseISO(booking.checked_out_at)
+          );
+          // Only positive values make sense
+          if (turnaroundMinutes < 0) turnaroundMinutes = null;
+        }
+
+        return {
+          room_id: s.room_id,
+          room_name: roomNameMap[s.room_id] || "Unknown",
+          updated_by: s.updated_by || "",
+          user_name: profilesById[s.updated_by || ""] || "Unknown",
+          date: s.date,
+          updated_at: s.updated_at,
+          bid: booking?.bid || null,
+          customer_name: booking?.customer_name || null,
+          checked_in_at: booking?.checked_in_at || null,
+          checked_out_at: booking?.checked_out_at || null,
+          turnaround_minutes: turnaroundMinutes,
+        };
+      });
 
       // Aggregate by user
       const userAggregates: { [id: string]: EmployeePerformance } = {};
@@ -133,17 +184,34 @@ export default function EmployeePerformanceReport() {
 
       const sortedPerformances = Object.values(userAggregates).sort((a, b) => b.rooms_cleaned - a.rooms_cleaned);
 
+      // Calculate average turnaround time
+      const validTurnarounds = mappedLogs
+        .map(l => l.turnaround_minutes)
+        .filter((m): m is number => m !== null && m >= 0);
+      const avgTurnaround = validTurnarounds.length > 0
+        ? Math.round(validTurnarounds.reduce((a, b) => a + b, 0) / validTurnarounds.length)
+        : 0;
+
       setPerformances(sortedPerformances);
       setLogs(mappedLogs);
       setStats({
         totalRoomsCleaned: mappedLogs.length,
         totalEmployees: sortedPerformances.length,
+        avgTurnaroundMinutes: avgTurnaround,
       });
     } catch (error) {
       console.error("Error fetching employee performance data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatTurnaround = (minutes: number | null): string => {
+    if (minutes === null || minutes < 0) return '-';
+    if (minutes < 60) return `${minutes} menit`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours} jam ${mins} menit` : `${hours} jam`;
   };
 
   const handleExport = () => {
@@ -157,13 +225,25 @@ export default function EmployeePerformanceReport() {
         rooms_list: p.rooms_list,
       })),
       logs: logs.map(l => ({
+        bid: l.bid || '-',
+        customer_name: l.customer_name || '-',
         room_name: l.room_name,
-        user_name: l.user_name,
-        date: l.date,
+        check_in_datetime: l.checked_in_at 
+          ? format(parseISO(l.checked_in_at), "d MMM yyyy, HH:mm", { locale: localeId }) 
+          : '-',
+        check_out_datetime: l.checked_out_at 
+          ? format(parseISO(l.checked_out_at), "d MMM yyyy, HH:mm", { locale: localeId }) 
+          : '-',
+        cleaned_by: l.user_name,
+        cleaned_at: l.updated_at 
+          ? format(parseISO(l.updated_at), "d MMM yyyy, HH:mm", { locale: localeId }) 
+          : format(new Date(l.date), "d MMM yyyy", { locale: localeId }),
+        turnaround_minutes: l.turnaround_minutes,
       })),
       summary: {
         total_rooms_cleaned: stats.totalRoomsCleaned,
         total_employees: stats.totalEmployees,
+        avg_turnaround_minutes: stats.avgTurnaroundMinutes,
       },
     };
 
@@ -215,7 +295,7 @@ export default function EmployeePerformanceReport() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Kamar Dibersihkan</CardTitle>
@@ -233,6 +313,16 @@ export default function EmployeePerformanceReport() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalEmployees}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Rata-rata Turnaround</CardTitle>
+                <CheckCircle className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatTurnaround(stats.avgTurnaroundMinutes)}</div>
               </CardContent>
             </Card>
           </div>
@@ -289,18 +379,33 @@ export default function EmployeePerformanceReport() {
               {logs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Tidak ada aktivitas</p>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-2 max-h-80 overflow-y-auto">
                   {logs.map((log, index) => (
-                    <div key={`${log.room_id}-${log.date}-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded text-sm">
-                      <div>
-                        <div className="font-medium">{log.room_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(log.date), "d MMM yyyy", { locale: localeId })}
+                    <div key={`${log.room_id}-${log.date}-${index}`} className="flex flex-col sm:flex-row justify-between gap-2 p-3 bg-muted/50 rounded text-sm">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{log.room_name}</span>
+                          {log.bid && <span className="text-xs text-muted-foreground">({log.bid})</span>}
                         </div>
+                        {log.customer_name && (
+                          <div className="text-xs text-muted-foreground">Tamu: {log.customer_name}</div>
+                        )}
+                        {log.checked_out_at && (
+                          <div className="text-xs text-muted-foreground">
+                            Check-out: {format(parseISO(log.checked_out_at), "d MMM, HH:mm", { locale: localeId })}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm">{log.user_name}</div>
-                        <div className="text-xs text-green-600">Ready ✓</div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-sm font-medium">{log.user_name}</div>
+                        <div className="text-xs text-green-600">
+                          Ready {log.updated_at && format(parseISO(log.updated_at), "HH:mm", { locale: localeId })} ✓
+                        </div>
+                        {log.turnaround_minutes !== null && log.turnaround_minutes >= 0 && (
+                          <div className="text-xs text-blue-600">
+                            Selisih: {formatTurnaround(log.turnaround_minutes)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
