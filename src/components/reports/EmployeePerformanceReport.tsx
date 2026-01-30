@@ -113,41 +113,44 @@ export default function EmployeePerformanceReport() {
         }
       }
 
-      // Get bookings that checked out on these dates for these rooms
-      // We need to find the booking that was checked out before the room was cleaned
+      // Get bookings that checked out for these rooms
+      // We look for bookings that were checked out within a reasonable window
+      // The checkout could have happened on a previous date but room cleaned today
       const { data: bookingsData } = await supabase
         .from("bookings")
         .select("id, bid, room_id, customer_name, date, checked_in_at, checked_out_at")
         .in("room_id", roomIds)
-        .gte("date", startDateStr)
-        .lte("date", endDateStr)
         .not("checked_out_at", "is", null)
         .order("checked_out_at", { ascending: false });
 
-      // Create a map of room_id + date -> most recent checkout booking
-      const bookingsByRoomDate: Record<string, typeof bookingsData[0]> = {};
-      if (bookingsData) {
-        bookingsData.forEach((b) => {
-          const key = `${b.room_id}_${b.date}`;
-          // Only keep the most recent one per room/date
-          if (!bookingsByRoomDate[key]) {
-            bookingsByRoomDate[key] = b;
-          }
-        });
-      }
-
-      // Map logs with booking info
+      // For each room status, find the most recent checkout that happened before or around the room ready time
       const mappedLogs: RoomReadyLog[] = statusData.map((s) => {
-        const roomKey = `${s.room_id}_${s.date}`;
-        const booking = bookingsByRoomDate[roomKey];
+        let matchedBooking: typeof bookingsData[0] | null = null;
+        
+        if (bookingsData && s.updated_at) {
+          const roomReadyTime = parseISO(s.updated_at);
+          
+          // Find the booking for this room that was checked out closest to (but before) the room ready time
+          const roomBookings = bookingsData.filter(b => b.room_id === s.room_id && b.checked_out_at);
+          
+          for (const booking of roomBookings) {
+            const checkoutTime = parseISO(booking.checked_out_at!);
+            const diffMinutes = differenceInMinutes(roomReadyTime, checkoutTime);
+            
+            // The checkout should be before the room was readied and within reasonable time (e.g., 24 hours)
+            if (diffMinutes >= 0 && diffMinutes <= 24 * 60) {
+              matchedBooking = booking;
+              break; // Take the most recent one (already sorted desc)
+            }
+          }
+        }
         
         let turnaroundMinutes: number | null = null;
-        if (booking?.checked_out_at && s.updated_at) {
+        if (matchedBooking?.checked_out_at && s.updated_at) {
           turnaroundMinutes = differenceInMinutes(
             parseISO(s.updated_at),
-            parseISO(booking.checked_out_at)
+            parseISO(matchedBooking.checked_out_at)
           );
-          // Only positive values make sense
           if (turnaroundMinutes < 0) turnaroundMinutes = null;
         }
 
@@ -158,10 +161,10 @@ export default function EmployeePerformanceReport() {
           user_name: profilesById[s.updated_by || ""] || "Unknown",
           date: s.date,
           updated_at: s.updated_at,
-          bid: booking?.bid || null,
-          customer_name: booking?.customer_name || null,
-          checked_in_at: booking?.checked_in_at || null,
-          checked_out_at: booking?.checked_out_at || null,
+          bid: matchedBooking?.bid || null,
+          customer_name: matchedBooking?.customer_name || null,
+          checked_in_at: matchedBooking?.checked_in_at || null,
+          checked_out_at: matchedBooking?.checked_out_at || null,
           turnaround_minutes: turnaroundMinutes,
         };
       });
