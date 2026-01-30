@@ -625,17 +625,31 @@ export interface EmployeePerformanceExportData {
     rooms_list: string[];
   }[];
   logs: {
+    bid: string;
+    customer_name: string;
     room_name: string;
-    user_name: string;
-    date: string;
+    check_in_datetime: string;
+    check_out_datetime: string;
+    cleaned_by: string;
+    cleaned_at: string;
+    turnaround_minutes: number | null;
   }[];
   summary: {
     total_rooms_cleaned: number;
     total_employees: number;
+    avg_turnaround_minutes: number;
   };
 }
 
 export const exportEmployeePerformanceReport = (data: EmployeePerformanceExportData, storeName: string, dateRange: string) => {
+  const formatTurnaround = (minutes: number | null): string => {
+    if (minutes === null || minutes < 0) return '-';
+    if (minutes < 60) return `${minutes} menit`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours} jam ${mins} menit` : `${hours} jam`;
+  };
+
   const summarySheet = [{
     'Ringkasan': 'Laporan Kinerja Karyawan',
     'Nilai': dateRange,
@@ -651,6 +665,9 @@ export const exportEmployeePerformanceReport = (data: EmployeePerformanceExportD
   }, {
     'Ringkasan': 'Karyawan Aktif',
     'Nilai': data.summary.total_employees,
+  }, {
+    'Ringkasan': 'Rata-rata Waktu Turnaround',
+    'Nilai': formatTurnaround(data.summary.avg_turnaround_minutes),
   }];
 
   const performancesSheet = data.performances.map(p => ({
@@ -661,15 +678,19 @@ export const exportEmployeePerformanceReport = (data: EmployeePerformanceExportD
   }));
 
   const logsSheet = data.logs.map(l => ({
+    'BID': l.bid || '-',
+    'Nama Tamu': l.customer_name || '-',
     'Kamar': l.room_name,
-    'Karyawan': l.user_name,
-    'Tanggal': l.date,
-    'Status': 'Ready',
+    'Check-in': l.check_in_datetime || '-',
+    'Check-out': l.check_out_datetime || '-',
+    'Dibersihkan Oleh': l.cleaned_by,
+    'Waktu Dibersihkan': l.cleaned_at,
+    'Selisih Waktu': formatTurnaround(l.turnaround_minutes),
   }));
 
   exportMultipleSheets([
     { name: 'Ringkasan', data: summarySheet },
     { name: 'Peringkat Karyawan', data: performancesSheet },
-    { name: 'Log Aktivitas', data: logsSheet },
+    { name: 'Detail Pembersihan', data: logsSheet },
   ], getExportFileName('Laporan_Kinerja', storeName, dateRange));
 };
