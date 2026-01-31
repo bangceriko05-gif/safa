@@ -677,20 +677,39 @@ export const exportEmployeePerformanceReport = (data: EmployeePerformanceExportD
     'Daftar Kamar': p.rooms_list.join(', '),
   }));
 
+  // Log/detail pembersihan (sesuai permintaan user)
   const logsSheet = data.logs.map(l => ({
     'BID': l.bid || '-',
     'Nama Tamu': l.customer_name || '-',
-    'Kamar': l.room_name,
-    'Check-in': l.check_in_datetime || '-',
-    'Check-out': l.check_out_datetime || '-',
+    'Check-in (tgl & jam)': l.check_in_datetime || '-',
+    'Check-out (tgl & jam)': l.check_out_datetime || '-',
+    'No/Nama Kamar': l.room_name,
     'Dibersihkan Oleh': l.cleaned_by,
-    'Waktu Dibersihkan': l.cleaned_at,
-    'Selisih Waktu': formatTurnaround(l.turnaround_minutes),
+    'Dibersihkan Pada (tgl & jam)': l.cleaned_at,
+    'Selisih Check-out → Ready': formatTurnaround(l.turnaround_minutes),
   }));
 
+  // Pastikan sheet tetap dibuat walaupun data kosong (biar user selalu lihat tabnya)
+  const performancesSheetSafe = performancesSheet.length
+    ? performancesSheet
+    : [{ 'Ranking': '', 'Nama Karyawan': '', 'Jumlah Kamar': '', 'Daftar Kamar': '' }];
+  const logsSheetSafe = logsSheet.length
+    ? logsSheet
+    : [{
+        'BID': '',
+        'Nama Tamu': '',
+        'Check-in (tgl & jam)': '',
+        'Check-out (tgl & jam)': '',
+        'No/Nama Kamar': '',
+        'Dibersihkan Oleh': '',
+        'Dibersihkan Pada (tgl & jam)': '',
+        'Selisih Check-out → Ready': '',
+      }];
+
   exportMultipleSheets([
+    // Letakkan log sebagai sheet pertama supaya saat file dibuka, user langsung lihat detail.
+    { name: 'Log Pembersihan', data: logsSheetSafe },
+    { name: 'Peringkat Karyawan', data: performancesSheetSafe },
     { name: 'Ringkasan', data: summarySheet },
-    { name: 'Peringkat Karyawan', data: performancesSheet },
-    { name: 'Detail Pembersihan', data: logsSheet },
   ], getExportFileName('Laporan_Kinerja', storeName, dateRange));
 };
