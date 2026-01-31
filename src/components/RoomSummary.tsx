@@ -161,7 +161,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         { data: bookingsData, error: bookingsError },
         { data: roomsData, error: roomsError },
         { data: dailyStatusData, error: dailyStatusError },
-        { data: ciRangeBookingsData, error: ciRangeBookingsError },
+        { data: activeBookingsData, error: activeBookingsError },
       ] = await Promise.all([
         // Bookings that START today (for the reservation cards)
         supabase
@@ -185,12 +185,12 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .from("room_daily_status")
           .select("room_id, status")
           .eq("date", dateStr),
-        // Fetch CI bookings that could overlap today (multi-night aware)
+        // Fetch ALL active bookings (BO or CI) that could overlap today (multi-night aware)
         supabase
           .from("bookings")
-          .select("room_id, date, duration")
+          .select("room_id, date, duration, status")
           .eq("store_id", currentStore.id)
-          .eq("status", "CI")
+          .in("status", ["BO", "CI"])
           .gte("date", earliestStartDate)
           .lte("date", dateStr),
       ]);
@@ -198,7 +198,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       if (bookingsError) throw bookingsError;
       if (roomsError) throw roomsError;
       if (dailyStatusError) throw dailyStatusError;
-      if (ciRangeBookingsError) throw ciRangeBookingsError;
+      if (activeBookingsError) throw activeBookingsError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
@@ -214,9 +214,9 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         room_name: b.rooms?.name || "Unknown",
       }));
 
-      // OCCUPIED TODAY (CI): bookings where today is within [start_date .. start_date + (nights-1)]
+      // OCCUPIED TODAY: bookings (BO or CI) where today is within [start_date .. start_date + (nights-1)]
       const today = startOfDay(selectedDate);
-      const occupiedIds = (ciRangeBookingsData || [])
+      const occupiedIds = (activeBookingsData || [])
         .filter((b: any) => {
           const bookingStart = startOfDay(new Date(b.date));
           const nights = Number(b.duration) || 1;
@@ -258,11 +258,14 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   // Kotor = rooms with status 'Kotor' in room_daily_status for today
   const kotorRooms = rooms.filter(r => dirtyRoomIds.has(r.id));
   
-  // Available = Total - (Occupied + Dirty)
-  // Room is available if NOT occupied AND NOT dirty
-  // occupiedRoomIds is from state - fetched from ALL CI bookings (multi-day aware)
+  // Available = rooms that are:
+  // 1. Aktif status (NOT Maintenance, Nonaktif, etc.)
+  // 2. NOT occupied (no BO or CI booking for today)
+  // 3. NOT dirty
   const availableRooms = rooms.filter(r => 
-    !occupiedRoomIds.has(r.id) && !dirtyRoomIds.has(r.id)
+    r.status === "Aktif" && 
+    !occupiedRoomIds.has(r.id) && 
+    !dirtyRoomIds.has(r.id)
   );
 
   const handleCardClick = (cardType: InfoCardType) => {
