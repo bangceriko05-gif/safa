@@ -24,7 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer, ImageIcon } from "lucide-react";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer, ImageIcon, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format, addDays, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
@@ -76,6 +77,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   });
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!currentStore) return;
@@ -463,6 +465,18 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   // Filter out BATAL status from active bookings list
   const activeBookings = bookings.filter(b => b.status !== "BATAL");
 
+  // Search filter for active bookings
+  const filteredActiveBookings = activeBookings.filter((booking) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      booking.customer_name.toLowerCase().includes(query) ||
+      booking.phone.includes(query) ||
+      booking.bid?.toLowerCase().includes(query) ||
+      booking.room_name.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
@@ -568,6 +582,17 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
               </div>
             </PopoverContent>
           </Popover>
+
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari BID, nama, HP, kamar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
 
         {/* Booking Table */}
@@ -575,9 +600,9 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : activeBookings.length === 0 ? (
+        ) : filteredActiveBookings.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            Tidak ada booking untuk tanggal ini
+            {searchQuery ? "Tidak ada booking yang cocok dengan pencarian" : "Tidak ada booking untuk tanggal ini"}
           </div>
         ) : (
           <div className="rounded-md border overflow-x-auto">
@@ -596,7 +621,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activeBookings.map((booking) => (
+                {filteredActiveBookings.map((booking) => (
                   <TableRow 
                     key={booking.id}
                     className={cn(
