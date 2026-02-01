@@ -24,9 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer, ImageIcon, Search } from "lucide-react";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer, ImageIcon, Search, Copy, Infinity } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { format, addDays, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { format, addDays, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
@@ -64,7 +64,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "custom">("today");
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("today");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
@@ -195,6 +195,13 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
         const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
         const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
         query = query.gte("date", monthStart).lte("date", monthEnd);
+      } else if (dateFilter === "lastMonth") {
+        const lastMonth = subMonths(new Date(), 1);
+        const monthStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+        const monthEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+        query = query.gte("date", monthStart).lte("date", monthEnd);
+      } else if (dateFilter === "allTime") {
+        // No date filter - fetch all bookings
       } else if (dateFilter === "custom" && customDateRange?.from) {
         const startDate = format(customDateRange.from, "yyyy-MM-dd");
         const endDate = format(customDateRange.to || customDateRange.from, "yyyy-MM-dd");
@@ -235,7 +242,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
     }
   };
 
-  const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "custom") => {
+  const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom") => {
     setDateFilter(filter);
     if (filter === "today") {
       setSelectedDate(new Date());
@@ -243,10 +250,20 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
       setSelectedDate(subDays(new Date(), 1));
     } else if (filter === "thisMonth") {
       setSelectedDate(new Date());
+    } else if (filter === "lastMonth") {
+      setSelectedDate(subMonths(new Date(), 1));
+    } else if (filter === "allTime") {
+      setSelectedDate(new Date());
     } else if (filter === "custom") {
       setPendingDateRange(customDateRange);
       setCalendarOpen(true);
     }
+  };
+
+  const handleCopyBid = (bid: string | null) => {
+    if (!bid) return;
+    navigator.clipboard.writeText(bid);
+    toast.success("BID berhasil disalin");
   };
 
   const handleCustomDateConfirm = () => {
@@ -533,6 +550,28 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
             >
               Bulan Ini
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("lastMonth")}
+              className={cn(
+                dateFilter === "lastMonth" && "bg-primary text-primary-foreground"
+              )}
+            >
+              Bulan Lalu
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("allTime")}
+              className={cn(
+                "gap-1",
+                dateFilter === "allTime" && "bg-primary text-primary-foreground"
+              )}
+            >
+              <Infinity className="h-3 w-3" />
+              All Time
+            </Button>
           </div>
           
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -640,8 +679,40 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {booking.bid || "-"}
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {booking.bid ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                if (hasPermission("edit_bookings") && canEdit(booking)) {
+                                  onEditBooking(booking);
+                                }
+                              }}
+                              className={cn(
+                                "font-mono text-sm hover:underline",
+                                hasPermission("edit_bookings") && canEdit(booking)
+                                  ? "cursor-pointer text-primary"
+                                  : "cursor-default"
+                              )}
+                              title={hasPermission("edit_bookings") && canEdit(booking) ? "Klik untuk edit" : undefined}
+                            >
+                              {booking.bid}
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleCopyBid(booking.bid)}
+                              title="Salin BID"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">
                       {booking.customer_name}
