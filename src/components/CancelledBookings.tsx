@@ -23,8 +23,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, Eye, Undo, Trash2, ChevronDown, XCircle, Search, ImageIcon } from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { CalendarIcon, Eye, Undo, Trash2, ChevronDown, XCircle, Search, ImageIcon, Copy, Infinity } from "lucide-react";
+import { format, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -60,10 +61,11 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
   const { currentStore } = useStore();
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
-  const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
-  const [startCalendarOpen, setStartCalendarOpen] = useState(false);
-  const [endCalendarOpen, setEndCalendarOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("thisMonth");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
@@ -108,7 +110,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
       supabase.removeChannel(channel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
-  }, [startDate, endDate, currentStore]);
+  }, [dateFilter, customDateRange, currentStore]);
 
   const fetchStatusColors = async () => {
     try {
@@ -138,10 +140,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
       if (!currentStore) return;
       setIsLoading(true);
 
-      const startStr = format(startDate, "yyyy-MM-dd");
-      const endStr = format(endDate, "yyyy-MM-dd");
-
-      const { data, error } = await supabase
+      let query = supabase
         .from("bookings")
         .select(`
           id,
@@ -161,10 +160,33 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
           rooms (name)
         `)
         .eq("status", "BATAL")
-        .eq("store_id", currentStore.id)
-        .gte("date", startStr)
-        .lte("date", endStr)
-        .order("updated_at", { ascending: false });
+        .eq("store_id", currentStore.id);
+
+      // Apply date filter
+      if (dateFilter === "today") {
+        const dateStr = format(new Date(), "yyyy-MM-dd");
+        query = query.eq("date", dateStr);
+      } else if (dateFilter === "yesterday") {
+        const dateStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
+        query = query.eq("date", dateStr);
+      } else if (dateFilter === "thisMonth") {
+        const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+        const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
+        query = query.gte("date", monthStart).lte("date", monthEnd);
+      } else if (dateFilter === "lastMonth") {
+        const lastMonth = subMonths(new Date(), 1);
+        const monthStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+        const monthEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+        query = query.gte("date", monthStart).lte("date", monthEnd);
+      } else if (dateFilter === "allTime") {
+        // No date filter - fetch all
+      } else if (dateFilter === "custom" && customDateRange?.from) {
+        const startStr = format(customDateRange.from, "yyyy-MM-dd");
+        const endStr = format(customDateRange.to || customDateRange.from, "yyyy-MM-dd");
+        query = query.gte("date", startStr).lte("date", endStr);
+      }
+
+      const { data, error } = await query.order("updated_at", { ascending: false });
 
       if (error) throw error;
 
@@ -289,6 +311,29 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
     }
   };
 
+  const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom") => {
+    setDateFilter(filter);
+    if (filter === "custom") {
+      setPendingDateRange(customDateRange);
+      setCalendarOpen(true);
+    }
+  };
+
+  const handleCustomDateConfirm = () => {
+    if (pendingDateRange?.from) {
+      setCustomDateRange(pendingDateRange);
+      setCalendarOpen(false);
+    } else {
+      toast.error("Pilih tanggal terlebih dahulu");
+    }
+  };
+
+  const handleCopyBid = (bid: string | null) => {
+    if (!bid) return;
+    navigator.clipboard.writeText(bid);
+    toast.success("BID berhasil disalin");
+  };
+
   const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
   const filteredBookings = bookings.filter((booking) => {
@@ -302,6 +347,8 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
     );
   });
 
+  
+
   return (
     <Card>
       <CardHeader>
@@ -311,60 +358,110 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Date Range */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Dari:</span>
-            <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(startDate, "d MMM yyyy", { locale: idLocale })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setStartDate(date);
-                      setStartCalendarOpen(false);
-                    }
-                  }}
-                  initialFocus
-                  locale={idLocale}
-                />
-              </PopoverContent>
-            </Popover>
+        {/* Date Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("today")}
+              className={cn(
+                dateFilter === "today" && "bg-primary text-primary-foreground"
+              )}
+            >
+              Hari Ini
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("yesterday")}
+              className={cn(
+                dateFilter === "yesterday" && "bg-primary text-primary-foreground"
+              )}
+            >
+              Kemarin
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("thisMonth")}
+              className={cn(
+                dateFilter === "thisMonth" && "bg-primary text-primary-foreground"
+              )}
+            >
+              Bulan Ini
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("lastMonth")}
+              className={cn(
+                dateFilter === "lastMonth" && "bg-primary text-primary-foreground"
+              )}
+            >
+              Bulan Lalu
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDateFilterChange("allTime")}
+              className={cn(
+                "gap-1",
+                dateFilter === "allTime" && "bg-primary text-primary-foreground"
+              )}
+            >
+              <Infinity className="h-3 w-3" />
+              All Time
+            </Button>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Sampai:</span>
-            <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(endDate, "d MMM yyyy", { locale: idLocale })}
+          
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn(
+                  "gap-2",
+                  dateFilter === "custom" && "bg-primary text-primary-foreground"
+                )}
+                onClick={() => handleDateFilterChange("custom")}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {dateFilter === "custom" && customDateRange?.from ? (
+                  customDateRange.to ? (
+                    <>
+                      {format(customDateRange.from, "d MMM", { locale: idLocale })} -{" "}
+                      {format(customDateRange.to, "d MMM yyyy", { locale: idLocale })}
+                    </>
+                  ) : (
+                    format(customDateRange.from, "d MMMM yyyy", { locale: idLocale })
+                  )
+                ) : (
+                  "Custom Tanggal"
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={pendingDateRange}
+                onSelect={(range) => setPendingDateRange(range)}
+                defaultMonth={pendingDateRange?.from || new Date()}
+                initialFocus
+                numberOfMonths={2}
+                locale={idLocale}
+                className="pointer-events-auto"
+              />
+              <div className="flex justify-end gap-2 p-3 border-t">
+                <Button variant="outline" size="sm" onClick={() => setCalendarOpen(false)}>
+                  Batal
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setEndDate(date);
-                      setEndCalendarOpen(false);
-                    }
-                  }}
-                  initialFocus
-                  locale={idLocale}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+                <Button size="sm" onClick={handleCustomDateConfirm} disabled={!pendingDateRange?.from}>
+                  OK
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           {/* Search */}
           <div className="relative flex-1 min-w-[200px]">
@@ -421,8 +518,25 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {booking.bid || "-"}
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {booking.bid ? (
+                          <>
+                            <span className="font-mono text-sm">{booking.bid}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleCopyBid(booking.bid)}
+                              title="Salin BID"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">
                       {booking.customer_name}
