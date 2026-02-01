@@ -179,16 +179,18 @@ export default function BookingReceipt() {
   const calculateTotal = () => {
     if (!booking) return 0;
     
+    // Room price is the base price for the room rental
     const roomPrice = booking.price;
+    // Products total from booking_products
     const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
+    // Calculate discount
     const discount = calculateDiscount();
     
-    let total = roomPrice + productsTotal - discount;
-    if (booking.dual_payment && booking.price_2) {
-      total = booking.price + (booking.price_2 || 0) + productsTotal - discount;
-    }
-    
-    return total;
+    // Total = room price + products - discount
+    // Note: price_2 is just the split payment amount, not an additional price
+    // When dual_payment is true, price + price_2 should equal the total payment
+    // but we calculate total from actual prices, not payment splits
+    return roomPrice + productsTotal - discount;
   };
 
   const getStatusLabel = (status: string | null | undefined) => {
