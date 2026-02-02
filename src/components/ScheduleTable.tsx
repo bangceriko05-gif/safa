@@ -28,6 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 
 interface ScheduleTableProps {
   selectedDate: Date;
@@ -110,6 +111,14 @@ export default function ScheduleTable({
   const [updatingPopupStatus, setUpdatingPopupStatus] = useState<string | null>(null);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
   const [roomsWithCheckout, setRoomsWithCheckout] = useState<Set<string>>(new Set());
+  
+  // Check-in deposit popup state
+  const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
+    open: boolean;
+    bookingId: string;
+    bookingData: BookingWithAdmin | null;
+    onConfirmCallback: (() => Promise<void>) | null;
+  }>({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null });
 
   const timeSlots = Array.from({ length: 20 }, (_, i) => {
     const hour = i + 9;
@@ -586,6 +595,29 @@ export default function ScheduleTable({
   };
 
   const handlePopupStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+    // If changing to Check In, show deposit popup first
+    if (newStatus === "CI") {
+      // Get room name for deposit popup
+      const room = rooms.find(r => r.id === bookingData.room_id);
+      
+      setCheckInDepositPopup({
+        open: true,
+        bookingId,
+        bookingData: {
+          ...bookingData,
+          room_name: room?.name,
+        } as any,
+        onConfirmCallback: async () => {
+          await executeStatusChange(bookingId, newStatus, bookingData);
+        },
+      });
+      return;
+    }
+    
+    await executeStatusChange(bookingId, newStatus, bookingData);
+  };
+
+  const executeStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
     setUpdatingPopupStatus(bookingId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -1480,6 +1512,26 @@ export default function ScheduleTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Check-In Deposit Popup */}
+      {checkInDepositPopup.bookingData && (
+        <CheckInDepositPopup
+          open={checkInDepositPopup.open}
+          onClose={() => setCheckInDepositPopup({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null })}
+          onConfirm={async () => {
+            if (checkInDepositPopup.onConfirmCallback) {
+              await checkInDepositPopup.onConfirmCallback();
+            }
+          }}
+          bookingData={{
+            id: checkInDepositPopup.bookingData.id,
+            room_id: checkInDepositPopup.bookingData.room_id,
+            room_name: (checkInDepositPopup.bookingData as any).room_name,
+            customer_name: checkInDepositPopup.bookingData.customer_name,
+            store_id: currentStore?.id || "",
+          }}
+        />
+      )}
     </>
   );
 }
