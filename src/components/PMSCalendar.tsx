@@ -33,6 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 
 interface PMSCalendarProps {
   selectedDate: Date;
@@ -105,6 +106,14 @@ export default function PMSCalendar({
   // Room deposits - map roomId -> true if has active deposit
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string; date: Date } | null>(null);
+  
+  // Check-in deposit popup state
+  const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
+    open: boolean;
+    bookingId: string;
+    bookingData: BookingWithAdmin | null;
+    onConfirmCallback: (() => Promise<void>) | null;
+  }>({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null });
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -545,6 +554,29 @@ export default function PMSCalendar({
   };
 
   const handleBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+    // If changing to Check In, show deposit popup first
+    if (newStatus === "CI") {
+      // Get room name for deposit popup
+      const room = rooms.find(r => r.id === bookingData.room_id);
+      
+      setCheckInDepositPopup({
+        open: true,
+        bookingId,
+        bookingData: {
+          ...bookingData,
+          room_name: room?.name,
+        } as any,
+        onConfirmCallback: async () => {
+          await executeBookingStatusChange(bookingId, newStatus, bookingData);
+        },
+      });
+      return;
+    }
+    
+    await executeBookingStatusChange(bookingId, newStatus, bookingData);
+  };
+
+  const executeBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
     setUpdatingStatus(bookingId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -619,6 +651,7 @@ export default function PMSCalendar({
 
       toast.success(`Status berhasil diubah ke ${statusLabels[newStatus] || newStatus}`);
       fetchBookings();
+      fetchRoomDeposits(); // Refresh deposits after check-in
       window.dispatchEvent(new CustomEvent("booking-changed"));
     } catch (error: any) {
       console.error("Error updating status:", error);
@@ -1412,6 +1445,26 @@ export default function PMSCalendar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Check-In Deposit Popup */}
+      {checkInDepositPopup.bookingData && (
+        <CheckInDepositPopup
+          open={checkInDepositPopup.open}
+          onClose={() => setCheckInDepositPopup({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null })}
+          onConfirm={async () => {
+            if (checkInDepositPopup.onConfirmCallback) {
+              await checkInDepositPopup.onConfirmCallback();
+            }
+          }}
+          bookingData={{
+            id: checkInDepositPopup.bookingData.id,
+            room_id: checkInDepositPopup.bookingData.room_id,
+            room_name: (checkInDepositPopup.bookingData as any).room_name,
+            customer_name: checkInDepositPopup.bookingData.customer_name,
+            store_id: currentStore?.id || "",
+          }}
+        />
+      )}
     </>
   );
 }
