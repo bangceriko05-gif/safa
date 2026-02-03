@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle, CalendarIcon } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -112,6 +113,13 @@ export default function BookingModal({
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
+  
+  // Deposit state
+  const [enableDeposit, setEnableDeposit] = useState(false);
+  const [depositType, setDepositType] = useState<"uang" | "identitas">("uang");
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositIdentityType, setDepositIdentityType] = useState("KTP");
+  
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
@@ -1263,6 +1271,39 @@ export default function BookingModal({
           if (productsError) throw productsError;
         }
         
+        // Create deposit if enabled
+        if (enableDeposit && currentStore) {
+          const depositData = {
+            room_id: formData.room_id,
+            store_id: currentStore.id,
+            deposit_type: depositType,
+            amount: depositType === "uang" ? parseFloat(depositAmount.replace(/\D/g, "")) : null,
+            identity_type: depositType === "identitas" ? depositIdentityType : null,
+            identity_owner_name: depositType === "identitas" ? formData.customer_name : null,
+            created_by: userId,
+            status: "active",
+          };
+
+          const { error: depositError } = await supabase
+            .from("room_deposits")
+            .insert(depositData);
+
+          if (depositError) {
+            console.error("Error creating deposit:", depositError);
+            // Don't fail the booking, just log the error
+          } else {
+            const depositDescription = depositType === "uang" 
+              ? `Rp ${depositAmount}` 
+              : `Identitas (${depositIdentityType})`;
+            
+            await logActivity({
+              actionType: "created",
+              entityType: "Deposit",
+              description: `Menambahkan deposit ${depositDescription} untuk kamar ${roomName} (Booking ${formData.customer_name})`,
+            });
+          }
+        }
+        
         // Log activity
         await logActivity({
           actionType: 'created',
@@ -1304,6 +1345,11 @@ export default function BookingModal({
         discount_applies_to: "variant",
         booking_type: "walk_in",
       });
+      // Reset deposit state
+      setEnableDeposit(false);
+      setDepositType("uang");
+      setDepositAmount("");
+      setDepositIdentityType("KTP");
 
       // Trigger refresh by dispatching a custom event
       window.dispatchEvent(new CustomEvent("booking-changed"));
@@ -2162,6 +2208,110 @@ export default function BookingModal({
                   <SelectItem value="CO">CO (Check Out)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {/* Deposit Section - Only for new bookings */}
+          {!editingBooking && (
+            <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-amber-600" />
+                  <Label className="font-medium">Deposit (Opsional)</Label>
+                </div>
+                <Checkbox
+                  id="enable_deposit"
+                  checked={enableDeposit}
+                  onCheckedChange={(checked) => setEnableDeposit(checked === true)}
+                />
+              </div>
+              
+              {enableDeposit && (
+                <div className="space-y-3 pt-2 border-t">
+                  {/* Deposit Type Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Jenis Deposit</Label>
+                    <RadioGroup
+                      value={depositType}
+                      onValueChange={(value) => setDepositType(value as "uang" | "identitas")}
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      <Label
+                        htmlFor="deposit-type-uang"
+                        className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-all ${
+                          depositType === "uang" 
+                            ? "bg-primary/10 border-primary shadow-sm" 
+                            : "hover:bg-muted border-border"
+                        }`}
+                      >
+                        <RadioGroupItem value="uang" id="deposit-type-uang" />
+                        <Banknote className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">Uang</span>
+                      </Label>
+                      <Label
+                        htmlFor="deposit-type-identitas"
+                        className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-all ${
+                          depositType === "identitas" 
+                            ? "bg-primary/10 border-primary shadow-sm" 
+                            : "hover:bg-muted border-border"
+                        }`}
+                      >
+                        <RadioGroupItem value="identitas" id="deposit-type-identitas" />
+                        <CreditCard className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Identitas</span>
+                      </Label>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Money Deposit Fields */}
+                  {depositType === "uang" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="deposit-amount">Nominal Deposit (Rp)</Label>
+                      <Input
+                        id="deposit-amount"
+                        placeholder="Contoh: 100.000"
+                        value={depositAmount}
+                        onChange={(e) => {
+                          const number = e.target.value.replace(/\D/g, "");
+                          const formatted = number.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                          setDepositAmount(formatted);
+                        }}
+                        className="font-medium"
+                      />
+                    </div>
+                  )}
+
+                  {/* Identity Deposit Fields */}
+                  {depositType === "identitas" && (
+                    <div className="space-y-2">
+                      <Label>Jenis Identitas</Label>
+                      <RadioGroup
+                        value={depositIdentityType}
+                        onValueChange={setDepositIdentityType}
+                        className="grid grid-cols-4 gap-2"
+                      >
+                        {["KTP", "SIM", "Paspor", "Lainnya"].map((type) => (
+                          <Label
+                            key={type}
+                            htmlFor={`deposit-identity-${type}`}
+                            className={`flex items-center justify-center gap-1 p-2 border rounded-lg cursor-pointer transition-colors text-center ${
+                              depositIdentityType === type 
+                                ? "bg-primary/10 border-primary" 
+                                : "hover:bg-muted"
+                            }`}
+                          >
+                            <RadioGroupItem value={type} id={`deposit-identity-${type}`} className="sr-only" />
+                            <span className="text-xs font-medium">{type}</span>
+                          </Label>
+                        ))}
+                      </RadioGroup>
+                      <p className="text-xs text-muted-foreground">
+                        Pemilik: <strong>{formData.customer_name || "-"}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
