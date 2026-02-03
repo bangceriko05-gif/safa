@@ -1142,6 +1142,9 @@ export default function PMSCalendar({
                             const bgColor = isBatal ? `${statusColor}40` : `${statusColor}80`;
                             const nights = booking.duration || 1;
                             
+                            // Check if room has active deposit
+                            const hasActiveDeposit = roomDeposits.has(room.id);
+                            
                             // Calculate colSpan: how many visible dates this booking covers
                             const bookingStartDate = startOfDay(new Date(booking.date));
                             const bookingEndDate = addDays(bookingStartDate, nights - 1);
@@ -1174,10 +1177,19 @@ export default function PMSCalendar({
                                         borderLeft: `4px solid ${statusColor}`,
                                       }}
                                     >
+                                      {/* Deposit Badge on booking cell */}
+                                      {hasActiveDeposit && (
+                                        <div 
+                                          className="absolute top-1 left-1 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 shadow-sm" 
+                                          title="Deposit aktif"
+                                        >
+                                          <Shield className="w-3 h-3 text-amber-600" />
+                                        </div>
+                                      )}
                                       <div className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: statusColor, color: '#000' }}>
                                         {status}
                                       </div>
-                                      <div className="text-xs font-semibold truncate pr-8">{booking.customer_name}</div>
+                                      <div className={cn("text-xs font-semibold truncate pr-8", hasActiveDeposit && "pl-6")}>{booking.customer_name}</div>
                                       <div className="text-[10px] text-muted-foreground truncate">
                                         {nights} malam
                                       </div>
