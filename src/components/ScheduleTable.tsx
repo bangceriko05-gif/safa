@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Edit, Trash2, User, Phone, Clock, DollarSign, FileText, Calendar, Copy, ChevronDown, XCircle, Undo, Loader2, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, User, Phone, Clock, DollarSign, FileText, Calendar, Copy, ChevronDown, XCircle, Undo, Loader2, Sparkles, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -111,6 +111,8 @@ export default function ScheduleTable({
   const [updatingPopupStatus, setUpdatingPopupStatus] = useState<string | null>(null);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
   const [roomsWithCheckout, setRoomsWithCheckout] = useState<Set<string>>(new Set());
+  // Room deposits - map roomId -> true if has active deposit
+  const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   
   // Check-in deposit popup state
   const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
@@ -131,6 +133,7 @@ export default function ScheduleTable({
     fetchRooms();
     fetchUserPermissions();
     fetchStatusColors();
+    fetchRoomDeposits();
 
     // Listen for status color changes
     const handleStatusColorsChange = () => fetchStatusColors();
@@ -142,9 +145,27 @@ export default function ScheduleTable({
     window.addEventListener("status-colors-changed", handleStatusColorsChange);
     window.addEventListener("booking-text-color-changed", handleBookingTextColorChange);
 
+    // Realtime subscription for deposits
+    const depositsChannel = supabase
+      .channel(`schedule-deposits-${currentStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_deposits',
+          filter: `store_id=eq.${currentStore.id}`,
+        },
+        () => {
+          fetchRoomDeposits();
+        }
+      )
+      .subscribe();
+
     return () => {
       window.removeEventListener("status-colors-changed", handleStatusColorsChange);
       window.removeEventListener("booking-text-color-changed", handleBookingTextColorChange);
+      supabase.removeChannel(depositsChannel);
     };
   }, [currentStore]);
 
@@ -215,6 +236,25 @@ export default function ScheduleTable({
 
   const hasPermission = (permissionName: string) => {
     return userPermissions.includes(permissionName) || userRole === "admin";
+  };
+
+  const fetchRoomDeposits = async () => {
+    try {
+      if (!currentStore) return;
+
+      const { data, error } = await supabase
+        .from("room_deposits")
+        .select("room_id")
+        .eq("store_id", currentStore.id)
+        .eq("status", "active");
+
+      if (error) throw error;
+
+      const depositSet = new Set(data?.map(d => d.room_id) || []);
+      setRoomDeposits(depositSet);
+    } catch (error) {
+      console.error("Error fetching room deposits:", error);
+    }
   };
 
   useEffect(() => {
@@ -1098,6 +1138,9 @@ export default function ScheduleTable({
                         // Calculate grand total (room subtotal + products - discount)
                         const grandTotal = Math.max(0, roomSubtotal + productsTotal - discount);
                         
+                        // Check if room has active deposit
+                        const hasDeposit = roomDeposits.has(room.id);
+                        
                         // Determine background color based on status using configured colors
                         const status = booking.status || 'BO';
                         const statusColor = statusColors[status] || '#3B82F6';
@@ -1132,6 +1175,16 @@ export default function ScheduleTable({
                                 borderLeft: `3px solid ${isBlocked ? "#9CA3AF" : borderColor}`,
                               }}
                             >
+                              {/* Deposit Badge */}
+                              {hasDeposit && (
+                                <div 
+                                  className="absolute top-1 left-1 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 shadow-sm" 
+                                  title="Deposit aktif"
+                                >
+                                  <Shield className="w-3 h-3 text-amber-600" />
+                                </div>
+                              )}
+                              
                               {/* Status Badge with Popover */}
                               <Popover>
                                 <PopoverTrigger asChild>
