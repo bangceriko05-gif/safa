@@ -212,15 +212,20 @@ export default function BookingDetailPopup({
   const handleStatusChange = async (newStatus: string) => {
     if (!booking || !bookingId) return;
     
-    // If changing to Check In, show deposit popup first
+    // If changing to Check In, show deposit popup only if no active deposit exists
     if (newStatus === "CI") {
-      setCheckInDepositPopup({
-        open: true,
-        onConfirmCallback: async () => {
-          await executeStatusChange(newStatus);
-        },
-      });
-      return;
+      const hasActiveDeposit = roomDeposits.has(booking.room_id);
+      
+      // Skip deposit popup if room already has active deposit
+      if (!hasActiveDeposit) {
+        setCheckInDepositPopup({
+          open: true,
+          onConfirmCallback: async () => {
+            await executeStatusChange(newStatus);
+          },
+        });
+        return;
+      }
     }
     
     // If changing to Check Out, check for active deposits first
