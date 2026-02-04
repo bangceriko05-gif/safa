@@ -21,6 +21,8 @@ import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Tr
 import { toast } from "@/hooks/use-toast";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
+import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
+import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 
 interface BookingDetailPopupProps {
   isOpen: boolean;
@@ -90,12 +92,42 @@ export default function BookingDetailPopup({
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
+  const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
+  
+  // Check-in deposit popup state
+  const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
+    open: boolean;
+    onConfirmCallback: (() => Promise<void>) | null;
+  }>({ open: false, onConfirmCallback: null });
+
+  // Check-out deposit popup state
+  const [checkOutDepositPopup, setCheckOutDepositPopup] = useState<{
+    open: boolean;
+    onConfirmCallback: (() => Promise<void>) | null;
+  }>({ open: false, onConfirmCallback: null });
 
   useEffect(() => {
     if (isOpen && bookingId) {
       fetchBookingDetail();
+      fetchRoomDeposits();
     }
   }, [isOpen, bookingId]);
+
+  const fetchRoomDeposits = async () => {
+    if (!currentStore) return;
+    try {
+      const { data, error } = await supabase
+        .from("room_deposits")
+        .select("room_id")
+        .eq("store_id", currentStore.id)
+        .eq("status", "active");
+
+      if (error) throw error;
+      setRoomDeposits(new Set(data?.map(d => d.room_id) || []));
+    } catch (error) {
+      console.error("Error fetching room deposits:", error);
+    }
+  };
 
   const fetchBookingDetail = async () => {
     if (!bookingId) return;
@@ -180,6 +212,38 @@ export default function BookingDetailPopup({
   const handleStatusChange = async (newStatus: string) => {
     if (!booking || !bookingId) return;
     
+    // If changing to Check In, show deposit popup first
+    if (newStatus === "CI") {
+      setCheckInDepositPopup({
+        open: true,
+        onConfirmCallback: async () => {
+          await executeStatusChange(newStatus);
+        },
+      });
+      return;
+    }
+    
+    // If changing to Check Out, check for active deposits first
+    if (newStatus === "CO") {
+      const hasActiveDeposit = roomDeposits.has(booking.room_id);
+      
+      if (hasActiveDeposit) {
+        setCheckOutDepositPopup({
+          open: true,
+          onConfirmCallback: async () => {
+            await executeStatusChange(newStatus);
+          },
+        });
+        return;
+      }
+    }
+    
+    await executeStatusChange(newStatus);
+  };
+
+  const executeStatusChange = async (newStatus: string) => {
+    if (!booking || !bookingId) return;
+    
     setUpdatingStatus(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -251,8 +315,9 @@ export default function BookingDetailPopup({
         description: `Status berhasil diubah ke ${statusLabels[newStatus] || newStatus}`,
       });
 
-      // Refresh booking data
+      // Refresh booking data and deposits
       await fetchBookingDetail();
+      await fetchRoomDeposits();
       
       // Notify parent component
       onStatusChange?.();
@@ -556,6 +621,46 @@ export default function BookingDetailPopup({
           </div>
         )}
       </DialogContent>
+
+      {/* Check-In Deposit Popup */}
+      {booking && checkInDepositPopup.open && (
+        <CheckInDepositPopup
+          open={checkInDepositPopup.open}
+          onClose={() => setCheckInDepositPopup({ open: false, onConfirmCallback: null })}
+          onConfirm={async () => {
+            if (checkInDepositPopup.onConfirmCallback) {
+              await checkInDepositPopup.onConfirmCallback();
+            }
+          }}
+          bookingData={{
+            id: booking.id,
+            room_id: booking.room_id,
+            room_name: booking.room_name,
+            customer_name: booking.customer_name,
+            store_id: booking.store_id || currentStore?.id || "",
+          }}
+        />
+      )}
+
+      {/* Check-Out Deposit Popup */}
+      {booking && checkOutDepositPopup.open && (
+        <CheckOutDepositPopup
+          open={checkOutDepositPopup.open}
+          onClose={() => setCheckOutDepositPopup({ open: false, onConfirmCallback: null })}
+          onConfirm={async () => {
+            if (checkOutDepositPopup.onConfirmCallback) {
+              await checkOutDepositPopup.onConfirmCallback();
+            }
+          }}
+          bookingData={{
+            id: booking.id,
+            room_id: booking.room_id,
+            room_name: booking.room_name,
+            customer_name: booking.customer_name,
+            store_id: booking.store_id || currentStore?.id || "",
+          }}
+        />
+      )}
     </Dialog>
   );
 }
