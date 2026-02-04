@@ -563,23 +563,27 @@ export default function PMSCalendar({
   };
 
   const handleBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
-    // If changing to Check In, show deposit popup first
+    // If changing to Check In, show deposit popup only if no active deposit exists
     if (newStatus === "CI") {
-      // Get room name for deposit popup
-      const room = rooms.find(r => r.id === bookingData.room_id);
+      const hasActiveDeposit = roomDeposits.has(bookingData.room_id);
       
-      setCheckInDepositPopup({
-        open: true,
-        bookingId,
-        bookingData: {
-          ...bookingData,
-          room_name: room?.name,
-        } as any,
-        onConfirmCallback: async () => {
-          await executeBookingStatusChange(bookingId, newStatus, bookingData);
-        },
-      });
-      return;
+      // Skip deposit popup if room already has active deposit
+      if (!hasActiveDeposit) {
+        const room = rooms.find(r => r.id === bookingData.room_id);
+        
+        setCheckInDepositPopup({
+          open: true,
+          bookingId,
+          bookingData: {
+            ...bookingData,
+            room_name: room?.name,
+          } as any,
+          onConfirmCallback: async () => {
+            await executeBookingStatusChange(bookingId, newStatus, bookingData);
+          },
+        });
+        return;
+      }
     }
     
     // If changing to Check Out, check for active deposits first
