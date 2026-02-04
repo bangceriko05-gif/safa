@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
+import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 
 interface ScheduleTableProps {
   selectedDate: Date;
@@ -116,6 +117,14 @@ export default function ScheduleTable({
   
   // Check-in deposit popup state
   const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
+    open: boolean;
+    bookingId: string;
+    bookingData: BookingWithAdmin | null;
+    onConfirmCallback: (() => Promise<void>) | null;
+  }>({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null });
+
+  // Check-out deposit popup state
+  const [checkOutDepositPopup, setCheckOutDepositPopup] = useState<{
     open: boolean;
     bookingId: string;
     bookingData: BookingWithAdmin | null;
@@ -652,6 +661,27 @@ export default function ScheduleTable({
         },
       });
       return;
+    }
+    
+    // If changing to Check Out, check for active deposits first
+    if (newStatus === "CO") {
+      const room = rooms.find(r => r.id === bookingData.room_id);
+      const hasActiveDeposit = roomDeposits.has(bookingData.room_id);
+      
+      if (hasActiveDeposit) {
+        setCheckOutDepositPopup({
+          open: true,
+          bookingId,
+          bookingData: {
+            ...bookingData,
+            room_name: room?.name,
+          } as any,
+          onConfirmCallback: async () => {
+            await executeStatusChange(bookingId, newStatus, bookingData);
+          },
+        });
+        return;
+      }
     }
     
     await executeStatusChange(bookingId, newStatus, bookingData);
@@ -1581,6 +1611,26 @@ export default function ScheduleTable({
             room_id: checkInDepositPopup.bookingData.room_id,
             room_name: (checkInDepositPopup.bookingData as any).room_name,
             customer_name: checkInDepositPopup.bookingData.customer_name,
+            store_id: currentStore?.id || "",
+          }}
+        />
+      )}
+
+      {/* Check-Out Deposit Popup */}
+      {checkOutDepositPopup.bookingData && (
+        <CheckOutDepositPopup
+          open={checkOutDepositPopup.open}
+          onClose={() => setCheckOutDepositPopup({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null })}
+          onConfirm={async () => {
+            if (checkOutDepositPopup.onConfirmCallback) {
+              await checkOutDepositPopup.onConfirmCallback();
+            }
+          }}
+          bookingData={{
+            id: checkOutDepositPopup.bookingData.id,
+            room_id: checkOutDepositPopup.bookingData.room_id,
+            room_name: (checkOutDepositPopup.bookingData as any).room_name,
+            customer_name: checkOutDepositPopup.bookingData.customer_name,
             store_id: currentStore?.id || "",
           }}
         />
