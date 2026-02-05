@@ -661,6 +661,7 @@ export type Database = {
           logo_url: string | null
           manager_name: string | null
           paper_size: string | null
+          print_format: string
           show_logo: boolean | null
           show_manager_signature: boolean | null
           show_qr_code: boolean | null
@@ -677,6 +678,7 @@ export type Database = {
           logo_url?: string | null
           manager_name?: string | null
           paper_size?: string | null
+          print_format?: string
           show_logo?: boolean | null
           show_manager_signature?: boolean | null
           show_qr_code?: boolean | null
@@ -693,6 +695,7 @@ export type Database = {
           logo_url?: string | null
           manager_name?: string | null
           paper_size?: string | null
+          print_format?: string
           show_logo?: boolean | null
           show_manager_signature?: boolean | null
           show_qr_code?: boolean | null
