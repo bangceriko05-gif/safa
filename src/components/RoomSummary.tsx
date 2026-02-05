@@ -315,6 +315,13 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
     !dirtyRoomIds.has(r.id)
   );
 
+  // Calculate daily occupancy percentage
+  // Occupancy = (occupied rooms / total active rooms) * 100
+  const activeRooms = rooms.filter(r => r.status === "Aktif");
+  const occupancyPercentage = activeRooms.length > 0 
+    ? Math.round((occupiedRoomIds.size / activeRooms.length) * 100) 
+    : 0;
+
   const handleCardClick = (cardType: InfoCardType) => {
     setSelectedCard(cardType);
     setDialogOpen(true);
@@ -410,8 +417,11 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="space-y-1">
-                <div className="text-2xl font-bold">{totalReservations}</div>
-                <div className="text-sm opacity-90">Rp {totalRevenue.toLocaleString('id-ID')}</div>
+                <div className="flex items-baseline gap-2">
+                  <div className="text-2xl font-bold">{totalReservations}</div>
+                  <div className="text-lg font-semibold opacity-90">({occupancyPercentage}%)</div>
+                </div>
+                <div className="text-xs opacity-80">Okupansi: {occupiedRoomIds.size}/{activeRooms.length} kamar</div>
               </div>
             </CardContent>
           </Card>
