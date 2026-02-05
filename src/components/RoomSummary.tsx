@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CalendarCheck, LogIn, LogOut, AlertTriangle, CheckCircle, DollarSign } from "lucide-react";
-import { addDays, format, startOfDay } from "date-fns";
+import { addDays, subDays, format, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ interface BookingData {
   status: string | null;
   room_id: string;
   room_name: string;
+  date?: string;
 }
 
 interface RoomData {
@@ -63,11 +64,12 @@ interface RoomDailyStatusData {
   status: string;
 }
 
-type InfoCardType = "total" | "bo" | "ci" | "co" | "kotor" | "available";
+type InfoCardType = "total" | "bo" | "ci" | "pending_co" | "co" | "kotor" | "available";
 
 export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const { currentStore } = useStore();
   const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [pendingCheckOutBookings, setPendingCheckOutBookings] = useState<BookingData[]>([]);
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [roomDailyStatus, setRoomDailyStatus] = useState<RoomDailyStatusData[]>([]);
   const [occupiedRoomIds, setOccupiedRoomIds] = useState<Set<string>>(new Set());
@@ -156,12 +158,14 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const earliestStartDate = format(addDays(selectedDate, -60), "yyyy-MM-dd");
+      const yesterdayStr = format(subDays(selectedDate, 1), "yyyy-MM-dd");
 
       const [
         { data: bookingsData, error: bookingsError },
         { data: roomsData, error: roomsError },
         { data: dailyStatusData, error: dailyStatusError },
         { data: activeBookingsData, error: activeBookingsError },
+        { data: pendingCOData, error: pendingCOError },
       ] = await Promise.all([
         // Bookings that START today (for the reservation cards)
         supabase
@@ -193,12 +197,27 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .in("status", ["BO", "CI"])
           .gte("date", earliestStartDate)
           .lte("date", dateStr),
+        // Fetch bookings from previous days that need to check out today
+        supabase
+          .from("bookings")
+          .select(
+            `
+            id, bid, customer_name, phone, start_time, end_time, 
+            duration, price, status, room_id, date,
+            rooms (name)
+          `
+          )
+          .eq("store_id", currentStore.id)
+          .in("status", ["BO", "CI"])
+          .gte("date", earliestStartDate)
+          .lt("date", dateStr),
       ]);
 
       if (bookingsError) throw bookingsError;
       if (roomsError) throw roomsError;
       if (dailyStatusError) throw dailyStatusError;
       if (activeBookingsError) throw activeBookingsError;
+      if (pendingCOError) throw pendingCOError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
@@ -212,10 +231,34 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         status: b.status,
         room_id: b.room_id,
         room_name: b.rooms?.name || "Unknown",
+        date: b.date,
       }));
 
-      // OCCUPIED TODAY: bookings (BO or CI) where today is within [start_date .. start_date + (nights-1)]
+      // Filter pending checkout bookings: bookings whose checkout date is today
       const today = startOfDay(selectedDate);
+      const pendingCOBookings: BookingData[] = (pendingCOData || [])
+        .filter((b: any) => {
+          const bookingStart = startOfDay(new Date(b.date));
+          const nights = Number(b.duration) || 1;
+          const checkoutDate = addDays(bookingStart, nights);
+          return startOfDay(checkoutDate).getTime() === today.getTime();
+        })
+        .map((b: any) => ({
+          id: b.id,
+          bid: b.bid,
+          customer_name: b.customer_name,
+          phone: b.phone,
+          start_time: b.start_time,
+          end_time: b.end_time,
+          duration: b.duration,
+          price: b.price,
+          status: b.status,
+          room_id: b.room_id,
+          room_name: b.rooms?.name || "Unknown",
+          date: b.date,
+        }));
+
+      // OCCUPIED TODAY: bookings (BO or CI) where today is within [start_date .. start_date + (nights-1)]
       const occupiedIds = (activeBookingsData || [])
         .filter((b: any) => {
           const bookingStart = startOfDay(new Date(b.date));
@@ -226,6 +269,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         .map((b: any) => b.room_id);
 
       setBookings(mappedBookings);
+      setPendingCheckOutBookings(pendingCOBookings);
       setRooms(roomsData || []);
       setRoomDailyStatus(dailyStatusData || []);
       setOccupiedRoomIds(new Set(occupiedIds));
@@ -246,6 +290,9 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
   const coBookings = bookings.filter(b => b.status === "CO");
   const coRevenue = coBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+
+  // Pending checkout: bookings from previous days that should checkout today
+  const pendingCORevenue = pendingCheckOutBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
   // Get dirty room IDs from room_daily_status for TODAY (single source of truth)
   const dirtyRoomIds = new Set(
@@ -314,7 +361,8 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       case "total": return "Total Reservasi Hari Ini";
       case "bo": return "Tamu Belum Check In (Reservasi)";
       case "ci": return "Tamu Sudah Check In";
-      case "co": return "Tamu Sudah Check Out";
+      case "pending_co": return "Tamu Harus Check Out Hari Ini";
+      case "co": return "Tamu Sudah Check Out Hari Ini";
       case "kotor": return "Kamar Kotor";
       case "available": return "Kamar Available";
       default: return "";
@@ -326,6 +374,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       case "total": return bookings;
       case "bo": return boBookings;
       case "ci": return ciBookings;
+      case "pending_co": return pendingCheckOutBookings;
       case "co": return coBookings;
       case "kotor": return kotorRooms;
       case "available": return availableRooms;
@@ -347,7 +396,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       )}
       
       {!isLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {/* Box 1: Total Reservasi */}
           <Card 
             className="cursor-pointer bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
@@ -407,8 +456,8 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
           {/* Box 4: Check Out (CO) */}
           <Card 
-            className="cursor-pointer bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
-            onClick={() => handleCardClick("co")}
+            className="cursor-pointer bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+            onClick={() => handleCardClick("pending_co")}
           >
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
@@ -418,13 +467,32 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="space-y-1">
-                <div className="text-2xl font-bold">{coBookings.length}</div>
-                <div className="text-sm opacity-90">Rp {coRevenue.toLocaleString('id-ID')}</div>
+                <div className="text-2xl font-bold">{pendingCheckOutBookings.length}</div>
+                <div className="text-sm opacity-90">Harus CO hari ini</div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Box 5: Kamar Kotor */}
+          {/* Box 5: Checked Out (CO) - Already checked out today */}
+          <Card 
+            className="cursor-pointer bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+            onClick={() => handleCardClick("co")}
+          >
+            <CardHeader className="pb-2 pt-3 px-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <CardTitle className="text-sm font-medium">Checked Out</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="space-y-1">
+                <div className="text-2xl font-bold">{coBookings.length}</div>
+                <div className="text-sm opacity-90">Sudah CO hari ini</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Box 6: Kamar Kotor */}
           <Card 
             className="cursor-pointer bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
             onClick={() => handleCardClick("kotor")}
@@ -443,7 +511,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             </CardContent>
           </Card>
 
-          {/* Box 6: Kamar Available */}
+          {/* Box 7: Kamar Available */}
           <Card 
             className="cursor-pointer bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
             onClick={() => handleCardClick("available")}
@@ -531,7 +599,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
                       <TableCell className="font-medium">{booking.customer_name}</TableCell>
                       <TableCell>{booking.room_name}</TableCell>
                       <TableCell>{booking.start_time?.slice(0, 5)} - {booking.end_time?.slice(0, 5)}</TableCell>
-                      <TableCell>{booking.duration} jam</TableCell>
+                      <TableCell>{booking.duration} {selectedCard === "pending_co" || selectedCard === "co" ? "malam" : "jam"}</TableCell>
                       <TableCell className="text-right">Rp {(booking.price || 0).toLocaleString('id-ID')}</TableCell>
                     </TableRow>
                   ))}
