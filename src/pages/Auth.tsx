@@ -30,7 +30,7 @@ export default function Auth() {
 
   useEffect(() => {
     // Load saved email only (password should never be stored)
-    const savedEmail = localStorage.getItem("treebox_email");
+    const savedEmail = localStorage.getItem("anka_pms_email");
     
     if (savedEmail) {
       setEmail(savedEmail);
@@ -38,7 +38,7 @@ export default function Auth() {
     }
     
     // Clean up any previously stored passwords
-    localStorage.removeItem("treebox_password");
+    localStorage.removeItem("anka_pms_password");
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -114,9 +114,9 @@ export default function Auth() {
         
         // Save or remove email based on remember me (never store password)
         if (rememberMe) {
-          localStorage.setItem("treebox_email", email.trim());
+          localStorage.setItem("anka_pms_email", email.trim());
         } else {
-          localStorage.removeItem("treebox_email");
+          localStorage.removeItem("anka_pms_email");
         }
         
         // Login activity will be logged in SelectStore when user selects a store
@@ -178,7 +178,7 @@ export default function Auth() {
       <Card className="w-full max-w-md shadow-[var(--shadow-card)]">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? "Masuk ke Treebox" : "Daftar Treebox"}
+            {isLogin ? "Masuk ke ANKA PMS" : "Daftar ANKA PMS"}
           </CardTitle>
           <CardDescription className="text-center">
             {isLogin
