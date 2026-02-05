@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Upload, Printer, Building2, Phone, User, FileText } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface PrintSettings {
   id?: string;
@@ -30,6 +31,7 @@ interface PrintSettings {
   show_logo: boolean;
   show_manager_signature: boolean;
   show_qr_code: boolean;
+  print_format: string;
 }
 
 export default function PrintSettingsComponent() {
@@ -49,6 +51,7 @@ export default function PrintSettingsComponent() {
     show_logo: true,
     show_manager_signature: true,
     show_qr_code: false,
+    print_format: "pdf",
   });
 
   useEffect(() => {
@@ -245,6 +248,41 @@ export default function PrintSettingsComponent() {
                 <SelectItem value="A5">A5 (148mm x 210mm)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Print Format */}
+          <div className="space-y-3">
+            <Label>Format Print Invoice</Label>
+            <RadioGroup
+              value={settings.print_format}
+              onValueChange={(value) =>
+                setSettings((prev) => ({ ...prev, print_format: value }))
+              }
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <div className="flex items-start space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="pdf" id="format-pdf" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="format-pdf" className="font-medium cursor-pointer">
+                    PDF Document
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Generate file PDF yang bisa diunduh dan dicetak ke printer biasa
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="thermal" id="format-thermal" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="format-thermal" className="font-medium cursor-pointer">
+                    Thermal Printer
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Print langsung ke printer thermal (58mm/80mm) via browser
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
           </div>
 
           {/* Logo */}
