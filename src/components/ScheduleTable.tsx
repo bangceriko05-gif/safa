@@ -1488,7 +1488,13 @@ export default function ScheduleTable({
                                   )}
                                 </div>
                                 <div className={`${size.fontSize} ${size.spacing}`} style={{ color: bookingTextColor }}>
-                                  <div>{booking.duration} jam ({booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)})</div>
+                                  <div>
+                                    {booking.duration} jam ({booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)})
+                                    {' '}
+                                    <span className={`font-bold ${(booking as any).payment_status === "lunas" ? "text-emerald-700" : "text-red-600"}`}>
+                                      ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                                    </span>
+                                  </div>
                                   <div>Total: Rp {grandTotal.toLocaleString('id-ID')}</div>
                                   <div>Admin: {booking.admin_name}</div>
                                   {booking.note && (

@@ -252,6 +252,7 @@ export type Database = {
           payment_method: string | null
           payment_method_2: string | null
           payment_proof_url: string | null
+          payment_status: string
           phone: string
           price: number
           price_2: number | null
@@ -287,6 +288,7 @@ export type Database = {
           payment_method?: string | null
           payment_method_2?: string | null
           payment_proof_url?: string | null
+          payment_status?: string
           phone: string
           price: number
           price_2?: number | null
@@ -322,6 +324,7 @@ export type Database = {
           payment_method?: string | null
           payment_method_2?: string | null
           payment_proof_url?: string | null
+          payment_status?: string
           phone?: string
           price?: number
           price_2?: number | null

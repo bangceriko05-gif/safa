@@ -141,6 +141,7 @@ export default function BookingModal({
     has_discount: false,
     discount_applies_to: "variant" as "variant" | "product",
     booking_type: "walk_in" as "walk_in" | "ota",
+    payment_status: "belum_lunas" as "lunas" | "belum_lunas",
   });
 
   // Check if PMS mode based on store calendar_type
@@ -294,6 +295,7 @@ export default function BookingModal({
         dual_payment: editingBooking.dual_payment || false,
         payment_method_2: editingBooking.payment_method_2 || "",
         status: editingBooking.status || "BO",
+        payment_status: editingBooking.payment_status || "belum_lunas",
         price_2: editingBooking.price_2 ? formatPrice(editingBooking.price_2.toString()) : "",
         reference_no_2: editingBooking.reference_no_2 || "",
         discount_type: editingBooking.discount_type || "percentage",
@@ -343,6 +345,7 @@ export default function BookingModal({
         has_discount: false,
         discount_applies_to: "variant",
         booking_type: "walk_in",
+        payment_status: "belum_lunas",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -384,6 +387,7 @@ export default function BookingModal({
         has_discount: false,
         discount_applies_to: "variant",
         booking_type: "walk_in",
+        payment_status: "belum_lunas",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -983,6 +987,7 @@ export default function BookingModal({
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
         store_id: currentStore.id,
         payment_proof_url: paymentProofUrl,
+        payment_status: formData.payment_status,
       };
 
       // Only set created_by for NEW bookings, never update it for existing bookings
@@ -1344,6 +1349,7 @@ export default function BookingModal({
         has_discount: false,
         discount_applies_to: "variant",
         booking_type: "walk_in",
+        payment_status: "belum_lunas",
       });
       // Reset deposit state
       setEnableDeposit(false);
@@ -2029,6 +2035,33 @@ export default function BookingModal({
                 <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Payment Status */}
+          <div className="space-y-2">
+            <Label>Status Pembayaran</Label>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant={formData.payment_status === "lunas" ? "default" : "outline"}
+                size="sm"
+                className={formData.payment_status === "lunas" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+                onClick={() => setFormData({ ...formData, payment_status: "lunas" })}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                LUNAS
+              </Button>
+              <Button
+                type="button"
+                variant={formData.payment_status === "belum_lunas" ? "default" : "outline"}
+                size="sm"
+                className={formData.payment_status === "belum_lunas" ? "bg-red-600 hover:bg-red-700 text-white" : ""}
+                onClick={() => setFormData({ ...formData, payment_status: "belum_lunas" })}
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                BELUM LUNAS
+              </Button>
+            </div>
           </div>
 
           {/* Payment Proof Upload */}
