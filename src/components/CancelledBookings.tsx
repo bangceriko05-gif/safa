@@ -55,6 +55,7 @@ interface BookingWithRoom {
   created_at: string;
   updated_at: string;
   payment_proof_url: string | null;
+  payment_status: string;
 }
 
 export default function CancelledBookings({ userRole, onEditBooking }: CancelledBookingsProps) {
@@ -206,6 +207,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
         created_at: b.created_at,
         updated_at: b.updated_at,
         payment_proof_url: b.payment_proof_url,
+        payment_status: b.payment_status || "belum_lunas",
       }));
 
       setBookings(mappedBookings);
@@ -546,10 +548,16 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                       {format(new Date(booking.date), "d MMM yyyy", { locale: idLocale })}
                     </TableCell>
                     <TableCell>
-                      {isPMSMode 
-                        ? `${booking.duration} malam`
-                        : `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
-                      }
+                      <div>
+                        {isPMSMode 
+                          ? `${booking.duration} malam`
+                          : `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
+                        }
+                        {' '}
+                        <span className={`font-bold text-xs ${booking.payment_status === "lunas" ? "text-emerald-700" : "text-red-600"}`}>
+                          ({booking.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {booking.payment_proof_url ? (

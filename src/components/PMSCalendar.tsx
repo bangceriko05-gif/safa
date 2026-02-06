@@ -1224,8 +1224,16 @@ export default function PMSCalendar({
                                         {status}
                                       </div>
                                       <div className={cn("text-xs font-semibold truncate pr-8", hasActiveDeposit && "pl-6")}>{booking.customer_name}</div>
-                                      <div className="text-[10px] text-muted-foreground truncate">
-                                        {nights} malam
+                                      <div className="text-[11px] font-medium truncate">
+                                        {nights} malam {' '}
+                                        <span className={cn(
+                                          "font-bold",
+                                          (booking as any).payment_status === "lunas" 
+                                            ? "text-emerald-700" 
+                                            : "text-red-600"
+                                        )}>
+                                          ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                                        </span>
                                       </div>
                                       {booking.phone && (
                                         <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
@@ -1355,7 +1363,17 @@ export default function PMSCalendar({
 
                                         <div>
                                           <p className="text-xs text-muted-foreground">Durasi</p>
-                                          <p className="font-medium">{nights} malam</p>
+                                          <p className="font-medium">
+                                            {nights} malam{' '}
+                                            <span className={cn(
+                                              "font-bold",
+                                              (booking as any).payment_status === "lunas" 
+                                                ? "text-emerald-700" 
+                                                : "text-red-600"
+                                            )}>
+                                              ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                                            </span>
+                                          </p>
                                         </div>
 
                                         {booking.note && (
