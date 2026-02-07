@@ -56,10 +56,18 @@ interface BookingDetail {
   room_id: string;
   store_id: string | null;
   variant_name?: string;
+  variant_id?: string | null;
   discount_type?: string | null;
   discount_value?: number | null;
+  discount_applies_to?: string | null;
   payment_method?: string | null;
+  payment_method_2?: string | null;
   reference_no?: string | null;
+  reference_no_2?: string | null;
+  dual_payment?: boolean | null;
+  price_2?: number | null;
+  payment_status?: string | null;
+  variant_price?: number;
 }
 
 interface ActivityLogEntry {
@@ -186,21 +194,24 @@ export default function BookingDetailPopup({
 
       setActivityLogs(logsData || []);
 
-      // Fetch variant name if variant_id exists
+      // Fetch variant name and price if variant_id exists
       let variantName = undefined;
+      let variantPrice = undefined;
       if (bookingData.variant_id) {
         const { data: variantData } = await supabase
           .from("room_variants")
-          .select("variant_name")
+          .select("variant_name, price")
           .eq("id", bookingData.variant_id)
           .single();
         variantName = variantData?.variant_name;
+        variantPrice = variantData?.price;
       }
 
       setBooking({
         ...bookingData,
         room_name: bookingData.rooms?.name || "Unknown",
         variant_name: variantName,
+        variant_price: variantPrice,
       });
     } catch (error) {
       console.error("Error fetching booking detail:", error);
@@ -550,14 +561,130 @@ export default function BookingDetailPopup({
                 <span>{booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}</span>
                 <span className="text-muted-foreground">Durasi</span>
                 <span>{booking.duration} jam</span>
-                <span className="text-muted-foreground">Harga</span>
-                <span>{formatCurrency(booking.price)}</span>
-                {booking.payment_method && (
-                  <>
-                    <span className="text-muted-foreground">Pembayaran</span>
-                    <span>{booking.payment_method} {booking.reference_no ? `(${booking.reference_no})` : ""}</span>
-                  </>
-                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Payment Details */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-sm">Detail Pembayaran</h4>
+              
+              {/* Price Breakdown */}
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
+                {(() => {
+                  // Calculate room subtotal from variant price × duration
+                  const roomSubtotal = booking.variant_price 
+                    ? booking.variant_price * booking.duration 
+                    : booking.price; // fallback for OTA
+                  const productTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
+                  let discountAmount = 0;
+                  if (booking.discount_value && booking.discount_value > 0) {
+                    if (booking.discount_type === "percentage") {
+                      const base = booking.discount_applies_to === "product" ? productTotal : roomSubtotal;
+                      discountAmount = Math.round(base * (booking.discount_value / 100));
+                    } else {
+                      discountAmount = booking.discount_value;
+                    }
+                  }
+                  const grandTotal = roomSubtotal + productTotal - discountAmount;
+                  const totalPaid = (booking.price || 0) + (booking.dual_payment && booking.price_2 ? booking.price_2 : 0);
+                  const remaining = grandTotal - totalPaid;
+                  const isLunas = booking.payment_status === "lunas";
+
+                  return (
+                    <>
+                      {/* Room Price */}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Harga Kamar {booking.variant_name ? `(${booking.variant_name})` : ""}
+                        </span>
+                        <span>{formatCurrency(roomSubtotal)}</span>
+                      </div>
+                      
+                      {/* Products */}
+                      {products.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Total Produk</span>
+                          <span>{formatCurrency(productTotal)}</span>
+                        </div>
+                      )}
+
+                      {/* Discount */}
+                      {booking.discount_value && booking.discount_value > 0 && (
+                        <div className="flex justify-between text-red-600">
+                          <span>Diskon {booking.discount_type === "percentage" ? `(${booking.discount_value}%)` : ""}</span>
+                          <span>- {formatCurrency(discountAmount)}</span>
+                        </div>
+                      )}
+
+                      <Separator />
+
+                      {/* Grand Total */}
+                      <div className="flex justify-between font-semibold">
+                        <span>Total Keseluruhan</span>
+                        <span>{formatCurrency(grandTotal)}</span>
+                      </div>
+
+                      <Separator />
+
+                      {/* Payment 1 */}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          {booking.dual_payment ? "Pembayaran 1" : "Total Bayar"}
+                        </span>
+                        <span>{formatCurrency(booking.price)}</span>
+                      </div>
+                      {booking.payment_method && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Metode</span>
+                          <span>{booking.payment_method} {booking.reference_no && booking.reference_no !== "-" ? `(${booking.reference_no})` : ""}</span>
+                        </div>
+                      )}
+
+                      {/* Payment 2 */}
+                      {booking.dual_payment && (
+                        <>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-muted-foreground">Pembayaran 2</span>
+                            <span>{booking.price_2 ? formatCurrency(booking.price_2) : formatCurrency(0)}</span>
+                          </div>
+                          {booking.payment_method_2 && (
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Metode</span>
+                              <span>{booking.payment_method_2} {booking.reference_no_2 ? `(${booking.reference_no_2})` : ""}</span>
+                            </div>
+                          )}
+
+                          <Separator />
+
+                          {/* Total Paid (only show for dual payment, otherwise it's same as payment 1) */}
+                          <div className="flex justify-between font-semibold">
+                            <span>Total Dibayar</span>
+                            <span>{formatCurrency(totalPaid)}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Remaining */}
+                      {remaining > 0 && (
+                        <div className="flex justify-between text-red-600 font-medium">
+                          <span>Sisa Pembayaran</span>
+                          <span>{formatCurrency(remaining)}</span>
+                        </div>
+                      )}
+
+                      {/* Payment Status */}
+                      <div className={`text-center py-2 mt-2 rounded-md font-bold text-sm ${
+                        isLunas 
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      }`}>
+                        {isLunas ? "✓ LUNAS" : "✕ BELUM LUNAS"}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
