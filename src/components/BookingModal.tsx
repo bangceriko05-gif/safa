@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -107,6 +107,7 @@ export default function BookingModal({
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
   const [isPrice2ManuallyEdited, setIsPrice2ManuallyEdited] = useState(false);
+  const isLoadingEditDataRef = useRef(false);
   const [lastFetchedStoreId, setLastFetchedStoreId] = useState<string | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
@@ -232,7 +233,9 @@ export default function BookingModal({
   useEffect(() => {
     // Skip auto-fill if dual payment is active - user should manually split the payment
     // Skip auto-fill if OTA - user inputs price manually
+    // Skip auto-fill during edit data loading - preserve original values
     if (formData.dual_payment || formData.booking_type === "ota") return;
+    if (isLoadingEditDataRef.current) return;
     
     const grandTotal = calculateGrandTotal();
     if (grandTotal > 0) {
@@ -245,6 +248,7 @@ export default function BookingModal({
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
+    if (isLoadingEditDataRef.current) return;
     if (formData.dual_payment && !isPrice2ManuallyEdited) {
       const grandTotal = calculateGrandTotal();
       const price1 = parseFloat(formData.price.replace(/\./g, '')) || 0;
@@ -280,6 +284,7 @@ export default function BookingModal({
       // Determine booking type: if no variant, it's OTA
       const isOTA = !editingBooking.variant_id;
       
+      isLoadingEditDataRef.current = true;
       setFormData({
         customer_name: editingBooking.customer_name,
         phone: editingBooking.phone,
@@ -320,6 +325,11 @@ export default function BookingModal({
 
       // Fetch booking products
       fetchBookingProducts(editingBooking.id);
+      
+      // Clear the edit loading flag after a tick so future user changes trigger auto-fill
+      setTimeout(() => {
+        isLoadingEditDataRef.current = false;
+      }, 100);
     } else if (selectedSlot && selectedSlot.roomId) {
       // New booking from slot click - auto-fill room_id
       setFormData({
