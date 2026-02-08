@@ -580,7 +580,7 @@ export default function BookingDetailPopup({
                   const productTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
                   let discountAmount = 0;
                   if (booking.discount_value && booking.discount_value > 0) {
-                    if (booking.discount_type === "percentage") {
+                    if (booking.discount_type === "percentage" || booking.discount_type === "percent") {
                       const base = booking.discount_applies_to === "product" ? productTotal : roomSubtotal;
                       discountAmount = Math.round(base * (booking.discount_value / 100));
                     } else {

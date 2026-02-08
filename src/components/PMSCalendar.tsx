@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import BookingPopoverContent from "@/components/BookingPopoverContent";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1244,176 +1245,22 @@ export default function PMSCalendar({
                                     </Card>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-80 p-4 bg-card border-2 shadow-xl z-50" side="right" align="start">
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between pb-2 border-b">
-                                        <h3 className="font-bold text-lg">Detail Booking</h3>
-                                        {getAvailableStatuses(status).length > 0 ? (
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                disabled={updatingStatus === booking.id}
-                                                className="gap-1 font-semibold h-7 px-2"
-                                                style={{
-                                                  backgroundColor: statusColor,
-                                                  color: status === "CO" || status === "BATAL" ? "#fff" : "#000",
-                                                  borderColor: statusColor,
-                                                }}
-                                              >
-                                                {updatingStatus === booking.id ? (
-                                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                                ) : (
-                                                  <>
-                                                    {status}
-                                                    <ChevronDown className="h-3 w-3" />
-                                                  </>
-                                                )}
-                                              </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-popover z-[100]">
-                                              {getAvailableStatuses(status).map((newStatus) => (
-                                                <DropdownMenuItem
-                                                  key={newStatus}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleBookingStatusChange(booking.id, newStatus, booking);
-                                                  }}
-                                                  className={newStatus === "BATAL" ? "text-destructive" : ""}
-                                                >
-                                                  <div
-                                                    className="w-3 h-3 rounded-full mr-2"
-                                                    style={{ backgroundColor: statusColors[newStatus] || "#ccc" }}
-                                                  />
-                                                  {getStatusLabel(newStatus)}
-                                                </DropdownMenuItem>
-                                              ))}
-                                              {userRole === "admin" && (
-                                                <DropdownMenuItem
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleBookingStatusChange(booking.id, "BO", booking);
-                                                  }}
-                                                  className="text-muted-foreground"
-                                                >
-                                                  <Undo className="h-3 w-3 mr-2" />
-                                                  Reset ke Reservasi
-                                                </DropdownMenuItem>
-                                              )}
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        ) : (
-                                          <div 
-                                            className="px-3 py-1 rounded-full text-xs font-bold"
-                                            style={{ backgroundColor: statusColor, color: status === "CO" || status === "BATAL" ? "#fff" : "#000" }}
-                                          >
-                                            {status}
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {booking.bid && (
-                                        <div className="bg-muted/50 px-3 py-2 rounded">
-                                          <p className="text-xs text-muted-foreground">Booking ID</p>
-                                          <div className="flex items-center justify-between">
-                                            <p className="font-mono font-bold text-primary">{booking.bid}</p>
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              className="h-6 w-6 p-0"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigator.clipboard.writeText(booking.bid || '');
-                                                toast.success("BID berhasil disalin");
-                                              }}
-                                            >
-                                              <Copy className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      <div className="space-y-2">
-                                        <div className="flex items-start gap-2">
-                                          <User className="w-4 h-4 mt-0.5 text-primary" />
-                                          <div className="flex-1">
-                                            <p className="text-xs text-muted-foreground">Nama Tamu</p>
-                                            <p className="font-semibold">{booking.customer_name}</p>
-                                          </div>
-                                        </div>
-
-                                        <div className="flex items-start gap-2">
-                                          <Phone className="w-4 h-4 mt-0.5 text-primary" />
-                                          <div className="flex-1">
-                                            <p className="text-xs text-muted-foreground">No. Telepon</p>
-                                            <p className="font-medium">{booking.phone || '-'}</p>
-                                          </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div>
-                                            <p className="text-xs text-muted-foreground">Check-in</p>
-                                            <p className="font-medium text-sm">{format(new Date(booking.date), "dd MMM yyyy", { locale: idLocale })}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-xs text-muted-foreground">Check-out</p>
-                                            <p className="font-medium text-sm">{format(addDays(new Date(booking.date), nights), "dd MMM yyyy", { locale: idLocale })}</p>
-                                          </div>
-                                        </div>
-
-                                        <div>
-                                          <p className="text-xs text-muted-foreground">Durasi</p>
-                                          <p className="font-medium">
-                                            {nights} malam{' '}
-                                            <span className={cn(
-                                              "font-bold",
-                                              (booking as any).payment_status === "lunas" 
-                                                ? "text-emerald-700" 
-                                                : "text-red-600"
-                                            )}>
-                                              ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
-                                            </span>
-                                          </p>
-                                        </div>
-
-                                        {booking.note && (
-                                          <div>
-                                            <p className="text-xs text-muted-foreground">Catatan</p>
-                                            <p className="font-medium text-sm">{booking.note}</p>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      <div className="flex gap-2 pt-2 border-t">
-                                        {hasPermission("edit_bookings") && (status !== 'BATAL' || userRole === 'admin') && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="flex-1"
-                                            onClick={() => onEditBooking(booking)}
-                                          >
-                                            <Edit className="h-3 w-3 mr-1" />
-                                            Edit
-                                          </Button>
-                                        )}
-                                        {hasPermission("delete_bookings") && (status !== 'BATAL' || userRole === 'admin') && (
-                                          <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            className="flex-1"
-                                            onClick={() => setDeleteBookingId(booking.id)}
-                                          >
-                                            <Trash2 className="h-3 w-3 mr-1" />
-                                            Hapus
-                                          </Button>
-                                        )}
-                                        {status === 'BATAL' && userRole !== 'admin' && (
-                                          <div className="flex-1 text-center text-sm text-muted-foreground py-2">
-                                            Booking dibatalkan
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
+                                    <BookingPopoverContent
+                                      booking={booking}
+                                      nights={nights}
+                                      status={status}
+                                      statusColor={statusColor}
+                                      statusColors={statusColors}
+                                      updatingStatus={updatingStatus}
+                                      userRole={userRole}
+                                      hasPermission={hasPermission}
+                                      getStatusLabel={getStatusLabel}
+                                      getAvailableStatuses={getAvailableStatuses}
+                                      onStatusChange={handleBookingStatusChange}
+                                      onEditBooking={onEditBooking}
+                                      onDeleteBooking={setDeleteBookingId}
+                                      addDays={addDays}
+                                    />
                                   </PopoverContent>
                                 </Popover>
                               </td>
