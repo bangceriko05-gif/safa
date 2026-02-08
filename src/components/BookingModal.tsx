@@ -108,6 +108,7 @@ export default function BookingModal({
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
   const [isPrice2ManuallyEdited, setIsPrice2ManuallyEdited] = useState(false);
   const isLoadingEditDataRef = useRef(false);
+  const isPriceProtectedRef = useRef(false);
   const [lastFetchedStoreId, setLastFetchedStoreId] = useState<string | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
@@ -233,9 +234,9 @@ export default function BookingModal({
   useEffect(() => {
     // Skip auto-fill if dual payment is active - user should manually split the payment
     // Skip auto-fill if OTA - user inputs price manually
-    // Skip auto-fill during edit data loading - preserve original values
+    // Skip auto-fill during edit data loading or when price is protected (edit mode until user changes variant/duration)
     if (formData.dual_payment || formData.booking_type === "ota") return;
-    if (isLoadingEditDataRef.current) return;
+    if (isLoadingEditDataRef.current || isPriceProtectedRef.current) return;
     
     const grandTotal = calculateGrandTotal();
     if (grandTotal > 0) {
@@ -248,7 +249,7 @@ export default function BookingModal({
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
-    if (isLoadingEditDataRef.current) return;
+    if (isLoadingEditDataRef.current || isPriceProtectedRef.current) return;
     if (formData.dual_payment && !isPrice2ManuallyEdited) {
       const grandTotal = calculateGrandTotal();
       const price1 = parseFloat(formData.price.replace(/\./g, '')) || 0;
@@ -285,6 +286,7 @@ export default function BookingModal({
       const isOTA = !editingBooking.variant_id;
       
       isLoadingEditDataRef.current = true;
+      isPriceProtectedRef.current = true;
       setFormData({
         customer_name: editingBooking.customer_name,
         phone: editingBooking.phone,
@@ -326,10 +328,11 @@ export default function BookingModal({
       // Fetch booking products
       fetchBookingProducts(editingBooking.id);
       
-      // Clear the edit loading flag after a tick so future user changes trigger auto-fill
+      // Clear the initial loading flag after a delay
+      // but keep price protected until user explicitly changes variant/duration
       setTimeout(() => {
         isLoadingEditDataRef.current = false;
-      }, 100);
+      }, 500);
     } else if (selectedSlot && selectedSlot.roomId) {
       // New booking from slot click - auto-fill room_id
       setFormData({
@@ -399,6 +402,7 @@ export default function BookingModal({
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
+      isPriceProtectedRef.current = false;
       
       // Reset check-in/out dates for PMS mode
       if (isPMSMode) {
@@ -566,6 +570,8 @@ export default function BookingModal({
   };
 
   const handleVariantChange = (variantId: string) => {
+    // User explicitly changed variant - allow price auto-fill
+    isPriceProtectedRef.current = false;
     const selectedVariant = roomVariants.find(v => v.id === variantId);
     if (selectedVariant) {
       // For PMS mode with duration types (months, weeks, days), auto-set checkout date
@@ -664,6 +670,8 @@ export default function BookingModal({
   };
 
   const handleAddProduct = () => {
+    // User adding product - allow price recalculation
+    isPriceProtectedRef.current = false;
     if (!productName || !productPrice || !productQuantity) {
       toast.error("Lengkapi data produk");
       return;
@@ -724,6 +732,8 @@ export default function BookingModal({
   };
 
   const handleRemoveProduct = (productId: string) => {
+    // User removing product - allow price recalculation
+    isPriceProtectedRef.current = false;
     setSelectedProducts(selectedProducts.filter(p => p.product_id !== productId));
   };
 
@@ -1571,6 +1581,10 @@ export default function BookingModal({
                       mode="single"
                       selected={checkInDate}
                       onSelect={(date) => {
+                        // User explicitly changed check-in date - allow price auto-fill
+                        if (!isLoadingEditDataRef.current) {
+                          isPriceProtectedRef.current = false;
+                        }
                         setCheckInDate(date);
                         // Auto-set checkout to next day if not set or if before check-in
                         if (date && (!checkOutDate || checkOutDate <= date)) {
@@ -1605,6 +1619,10 @@ export default function BookingModal({
                       mode="single"
                       selected={checkOutDate}
                       onSelect={(date) => {
+                        // User explicitly changed check-out date - allow price auto-fill
+                        if (!isLoadingEditDataRef.current) {
+                          isPriceProtectedRef.current = false;
+                        }
                         setCheckOutDate(date);
                         setCheckOutOpen(false);
                       }}
@@ -1784,13 +1802,14 @@ export default function BookingModal({
               <Checkbox
                 id="has_discount"
                 checked={formData.has_discount}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) => {
+                  isPriceProtectedRef.current = false;
                   setFormData({ 
                     ...formData, 
                     has_discount: checked as boolean,
                     discount_value: checked ? formData.discount_value : ""
-                  })
-                }
+                  });
+                }}
               />
               <Label
                 htmlFor="has_discount"
