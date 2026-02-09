@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/contexts/StoreContext";
 import { format, eachDayOfInterval, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, LabelList } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 import { Building2 } from "lucide-react";
 
@@ -205,7 +205,7 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
 
         {/* Chart */}
         <ChartContainer config={chartConfig} className="h-[250px] w-full">
-          <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+          <BarChart data={data} margin={{ top: 20, right: 10, left: -10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="dateLabel"
@@ -248,6 +248,12 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
               strokeWidth={1.5}
             />
             <Bar dataKey="percentage" radius={[4, 4, 0, 0]} maxBarSize={isSingleDay ? 80 : 50}>
+              <LabelList
+                dataKey="percentage"
+                position="top"
+                formatter={(value: number) => `${value}%`}
+                style={{ fontSize: 10, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+              />
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getBarColor(entry.percentage)} />
               ))}
