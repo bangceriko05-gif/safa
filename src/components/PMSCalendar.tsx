@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
+import DepositDetailPopup from "@/components/deposit/DepositDetailPopup";
 
 interface PMSCalendarProps {
   selectedDate: Date;
@@ -130,6 +131,13 @@ export default function PMSCalendar({
   const [searchResults, setSearchResults] = useState<BookingWithAdmin[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Deposit detail popup state
+  const [depositDetailPopup, setDepositDetailPopup] = useState<{
+    open: boolean;
+    roomId: string | null;
+    roomName: string;
+  }>({ open: false, roomId: null, roomName: "" });
 
   // Calculate visible date range (14 days centered on selected date)
   const visibleDates = useMemo(() => {
@@ -1138,8 +1146,12 @@ export default function PMSCalendar({
                             {room.name}
                             {!depositMode && hasDeposit && (
                               <div 
-                                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300" 
-                                title="Deposit aktif"
+                                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 cursor-pointer hover:bg-amber-200 transition-colors" 
+                                title="Klik untuk lihat deposit"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDepositDetailPopup({ open: true, roomId: room.id, roomName: room.name });
+                                }}
                               >
                                 <Shield className="w-3 h-3 text-amber-600" />
                               </div>
@@ -1215,8 +1227,13 @@ export default function PMSCalendar({
                                       {/* Deposit Badge on booking cell */}
                                       {hasActiveDeposit && (
                                         <div 
-                                          className="absolute top-1 left-1 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 shadow-sm" 
-                                          title="Deposit aktif"
+                                          className="absolute top-1 left-1 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 shadow-sm cursor-pointer hover:bg-amber-200 transition-colors z-10" 
+                                          title="Klik untuk lihat deposit"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            setDepositDetailPopup({ open: true, roomId: room.id, roomName: room.name });
+                                          }}
                                         >
                                           <Shield className="w-3 h-3 text-amber-600" />
                                         </div>
@@ -1396,6 +1413,15 @@ export default function PMSCalendar({
           }}
         />
       )}
+
+      {/* Deposit Detail Popup */}
+      <DepositDetailPopup
+        open={depositDetailPopup.open}
+        roomId={depositDetailPopup.roomId}
+        roomName={depositDetailPopup.roomName}
+        onClose={() => setDepositDetailPopup({ open: false, roomId: null, roomName: "" })}
+        onSuccess={() => fetchRoomDeposits()}
+      />
     </>
   );
 }
