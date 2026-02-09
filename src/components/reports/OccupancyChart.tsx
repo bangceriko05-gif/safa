@@ -190,12 +190,12 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
         {/* Summary stats */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center p-2 rounded-lg bg-muted/50">
-            <div className="text-lg font-bold text-green-600">{maxOccupancy}%</div>
-            <div className="text-[10px] text-muted-foreground">Tertinggi</div>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-muted/50">
             <div className="text-lg font-bold text-primary">{averageOccupancy}%</div>
             <div className="text-[10px] text-muted-foreground">Rata-rata</div>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-muted/50">
+            <div className="text-lg font-bold text-green-600">{maxOccupancy}%</div>
+            <div className="text-[10px] text-muted-foreground">Tertinggi</div>
           </div>
           <div className="text-center p-2 rounded-lg bg-muted/50">
             <div className="text-lg font-bold text-orange-500">{minOccupancy}%</div>
