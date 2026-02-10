@@ -385,21 +385,19 @@ export default function Dashboard() {
             <StoreSelector />
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={() => setDepositMode(!depositMode)} 
+              variant={depositMode ? "default" : "outline"}
+              className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              {depositMode ? "Batal Pilih" : "Deposit"}
+            </Button>
             {(userRole === "admin" || userRole === "leader") && (
-              <>
-                <Button 
-                  onClick={() => setDepositMode(!depositMode)} 
-                  variant={depositMode ? "default" : "outline"}
-                  className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-                >
-                  <Shield className="mr-2 h-4 w-4" />
-                  {depositMode ? "Batal Pilih" : "Deposit"}
-                </Button>
-                <Button onClick={handleExportToExcel} variant="outline">
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Export Excel
-                </Button>
-              </>
+              <Button onClick={handleExportToExcel} variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Excel
+              </Button>
             )}
             <Button onClick={handleLogout} variant="outline">
               <LogOut className="mr-2 h-4 w-4" />
@@ -413,7 +411,7 @@ export default function Dashboard() {
           <TabsList className="grid w-full max-w-7xl" style={{ 
             gridTemplateColumns: 
               (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
-              "1fr 1fr 1fr 1fr 1fr 1fr" 
+              "1fr 1fr 1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
               <Calendar className="mr-2 h-4 w-4" />
@@ -435,15 +433,15 @@ export default function Dashboard() {
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan
             </TabsTrigger>
+            <TabsTrigger value="deposits">
+              <Shield className="mr-2 h-4 w-4" />
+              Deposit
+            </TabsTrigger>
             {(userRole === "admin" || userRole === "leader") && (
               <>
                 <TabsTrigger value="rooms">
                   <Package className="mr-2 h-4 w-4" />
                   Produk & Inventori
-                </TabsTrigger>
-                <TabsTrigger value="deposits">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Deposit
                 </TabsTrigger>
                 <TabsTrigger value="activity">
                   <History className="mr-2 h-4 w-4" />
