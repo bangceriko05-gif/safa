@@ -447,11 +447,38 @@ export default function RoomManagement() {
 
   const getStatusBadge = (status: string) => {
     if (status === "Aktif") {
-      return <Badge className="bg-green-500">Aktif</Badge>;
+      return <Badge className="bg-green-500 cursor-pointer hover:bg-green-600">Aktif</Badge>;
     } else if (status === "Rusak") {
-      return <Badge variant="destructive">Rusak</Badge>;
+      return <Badge variant="destructive" className="cursor-pointer">Rusak</Badge>;
     } else {
-      return <Badge variant="secondary">Maintenance</Badge>;
+      return <Badge variant="secondary" className="cursor-pointer">Non Aktif</Badge>;
+    }
+  };
+
+  const handleToggleStatus = async (room: Room) => {
+    const newStatus = room.status === "Aktif" ? "Nonaktif" : "Aktif";
+    try {
+      const { error } = await supabase
+        .from("rooms")
+        .update({ status: newStatus })
+        .eq("id", room.id);
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'updated',
+        entityType: 'Kamar',
+        entityId: room.id,
+        description: `Mengubah status kamar ${room.name} menjadi ${newStatus}`,
+        storeId: currentStore?.id,
+      });
+
+      toast.success(`Status kamar ${room.name} diubah menjadi ${newStatus}`);
+      fetchRooms();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
+    } catch (error: any) {
+      toast.error(error.message || "Gagal mengubah status kamar");
+      console.error(error);
     }
   };
 
@@ -590,7 +617,9 @@ export default function RoomManagement() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {getStatusBadge(room.status)}
+                      <div onClick={() => handleToggleStatus(room)}>
+                        {getStatusBadge(room.status)}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
