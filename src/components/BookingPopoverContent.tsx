@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield } from "lucide-react";
+import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -127,7 +127,21 @@ export default function BookingPopoverContent({
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b">
-        <h3 className="font-bold text-lg">Detail Booking</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-lg">Detail Booking</h3>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(`/receipt?id=${booking.id}`, '_blank');
+            }}
+            title="Print Receipt"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+        </div>
         {getAvailableStatuses(status).length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
