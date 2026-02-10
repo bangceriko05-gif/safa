@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
-import { Banknote, CreditCard, Upload, X, Loader2, Pencil, Trash2, Shield, Calendar, User } from "lucide-react";
+import { Banknote, CreditCard, Upload, X, Loader2, Pencil, Trash2, Shield, Calendar, User, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import {
@@ -238,31 +238,37 @@ export default function DepositDetailPopup({
     }
   };
 
-  const handleDelete = async () => {
+  const handleReturn = async () => {
     if (!deposit) return;
     setIsSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase
         .from("room_deposits")
-        .delete()
+        .update({ 
+          status: "returned",
+          returned_at: new Date().toISOString(),
+          returned_by: user?.id || null,
+        })
         .eq("id", deposit.id);
 
       if (error) throw error;
 
       await logActivity({
-        actionType: "deleted",
-        entityType: "Deposit",
+        actionType: 'updated',
+        entityType: 'Deposit',
         entityId: deposit.id,
-        description: `Menghapus deposit untuk kamar: ${roomName}`,
+        description: `Mengembalikan deposit untuk kamar: ${roomName}`,
         storeId: currentStore?.id,
       });
 
-      toast.success("Deposit berhasil dihapus");
+      toast.success("Deposit berhasil dikembalikan");
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      console.error("Error deleting deposit:", error);
-      toast.error(error.message || "Gagal menghapus deposit");
+      console.error("Error returning deposit:", error);
+      toast.error(error.message || "Gagal mengembalikan deposit");
     } finally {
       setIsSubmitting(false);
       setShowDeleteConfirm(false);
@@ -520,12 +526,13 @@ export default function DepositDetailPopup({
               {/* Action buttons */}
               <div className="flex justify-between items-center pt-4 border-t">
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowDeleteConfirm(true)}
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Hapus
+                  <Undo2 className="h-4 w-4 mr-1" />
+                  Kembalikan
                 </Button>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleClose}>
@@ -546,23 +553,23 @@ export default function DepositDetailPopup({
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Deposit?</AlertDialogTitle>
+            <AlertDialogTitle>Kembalikan Deposit?</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus deposit untuk kamar {roomName}? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin mengembalikan deposit untuk kamar {roomName}? Status deposit akan berubah menjadi "Dikembalikan".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleReturn}
+              className="bg-amber-500 text-white hover:bg-amber-600"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
               ) : (
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Undo2 className="h-4 w-4 mr-1" />
               )}
-              Hapus
+              Kembalikan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
