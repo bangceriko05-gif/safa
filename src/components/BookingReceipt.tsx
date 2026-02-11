@@ -27,9 +27,11 @@ interface BookingData {
   discount_applies_to?: string;
   note?: string;
   status?: string;
+  payment_status?: string;
   created_at: string;
   room_name: string;
   variant_name?: string;
+  variant_price?: number;
   store_id: string;
   duration_unit?: string;
 }
@@ -91,14 +93,16 @@ export default function BookingReceipt() {
 
       // Fetch variant name if exists
       let variantName = undefined;
+      let variantPrice = undefined;
       let durationUnit = "jam";
       if (bookingData.variant_id) {
         const { data: variantData } = await supabase
           .from("room_variants")
-          .select("variant_name, booking_duration_type")
+          .select("variant_name, price, booking_duration_type")
           .eq("id", bookingData.variant_id)
           .single();
         variantName = variantData?.variant_name;
+        variantPrice = variantData?.price;
         if (variantData?.booking_duration_type === "hari" || variantData?.booking_duration_type === "bulan") {
           durationUnit = variantData.booking_duration_type;
         }
@@ -166,6 +170,7 @@ export default function BookingReceipt() {
         ...bookingData,
         room_name: bookingData.rooms?.name || "Unknown",
         variant_name: variantName,
+        variant_price: variantPrice,
         duration_unit: durationUnit,
         store_id: storeId,
       });
@@ -184,12 +189,23 @@ export default function BookingReceipt() {
     }).format(amount);
   };
 
+  const getRoomSubtotal = () => {
+    if (!booking) return 0;
+    // Match popup logic: variant_price * duration, fallback to price for OTA
+    return booking.variant_price 
+      ? booking.variant_price * booking.duration 
+      : booking.price;
+  };
+
   const calculateDiscount = () => {
     if (!booking || !booking.discount_value || booking.discount_value <= 0) return 0;
     
-    const baseAmount = booking.price;
-    if (booking.discount_type === "percent") {
-      return Math.round(baseAmount * (booking.discount_value / 100));
+    const roomSubtotal = getRoomSubtotal();
+    const productTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
+    
+    if (booking.discount_type === "percentage" || booking.discount_type === "percent") {
+      const base = booking.discount_applies_to === "product" ? productTotal : roomSubtotal;
+      return Math.round(base * (booking.discount_value / 100));
     }
     return booking.discount_value;
   };
@@ -197,16 +213,20 @@ export default function BookingReceipt() {
   const calculateDepositAmount = () => {
     if (!deposit) return 0;
     if (deposit.deposit_type === "Uang") return deposit.amount || 0;
-    return 0; // Identitas = 0
+    return 0;
   };
 
-  const calculateTotal = () => {
+  const getTotalPaid = () => {
     if (!booking) return 0;
-    const roomPrice = booking.price;
+    return (booking.price || 0) + (booking.dual_payment && booking.price_2 ? booking.price_2 : 0);
+  };
+
+  const calculateGrandTotal = () => {
+    if (!booking) return 0;
+    const roomSubtotal = getRoomSubtotal();
     const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
     const discount = calculateDiscount();
-    const depositAmount = calculateDepositAmount();
-    return roomPrice + productsTotal - discount + depositAmount;
+    return roomSubtotal + productsTotal - discount;
   };
 
   const getStatusLabel = (status: string | null | undefined) => {
@@ -447,7 +467,7 @@ export default function BookingReceipt() {
         >
           <div className="flex justify-between mb-1">
             <span>Sewa Ruangan</span>
-            <span>{formatCurrency(booking.price)}</span>
+            <span>{formatCurrency(getRoomSubtotal())}</span>
           </div>
 
           {/* Products */}
@@ -499,7 +519,7 @@ export default function BookingReceipt() {
         >
           <div className="flex justify-between">
             <span>TOTAL</span>
-            <span>{formatCurrency(calculateTotal())}</span>
+            <span>{formatCurrency(calculateGrandTotal())}</span>
           </div>
         </div>
 
@@ -512,14 +532,12 @@ export default function BookingReceipt() {
         >
           {/* Payment Status */}
           {(() => {
-            const total = calculateTotal();
-            const totalPaid = (booking.price || 0) + (booking.dual_payment && booking.price_2 ? booking.price_2 : 0);
-            const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
+            const grandTotal = calculateGrandTotal();
             const paid1 = booking.price || 0;
             const paid2 = booking.dual_payment ? (booking.price_2 || 0) : 0;
             const totalBayar = paid1 + paid2;
-            const isLunas = totalBayar >= total;
-            const sisa = total - totalBayar;
+            const isLunas = booking.payment_status === "lunas";
+            const sisa = grandTotal - totalBayar;
 
             return (
               <>
