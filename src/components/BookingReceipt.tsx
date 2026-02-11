@@ -31,6 +31,7 @@ interface BookingData {
   room_name: string;
   variant_name?: string;
   store_id: string;
+  duration_unit?: string;
 }
 
 interface PrintSettings {
@@ -62,6 +63,7 @@ export default function BookingReceipt() {
   const [printSettings, setPrintSettings] = useState<PrintSettings | null>(null);
   const [products, setProducts] = useState<BookingProduct[]>([]);
   const [storeName, setStoreName] = useState<string>("");
+  const [deposit, setDeposit] = useState<{ deposit_type: string; amount: number | null; identity_type: string | null; identity_owner_name: string | null; notes: string | null } | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -89,13 +91,17 @@ export default function BookingReceipt() {
 
       // Fetch variant name if exists
       let variantName = undefined;
+      let durationUnit = "jam";
       if (bookingData.variant_id) {
         const { data: variantData } = await supabase
           .from("room_variants")
-          .select("variant_name")
+          .select("variant_name, booking_duration_type")
           .eq("id", bookingData.variant_id)
           .single();
         variantName = variantData?.variant_name;
+        if (variantData?.booking_duration_type === "hari" || variantData?.booking_duration_type === "bulan") {
+          durationUnit = variantData.booking_duration_type;
+        }
       }
 
       const storeId = bookingData.store_id || bookingData.rooms?.store_id;
@@ -145,10 +151,22 @@ export default function BookingReceipt() {
 
       setProducts(productsData || []);
 
+      // Fetch active deposit for the room
+      if (bookingData.room_id) {
+        const { data: depositData } = await supabase
+          .from("room_deposits")
+          .select("deposit_type, amount, identity_type, identity_owner_name, notes")
+          .eq("room_id", bookingData.room_id)
+          .eq("status", "active")
+          .maybeSingle();
+        setDeposit(depositData);
+      }
+
       setBooking({
         ...bookingData,
         room_name: bookingData.rooms?.name || "Unknown",
         variant_name: variantName,
+        duration_unit: durationUnit,
         store_id: storeId,
       });
     } catch (error) {
@@ -176,21 +194,19 @@ export default function BookingReceipt() {
     return booking.discount_value;
   };
 
+  const calculateDepositAmount = () => {
+    if (!deposit) return 0;
+    if (deposit.deposit_type === "Uang") return deposit.amount || 0;
+    return 0; // Identitas = 0
+  };
+
   const calculateTotal = () => {
     if (!booking) return 0;
-    
-    // Room price is the base price for the room rental
     const roomPrice = booking.price;
-    // Products total from booking_products
     const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
-    // Calculate discount
     const discount = calculateDiscount();
-    
-    // Total = room price + products - discount
-    // Note: price_2 is just the split payment amount, not an additional price
-    // When dual_payment is true, price + price_2 should equal the total payment
-    // but we calculate total from actual prices, not payment splits
-    return roomPrice + productsTotal - discount;
+    const depositAmount = calculateDepositAmount();
+    return roomPrice + productsTotal - discount + depositAmount;
   };
 
   const getStatusLabel = (status: string | null | undefined) => {
@@ -380,16 +396,16 @@ export default function BookingReceipt() {
           }}
         >
           <div className="flex justify-between">
-            <span>Tanggal:</span>
+            <span>Tanggal Check In:</span>
             <span>{format(new Date(booking.date), "dd MMMM yyyy", { locale: idLocale })}</span>
           </div>
           <div className="flex justify-between">
-            <span>Waktu:</span>
+            <span>Tanggal Check Out:</span>
             <span>{booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}</span>
           </div>
           <div className="flex justify-between">
             <span>Durasi:</span>
-            <span>{booking.duration} jam</span>
+            <span>{booking.duration} {booking.duration_unit || "jam"}</span>
           </div>
           <div className="flex justify-between">
             <span>Ruangan:</span>
@@ -397,7 +413,7 @@ export default function BookingReceipt() {
           </div>
           {booking.variant_name && (
             <div className="flex justify-between">
-              <span>Paket:</span>
+              <span>Tipe Room:</span>
               <span>{booking.variant_name}</span>
             </div>
           )}
@@ -441,6 +457,16 @@ export default function BookingReceipt() {
                 {booking.discount_type === "percent" ? ` (${booking.discount_value}%)` : ""}
               </span>
               <span>-{formatCurrency(calculateDiscount())}</span>
+            </div>
+          )}
+
+          {/* Deposit */}
+          {deposit && (
+            <div className="flex justify-between">
+              <span>
+                Deposito ({deposit.deposit_type === "Uang" ? "Uang" : `Identitas - ${deposit.identity_type || ""}`})
+              </span>
+              <span>{formatCurrency(calculateDepositAmount())}</span>
             </div>
           )}
         </div>
@@ -557,7 +583,7 @@ export default function BookingReceipt() {
             fontSize: printSettings?.paper_size === "58mm" ? "7px" : "8px",
           }}
         >
-          <p>Powered by Treebox PMS</p>
+          <p>Powered by ANKA PMS</p>
         </div>
       </div>
 
