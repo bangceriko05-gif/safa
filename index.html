@@ -3,6 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Detect iOS requesting desktop site: UA says "Macintosh" but device has touch
+      (function() {
+        var ua = navigator.userAgent;
+        if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) {
+          document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=1024');
+        }
+      })();
+    </script>
     <title>ANKA dashboard</title>
     <meta name="description" content="Sistem booking dashboard untuk mengelola jadwal reservasi. Kelola semua booking ruangan dengan mudah, lihat ringkasan, dan ekspor data dalam satu platform.">
     <meta name="author" content="Treebox" />
