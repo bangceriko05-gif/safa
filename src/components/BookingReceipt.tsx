@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, addDays, addMonths } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -401,7 +401,20 @@ export default function BookingReceipt() {
           </div>
           <div className="flex justify-between">
             <span>Tanggal Check Out:</span>
-            <span>{booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}</span>
+            <span>
+              {(() => {
+                const checkInDate = new Date(booking.date);
+                const unit = booking.duration_unit || "jam";
+                if (unit === "hari") {
+                  return format(addDays(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
+                } else if (unit === "bulan") {
+                  return format(addMonths(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
+                } else {
+                  // For jam (hours), show time range
+                  return `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`;
+                }
+              })()}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Durasi:</span>
@@ -490,40 +503,90 @@ export default function BookingReceipt() {
           </div>
         </div>
 
-        {/* Payment Info */}
-        {booking.payment_method && (
-          <div
-            className="mb-2"
-            style={{
-              fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
-            }}
-          >
-            <div className="flex justify-between">
-              <span>Pembayaran:</span>
-              <span>{booking.payment_method}</span>
-            </div>
-            {booking.reference_no && (
-              <div className="flex justify-between">
-                <span>Ref:</span>
-                <span className="font-mono">{booking.reference_no}</span>
-              </div>
-            )}
-            {booking.dual_payment && booking.payment_method_2 && (
+        {/* Payment Status & Details */}
+        <div
+          className="mb-2"
+          style={{
+            fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
+          }}
+        >
+          {/* Payment Status */}
+          {(() => {
+            const total = calculateTotal();
+            const totalPaid = (booking.price || 0) + (booking.dual_payment && booking.price_2 ? booking.price_2 : 0);
+            const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
+            const paid1 = booking.price || 0;
+            const paid2 = booking.dual_payment ? (booking.price_2 || 0) : 0;
+            const totalBayar = paid1 + paid2;
+            const isLunas = totalBayar >= total;
+            const sisa = total - totalBayar;
+
+            return (
               <>
-                <div className="flex justify-between mt-1">
-                  <span>Pembayaran 2:</span>
-                  <span>{booking.payment_method_2}</span>
+                <div className="flex justify-between font-bold">
+                  <span>Status Bayar:</span>
+                  <span style={{ color: isLunas ? "#059669" : "#dc2626" }}>
+                    {isLunas ? "LUNAS" : "BELUM LUNAS"}
+                  </span>
                 </div>
-                {booking.reference_no_2 && (
-                  <div className="flex justify-between">
-                    <span>Ref:</span>
-                    <span className="font-mono">{booking.reference_no_2}</span>
+
+                {/* Payment 1 */}
+                {booking.payment_method && (
+                  <>
+                    <div className="flex justify-between mt-1">
+                      <span>Pembayaran 1:</span>
+                      <span>{booking.payment_method}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Jumlah:</span>
+                      <span>{formatCurrency(paid1)}</span>
+                    </div>
+                    {booking.reference_no && booking.reference_no !== "-" && (
+                      <div className="flex justify-between">
+                        <span>Ref:</span>
+                        <span className="font-mono">{booking.reference_no}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Payment 2 */}
+                {booking.dual_payment && booking.payment_method_2 && (
+                  <>
+                    <div className="flex justify-between mt-1">
+                      <span>Pembayaran 2:</span>
+                      <span>{booking.payment_method_2}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Jumlah:</span>
+                      <span>{formatCurrency(paid2)}</span>
+                    </div>
+                    {booking.reference_no_2 && (
+                      <div className="flex justify-between">
+                        <span>Ref:</span>
+                        <span className="font-mono">{booking.reference_no_2}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Total Paid */}
+                <div className="flex justify-between mt-1 font-semibold">
+                  <span>Total Bayar:</span>
+                  <span>{formatCurrency(totalBayar)}</span>
+                </div>
+
+                {/* Remaining */}
+                {!isLunas && sisa > 0 && (
+                  <div className="flex justify-between" style={{ color: "#dc2626" }}>
+                    <span>Sisa Pembayaran:</span>
+                    <span>{formatCurrency(sisa)}</span>
                   </div>
                 )}
               </>
-            )}
-          </div>
-        )}
+            );
+          })()}
+        </div>
 
         {/* Note */}
         {booking.note && (
