@@ -103,8 +103,10 @@ export default function BookingReceipt() {
           .single();
         variantName = variantData?.variant_name;
         variantPrice = variantData?.price;
-        if (variantData?.booking_duration_type === "hari" || variantData?.booking_duration_type === "bulan") {
-          durationUnit = variantData.booking_duration_type;
+        if (variantData?.booking_duration_type === "hari" || variantData?.booking_duration_type === "days") {
+          durationUnit = "hari";
+        } else if (variantData?.booking_duration_type === "bulan" || variantData?.booking_duration_type === "months") {
+          durationUnit = "bulan";
         }
       }
 
