@@ -424,21 +424,21 @@ export default function BookingReceipt() {
             <span>
               {(() => {
                 const checkInDate = new Date(booking.date);
-                const unit = booking.duration_unit || "jam";
-                if (unit === "hari") {
-                  return format(addDays(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
-                } else if (unit === "bulan") {
+                const unit = booking.duration_unit || "hari";
+                if (unit === "bulan") {
                   return format(addMonths(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
+                } else if (unit === "hari") {
+                  return format(addDays(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
                 } else {
-                  // For jam (hours), show time range
-                  return `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`;
+                  // For jam (hours), show end time on same day or calculate
+                  return format(checkInDate, "dd MMMM yyyy", { locale: idLocale });
                 }
               })()}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Durasi:</span>
-            <span>{booking.duration} {booking.duration_unit || "jam"}</span>
+            <span>{booking.duration} {booking.duration_unit === "bulan" ? "bulan" : booking.duration_unit === "jam" ? "jam" : "malam"}</span>
           </div>
           <div className="flex justify-between">
             <span>Ruangan:</span>
@@ -466,7 +466,7 @@ export default function BookingReceipt() {
           }}
         >
           <div className="flex justify-between mb-1">
-            <span>Sewa Ruangan</span>
+            <span>Total Biaya</span>
             <span>{formatCurrency(getRoomSubtotal())}</span>
           </div>
 
