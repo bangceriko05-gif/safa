@@ -97,24 +97,26 @@ export default function PrintSettingsComponent() {
     setIsSaving(true);
 
     try {
-      const settingsData = {
-        ...settings,
+      // Build clean data without the local 'id' field
+      const { id, ...settingsWithoutId } = settings;
+      const cleanData = {
+        ...settingsWithoutId,
         store_id: currentStore.id,
       };
 
-      if (settings.id) {
+      if (id) {
         // Update existing
         const { error } = await supabase
           .from("print_settings")
-          .update(settingsData)
-          .eq("id", settings.id);
+          .update(cleanData)
+          .eq("id", id);
 
         if (error) throw error;
       } else {
-        // Insert new
+        // Insert new — use upsert to handle conflicts on store_id
         const { data, error } = await supabase
           .from("print_settings")
-          .insert(settingsData)
+          .upsert(cleanData, { onConflict: "store_id" })
           .select()
           .single();
 
