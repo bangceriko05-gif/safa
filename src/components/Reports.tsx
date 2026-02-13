@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck } from "lucide-react";
+import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings } from "lucide-react";
+import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -37,6 +38,12 @@ interface ReportStats {
   totalBookingRevenue: number;
 }
 
+interface ExpenseCategory {
+  id: string;
+  name: string;
+  store_id: string;
+}
+
 interface Expense {
   id: string;
   description: string;
@@ -46,6 +53,8 @@ interface Expense {
   bid?: string;
   created_by: string;
   creator_name?: string;
+  payment_method?: string;
+  payment_proof_url?: string;
 }
 
 interface Product {
@@ -128,9 +137,14 @@ export default function Reports() {
     description: "",
     amount: "",
     category: "",
+    payment_method: "",
+    payment_proof_url: null as string | null,
   });
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
+  const [showCategoryManagement, setShowCategoryManagement] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [selectedPaymentType, setSelectedPaymentType] = useState<'booking' | 'income' | null>(null);
 
@@ -180,8 +194,57 @@ export default function Reports() {
       fetchData();
       fetchProducts();
       fetchCustomers();
+      fetchExpenseCategories();
     }
   }, [timeRange, customDateRange, currentStore, activeTab]);
+
+  const fetchExpenseCategories = async () => {
+    if (!currentStore) return;
+    try {
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .order("name");
+      if (error) throw error;
+      setExpenseCategories(data || []);
+    } catch (error) {
+      console.error("Error fetching expense categories:", error);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!currentStore || !newCategoryName.trim()) return;
+    try {
+      const { error } = await supabase
+        .from("expense_categories")
+        .insert([{ name: newCategoryName.trim(), store_id: currentStore.id }]);
+      if (error) throw error;
+      toast.success("Kategori berhasil ditambahkan");
+      setNewCategoryName("");
+      fetchExpenseCategories();
+    } catch (error: any) {
+      if (error.code === '23505') {
+        toast.error("Kategori sudah ada");
+      } else {
+        toast.error("Gagal menambahkan kategori");
+      }
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("expense_categories")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Kategori berhasil dihapus");
+      fetchExpenseCategories();
+    } catch (error) {
+      toast.error("Gagal menghapus kategori");
+    }
+  };
 
   const fetchProducts = async () => {
     if (!currentStore) return;
@@ -438,6 +501,8 @@ export default function Reports() {
             description: expenseForm.description,
             amount: expenseForm.amount ? parseFloat(expenseForm.amount.replace(/\./g, "")) : 0,
             category: expenseForm.category,
+            payment_method: expenseForm.payment_method || null,
+            payment_proof_url: expenseForm.payment_proof_url || null,
           })
           .eq("id", editingExpense.id);
 
@@ -450,6 +515,8 @@ export default function Reports() {
             description: expenseForm.description,
             amount: expenseForm.amount ? parseFloat(expenseForm.amount.replace(/\./g, "")) : 0,
             category: expenseForm.category,
+            payment_method: expenseForm.payment_method || null,
+            payment_proof_url: expenseForm.payment_proof_url || null,
             date: dateStr,
             created_by: user.id,
             store_id: currentStore.id,
@@ -459,7 +526,7 @@ export default function Reports() {
         toast.success("Pengeluaran berhasil ditambahkan");
       }
 
-      setExpenseForm({ description: "", amount: "", category: "" });
+      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", payment_proof_url: null });
       setEditingExpense(null);
       setShowExpenseForm(false);
       fetchData();
@@ -475,6 +542,8 @@ export default function Reports() {
       description: expense.description,
       amount: expense.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
       category: expense.category || "",
+      payment_method: expense.payment_method || "",
+      payment_proof_url: expense.payment_proof_url || null,
     });
     setShowExpenseForm(true);
   };
@@ -949,7 +1018,7 @@ export default function Reports() {
                   setShowExpenseForm(open);
                   if (!open) {
                     setEditingExpense(null);
-                    setExpenseForm({ description: "", amount: "", category: "" });
+                    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", payment_proof_url: null });
                   }
                 }}>
                   <DialogTrigger asChild>
@@ -958,9 +1027,20 @@ export default function Reports() {
                       Tambah Pengeluaran
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>{editingExpense ? "Edit" : "Tambah"} Pengeluaran</DialogTitle>
+                      <div className="flex items-center justify-between">
+                        <DialogTitle>{editingExpense ? "Edit" : "Tambah"} Pengeluaran</DialogTitle>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCategoryManagement(true)}
+                        >
+                          <Settings className="h-4 w-4 mr-1" />
+                          Kategori
+                        </Button>
+                      </div>
                     </DialogHeader>
                     <form onSubmit={handleAddExpense} className="space-y-4">
                       <div className="space-y-2">
@@ -984,16 +1064,93 @@ export default function Reports() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="category">Kategori</Label>
-                        <Input
-                          id="category"
+                        <Label>Kategori</Label>
+                        <Select
                           value={expenseForm.category}
-                          onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                          placeholder="Contoh: Operasional, Utilitas"
-                        />
+                          onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih kategori" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {expenseCategories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.name}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Metode Pembayaran</Label>
+                        <Select
+                          value={expenseForm.payment_method}
+                          onValueChange={(value) => setExpenseForm({ ...expenseForm, payment_method: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih metode pembayaran" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Cash">Cash</SelectItem>
+                            <SelectItem value="Transfer">Transfer</SelectItem>
+                            <SelectItem value="QRIS">QRIS</SelectItem>
+                            <SelectItem value="Debit">Debit</SelectItem>
+                            <SelectItem value="Credit Card">Credit Card</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <PaymentProofUpload
+                        value={expenseForm.payment_proof_url}
+                        onChange={(url) => setExpenseForm({ ...expenseForm, payment_proof_url: url })}
+                      />
                       <Button type="submit" className="w-full">Simpan</Button>
                     </form>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Category Management Dialog */}
+                <Dialog open={showCategoryManagement} onOpenChange={setShowCategoryManagement}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Kelola Kategori Pengeluaran</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="Nama kategori baru"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddCategory();
+                            }
+                          }}
+                        />
+                        <Button onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {expenseCategories.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">Belum ada kategori</p>
+                        ) : (
+                          expenseCategories.map((cat) => (
+                            <div key={cat.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                              <span className="text-sm">{cat.name}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleDeleteCategory(cat.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   </DialogContent>
                 </Dialog>
 
@@ -1463,6 +1620,23 @@ export default function Reports() {
                 <div>
                   <Label className="text-muted-foreground text-xs">Kategori</Label>
                   <div className="text-sm">{viewingExpense.category}</div>
+                </div>
+              )}
+              {viewingExpense.payment_method && (
+                <div>
+                  <Label className="text-muted-foreground text-xs">Metode Pembayaran</Label>
+                  <div className="text-sm">{viewingExpense.payment_method}</div>
+                </div>
+              )}
+              {viewingExpense.payment_proof_url && (
+                <div>
+                  <Label className="text-muted-foreground text-xs">Bukti Bayar</Label>
+                  <img
+                    src={viewingExpense.payment_proof_url}
+                    alt="Bukti bayar"
+                    className="w-full h-40 object-contain rounded-md border cursor-pointer mt-1"
+                    onClick={() => window.open(viewingExpense.payment_proof_url!, '_blank')}
+                  />
                 </div>
               )}
               <div>

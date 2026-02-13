@@ -407,6 +407,38 @@ export type Database = {
           },
         ]
       }
+      expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -417,6 +449,8 @@ export type Database = {
           date: string
           description: string
           id: string
+          payment_method: string | null
+          payment_proof_url: string | null
           store_id: string | null
           updated_at: string
         }
@@ -429,6 +463,8 @@ export type Database = {
           date: string
           description: string
           id?: string
+          payment_method?: string | null
+          payment_proof_url?: string | null
           store_id?: string | null
           updated_at?: string
         }
@@ -441,6 +477,8 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          payment_method?: string | null
+          payment_proof_url?: string | null
           store_id?: string | null
           updated_at?: string
         }
