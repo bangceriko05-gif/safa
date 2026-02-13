@@ -94,7 +94,8 @@ export default function BookingReceipt() {
       // Fetch variant name if exists
       let variantName = undefined;
       let variantPrice = undefined;
-      let durationUnit = "jam";
+      // Default: OTA bookings always use "hari" (displayed as "malam")
+      let durationUnit = bookingData.bid?.startsWith("OTA") ? "hari" : "jam";
       if (bookingData.variant_id) {
         const { data: variantData } = await supabase
           .from("room_variants")
