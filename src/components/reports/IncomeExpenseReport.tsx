@@ -53,6 +53,7 @@ export default function IncomeExpenseReport() {
     totalIncomes: 0,
     netProfit: 0,
     expenseCategories: [] as { category: string; total: number }[],
+    expensePaymentMethods: [] as { method: string; total: number }[],
     incomePaymentMethods: [] as { method: string; total: number }[],
   });
 
@@ -171,6 +172,12 @@ export default function IncomeExpenseReport() {
         expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
       });
 
+      // Expense by payment method
+      const expenseByMethod: { [key: string]: number } = {};
+      mappedExpenses.forEach((e) => {
+        expenseByMethod[e.payment_method] = (expenseByMethod[e.payment_method] || 0) + e.amount;
+      });
+
       // Income by payment method
       const incomeByMethod: { [key: string]: number } = {};
       mappedIncomes.forEach((i) => {
@@ -184,6 +191,7 @@ export default function IncomeExpenseReport() {
         totalIncomes,
         netProfit: totalIncomes - totalExpenses,
         expenseCategories: Object.entries(expenseByCategory).map(([category, total]) => ({ category, total })),
+        expensePaymentMethods: Object.entries(expenseByMethod).map(([method, total]) => ({ method, total })),
         incomePaymentMethods: Object.entries(incomeByMethod).map(([method, total]) => ({ method, total })),
       });
     } catch (error) {
@@ -330,7 +338,7 @@ export default function IncomeExpenseReport() {
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             {/* Expense Categories */}
             <Card>
               <CardHeader>
@@ -352,6 +360,36 @@ export default function IncomeExpenseReport() {
               </CardContent>
             </Card>
 
+            {/* Expense by Payment Method */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium">Pengeluaran per Metode Bayar</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportExpense}
+                  disabled={loading || expenses.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {stats.expensePaymentMethods.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {stats.expensePaymentMethods.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                        <span className="text-sm font-medium">{item.method}</span>
+                        <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Income by Payment Method */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -363,14 +401,14 @@ export default function IncomeExpenseReport() {
                   disabled={loading || incomes.length === 0}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export Pemasukan
+                  Export
                 </Button>
               </CardHeader>
               <CardContent>
                 {stats.incomePaymentMethods.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
                     {stats.incomePaymentMethods.map((item, index) => (
                       <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
                         <span className="text-sm font-medium">{item.method}</span>
@@ -386,17 +424,8 @@ export default function IncomeExpenseReport() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* Expense List */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle className="text-sm font-medium">Daftar Pengeluaran</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportExpense}
-                  disabled={loading || expenses.length === 0}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Pengeluaran
-                </Button>
               </CardHeader>
               <CardContent>
                 {expenses.length === 0 ? (
