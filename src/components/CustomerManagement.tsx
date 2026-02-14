@@ -180,6 +180,8 @@ export default function CustomerManagement() {
       phone: formData.phone,
       email: formData.email,
       notes: formData.notes,
+      identity_type: formData.identity_type,
+      identity_number: formData.identity_number,
     });
     if (!validation.success) {
       setFormErrors(validation.errors);
@@ -472,7 +474,7 @@ export default function CustomerManagement() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent>
+    <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingCustomer ? "Edit Pelanggan" : "Tambah Pelanggan"}
