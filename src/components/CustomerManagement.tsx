@@ -426,7 +426,7 @@ export default function CustomerManagement() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0"
-                                  onClick={() => setViewingIdentity(getIdentityDocumentUrl(customer.identity_document_url!))}
+                                  onClick={() => window.open(getIdentityDocumentUrl(customer.identity_document_url!), '_blank')}
                                 >
                                   <Eye className="h-3 w-3" />
                                 </Button>
