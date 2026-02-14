@@ -331,7 +331,7 @@ export default function IncomeExpenseReport() {
                 {stats.expenseCategories.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
                     {stats.expenseCategories.map((item, index) => (
                       <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
                         <span className="text-sm font-medium">{item.category}</span>
