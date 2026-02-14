@@ -22,6 +22,7 @@ interface ExpenseData {
   description: string;
   amount: number;
   category: string;
+  payment_method: string;
   date: string;
   created_at: string;
   creator_name: string;
@@ -141,6 +142,7 @@ export default function IncomeExpenseReport() {
         description: e.description,
         amount: Number(e.amount) || 0,
         category: e.category || "Lainnya",
+        payment_method: e.payment_method || "-",
         date: e.date,
         created_at: e.created_at,
         creator_name: profilesById[e.created_by] || "Unknown",
@@ -238,12 +240,19 @@ export default function IncomeExpenseReport() {
     
     const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
     
-    // Export pengeluaran: deskripsi, jumlah, kategori
-    const expenseData = expenses.map(expense => ({
-      'Deskripsi': expense.description,
-      'Jumlah': expense.amount,
-      'Kategori': expense.category,
-    }));
+    const expenseData = expenses.map(expense => {
+      const createdAtDate = new Date(expense.created_at);
+      return {
+        'BID': expense.bid,
+        'Tanggal Dibuat': format(createdAtDate, 'dd/MM/yyyy', { locale: localeId }),
+        'Jam Dibuat': format(createdAtDate, 'HH:mm', { locale: localeId }),
+        'Dibuat Oleh': expense.creator_name,
+        'Deskripsi': expense.description,
+        'Metode Bayar': expense.payment_method,
+        'Jumlah': expense.amount,
+        'Kategori': expense.category,
+      };
+    });
     
     exportToExcel(
       expenseData, 
