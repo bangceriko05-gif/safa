@@ -57,6 +57,8 @@ export default function BookingPopoverContent({
 }: BookingPopoverContentProps) {
   const [products, setProducts] = useState<BookingProduct[]>([]);
   const [variantPrice, setVariantPrice] = useState<number | null>(null);
+  const [variantDurationType, setVariantDurationType] = useState<string | null>(null);
+  const [variantDurationValue, setVariantDurationValue] = useState<number | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export default function BookingPopoverContent({
         booking.variant_id
           ? supabase
               .from("room_variants")
-              .select("price")
+              .select("price, booking_duration_type, booking_duration_value")
               .eq("id", booking.variant_id)
               .single()
           : Promise.resolve({ data: null }),
@@ -84,6 +86,8 @@ export default function BookingPopoverContent({
       setProducts(productsResult.data || []);
       if (variantResult.data && "price" in variantResult.data) {
         setVariantPrice(variantResult.data.price);
+        setVariantDurationType((variantResult.data as any).booking_duration_type || "hours");
+        setVariantDurationValue((variantResult.data as any).booking_duration_value || 1);
       }
     } catch (error) {
       console.error("Error fetching payment details:", error);
@@ -101,8 +105,11 @@ export default function BookingPopoverContent({
   };
 
   // Calculate financial breakdown
+  // For monthly/weekly variants, price is per unit (per month/week), not per day
   const roomSubtotal = variantPrice
-    ? variantPrice * booking.duration
+    ? (variantDurationType === "months" || variantDurationType === "weeks")
+      ? variantPrice * (variantDurationValue || 1)
+      : variantPrice * booking.duration
     : booking.price; // fallback for OTA
   const productTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
 

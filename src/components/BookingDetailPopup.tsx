@@ -68,6 +68,8 @@ interface BookingDetail {
   price_2?: number | null;
   payment_status?: string | null;
   variant_price?: number;
+  variant_duration_type?: string | null;
+  variant_duration_value?: number | null;
 }
 
 interface ActivityLogEntry {
@@ -197,14 +199,18 @@ export default function BookingDetailPopup({
       // Fetch variant name and price if variant_id exists
       let variantName = undefined;
       let variantPrice = undefined;
+      let variantDurationType: string | null = null;
+      let variantDurationValue: number | null = null;
       if (bookingData.variant_id) {
         const { data: variantData } = await supabase
           .from("room_variants")
-          .select("variant_name, price")
+          .select("variant_name, price, booking_duration_type, booking_duration_value")
           .eq("id", bookingData.variant_id)
           .single();
         variantName = variantData?.variant_name;
         variantPrice = variantData?.price;
+        variantDurationType = variantData?.booking_duration_type || "hours";
+        variantDurationValue = variantData?.booking_duration_value || 1;
       }
 
       setBooking({
@@ -212,6 +218,8 @@ export default function BookingDetailPopup({
         room_name: bookingData.rooms?.name || "Unknown",
         variant_name: variantName,
         variant_price: variantPrice,
+        variant_duration_type: variantDurationType,
+        variant_duration_value: variantDurationValue,
       });
     } catch (error) {
       console.error("Error fetching booking detail:", error);
@@ -573,9 +581,11 @@ export default function BookingDetailPopup({
               {/* Price Breakdown */}
               <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
                 {(() => {
-                  // Calculate room subtotal from variant price × duration
+                  // Calculate room subtotal - for monthly/weekly variants, use duration_value not days
                   const roomSubtotal = booking.variant_price 
-                    ? booking.variant_price * booking.duration 
+                    ? (booking.variant_duration_type === "months" || booking.variant_duration_type === "weeks")
+                      ? booking.variant_price * (booking.variant_duration_value || 1)
+                      : booking.variant_price * booking.duration
                     : booking.price; // fallback for OTA
                   const productTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
                   let discountAmount = 0;
