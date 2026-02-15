@@ -249,6 +249,8 @@ export type Database = {
           end_time: string
           id: string
           note: string | null
+          ota_booking_id: string | null
+          ota_source: string | null
           payment_method: string | null
           payment_method_2: string | null
           payment_proof_url: string | null
@@ -285,6 +287,8 @@ export type Database = {
           end_time: string
           id?: string
           note?: string | null
+          ota_booking_id?: string | null
+          ota_source?: string | null
           payment_method?: string | null
           payment_method_2?: string | null
           payment_proof_url?: string | null
@@ -321,6 +325,8 @@ export type Database = {
           end_time?: string
           id?: string
           note?: string | null
+          ota_booking_id?: string | null
+          ota_source?: string | null
           payment_method?: string | null
           payment_method_2?: string | null
           payment_proof_url?: string | null
@@ -669,6 +675,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ota_sources: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ota_sources_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {

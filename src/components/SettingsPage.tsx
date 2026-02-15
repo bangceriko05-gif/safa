@@ -12,6 +12,7 @@ import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
+import OtaSourceManagement from "./OtaSourceManagement";
 
 interface StatusColor {
   id: string;
@@ -524,6 +525,8 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
               isOpen={isRoomSettingsOpen}
               onClose={() => setIsRoomSettingsOpen(false)}
             />
+
+            <OtaSourceManagement />
           </TabsContent>
         )}
 

@@ -122,6 +122,7 @@ export default function BookingModal({
   const [depositAmount, setDepositAmount] = useState("");
   const [depositIdentityType, setDepositIdentityType] = useState("KTP");
   
+  const [otaSources, setOtaSources] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
@@ -143,6 +144,8 @@ export default function BookingModal({
     has_discount: false,
     discount_applies_to: "variant" as "variant" | "product",
     booking_type: "walk_in" as "walk_in" | "ota",
+    ota_booking_id: "",
+    ota_source: "",
   });
 
   // Check if PMS mode based on store calendar_type
@@ -162,6 +165,9 @@ export default function BookingModal({
     }
     if (storeChanged || products.length === 0) {
       fetchProducts();
+    }
+    if (storeChanged || otaSources.length === 0) {
+      fetchOtaSources();
     }
     
     if (storeChanged) {
@@ -308,6 +314,8 @@ export default function BookingModal({
         has_discount: !!editingBooking.discount_value && editingBooking.discount_value > 0,
         discount_applies_to: editingBooking.discount_applies_to || "variant",
         booking_type: isOTA ? "ota" : "walk_in",
+        ota_booking_id: editingBooking.ota_booking_id || "",
+        ota_source: editingBooking.ota_source || "",
       });
       // Set payment proof URL from existing booking
       setPaymentProofUrl(editingBooking.payment_proof_url || null);
@@ -356,6 +364,8 @@ export default function BookingModal({
         has_discount: false,
         discount_applies_to: "variant",
         booking_type: "walk_in",
+        ota_booking_id: "",
+        ota_source: "",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -397,6 +407,8 @@ export default function BookingModal({
         has_discount: false,
         discount_applies_to: "variant",
         booking_type: "walk_in",
+        ota_booking_id: "",
+        ota_source: "",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -461,6 +473,24 @@ export default function BookingModal({
       setProducts(data || []);
     } catch (error) {
       console.error("Error fetching products:", error);
+    }
+  };
+
+  const fetchOtaSources = async () => {
+    try {
+      if (!currentStore) return;
+      
+      const { data, error } = await supabase
+        .from("ota_sources")
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setOtaSources(data || []);
+    } catch (error) {
+      console.error("Error fetching OTA sources:", error);
     }
   };
 
@@ -838,6 +868,20 @@ export default function BookingModal({
         return;
       }
 
+      // Validate OTA fields
+      if (formData.booking_type === "ota") {
+        if (!formData.ota_booking_id.trim()) {
+          toast.error("ID Booking OTA wajib diisi");
+          setLoading(false);
+          return;
+        }
+        if (!formData.ota_source) {
+          toast.error("Sumber OTA wajib dipilih");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validate variant is selected (only for walk_in type)
       if (formData.booking_type === "walk_in" && !formData.variant_id) {
         toast.error("Varian kamar wajib dipilih untuk Walk-in");
@@ -993,6 +1037,8 @@ export default function BookingModal({
         dual_payment: formData.dual_payment,
         payment_method_2: formData.payment_method_2 || null,
         reference_no_2: formData.reference_no_2 || null,
+        ota_booking_id: formData.booking_type === "ota" ? (formData.ota_booking_id || null) : null,
+        ota_source: formData.booking_type === "ota" ? (formData.ota_source || null) : null,
         status: formData.status,
         date: dateStr,
         duration: finalDuration,
@@ -1369,6 +1415,8 @@ export default function BookingModal({
         has_discount: false,
         discount_applies_to: "variant",
         booking_type: "walk_in",
+        ota_booking_id: "",
+        ota_source: "",
       });
       // Reset deposit state
       setEnableDeposit(false);
@@ -1539,6 +1587,48 @@ export default function BookingModal({
                 </div>
               )}
             </div>
+          )}
+
+          {/* OTA Booking ID and Source */}
+          {formData.booking_type === "ota" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="ota_booking_id">ID Booking OTA *</Label>
+                <Input
+                  id="ota_booking_id"
+                  value={formData.ota_booking_id}
+                  onChange={(e) => setFormData({ ...formData, ota_booking_id: e.target.value })}
+                  placeholder="Masukkan ID booking dari OTA"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ota_source">Sumber OTA *</Label>
+                <Select
+                  value={formData.ota_source}
+                  onValueChange={(value) => setFormData({ ...formData, ota_source: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih sumber OTA" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {otaSources.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        Belum ada sumber OTA. Tambahkan di Pengaturan &gt; Kamar.
+                      </div>
+                    ) : (
+                      otaSources.map((source) => (
+                        <SelectItem key={source.id} value={source.name}>
+                          {source.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
 
           {/* OTA Manual Price Input */}
