@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -77,6 +77,9 @@ export default function CustomerManagement() {
   const [identityPreview, setIdentityPreview] = useState<string | null>(null);
   const [uploadingIdentity, setUploadingIdentity] = useState(false);
   const [viewingIdentity, setViewingIdentity] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [identityFilter, setIdentityFilter] = useState<string>("all"); // all, KTP, SIM, Passport
+  const [showMissingKtp, setShowMissingKtp] = useState(false);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -372,14 +375,39 @@ export default function CustomerManagement() {
     setIdentityPreview(null);
   };
 
+  const filteredCustomers = customers.filter((customer) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        customer.name.toLowerCase().includes(query) ||
+        customer.phone.toLowerCase().includes(query) ||
+        (customer.email && customer.email.toLowerCase().includes(query)) ||
+        (customer.identity_number && customer.identity_number.toLowerCase().includes(query));
+      if (!matchesSearch) return false;
+    }
+
+    // Identity type filter
+    if (identityFilter !== "all") {
+      if (customer.identity_type !== identityFilter) return false;
+    }
+
+    // Missing KTP filter
+    if (showMissingKtp) {
+      if (customer.identity_document_url) return false;
+    }
+
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Data Pelanggan</h2>
-          <p className="text-gray-600 mt-1">Kelola database pelanggan Treebox</p>
+          <h2 className="text-2xl font-bold text-foreground">Data Pelanggan</h2>
+          <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="bg-[#1f7acb] hover:bg-[#1a6ab0]">
+        <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
           <Plus className="mr-2 h-4 w-4" />
           Tambah Pelanggan
         </Button>
@@ -387,10 +415,45 @@ export default function CustomerManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Daftar Pelanggan ({customers.length})
-          </CardTitle>
+          <div className="flex flex-col gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Daftar Pelanggan ({filteredCustomers.length})
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari nama, nomor HP, email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              {/* Identity type filter */}
+              <Select value={identityFilter} onValueChange={setIdentityFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Identitas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="KTP">KTP</SelectItem>
+                  <SelectItem value="SIM">SIM</SelectItem>
+                  <SelectItem value="Passport">Passport</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Missing KTP filter */}
+              <Button
+                variant={showMissingKtp ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowMissingKtp(!showMissingKtp)}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Belum Upload KTP
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border overflow-hidden">
@@ -406,14 +469,14 @@ export default function CustomerManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customers.length === 0 ? (
+                {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                      Belum ada data pelanggan
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      {customers.length === 0 ? "Belum ada data pelanggan" : "Tidak ada pelanggan yang cocok dengan filter"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  customers.map((customer) => {
+                  filteredCustomers.map((customer) => {
                     const canModify = userRole === "admin" || userRole === "leader" || customer.created_by === userId;
                     
                     return (
