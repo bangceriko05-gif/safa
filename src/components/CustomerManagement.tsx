@@ -164,11 +164,15 @@ export default function CustomerManagement() {
     }
   };
 
-  const getIdentityDocumentUrl = (path: string) => {
-    const { data } = supabase.storage
+  const getIdentityDocumentUrl = async (path: string) => {
+    const { data, error } = await supabase.storage
       .from('identity-documents')
-      .getPublicUrl(path);
-    return data.publicUrl;
+      .createSignedUrl(path, 3600); // 1 hour expiry
+    if (error || !data?.signedUrl) {
+      toast.error("Gagal membuka dokumen identitas");
+      return null;
+    }
+    return data.signedUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -312,7 +316,9 @@ export default function CustomerManagement() {
       identity_number: customer.identity_number || "",
     });
     if (customer.identity_document_url) {
-      setIdentityPreview(getIdentityDocumentUrl(customer.identity_document_url));
+      getIdentityDocumentUrl(customer.identity_document_url).then(url => {
+        if (url) setIdentityPreview(url);
+      });
     }
     setIsDialogOpen(true);
   };
@@ -426,7 +432,10 @@ export default function CustomerManagement() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0"
-                                  onClick={() => window.open(getIdentityDocumentUrl(customer.identity_document_url!), '_blank')}
+                                  onClick={async () => {
+                                    const url = await getIdentityDocumentUrl(customer.identity_document_url!);
+                                    if (url) window.open(url, '_blank');
+                                  }}
                                 >
                                   <Eye className="h-3 w-3" />
                                 </Button>
