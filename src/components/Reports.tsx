@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings } from "lucide-react";
+import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer } from "lucide-react";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -550,6 +550,94 @@ export default function Reports() {
 
   const handleViewExpense = (expense: Expense) => {
     setViewingExpense(expense);
+  };
+
+  const handlePrintExpense = (expense: Expense) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Nota Pengeluaran - ${expense.bid || ''}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 10px; margin-bottom: 10px; }
+        .header h2 { margin: 0 0 4px; font-size: 16px; }
+        .header p { margin: 0; color: #666; font-size: 11px; }
+        .bid { font-family: monospace; font-size: 13px; font-weight: bold; color: #333; }
+        .row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .label { color: #666; }
+        .value { font-weight: bold; text-align: right; }
+        .total { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-size: 16px; }
+        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 10px; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <div class="header">
+        <h2>${currentStore?.name || ''}</h2>
+        <p>Nota Pengeluaran</p>
+        <p class="bid">${expense.bid || '-'}</p>
+      </div>
+      <div class="row"><span class="label">Tanggal</span><span class="value">${format(new Date(expense.date), 'dd MMM yyyy', { locale: localeId })}</span></div>
+      <div class="row"><span class="label">Deskripsi</span><span class="value">${expense.description}</span></div>
+      <div class="row"><span class="label">Kategori</span><span class="value">${expense.category || '-'}</span></div>
+      <div class="row"><span class="label">Metode Bayar</span><span class="value">${expense.payment_method || '-'}</span></div>
+      <div class="row"><span class="label">Dibuat oleh</span><span class="value">${expense.creator_name || '-'}</span></div>
+      <div class="row total"><span>Total</span><span>Rp ${expense.amount.toLocaleString('id-ID')}</span></div>
+      <div class="footer">Dicetak: ${format(new Date(), 'dd MMM yyyy HH:mm', { locale: localeId })}</div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const handlePrintIncome = async (income: AdditionalIncome) => {
+    // Fetch products if not loaded
+    let products = income.products || [];
+    if (products.length === 0) {
+      const { data } = await supabase
+        .from("income_products")
+        .select("product_name, quantity, subtotal")
+        .eq("income_id", income.id);
+      if (data) products = data.map(p => ({ ...p, product_id: '', product_price: 0 }));
+    }
+    const productsHtml = products.length > 0 
+      ? products.map(p => `<div class="row"><span class="label">${p.product_name} x${p.quantity}</span><span class="value">Rp ${p.subtotal.toLocaleString('id-ID')}</span></div>`).join('')
+      : '';
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Nota Pemasukan - ${income.bid || ''}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 10px; margin-bottom: 10px; }
+        .header h2 { margin: 0 0 4px; font-size: 16px; }
+        .header p { margin: 0; color: #666; font-size: 11px; }
+        .bid { font-family: monospace; font-size: 13px; font-weight: bold; color: #333; }
+        .row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .label { color: #666; }
+        .value { font-weight: bold; text-align: right; }
+        .section { border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px; }
+        .total { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-size: 16px; }
+        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 10px; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <div class="header">
+        <h2>${currentStore?.name || ''}</h2>
+        <p>Nota Pemasukan</p>
+        <p class="bid">${income.bid || '-'}</p>
+      </div>
+      <div class="row"><span class="label">Tanggal</span><span class="value">${format(new Date(income.date), 'dd MMM yyyy', { locale: localeId })}</span></div>
+      <div class="row"><span class="label">Pelanggan</span><span class="value">${income.customer_name || '-'}</span></div>
+      <div class="row"><span class="label">Metode Bayar</span><span class="value">${income.payment_method || '-'}</span></div>
+      ${income.reference_no ? `<div class="row"><span class="label">No. Referensi</span><span class="value">${income.reference_no}</span></div>` : ''}
+      ${income.description ? `<div class="row"><span class="label">Deskripsi</span><span class="value">${income.description}</span></div>` : ''}
+      <div class="row"><span class="label">Dibuat oleh</span><span class="value">${income.creator_name || '-'}</span></div>
+      ${productsHtml ? `<div class="section"><div style="font-weight:bold;margin-bottom:4px;">Produk:</div>${productsHtml}</div>` : ''}
+      <div class="row total"><span>Total</span><span>Rp ${income.amount.toLocaleString('id-ID')}</span></div>
+      <div class="footer">Dicetak: ${format(new Date(), 'dd MMM yyyy HH:mm', { locale: localeId })}</div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const handleDeleteExpense = async (id: string) => {
@@ -1175,6 +1263,18 @@ export default function Reports() {
                               >
                                 <Copy className="h-2.5 w-2.5" />
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrintExpense(expense);
+                                }}
+                                title="Print Nota"
+                              >
+                                <Printer className="h-2.5 w-2.5" />
+                              </Button>
                             </div>
                           )}
                           <div className="font-medium">{expense.description}</div>
@@ -1422,6 +1522,18 @@ export default function Reports() {
                                 title="Salin BID"
                               >
                                 <Copy className="h-2.5 w-2.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrintIncome(income);
+                                }}
+                                title="Print Nota"
+                              >
+                                <Printer className="h-2.5 w-2.5" />
                               </Button>
                             </div>
                           )}
