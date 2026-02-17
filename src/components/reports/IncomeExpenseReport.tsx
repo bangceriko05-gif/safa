@@ -15,6 +15,12 @@ import {
   formatCurrencyPlain
 } from "@/utils/reportExport";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ExpenseData {
   id: string;
@@ -41,6 +47,11 @@ interface IncomeData {
   products: { product_name: string; quantity: number; subtotal: number }[];
 }
 
+interface DetailPopup {
+  type: 'expense_category' | 'expense_method' | 'income_method';
+  label: string;
+}
+
 export default function IncomeExpenseReport() {
   const { currentStore } = useStore();
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
@@ -48,6 +59,7 @@ export default function IncomeExpenseReport() {
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [incomes, setIncomes] = useState<IncomeData[]>([]);
+  const [detailPopup, setDetailPopup] = useState<DetailPopup | null>(null);
   const [stats, setStats] = useState({
     totalExpenses: 0,
     totalIncomes: 0,
@@ -270,6 +282,78 @@ export default function IncomeExpenseReport() {
     toast.success("Export pengeluaran berhasil!");
   };
 
+  const getDetailData = () => {
+    if (!detailPopup) return { items: [] as any[], title: '' };
+    const { type, label } = detailPopup;
+    
+    if (type === 'expense_category') {
+      return {
+        title: `Pengeluaran - Kategori: ${label}`,
+        items: expenses.filter(e => e.category === label),
+      };
+    }
+    if (type === 'expense_method') {
+      return {
+        title: `Pengeluaran - Metode: ${label}`,
+        items: expenses.filter(e => e.payment_method === label),
+      };
+    }
+    // income_method
+    return {
+      title: `Pemasukan - Metode: ${label}`,
+      items: incomes.filter(i => i.payment_method === label),
+    };
+  };
+
+  const handleExportDetail = () => {
+    if (!detailPopup || !currentStore) return;
+    const { type, label } = detailPopup;
+    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+    
+    if (type === 'income_method') {
+      const filtered = incomes.filter(i => i.payment_method === label);
+      const data = filtered.map(income => {
+        const createdAt = new Date(income.created_at);
+        const productsText = income.products.length > 0 
+          ? income.products.map(p => `${p.product_name} (${p.quantity}x Rp ${formatCurrencyPlain(p.subtotal)})`).join(', ')
+          : '-';
+        return {
+          'BID': income.bid,
+          'Tanggal': format(createdAt, 'dd/MM/yyyy', { locale: localeId }),
+          'Jam': format(createdAt, 'HH:mm'),
+          'Pelanggan': income.customer_name || '-',
+          'Metode Bayar': income.payment_method,
+          'Jumlah': income.amount,
+          'Produk': productsText,
+          'Deskripsi': income.description || '-',
+        };
+      });
+      exportToExcel(data, `Pemasukan_${label}`, getExportFileName(`Pemasukan_${label}`, currentStore.name, dateRangeStr));
+    } else {
+      const filtered = expenses.filter(e => 
+        type === 'expense_category' ? e.category === label : e.payment_method === label
+      );
+      const data = filtered.map(expense => {
+        const createdAt = new Date(expense.created_at);
+        return {
+          'BID': expense.bid,
+          'Tanggal': format(createdAt, 'dd/MM/yyyy', { locale: localeId }),
+          'Jam': format(createdAt, 'HH:mm'),
+          'Dibuat Oleh': expense.creator_name,
+          'Deskripsi': expense.description,
+          'Metode Bayar': expense.payment_method,
+          'Jumlah': expense.amount,
+          'Kategori': expense.category,
+        };
+      });
+      const suffix = type === 'expense_category' ? `Kategori_${label}` : `Metode_${label}`;
+      exportToExcel(data, `Pengeluaran_${suffix}`, getExportFileName(`Pengeluaran_${suffix}`, currentStore.name, dateRangeStr));
+    }
+    toast.success("Export berhasil!");
+  };
+
+  const detail = getDetailData();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -350,7 +434,11 @@ export default function IncomeExpenseReport() {
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {stats.expenseCategories.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}
+                      >
                         <span className="text-sm font-medium">{item.category}</span>
                         <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
                       </div>
@@ -380,7 +468,11 @@ export default function IncomeExpenseReport() {
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {stats.expensePaymentMethods.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setDetailPopup({ type: 'expense_method', label: item.method })}
+                      >
                         <span className="text-sm font-medium">{item.method}</span>
                         <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
                       </div>
@@ -410,7 +502,11 @@ export default function IncomeExpenseReport() {
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {stats.incomePaymentMethods.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}
+                      >
                         <span className="text-sm font-medium">{item.method}</span>
                         <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
                       </div>
@@ -478,6 +574,73 @@ export default function IncomeExpenseReport() {
           </div>
         </>
       )}
+
+      {/* Detail Popup Dialog */}
+      <Dialog open={!!detailPopup} onOpenChange={(open) => !open && setDetailPopup(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle className="text-base">{detail.title}</DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportDetail}
+              disabled={detail.items.length === 0}
+              className="mr-6"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 space-y-2">
+            {detail.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Tidak ada data</p>
+            ) : detailPopup?.type === 'income_method' ? (
+              detail.items.map((income: IncomeData) => (
+                <div key={income.id} className="flex justify-between items-start p-3 bg-muted/50 rounded text-sm border">
+                  <div className="space-y-1">
+                    <div className="font-medium">{income.customer_name || income.description || "Pemasukan"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      BID: {income.bid} • {format(new Date(income.created_at), "d MMM yyyy HH:mm", { locale: localeId })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">oleh: {income.creator_name}</div>
+                    {income.products.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Produk: {income.products.map(p => `${p.product_name} (${p.quantity}x)`).join(', ')}
+                      </div>
+                    )}
+                    {income.description && <div className="text-xs text-muted-foreground">Ket: {income.description}</div>}
+                  </div>
+                  <div className="font-bold text-green-600 whitespace-nowrap ml-4">{formatCurrency(income.amount)}</div>
+                </div>
+              ))
+            ) : (
+              detail.items.map((expense: ExpenseData) => (
+                <div key={expense.id} className="flex justify-between items-start p-3 bg-muted/50 rounded text-sm border">
+                  <div className="space-y-1">
+                    <div className="font-medium">{expense.description}</div>
+                    <div className="text-xs text-muted-foreground">
+                      BID: {expense.bid} • {format(new Date(expense.created_at), "d MMM yyyy HH:mm", { locale: localeId })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Kategori: {expense.category} • Metode: {expense.payment_method}
+                    </div>
+                    <div className="text-xs text-muted-foreground">oleh: {expense.creator_name}</div>
+                  </div>
+                  <div className="font-bold text-red-600 whitespace-nowrap ml-4">{formatCurrency(expense.amount)}</div>
+                </div>
+              ))
+            )}
+          </div>
+          {detail.items.length > 0 && (
+            <div className="border-t pt-3 flex justify-between items-center">
+              <span className="text-sm font-medium">Total ({detail.items.length} transaksi)</span>
+              <span className={`text-lg font-bold ${detailPopup?.type === 'income_method' ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(detail.items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0))}
+              </span>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
