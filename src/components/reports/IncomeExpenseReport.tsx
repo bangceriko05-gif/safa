@@ -329,7 +329,8 @@ export default function IncomeExpenseReport() {
         .value { font-weight: bold; text-align: right; }
         .total { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-size: 16px; }
         .footer { text-align: center; margin-top: 20px; color: #999; font-size: 10px; }
-        @media print { body { padding: 0; } }
+        @page { margin: 0; size: auto; }
+        @media print { body { padding: 10px; } }
       </style></head><body>
       <div class="header">
         <h2>${currentStore?.name || ''}</h2>
@@ -369,7 +370,8 @@ export default function IncomeExpenseReport() {
         .section { border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px; }
         .total { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-size: 16px; }
         .footer { text-align: center; margin-top: 20px; color: #999; font-size: 10px; }
-        @media print { body { padding: 0; } }
+        @page { margin: 0; size: auto; }
+        @media print { body { padding: 10px; } }
       </style></head><body>
       <div class="header">
         <h2>${currentStore?.name || ''}</h2>
