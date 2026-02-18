@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { TrendingUp, TrendingDown, DollarSign, Download } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { 
@@ -29,8 +32,10 @@ interface ExpenseData {
   amount: number;
   category: string;
   payment_method: string;
+  payment_proof_url?: string;
   date: string;
   created_at: string;
+  created_by: string;
   creator_name: string;
 }
 
@@ -43,6 +48,7 @@ interface IncomeData {
   payment_method: string;
   date: string;
   created_at: string;
+  created_by: string;
   creator_name: string;
   products: { product_name: string; quantity: number; subtotal: number }[];
 }
@@ -60,6 +66,11 @@ export default function IncomeExpenseReport() {
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [incomes, setIncomes] = useState<IncomeData[]>([]);
   const [detailPopup, setDetailPopup] = useState<DetailPopup | null>(null);
+  const [editingExpense, setEditingExpense] = useState<ExpenseData | null>(null);
+  const [editingIncome, setEditingIncome] = useState<IncomeData | null>(null);
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "" });
+  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "" });
+  const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
   const [stats, setStats] = useState({
     totalExpenses: 0,
     totalIncomes: 0,
@@ -72,7 +83,18 @@ export default function IncomeExpenseReport() {
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
+    fetchExpenseCategories();
   }, [timeRange, customDateRange, currentStore]);
+
+  const fetchExpenseCategories = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("expense_categories")
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .order("name");
+    setExpenseCategories(data || []);
+  };
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -156,8 +178,10 @@ export default function IncomeExpenseReport() {
         amount: Number(e.amount) || 0,
         category: e.category || "Lainnya",
         payment_method: e.payment_method || "-",
+        payment_proof_url: e.payment_proof_url || undefined,
         date: e.date,
         created_at: e.created_at,
+        created_by: e.created_by,
         creator_name: profilesById[e.created_by] || "Unknown",
       }));
 
@@ -170,6 +194,7 @@ export default function IncomeExpenseReport() {
         payment_method: i.payment_method || "Lainnya",
         date: i.date,
         created_at: i.created_at,
+        created_by: i.created_by,
         creator_name: profilesById[i.created_by] || "Unknown",
         products: incomeProductsMap[i.id] || [],
       }));
@@ -219,6 +244,150 @@ export default function IncomeExpenseReport() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatExpenseAmount = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  const handleEditExpenseClick = (expense: ExpenseData) => {
+    setEditingExpense(expense);
+    setExpenseForm({
+      description: expense.description,
+      amount: expense.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+      category: expense.category,
+      payment_method: expense.payment_method === '-' ? '' : expense.payment_method,
+    });
+  };
+
+  const handleSaveExpense = async () => {
+    if (!editingExpense) return;
+    try {
+      const { error } = await supabase
+        .from("expenses")
+        .update({
+          description: expenseForm.description,
+          amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
+          category: expenseForm.category,
+          payment_method: expenseForm.payment_method || null,
+        })
+        .eq("id", editingExpense.id);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil diperbarui");
+      setEditingExpense(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal memperbarui pengeluaran");
+    }
+  };
+
+  const handleEditIncomeClick = (income: IncomeData) => {
+    setEditingIncome(income);
+    setIncomeForm({
+      description: income.description,
+      amount: income.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+      customer_name: income.customer_name,
+      payment_method: income.payment_method === 'Lainnya' ? '' : income.payment_method,
+    });
+  };
+
+  const handleSaveIncome = async () => {
+    if (!editingIncome) return;
+    try {
+      const { error } = await supabase
+        .from("incomes")
+        .update({
+          description: incomeForm.description || null,
+          amount: parseFloat(incomeForm.amount.replace(/\./g, "")) || 0,
+          customer_name: incomeForm.customer_name,
+          payment_method: incomeForm.payment_method || null,
+        })
+        .eq("id", editingIncome.id);
+      if (error) throw error;
+      toast.success("Pemasukan berhasil diperbarui");
+      setEditingIncome(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal memperbarui pemasukan");
+    }
+  };
+
+  const handlePrintExpense = (expense: ExpenseData) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Nota Pengeluaran - ${expense.bid}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 10px; margin-bottom: 10px; }
+        .header h2 { margin: 0 0 4px; font-size: 16px; }
+        .header p { margin: 0; color: #666; font-size: 11px; }
+        .bid { font-family: monospace; font-size: 13px; font-weight: bold; color: #333; }
+        .row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .label { color: #666; }
+        .value { font-weight: bold; text-align: right; }
+        .total { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-size: 16px; }
+        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 10px; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <div class="header">
+        <h2>${currentStore?.name || ''}</h2>
+        <p>Nota Pengeluaran</p>
+        <p class="bid">${expense.bid}</p>
+      </div>
+      <div class="row"><span class="label">Tanggal</span><span class="value">${format(new Date(expense.date), 'dd MMM yyyy', { locale: localeId })}</span></div>
+      <div class="row"><span class="label">Deskripsi</span><span class="value">${expense.description}</span></div>
+      <div class="row"><span class="label">Kategori</span><span class="value">${expense.category}</span></div>
+      <div class="row"><span class="label">Metode Bayar</span><span class="value">${expense.payment_method}</span></div>
+      <div class="row"><span class="label">Dibuat oleh</span><span class="value">${expense.creator_name}</span></div>
+      <div class="row total"><span>Total</span><span>Rp ${expense.amount.toLocaleString('id-ID')}</span></div>
+      <div class="footer">Dicetak: ${format(new Date(), 'dd MMM yyyy HH:mm', { locale: localeId })}</div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const handlePrintIncome = (income: IncomeData) => {
+    const productsHtml = income.products.length > 0 
+      ? income.products.map(p => `<div class="row"><span class="label">${p.product_name} x${p.quantity}</span><span class="value">Rp ${p.subtotal.toLocaleString('id-ID')}</span></div>`).join('')
+      : '';
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Nota Pemasukan - ${income.bid}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 10px; margin-bottom: 10px; }
+        .header h2 { margin: 0 0 4px; font-size: 16px; }
+        .header p { margin: 0; color: #666; font-size: 11px; }
+        .bid { font-family: monospace; font-size: 13px; font-weight: bold; color: #333; }
+        .row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .label { color: #666; }
+        .value { font-weight: bold; text-align: right; }
+        .section { border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px; }
+        .total { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-size: 16px; }
+        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 10px; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <div class="header">
+        <h2>${currentStore?.name || ''}</h2>
+        <p>Nota Pemasukan</p>
+        <p class="bid">${income.bid}</p>
+      </div>
+      <div class="row"><span class="label">Tanggal</span><span class="value">${format(new Date(income.date), 'dd MMM yyyy', { locale: localeId })}</span></div>
+      <div class="row"><span class="label">Pelanggan</span><span class="value">${income.customer_name || '-'}</span></div>
+      <div class="row"><span class="label">Metode Bayar</span><span class="value">${income.payment_method}</span></div>
+      ${income.description ? `<div class="row"><span class="label">Deskripsi</span><span class="value">${income.description}</span></div>` : ''}
+      <div class="row"><span class="label">Dibuat oleh</span><span class="value">${income.creator_name}</span></div>
+      ${productsHtml ? `<div class="section"><div style="font-weight:bold;margin-bottom:4px;">Produk:</div>${productsHtml}</div>` : ''}
+      <div class="row total"><span>Total</span><span>Rp ${income.amount.toLocaleString('id-ID')}</span></div>
+      <div class="footer">Dicetak: ${format(new Date(), 'dd MMM yyyy HH:mm', { locale: localeId })}</div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const handleExportIncomeDetail = () => {
@@ -532,7 +701,21 @@ export default function IncomeExpenseReport() {
                       <div key={expense.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
                         <div>
                           {expense.bid && expense.bid !== '-' && (
-                            <div className="text-[10px] font-mono text-primary font-bold mb-0.5">{expense.bid}</div>
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <div 
+                                className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
+                                onClick={() => handleEditExpenseClick(expense)}
+                                title="Klik untuk edit"
+                              >
+                                {expense.bid}
+                              </div>
+                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => { navigator.clipboard.writeText(expense.bid); toast.success("BID disalin"); }} title="Salin BID">
+                                <Copy className="h-2.5 w-2.5" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => handlePrintExpense(expense)} title="Print">
+                                <Printer className="h-2.5 w-2.5" />
+                              </Button>
+                            </div>
                           )}
                           <div className="font-medium">{expense.description}</div>
                           <div className="text-xs text-muted-foreground">
@@ -562,7 +745,21 @@ export default function IncomeExpenseReport() {
                       <div key={income.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
                         <div>
                           {income.bid && income.bid !== '-' && (
-                            <div className="text-[10px] font-mono text-primary font-bold mb-0.5">{income.bid}</div>
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <div 
+                                className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
+                                onClick={() => handleEditIncomeClick(income)}
+                                title="Klik untuk edit"
+                              >
+                                {income.bid}
+                              </div>
+                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => { navigator.clipboard.writeText(income.bid); toast.success("BID disalin"); }} title="Salin BID">
+                                <Copy className="h-2.5 w-2.5" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => handlePrintIncome(income)} title="Print">
+                                <Printer className="h-2.5 w-2.5" />
+                              </Button>
+                            </div>
                           )}
                           <div className="font-medium">{income.customer_name || income.description || "Pemasukan"}</div>
                           <div className="text-xs text-muted-foreground">
@@ -645,6 +842,85 @@ export default function IncomeExpenseReport() {
               </span>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Expense Dialog */}
+      <Dialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Pengeluaran {editingExpense?.bid}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Deskripsi</Label>
+              <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatExpenseAmount(e.target.value) })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Kategori</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Pembayaran</Label>
+              <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  <SelectItem value="QRIS">QRIS</SelectItem>
+                  <SelectItem value="Debit">Debit</SelectItem>
+                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleSaveExpense}>Simpan</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Income Dialog */}
+      <Dialog open={!!editingIncome} onOpenChange={(open) => !open && setEditingIncome(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Pemasukan {editingIncome?.bid}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nama Pelanggan</Label>
+              <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={incomeForm.amount} onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatExpenseAmount(e.target.value) })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Bayar</Label>
+              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="QRIS">QRIS</SelectItem>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi (opsional)</Label>
+              <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} />
+            </div>
+            <Button className="w-full" onClick={handleSaveIncome}>Simpan</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
