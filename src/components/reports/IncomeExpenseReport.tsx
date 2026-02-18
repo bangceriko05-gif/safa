@@ -531,6 +531,9 @@ export default function IncomeExpenseReport() {
                     {expenses.map((expense) => (
                       <div key={expense.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
                         <div>
+                          {expense.bid && expense.bid !== '-' && (
+                            <div className="text-[10px] font-mono text-primary font-bold mb-0.5">{expense.bid}</div>
+                          )}
                           <div className="font-medium">{expense.description}</div>
                           <div className="text-xs text-muted-foreground">
                             {expense.category} • {format(new Date(expense.date), "d MMM yyyy", { locale: localeId })}
@@ -558,6 +561,9 @@ export default function IncomeExpenseReport() {
                     {incomes.map((income) => (
                       <div key={income.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
                         <div>
+                          {income.bid && income.bid !== '-' && (
+                            <div className="text-[10px] font-mono text-primary font-bold mb-0.5">{income.bid}</div>
+                          )}
                           <div className="font-medium">{income.customer_name || income.description || "Pemasukan"}</div>
                           <div className="text-xs text-muted-foreground">
                             {income.payment_method} • {format(new Date(income.date), "d MMM yyyy", { locale: localeId })}
