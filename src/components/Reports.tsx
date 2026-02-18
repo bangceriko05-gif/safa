@@ -1246,10 +1246,16 @@ export default function Reports() {
                   <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
                     {expenses.map((expense) => (
                       <div key={expense.id} className="flex justify-between items-start text-xs bg-muted/50 p-2 rounded">
-                        <div className="flex-1 cursor-pointer" onClick={() => handleViewExpense(expense)}>
+                        <div className="flex-1">
                           {expense.bid && (
                             <div className="flex items-center gap-1 mb-1">
-                              <div className="text-[10px] font-mono text-primary">{expense.bid}</div>
+                              <div 
+                                className="text-[10px] font-mono text-primary cursor-pointer hover:underline font-bold"
+                                onClick={() => handleEditExpense(expense)}
+                                title="Klik untuk edit"
+                              >
+                                {expense.bid}
+                              </div>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -1277,32 +1283,24 @@ export default function Reports() {
                               </Button>
                             </div>
                           )}
-                          <div className="font-medium">{expense.description}</div>
-                          {expense.category && (
-                            <div className="text-muted-foreground">{expense.category}</div>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Dibuat oleh: {expense.creator_name}
+                          <div className="font-medium cursor-pointer" onClick={() => handleViewExpense(expense)}>{expense.description}</div>
+                          <div className="text-muted-foreground">
+                            {expense.category || '-'} • {expense.date && format(new Date(expense.date), "d MMM yyyy", { locale: localeId })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            oleh: {expense.creator_name}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold">{formatCurrency(expense.amount)}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0"
-                            onClick={() => handleEditExpense(expense)}
-                            title="Edit"
+                            onClick={() => handlePrintExpense(expense)}
+                            title="Print"
                           >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleDeleteExpense(expense.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
+                            <Printer className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
@@ -1506,10 +1504,16 @@ export default function Reports() {
                   <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
                     {additionalIncomes.map((income) => (
                       <div key={income.id} className="flex justify-between items-start text-xs bg-muted/50 p-2 rounded">
-                        <div className="flex-1 cursor-pointer" onClick={() => handleViewIncome(income)}>
+                        <div className="flex-1">
                           {income.bid && (
                             <div className="flex items-center gap-1 mb-1">
-                              <div className="text-[10px] font-mono text-primary">{income.bid}</div>
+                              <div 
+                                className="text-[10px] font-mono text-primary cursor-pointer hover:underline font-bold"
+                                onClick={() => handleEditIncome(income)}
+                                title="Klik untuk edit"
+                              >
+                                {income.bid}
+                              </div>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -1537,32 +1541,24 @@ export default function Reports() {
                               </Button>
                             </div>
                           )}
-                          <div className="font-medium">{income.customer_name || income.description}</div>
-                          {income.payment_method && (
-                            <div className="text-muted-foreground">{income.payment_method}</div>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Dibuat oleh: {income.creator_name}
+                          <div className="font-medium cursor-pointer" onClick={() => handleViewIncome(income)}>{income.customer_name || income.description}</div>
+                          <div className="text-muted-foreground">
+                            {income.payment_method || '-'} • {income.date && format(new Date(income.date), "d MMM yyyy", { locale: localeId })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            oleh: {income.creator_name}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <span className="font-bold text-green-600">{formatCurrency(income.amount)}</span>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0"
-                            onClick={() => handleEditIncome(income)}
-                            title="Edit"
+                            onClick={() => handlePrintIncome(income)}
+                            title="Print"
                           >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleDeleteIncome(income.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
+                            <Printer className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
