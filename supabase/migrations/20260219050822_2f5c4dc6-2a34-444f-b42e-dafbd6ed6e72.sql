@@ -1,0 +1,1 @@
+ALTER TABLE public.room_deposits ADD COLUMN print_count integer NOT NULL DEFAULT 0;

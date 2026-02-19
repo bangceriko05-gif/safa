@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
-import { Banknote, CreditCard, Upload, X, Loader2, Pencil, Trash2, Shield, Calendar, User, Undo2 } from "lucide-react";
+import { Banknote, CreditCard, Upload, X, Loader2, Pencil, Trash2, Shield, Calendar, User, Undo2, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import {
@@ -535,6 +535,14 @@ export default function DepositDetailPopup({
                   Kembalikan
                 </Button>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/receipt/deposit?id=${deposit.id}`, '_blank')}
+                  >
+                    <Printer className="h-4 w-4 mr-1" />
+                    Print
+                  </Button>
                   <Button variant="outline" size="sm" onClick={handleClose}>
                     Tutup
                   </Button>

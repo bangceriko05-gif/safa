@@ -11,6 +11,7 @@ import Booking from "./pages/Booking";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import Receipt from "./pages/Receipt";
 import TransactionReceiptPage from "./pages/TransactionReceipt";
+import DepositReceiptPage from "./pages/DepositReceipt";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/booking/confirm" element={<BookingConfirmation />} />
             <Route path="/receipt" element={<Receipt />} />
             <Route path="/receipt/transaction" element={<TransactionReceiptPage />} />
+            <Route path="/receipt/deposit" element={<DepositReceiptPage />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

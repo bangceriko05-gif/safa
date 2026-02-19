@@ -969,6 +969,7 @@ export type Database = {
           identity_type: string | null
           notes: string | null
           photo_url: string | null
+          print_count: number
           returned_at: string | null
           returned_by: string | null
           room_id: string
@@ -986,6 +987,7 @@ export type Database = {
           identity_type?: string | null
           notes?: string | null
           photo_url?: string | null
+          print_count?: number
           returned_at?: string | null
           returned_by?: string | null
           room_id: string
@@ -1003,6 +1005,7 @@ export type Database = {
           identity_type?: string | null
           notes?: string | null
           photo_url?: string | null
+          print_count?: number
           returned_at?: string | null
           returned_by?: string | null
           room_id?: string
