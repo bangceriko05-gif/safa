@@ -123,6 +123,7 @@ export default function Reports() {
     customer_name: "",
     payment_method: "",
     reference_no: "",
+    date: format(new Date(), "yyyy-MM-dd"),
   });
   const [editingIncome, setEditingIncome] = useState<AdditionalIncome | null>(null);
   const [viewingIncome, setViewingIncome] = useState<AdditionalIncome | null>(null);
@@ -139,7 +140,9 @@ export default function Reports() {
     category: "",
     payment_method: "",
     payment_proof_url: null as string | null,
+    date: format(new Date(), "yyyy-MM-dd"),
   });
+  const [productSearches, setProductSearches] = useState<Record<number, string>>({});
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
@@ -491,8 +494,7 @@ export default function Reports() {
         return;
       }
 
-      const { startDate } = getDateRangeInternal(timeRange);
-      const dateStr = format(startDate, "yyyy-MM-dd");
+      const dateStr = expenseForm.date;
 
       if (editingExpense) {
         const { error } = await supabase
@@ -503,6 +505,7 @@ export default function Reports() {
             category: expenseForm.category,
             payment_method: expenseForm.payment_method || null,
             payment_proof_url: expenseForm.payment_proof_url || null,
+            date: dateStr,
           })
           .eq("id", editingExpense.id);
 
@@ -526,7 +529,7 @@ export default function Reports() {
         toast.success("Pengeluaran berhasil ditambahkan");
       }
 
-      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", payment_proof_url: null });
+      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", payment_proof_url: null, date: format(new Date(), "yyyy-MM-dd") });
       setEditingExpense(null);
       setShowExpenseForm(false);
       fetchData();
@@ -544,6 +547,7 @@ export default function Reports() {
       category: expense.category || "",
       payment_method: expense.payment_method || "",
       payment_proof_url: expense.payment_proof_url || null,
+      date: expense.date,
     });
     setShowExpenseForm(true);
   };
@@ -616,8 +620,7 @@ export default function Reports() {
         return;
       }
 
-      const { startDate } = getDateRangeInternal(timeRange);
-      const dateStr = format(startDate, "yyyy-MM-dd");
+      const dateStr = incomeForm.date;
 
       const calculatedAmount = selectedProducts.length > 0 
         ? calculateProductsTotal()
@@ -632,6 +635,7 @@ export default function Reports() {
             customer_name: incomeForm.customer_name,
             payment_method: incomeForm.payment_method,
             reference_no: incomeForm.reference_no || null,
+            date: dateStr,
           })
           .eq("id", editingIncome.id);
 
@@ -698,7 +702,7 @@ export default function Reports() {
         toast.success("Pemasukan berhasil ditambahkan");
       }
 
-      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "" });
+      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
       setSelectedProducts([]);
       setEditingIncome(null);
       setShowIncomeForm(false);
@@ -717,6 +721,7 @@ export default function Reports() {
       customer_name: income.customer_name || "",
       payment_method: income.payment_method || "",
       reference_no: income.reference_no || "",
+      date: income.date,
     });
 
     try {
@@ -1026,7 +1031,7 @@ export default function Reports() {
                   setShowExpenseForm(open);
                   if (!open) {
                     setEditingExpense(null);
-                    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", payment_proof_url: null });
+                    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", payment_proof_url: null, date: format(new Date(), "yyyy-MM-dd") });
                   }
                 }}>
                   <DialogTrigger asChild>
@@ -1051,15 +1056,27 @@ export default function Reports() {
                       </div>
                     </DialogHeader>
                     <form onSubmit={handleAddExpense} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Deskripsi</Label>
-                        <Input
-                          id="description"
-                          value={expenseForm.description}
-                          onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                          placeholder="Contoh: Listrik, Air, dll"
-                          required
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Deskripsi</Label>
+                          <Input
+                            id="description"
+                            value={expenseForm.description}
+                            onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                            placeholder="Contoh: Listrik, Air, dll"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="expense-date">Tanggal</Label>
+                          <Input
+                            id="expense-date"
+                            type="date"
+                            value={expenseForm.date}
+                            onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                            required
+                          />
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="amount">Jumlah</Label>
@@ -1250,7 +1267,7 @@ export default function Reports() {
                   setShowIncomeForm(open);
                   if (!open) {
                     setEditingIncome(null);
-                    setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "" });
+                    setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
                     setSelectedProducts([]);
                   }
                 }}>
@@ -1265,7 +1282,8 @@ export default function Reports() {
                       <DialogTitle>{editingIncome ? "Edit" : "Tambah"} Pemasukan</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleAddIncome} className="space-y-4">
-                      <div className="space-y-2 relative">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2 relative">
                         <Label htmlFor="income-customer-name">Nama Pelanggan <span className="text-red-500">*</span></Label>
                         <Input
                           id="income-customer-name"
@@ -1299,7 +1317,18 @@ export default function Reports() {
                               </div>
                             ))}
                           </div>
-                        )}
+                         )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="income-date">Tanggal</Label>
+                          <Input
+                            id="income-date"
+                            type="date"
+                            value={incomeForm.date}
+                            onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
+                            required
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -1354,21 +1383,56 @@ export default function Reports() {
                         {selectedProducts.map((product, index) => (
                           <div key={index} className="flex gap-2 items-start p-2 bg-muted/50 rounded">
                             <div className="flex-1 space-y-2">
-                              <Select
-                                value={product.product_id}
-                                onValueChange={(value) => handleProductChange(index, value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Pilih produk" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover z-50">
-                                  {products.map((p) => (
-                                    <SelectItem key={p.id} value={p.id}>
-                                      {p.name} - {formatCurrency(p.price)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="relative">
+                                <Input
+                                  value={productSearches[index] !== undefined ? productSearches[index] : product.product_name || ""}
+                                  onChange={(e) => {
+                                    setProductSearches({ ...productSearches, [index]: e.target.value });
+                                  }}
+                                  onFocus={() => {
+                                    setProductSearches({ ...productSearches, [index]: productSearches[index] !== undefined ? productSearches[index] : product.product_name || "" });
+                                  }}
+                                  onBlur={() => {
+                                    // Delay to allow click on suggestion
+                                    setTimeout(() => {
+                                      setProductSearches((prev) => {
+                                        const next = { ...prev };
+                                        delete next[index];
+                                        return next;
+                                      });
+                                    }, 200);
+                                  }}
+                                  placeholder="Ketik nama produk..."
+                                  autoComplete="off"
+                                />
+                                {productSearches[index] !== undefined && (
+                                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                    {products
+                                      .filter((p) => p.name.toLowerCase().includes((productSearches[index] || "").toLowerCase()))
+                                      .map((p) => (
+                                        <div
+                                          key={p.id}
+                                          className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleProductChange(index, p.id);
+                                            setProductSearches((prev) => {
+                                              const next = { ...prev };
+                                              delete next[index];
+                                              return next;
+                                            });
+                                          }}
+                                        >
+                                          <span className="font-medium">{p.name}</span>
+                                          <span className="text-muted-foreground ml-2">{formatCurrency(p.price)}</span>
+                                        </div>
+                                      ))}
+                                    {products.filter((p) => p.name.toLowerCase().includes((productSearches[index] || "").toLowerCase())).length === 0 && (
+                                      <div className="px-3 py-2 text-sm text-muted-foreground">Produk tidak ditemukan</div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               <div className="flex gap-2">
                                 <Input
                                   type="number"
