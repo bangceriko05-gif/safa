@@ -70,7 +70,7 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
         .in("room_id", activeRoomIds)
         .gte("date", startDateStr)
         .lte("date", endDateStr)
-        .in("status", ["BO", "CI"]);
+        .in("status", ["BO", "CI", "CO"]);
 
       if (bookingsError) throw bookingsError;
 
