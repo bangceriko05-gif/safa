@@ -1487,79 +1487,142 @@ export default function Reports() {
                       {selectedProducts.length === 0 && (
                         <div className="space-y-2">
                           <Label htmlFor="income-amount">Jumlah (jika tidak pakai produk)</Label>
-                          <Input
-                            id="income-amount"
-                            value={incomeForm.amount}
-                            onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatExpenseAmount(e.target.value) })}
-                            placeholder="0"
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              id="income-amount"
+                              value={incomeForm.amount}
+                              onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatExpenseAmount(e.target.value) })}
+                              placeholder="0"
+                              className="flex-1"
+                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button type="button" size="sm" variant={incomeForm.discount_type ? "secondary" : "outline"} className="h-10 whitespace-nowrap">
+                                  {incomeForm.discount_type && incomeForm.discount_value
+                                    ? incomeForm.discount_type === "percentage" ? `Diskon ${incomeForm.discount_value}%` : `Diskon ${formatCurrency(parseFloat(incomeForm.discount_value.replace(/\./g, "")))}`
+                                    : "Diskon"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3 space-y-2" align="end">
+                                <Label className="text-xs">Tipe Diskon</Label>
+                                <Select
+                                  value={incomeForm.discount_type}
+                                  onValueChange={(value) => setIncomeForm({ ...incomeForm, discount_type: value as "" | "percentage" | "fixed", discount_value: "" })}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Pilih tipe" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-popover z-50">
+                                    <SelectItem value="percentage">Persen (%)</SelectItem>
+                                    <SelectItem value="fixed">Nominal (Rp)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {incomeForm.discount_type && (
+                                  <>
+                                    <Label className="text-xs">{incomeForm.discount_type === "percentage" ? "Persen" : "Nominal"}</Label>
+                                    <Input
+                                      value={incomeForm.discount_value}
+                                      onChange={(e) => {
+                                        const val = incomeForm.discount_type === "percentage"
+                                          ? e.target.value.replace(/[^0-9.]/g, "")
+                                          : formatExpenseAmount(e.target.value);
+                                        setIncomeForm({ ...incomeForm, discount_value: val });
+                                      }}
+                                      placeholder="0"
+                                      className="h-8 text-xs"
+                                    />
+                                  </>
+                                )}
+                                {incomeForm.discount_type && (
+                                  <Button type="button" size="sm" variant="ghost" className="w-full h-7 text-xs" onClick={() => setIncomeForm({ ...incomeForm, discount_type: "", discount_value: "" })}>
+                                    Hapus Diskon
+                                  </Button>
+                                )}
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </div>
                       )}
 
-                      <div className="space-y-2">
-                        <Label>Diskon (opsional)</Label>
-                        <div className="flex gap-2">
-                          <Select
-                            value={incomeForm.discount_type}
-                            onValueChange={(value) => setIncomeForm({ ...incomeForm, discount_type: value as "" | "percentage" | "fixed", discount_value: "" })}
-                          >
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue placeholder="Tipe diskon" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover z-50">
-                              <SelectItem value="percentage">Persen (%)</SelectItem>
-                              <SelectItem value="fixed">Nominal (Rp)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {incomeForm.discount_type && (
-                            <Input
-                              value={incomeForm.discount_value}
-                              onChange={(e) => {
-                                const val = incomeForm.discount_type === "percentage"
-                                  ? e.target.value.replace(/[^0-9.]/g, "")
-                                  : formatExpenseAmount(e.target.value);
-                                setIncomeForm({ ...incomeForm, discount_value: val });
-                              }}
-                              placeholder={incomeForm.discount_type === "percentage" ? "0" : "0"}
-                              className="flex-1"
-                            />
-                          )}
-                          {incomeForm.discount_type && (
-                            <Button type="button" size="sm" variant="ghost" className="h-10 px-2" onClick={() => setIncomeForm({ ...incomeForm, discount_type: "", discount_value: "" })}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                      {selectedProducts.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button type="button" size="sm" variant={incomeForm.discount_type ? "secondary" : "outline"} className="h-8 whitespace-nowrap text-xs">
+                                {incomeForm.discount_type && incomeForm.discount_value
+                                  ? incomeForm.discount_type === "percentage" ? `Diskon ${incomeForm.discount_value}%` : `Diskon ${formatCurrency(parseFloat(incomeForm.discount_value.replace(/\./g, "")))}`
+                                  : "+ Diskon"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3 space-y-2" align="start">
+                              <Label className="text-xs">Tipe Diskon</Label>
+                              <Select
+                                value={incomeForm.discount_type}
+                                onValueChange={(value) => setIncomeForm({ ...incomeForm, discount_type: value as "" | "percentage" | "fixed", discount_value: "" })}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Pilih tipe" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover z-50">
+                                  <SelectItem value="percentage">Persen (%)</SelectItem>
+                                  <SelectItem value="fixed">Nominal (Rp)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {incomeForm.discount_type && (
+                                <>
+                                  <Label className="text-xs">{incomeForm.discount_type === "percentage" ? "Persen" : "Nominal"}</Label>
+                                  <Input
+                                    value={incomeForm.discount_value}
+                                    onChange={(e) => {
+                                      const val = incomeForm.discount_type === "percentage"
+                                        ? e.target.value.replace(/[^0-9.]/g, "")
+                                        : formatExpenseAmount(e.target.value);
+                                      setIncomeForm({ ...incomeForm, discount_value: val });
+                                    }}
+                                    placeholder="0"
+                                    className="h-8 text-xs"
+                                  />
+                                </>
+                              )}
+                              {incomeForm.discount_type && (
+                                <Button type="button" size="sm" variant="ghost" className="w-full h-7 text-xs" onClick={() => setIncomeForm({ ...incomeForm, discount_type: "", discount_value: "" })}>
+                                  Hapus Diskon
+                                </Button>
+                              )}
+                            </PopoverContent>
+                          </Popover>
                         </div>
-                        {incomeForm.discount_type && incomeForm.discount_value && (() => {
-                          const subtotal = selectedProducts.length > 0 
-                            ? calculateProductsTotal()
-                            : (incomeForm.amount ? parseFloat(incomeForm.amount.replace(/\./g, "")) : 0);
-                          const discountVal = parseFloat(incomeForm.discount_value.replace(/\./g, ""));
-                          let discountAmount = 0;
-                          if (incomeForm.discount_type === "percentage") {
-                            discountAmount = subtotal * Math.min(discountVal, 100) / 100;
-                          } else {
-                            discountAmount = Math.min(discountVal, subtotal);
-                          }
-                          const finalTotal = Math.max(0, Math.round(subtotal - discountAmount));
-                          return (
-                            <div className="text-sm space-y-1 mt-2 p-2 bg-muted/50 rounded">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Subtotal</span>
-                                <span>{formatCurrency(subtotal)}</span>
-                              </div>
-                              <div className="flex justify-between text-red-500">
-                                <span>Diskon {incomeForm.discount_type === "percentage" ? `(${discountVal}%)` : ""}</span>
-                                <span>-{formatCurrency(Math.round(discountAmount))}</span>
-                              </div>
-                              <div className="flex justify-between font-bold border-t pt-1">
-                                <span>Total</span>
-                                <span className="text-green-600">{formatCurrency(finalTotal)}</span>
-                              </div>
+                      )}
+
+                      {incomeForm.discount_type && incomeForm.discount_value && (() => {
+                        const subtotal = selectedProducts.length > 0 
+                          ? calculateProductsTotal()
+                          : (incomeForm.amount ? parseFloat(incomeForm.amount.replace(/\./g, "")) : 0);
+                        const discountVal = parseFloat(incomeForm.discount_value.replace(/\./g, ""));
+                        let discountAmount = 0;
+                        if (incomeForm.discount_type === "percentage") {
+                          discountAmount = subtotal * Math.min(discountVal, 100) / 100;
+                        } else {
+                          discountAmount = Math.min(discountVal, subtotal);
+                        }
+                        const finalTotal = Math.max(0, Math.round(subtotal - discountAmount));
+                        return (
+                          <div className="text-sm space-y-1 p-2 bg-muted/50 rounded">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Subtotal</span>
+                              <span>{formatCurrency(subtotal)}</span>
                             </div>
-                          );
-                        })()}
-                      </div>
+                            <div className="flex justify-between text-destructive">
+                              <span>Diskon {incomeForm.discount_type === "percentage" ? `(${discountVal}%)` : ""}</span>
+                              <span>-{formatCurrency(Math.round(discountAmount))}</span>
+                            </div>
+                            <div className="flex justify-between font-bold border-t pt-1">
+                              <span>Total</span>
+                              <span className="text-green-600">{formatCurrency(finalTotal)}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       <Button type="submit" className="w-full">Simpan</Button>
                     </form>
