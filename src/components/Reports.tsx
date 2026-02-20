@@ -124,6 +124,8 @@ export default function Reports() {
     payment_method: "",
     reference_no: "",
     date: format(new Date(), "yyyy-MM-dd"),
+    discount_type: "" as "" | "percentage" | "fixed",
+    discount_value: "",
   });
   const [editingIncome, setEditingIncome] = useState<AdditionalIncome | null>(null);
   const [viewingIncome, setViewingIncome] = useState<AdditionalIncome | null>(null);
@@ -622,9 +624,22 @@ export default function Reports() {
 
       const dateStr = incomeForm.date;
 
-      const calculatedAmount = selectedProducts.length > 0 
+      let calculatedAmount = selectedProducts.length > 0 
         ? calculateProductsTotal()
         : (incomeForm.amount ? parseFloat(incomeForm.amount.replace(/\./g, "")) : 0);
+
+      // Apply discount
+      if (incomeForm.discount_type && incomeForm.discount_value) {
+        const discountVal = parseFloat(incomeForm.discount_value.replace(/\./g, ""));
+        if (discountVal > 0) {
+          if (incomeForm.discount_type === "percentage") {
+            calculatedAmount = calculatedAmount - (calculatedAmount * Math.min(discountVal, 100) / 100);
+          } else {
+            calculatedAmount = Math.max(0, calculatedAmount - discountVal);
+          }
+        }
+      }
+      calculatedAmount = Math.round(calculatedAmount);
 
       if (editingIncome) {
         const { error: incomeError } = await supabase
@@ -702,7 +717,7 @@ export default function Reports() {
         toast.success("Pemasukan berhasil ditambahkan");
       }
 
-      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
+      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd"), discount_type: "", discount_value: "" });
       setSelectedProducts([]);
       setEditingIncome(null);
       setShowIncomeForm(false);
@@ -722,6 +737,8 @@ export default function Reports() {
       payment_method: income.payment_method || "",
       reference_no: income.reference_no || "",
       date: income.date,
+      discount_type: "",
+      discount_value: "",
     });
 
     try {
@@ -1267,7 +1284,7 @@ export default function Reports() {
                   setShowIncomeForm(open);
                   if (!open) {
                     setEditingIncome(null);
-                    setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
+                    setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd"), discount_type: "", discount_value: "" });
                     setSelectedProducts([]);
                   }
                 }}>
@@ -1478,6 +1495,71 @@ export default function Reports() {
                           />
                         </div>
                       )}
+
+                      <div className="space-y-2">
+                        <Label>Diskon (opsional)</Label>
+                        <div className="flex gap-2">
+                          <Select
+                            value={incomeForm.discount_type}
+                            onValueChange={(value) => setIncomeForm({ ...incomeForm, discount_type: value as "" | "percentage" | "fixed", discount_value: "" })}
+                          >
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Tipe diskon" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover z-50">
+                              <SelectItem value="percentage">Persen (%)</SelectItem>
+                              <SelectItem value="fixed">Nominal (Rp)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {incomeForm.discount_type && (
+                            <Input
+                              value={incomeForm.discount_value}
+                              onChange={(e) => {
+                                const val = incomeForm.discount_type === "percentage"
+                                  ? e.target.value.replace(/[^0-9.]/g, "")
+                                  : formatExpenseAmount(e.target.value);
+                                setIncomeForm({ ...incomeForm, discount_value: val });
+                              }}
+                              placeholder={incomeForm.discount_type === "percentage" ? "0" : "0"}
+                              className="flex-1"
+                            />
+                          )}
+                          {incomeForm.discount_type && (
+                            <Button type="button" size="sm" variant="ghost" className="h-10 px-2" onClick={() => setIncomeForm({ ...incomeForm, discount_type: "", discount_value: "" })}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {incomeForm.discount_type && incomeForm.discount_value && (() => {
+                          const subtotal = selectedProducts.length > 0 
+                            ? calculateProductsTotal()
+                            : (incomeForm.amount ? parseFloat(incomeForm.amount.replace(/\./g, "")) : 0);
+                          const discountVal = parseFloat(incomeForm.discount_value.replace(/\./g, ""));
+                          let discountAmount = 0;
+                          if (incomeForm.discount_type === "percentage") {
+                            discountAmount = subtotal * Math.min(discountVal, 100) / 100;
+                          } else {
+                            discountAmount = Math.min(discountVal, subtotal);
+                          }
+                          const finalTotal = Math.max(0, Math.round(subtotal - discountAmount));
+                          return (
+                            <div className="text-sm space-y-1 mt-2 p-2 bg-muted/50 rounded">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Subtotal</span>
+                                <span>{formatCurrency(subtotal)}</span>
+                              </div>
+                              <div className="flex justify-between text-red-500">
+                                <span>Diskon {incomeForm.discount_type === "percentage" ? `(${discountVal}%)` : ""}</span>
+                                <span>-{formatCurrency(Math.round(discountAmount))}</span>
+                              </div>
+                              <div className="flex justify-between font-bold border-t pt-1">
+                                <span>Total</span>
+                                <span className="text-green-600">{formatCurrency(finalTotal)}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
 
                       <Button type="submit" className="w-full">Simpan</Button>
                     </form>
