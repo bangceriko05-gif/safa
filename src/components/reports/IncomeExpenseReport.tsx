@@ -75,7 +75,7 @@ export default function IncomeExpenseReport() {
     totalExpenses: 0,
     totalIncomes: 0,
     netProfit: 0,
-    expenseCategories: [] as { category: string; total: number }[],
+    expenseCategories: [] as { category: string; total: number; count: number }[],
     expensePaymentMethods: [] as { method: string; total: number }[],
     incomePaymentMethods: [] as { method: string; total: number }[],
   });
@@ -227,7 +227,11 @@ export default function IncomeExpenseReport() {
         totalExpenses,
         totalIncomes,
         netProfit: totalIncomes - totalExpenses,
-        expenseCategories: Object.entries(expenseByCategory).map(([category, total]) => ({ category, total })),
+        expenseCategories: Object.entries(expenseByCategory).map(([category, total]) => ({
+          category,
+          total,
+          count: mappedExpenses.filter(e => e.category === category).length,
+        })).sort((a, b) => b.total - a.total),
         expensePaymentMethods: Object.entries(expenseByMethod).map(([method, total]) => ({ method, total })),
         incomePaymentMethods: Object.entries(incomeByMethod).map(([method, total]) => ({ method, total })),
       });
@@ -533,16 +537,28 @@ export default function IncomeExpenseReport() {
                   <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {stats.expenseCategories.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                        onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}
-                      >
-                        <span className="text-sm font-medium">{item.category}</span>
-                        <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
-                      </div>
-                    ))}
+                    {stats.expenseCategories.map((item, index) => {
+                      const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}
+                        >
+                          <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium truncate">{item.category}</span>
+                              <span className="text-sm font-bold text-red-600 shrink-0 ml-2">{formatCurrency(item.total)}</span>
+                            </div>
+                            <div className="flex justify-between items-center mt-0.5">
+                              <span className="text-xs text-muted-foreground">{ratio}%</span>
+                              <span className="text-xs text-muted-foreground">{item.count} transaksi</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
