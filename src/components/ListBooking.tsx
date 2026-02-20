@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, List, Printer, ImageIcon, Search, Copy, Infinity } from "lucide-react";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, ChevronLeft, ChevronRight, List, Printer, ImageIcon, Search, Copy, Infinity } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, addDays, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { DateRange } from "react-day-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
@@ -79,6 +86,8 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [pageSize, setPageSize] = useState<number>(30);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -184,6 +193,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
           price,
           created_at,
           payment_proof_url,
+          payment_status,
           rooms (name)
         `)
         .eq("store_id", currentStore.id);
@@ -496,6 +506,19 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
     );
   });
 
+  // Pagination
+  const totalItems = filteredActiveBookings.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const paginatedBookings = filteredActiveBookings.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, dateFilter, customDateRange, pageSize]);
+
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
@@ -662,7 +685,7 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredActiveBookings.map((booking) => (
+                {paginatedBookings.map((booking) => (
                   <TableRow 
                     key={booking.id}
                     className={cn(
@@ -879,6 +902,65 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {filteredActiveBookings.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Tampilkan</span>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-[70px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span>dari {totalItems} data</span>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .map((page, idx, arr) => (
+                    <span key={page} className="flex items-center">
+                      {idx > 0 && arr[idx - 1] !== page - 1 && (
+                        <span className="px-1 text-muted-foreground">...</span>
+                      )}
+                      <Button
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    </span>
+                  ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
