@@ -27,6 +27,7 @@ import PurchaseReport from "./reports/PurchaseReport";
 import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 import OccupancyChart from "./reports/OccupancyChart";
+import RoomOccupancyList from "./reports/RoomOccupancyList";
 
 interface ReportStats {
   totalTransactions: number;
@@ -1750,6 +1751,14 @@ export default function Reports() {
         {/* Occupancy Chart */}
         <div className="mt-6">
           <OccupancyChart
+            startDate={getDateRangeInternal(timeRange).startDate}
+            endDate={getDateRangeInternal(timeRange).endDate}
+          />
+        </div>
+
+        {/* Room Occupancy List */}
+        <div className="mt-6">
+          <RoomOccupancyList
             startDate={getDateRangeInternal(timeRange).startDate}
             endDate={getDateRangeInternal(timeRange).endDate}
           />
