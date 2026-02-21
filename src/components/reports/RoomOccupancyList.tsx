@@ -109,7 +109,7 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
 
   if (loading) {
     return (
-      <Card className="col-span-full">
+      <Card>
         <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
         <CardContent><Skeleton className="h-[300px] w-full" /></CardContent>
       </Card>
@@ -118,7 +118,7 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
 
   if (data.length === 0) {
     return (
-      <Card className="col-span-full">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Okupansi Per Kamar</CardTitle>
           <BedDouble className="h-4 w-4 text-muted-foreground" />
@@ -133,7 +133,7 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
   }
 
   return (
-    <Card className="col-span-full">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-sm font-medium">Okupansi Per Kamar</CardTitle>
