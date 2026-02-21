@@ -146,7 +146,7 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
 
   if (loading) {
     return (
-      <Card className="col-span-full">
+      <Card>
         <CardHeader>
           <Skeleton className="h-5 w-40" />
         </CardHeader>
@@ -159,7 +159,7 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
 
   if (data.length === 0) {
     return (
-      <Card className="col-span-full">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Grafik Okupansi Kamar</CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -176,7 +176,7 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
   const isSingleDay = data.length === 1;
 
   return (
-    <Card className="col-span-full">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-sm font-medium">Grafik Okupansi Kamar</CardTitle>
