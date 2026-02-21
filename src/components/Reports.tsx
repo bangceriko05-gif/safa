@@ -1748,16 +1748,12 @@ export default function Reports() {
           </Card>
         </div>
 
-        {/* Occupancy Chart */}
-        <div className="mt-6">
+        {/* Occupancy Chart & Room List */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <OccupancyChart
             startDate={getDateRangeInternal(timeRange).startDate}
             endDate={getDateRangeInternal(timeRange).endDate}
           />
-        </div>
-
-        {/* Room Occupancy List */}
-        <div className="mt-6">
           <RoomOccupancyList
             startDate={getDateRangeInternal(timeRange).startDate}
             endDate={getDateRangeInternal(timeRange).endDate}
