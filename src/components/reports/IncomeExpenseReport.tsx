@@ -58,7 +58,11 @@ interface DetailPopup {
   label: string;
 }
 
-export default function IncomeExpenseReport() {
+interface IncomeExpenseReportProps {
+  initialTab?: "expenses" | "incomes";
+}
+
+export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
