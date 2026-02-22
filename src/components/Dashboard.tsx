@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, List, Shield } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -31,9 +31,8 @@ import SettingsPage from "./SettingsPage";
 import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
-import ListBooking from "./ListBooking";
+import TransactionManagement from "./TransactionManagement";
 import DepositFormModal from "./deposit/DepositFormModal";
-import DepositManagement from "./deposit/DepositManagement";
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
@@ -410,16 +409,16 @@ export default function Dashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full max-w-7xl" style={{ 
             gridTemplateColumns: 
-              (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
-              "1fr 1fr 1fr 1fr 1fr 1fr 1fr" 
+              (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
+              "1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
               <Calendar className="mr-2 h-4 w-4" />
               Kalender
             </TabsTrigger>
-            <TabsTrigger value="list-booking">
-              <List className="mr-2 h-4 w-4" />
-              List Booking
+            <TabsTrigger value="transactions">
+              <Receipt className="mr-2 h-4 w-4" />
+              Transaksi
             </TabsTrigger>
             <TabsTrigger value="customers">
               <Users className="mr-2 h-4 w-4" />
@@ -432,10 +431,6 @@ export default function Dashboard() {
             <TabsTrigger value="settings">
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan
-            </TabsTrigger>
-            <TabsTrigger value="deposits">
-              <Shield className="mr-2 h-4 w-4" />
-              Deposit
             </TabsTrigger>
             {(userRole === "admin" || userRole === "leader") && (
               <>
@@ -510,8 +505,12 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="list-booking" className="mt-6">
-            <ListBooking userRole={userRole} onEditBooking={handleEditBooking} />
+          <TabsContent value="transactions" className="mt-6">
+            <TransactionManagement 
+              userRole={userRole} 
+              onEditBooking={handleEditBooking} 
+              depositRefreshTrigger={depositRefreshTrigger}
+            />
           </TabsContent>
 
           <TabsContent value="customers" className="mt-6">
@@ -530,10 +529,6 @@ export default function Dashboard() {
             <>
               <TabsContent value="rooms" className="mt-6">
                 <RoomManagement />
-              </TabsContent>
-              
-              <TabsContent value="deposits" className="mt-6">
-                <DepositManagement refreshTrigger={depositRefreshTrigger} />
               </TabsContent>
               
               <TabsContent value="activity" className="mt-6">
