@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { List, DollarSign, Shield } from "lucide-react";
+import { List, TrendingDown, TrendingUp, Shield } from "lucide-react";
 import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import DepositManagement from "./deposit/DepositManagement";
@@ -17,14 +17,18 @@ export default function TransactionManagement({ userRole, onEditBooking, deposit
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="list-booking">
             <List className="mr-2 h-4 w-4" />
             List Booking
           </TabsTrigger>
-          <TabsTrigger value="income-expense">
-            <DollarSign className="mr-2 h-4 w-4" />
-            Pengeluaran & Pemasukan
+          <TabsTrigger value="expenses">
+            <TrendingDown className="mr-2 h-4 w-4" />
+            Pengeluaran
+          </TabsTrigger>
+          <TabsTrigger value="incomes">
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Pemasukan
           </TabsTrigger>
           <TabsTrigger value="deposits">
             <Shield className="mr-2 h-4 w-4" />
@@ -36,8 +40,12 @@ export default function TransactionManagement({ userRole, onEditBooking, deposit
           <ListBooking userRole={userRole} onEditBooking={onEditBooking} />
         </TabsContent>
 
-        <TabsContent value="income-expense" className="mt-4">
-          <IncomeExpenseReport />
+        <TabsContent value="expenses" className="mt-4">
+          <IncomeExpenseReport initialTab="expenses" />
+        </TabsContent>
+
+        <TabsContent value="incomes" className="mt-4">
+          <IncomeExpenseReport initialTab="incomes" />
         </TabsContent>
 
         <TabsContent value="deposits" className="mt-4">

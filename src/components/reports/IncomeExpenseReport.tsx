@@ -466,7 +466,9 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h3 className="text-lg font-semibold">Laporan Pengeluaran / Pemasukan</h3>
+          <h3 className="text-lg font-semibold">
+            {initialTab === "expenses" ? "Laporan Pengeluaran" : initialTab === "incomes" ? "Laporan Pemasukan" : "Laporan Pengeluaran / Pemasukan"}
+          </h3>
           <p className="text-sm text-muted-foreground">
             {getDateRangeDisplay(timeRange, customDateRange)}
           </p>
@@ -496,235 +498,251 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalIncomes)}</div>
-              </CardContent>
-            </Card>
+          <div className={`grid gap-4 ${!initialTab ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+            {(!initialTab || initialTab === "incomes") && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalIncomes)}</div>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalExpenses)}</div>
-              </CardContent>
-            </Card>
+            {(!initialTab || initialTab === "expenses") && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalExpenses)}</div>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Selisih Bersih</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${stats.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {formatCurrency(stats.netProfit)}
-                </div>
-              </CardContent>
-            </Card>
+            {!initialTab && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Selisih Bersih</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${stats.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {formatCurrency(stats.netProfit)}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Expense Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Pengeluaran per Kategori</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {stats.expenseCategories.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {stats.expenseCategories.map((item, index) => {
-                      const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
-                      return (
+          <div className={`grid gap-4 ${initialTab === "incomes" ? 'md:grid-cols-1' : initialTab === "expenses" ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+            {(!initialTab || initialTab === "expenses") && (
+              <>
+                {/* Expense Categories */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Pengeluaran per Kategori</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {stats.expenseCategories.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {stats.expenseCategories.map((item, index) => {
+                          const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                              onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}
+                            >
+                              <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium truncate">{item.category}</span>
+                                  <span className="text-sm font-bold text-red-600 shrink-0 ml-2">{formatCurrency(item.total)}</span>
+                                </div>
+                                <div className="flex justify-between items-center mt-0.5">
+                                  <span className="text-xs text-muted-foreground">{ratio}%</span>
+                                  <span className="text-xs text-muted-foreground">{item.count} transaksi</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Expense by Payment Method */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-medium">Pengeluaran per Metode Bayar</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportExpense}
+                      disabled={loading || expenses.length === 0}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {stats.expensePaymentMethods.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {stats.expensePaymentMethods.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                            onClick={() => setDetailPopup({ type: 'expense_method', label: item.method })}
+                          >
+                            <span className="text-sm font-medium">{item.method}</span>
+                            <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {(!initialTab || initialTab === "incomes") && (
+              /* Income by Payment Method */
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium">Pemasukan per Metode Bayar</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportIncomeDetail}
+                    disabled={loading || incomes.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {stats.incomePaymentMethods.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {stats.incomePaymentMethods.map((item, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                          onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}
+                          className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}
                         >
-                          <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium truncate">{item.category}</span>
-                              <span className="text-sm font-bold text-red-600 shrink-0 ml-2">{formatCurrency(item.total)}</span>
-                            </div>
-                            <div className="flex justify-between items-center mt-0.5">
-                              <span className="text-xs text-muted-foreground">{ratio}%</span>
-                              <span className="text-xs text-muted-foreground">{item.count} transaksi</span>
-                            </div>
-                          </div>
+                          <span className="text-sm font-medium">{item.method}</span>
+                          <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Expense by Payment Method */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Pengeluaran per Metode Bayar</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportExpense}
-                  disabled={loading || expenses.length === 0}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {stats.expensePaymentMethods.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {stats.expensePaymentMethods.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                        onClick={() => setDetailPopup({ type: 'expense_method', label: item.method })}
-                      >
-                        <span className="text-sm font-medium">{item.method}</span>
-                        <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Income by Payment Method */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Pemasukan per Metode Bayar</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportIncomeDetail}
-                  disabled={loading || incomes.length === 0}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {stats.incomePaymentMethods.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {stats.incomePaymentMethods.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                        onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}
-                      >
-                        <span className="text-sm font-medium">{item.method}</span>
-                        <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Expense List */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Daftar Pengeluaran</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {expenses.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {expenses.map((expense) => (
-                      <div key={expense.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
-                        <div>
-                          {expense.bid && expense.bid !== '-' && (
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <div 
-                                className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
-                                onClick={() => handleEditExpenseClick(expense)}
-                                title="Klik untuk edit"
-                              >
-                                {expense.bid}
+          <div className={`grid gap-4 ${initialTab ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
+            {(!initialTab || initialTab === "expenses") && (
+              /* Expense List */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Daftar Pengeluaran</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {expenses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {expenses.map((expense) => (
+                        <div key={expense.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
+                          <div>
+                            {expense.bid && expense.bid !== '-' && (
+                              <div className="flex items-center gap-1 mb-0.5">
+                                <div 
+                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
+                                  onClick={() => handleEditExpenseClick(expense)}
+                                  title="Klik untuk edit"
+                                >
+                                  {expense.bid}
+                                </div>
+                                <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => { navigator.clipboard.writeText(expense.bid); toast.success("BID disalin"); }} title="Salin BID">
+                                  <Copy className="h-2.5 w-2.5" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => handlePrintExpense(expense)} title="Print">
+                                  <Printer className="h-2.5 w-2.5" />
+                                </Button>
                               </div>
-                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => { navigator.clipboard.writeText(expense.bid); toast.success("BID disalin"); }} title="Salin BID">
-                                <Copy className="h-2.5 w-2.5" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => handlePrintExpense(expense)} title="Print">
-                                <Printer className="h-2.5 w-2.5" />
-                              </Button>
+                            )}
+                            <div className="font-medium">{expense.description}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {expense.category} • {format(new Date(expense.date), "d MMM yyyy", { locale: localeId })}
                             </div>
-                          )}
-                          <div className="font-medium">{expense.description}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {expense.category} • {format(new Date(expense.date), "d MMM yyyy", { locale: localeId })}
+                            <div className="text-xs text-muted-foreground">oleh: {expense.creator_name}</div>
                           </div>
-                          <div className="text-xs text-muted-foreground">oleh: {expense.creator_name}</div>
+                          <div className="font-bold text-red-600">{formatCurrency(expense.amount)}</div>
                         </div>
-                        <div className="font-bold text-red-600">{formatCurrency(expense.amount)}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-            {/* Income List */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Daftar Pemasukan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {incomes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {incomes.map((income) => (
-                      <div key={income.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
-                        <div>
-                          {income.bid && income.bid !== '-' && (
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <div 
-                                className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
-                                onClick={() => handleEditIncomeClick(income)}
-                                title="Klik untuk edit"
-                              >
-                                {income.bid}
+            {(!initialTab || initialTab === "incomes") && (
+              /* Income List */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Daftar Pemasukan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {incomes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {incomes.map((income) => (
+                        <div key={income.id} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
+                          <div>
+                            {income.bid && income.bid !== '-' && (
+                              <div className="flex items-center gap-1 mb-0.5">
+                                <div 
+                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
+                                  onClick={() => handleEditIncomeClick(income)}
+                                  title="Klik untuk edit"
+                                >
+                                  {income.bid}
+                                </div>
+                                <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => { navigator.clipboard.writeText(income.bid); toast.success("BID disalin"); }} title="Salin BID">
+                                  <Copy className="h-2.5 w-2.5" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => handlePrintIncome(income)} title="Print">
+                                  <Printer className="h-2.5 w-2.5" />
+                                </Button>
                               </div>
-                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => { navigator.clipboard.writeText(income.bid); toast.success("BID disalin"); }} title="Salin BID">
-                                <Copy className="h-2.5 w-2.5" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-4 w-4 p-0" onClick={() => handlePrintIncome(income)} title="Print">
-                                <Printer className="h-2.5 w-2.5" />
-                              </Button>
+                            )}
+                            <div className="font-medium">{income.customer_name || income.description || "Pemasukan"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {income.payment_method} • {format(new Date(income.date), "d MMM yyyy", { locale: localeId })}
                             </div>
-                          )}
-                          <div className="font-medium">{income.customer_name || income.description || "Pemasukan"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {income.payment_method} • {format(new Date(income.date), "d MMM yyyy", { locale: localeId })}
+                            <div className="text-xs text-muted-foreground">oleh: {income.creator_name}</div>
                           </div>
-                          <div className="text-xs text-muted-foreground">oleh: {income.creator_name}</div>
+                          <div className="font-bold text-green-600">{formatCurrency(income.amount)}</div>
                         </div>
-                        <div className="font-bold text-green-600">{formatCurrency(income.amount)}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </>
       )}
