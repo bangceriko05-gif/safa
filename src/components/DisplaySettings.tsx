@@ -41,6 +41,9 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
   const [bookingTextColor, setBookingTextColor] = useState<string>(() => {
     return localStorage.getItem("booking-text-color") || "#1F2937";
   });
+  const [readyUsedColor, setReadyUsedColor] = useState<string>(() => {
+    return localStorage.getItem("ready-used-color") || "#10B981";
+  });
 
   useEffect(() => {
     if (currentStore) {
@@ -239,6 +242,13 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
     toast.success("Warna teks booking berhasil diubah");
   };
 
+  const handleReadyUsedColorChange = (value: string) => {
+    setReadyUsedColor(value);
+    localStorage.setItem("ready-used-color", value);
+    window.dispatchEvent(new CustomEvent("ready-used-color-changed"));
+    toast.success("Warna Ready (Sudah Dipakai) berhasil diubah");
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -387,6 +397,86 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
               </Select>
             </div>
           ))}
+            {/* Ready (Sudah Dipakai) color setting */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className="text-sm font-medium">
+                Warna Ready (Sudah Dipakai)
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Warna cell kamar yang sudah pernah diisi dan sudah di-ready-kan
+              </p>
+              <Select 
+                value={readyUsedColor} 
+                onValueChange={handleReadyUsedColorChange}
+              >
+                <SelectTrigger className="w-full">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-6 h-6 rounded border"
+                      style={{ backgroundColor: readyUsedColor }}
+                    />
+                    <span>{readyUsedColor}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="#10B981">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#10B981" }} />
+                      <span>Emerald - #10B981</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#34D399">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#34D399" }} />
+                      <span>Light Emerald - #34D399</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#90EE90">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#90EE90" }} />
+                      <span>Light Green - #90EE90</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#4ECDC4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#4ECDC4" }} />
+                      <span>Turquoise - #4ECDC4</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#87CEEB">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#87CEEB" }} />
+                      <span>Sky Blue - #87CEEB</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#FFD700">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#FFD700" }} />
+                      <span>Gold - #FFD700</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#FFA500">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#FFA500" }} />
+                      <span>Orange - #FFA500</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#E6E6FA">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#E6E6FA" }} />
+                      <span>Lavender - #E6E6FA</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="#9CA3AF">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: "#9CA3AF" }} />
+                      <span>Gray - #9CA3AF</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {!canEditColors && (
               <p className="text-sm text-muted-foreground">
                 Hanya admin dan leader yang dapat mengubah warna status
