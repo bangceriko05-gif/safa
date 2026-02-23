@@ -1310,13 +1310,23 @@ export default function PMSCalendar({
                                 // Room is available - show "Ready" button to add booking
                                 <Button
                                   variant="ghost"
-                                  className="w-full h-full min-h-[60px] bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary transition-all flex flex-col items-center justify-center gap-0.5"
+                                  className={cn(
+                                    "w-full h-full min-h-[60px] border transition-all flex flex-col items-center justify-center gap-0.5",
+                                    isReady && dailyStatusData?.updated_by_name
+                                      ? "bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-400 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 dark:border-emerald-700"
+                                      : "bg-primary/5 hover:bg-primary/10 border-dashed border-primary/30 hover:border-primary"
+                                  )}
                                   onClick={() => onAddBooking(room.id, dateStr)}
                                   title={isReady && dailyStatusData?.updated_by_name ? `Direadykan oleh: ${dailyStatusData.updated_by_name}` : undefined}
                                 >
-                                  <span className="text-primary font-semibold text-xs">Ready</span>
+                                  <span className={cn(
+                                    "font-semibold text-xs",
+                                    isReady && dailyStatusData?.updated_by_name
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-primary"
+                                  )}>Ready</span>
                                   {isReady && dailyStatusData?.updated_by_name && (
-                                    <span className="text-[9px] text-muted-foreground truncate max-w-full px-1">
+                                    <span className="text-[9px] text-emerald-500 dark:text-emerald-400 truncate max-w-full px-1">
                                       {dailyStatusData.updated_by_name}
                                     </span>
                                   )}
