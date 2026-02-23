@@ -102,6 +102,9 @@ export default function PMSCalendar({
     CO: "#6B7280",
     BATAL: "#9CA3AF",
   });
+  const [readyUsedColor, setReadyUsedColor] = useState<string>(() => {
+    return localStorage.getItem("ready-used-color") || "#10B981";
+  });
   // Date-specific room status (from room_daily_status table)
   const [roomDailyStatus, setRoomDailyStatus] = useState<Record<string, string>>({});
   const [roomDailyStatusData, setRoomDailyStatusData] = useState<Record<string, { status: string; updated_by_name?: string }>>({});
@@ -154,6 +157,12 @@ export default function PMSCalendar({
     fetchStatusColors();
     fetchRoomDeposits();
 
+    // Listen for ready-used color changes
+    const handleReadyUsedColorChange = () => {
+      setReadyUsedColor(localStorage.getItem("ready-used-color") || "#10B981");
+    };
+    window.addEventListener("ready-used-color-changed", handleReadyUsedColorChange);
+
     // Realtime subscription for rooms
     const roomsChannel = supabase
       .channel(`pms-rooms-${currentStore.id}`)
@@ -189,6 +198,7 @@ export default function PMSCalendar({
       .subscribe();
 
     return () => {
+      window.removeEventListener("ready-used-color-changed", handleReadyUsedColorChange);
       supabase.removeChannel(roomsChannel);
       supabase.removeChannel(depositsChannel);
     };
@@ -1312,21 +1322,28 @@ export default function PMSCalendar({
                                   variant="ghost"
                                   className={cn(
                                     "w-full h-full min-h-[60px] border transition-all flex flex-col items-center justify-center gap-0.5",
-                                    isReady && dailyStatusData?.updated_by_name
-                                      ? "bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-400 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 dark:border-emerald-700"
-                                      : "bg-primary/5 hover:bg-primary/10 border-dashed border-primary/30 hover:border-primary"
+                                    !(isReady && dailyStatusData?.updated_by_name) && "bg-primary/5 hover:bg-primary/10 border-dashed border-primary/30 hover:border-primary"
                                   )}
+                                  style={isReady && dailyStatusData?.updated_by_name ? {
+                                    backgroundColor: `${readyUsedColor}15`,
+                                    borderColor: `${readyUsedColor}60`,
+                                    borderStyle: 'solid',
+                                  } : undefined}
                                   onClick={() => onAddBooking(room.id, dateStr)}
                                   title={isReady && dailyStatusData?.updated_by_name ? `Direadykan oleh: ${dailyStatusData.updated_by_name}` : undefined}
                                 >
-                                  <span className={cn(
-                                    "font-semibold text-xs",
-                                    isReady && dailyStatusData?.updated_by_name
-                                      ? "text-emerald-600 dark:text-emerald-400"
-                                      : "text-primary"
-                                  )}>Ready</span>
+                                  <span 
+                                    className={cn(
+                                      "font-semibold text-xs",
+                                      !(isReady && dailyStatusData?.updated_by_name) && "text-primary"
+                                    )}
+                                    style={isReady && dailyStatusData?.updated_by_name ? { color: readyUsedColor } : undefined}
+                                  >Ready</span>
                                   {isReady && dailyStatusData?.updated_by_name && (
-                                    <span className="text-[9px] text-emerald-500 dark:text-emerald-400 truncate max-w-full px-1">
+                                    <span 
+                                      className="text-[9px] truncate max-w-full px-1"
+                                      style={{ color: `${readyUsedColor}BB` }}
+                                    >
                                       {dailyStatusData.updated_by_name}
                                     </span>
                                   )}
