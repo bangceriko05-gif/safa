@@ -50,6 +50,9 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const [primaryColor, setPrimaryColor] = useState<string>(() => {
     return localStorage.getItem("app-primary-color") || "#8B5CF6";
   });
+  const [readyUsedColor, setReadyUsedColor] = useState<string>(() => {
+    return localStorage.getItem("ready-used-color") || "#10B981";
+  });
 
   useEffect(() => {
     if (currentStore) {
@@ -234,6 +237,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     toast.success("Warna teks booking berhasil diubah");
   };
 
+  const handleReadyUsedColorChange = (value: string) => {
+    setReadyUsedColor(value);
+    localStorage.setItem("ready-used-color", value);
+    window.dispatchEvent(new CustomEvent("ready-used-color-changed"));
+    toast.success("Warna Ready (Sudah Dipakai) berhasil diubah");
+  };
+
   const canEditColors = userRole === "admin" || userRole === "leader";
 
   const colorOptions = [
@@ -266,6 +276,18 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     { value: "#374151", label: "Gray" },
     { value: "#4B5563", label: "Medium Gray" },
     { value: "#6B7280", label: "Light Gray" },
+  ];
+
+  const readyUsedColorOptions = [
+    { value: "#10B981", label: "Emerald" },
+    { value: "#34D399", label: "Light Emerald" },
+    { value: "#90EE90", label: "Light Green" },
+    { value: "#4ECDC4", label: "Turquoise" },
+    { value: "#06B6D4", label: "Cyan" },
+    { value: "#3B82F6", label: "Blue" },
+    { value: "#F59E0B", label: "Amber" },
+    { value: "#FFB6C1", label: "Light Pink" },
+    { value: "#9CA3AF", label: "Gray" },
   ];
 
   return (
@@ -480,6 +502,36 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                   </Select>
                 </div>
               ))}
+              {/* Ready (Sudah Dipakai) color setting */}
+              <div className="space-y-2 pt-4 border-t border-border">
+                <label className="text-sm font-medium">
+                  Warna Ready (Sudah Dipakai)
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Warna cell kamar yang sudah pernah diisi dan sudah di-ready-kan
+                </p>
+                <Select 
+                  value={readyUsedColor} 
+                  onValueChange={handleReadyUsedColorChange}
+                >
+                  <SelectTrigger>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: readyUsedColor }} />
+                      <span>{readyUsedColorOptions.find(c => c.value === readyUsedColor)?.label || readyUsedColor}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {readyUsedColorOptions.map(color => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
+                          <span>{color.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {!canEditColors && (
                 <p className="text-sm text-muted-foreground">
                   Hanya admin dan leader yang dapat mengubah warna status
