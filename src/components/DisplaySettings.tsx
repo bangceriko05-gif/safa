@@ -290,7 +290,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
                 Pengaturan Warna Status Booking
               </CardTitle>
               <CardDescription>
-                Atur warna untuk setiap status booking (BO, CI, CO, BATAL)
+                Atur warna untuk setiap status booking (BO, CI, CO, BATAL) dan warna Ready (Sudah Dipakai)
               </CardDescription>
             </div>
             <Button
