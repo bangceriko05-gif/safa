@@ -66,7 +66,7 @@ type SubView = "all" | "expenses" | "incomes";
 
 export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
-  const [subView, setSubView] = useState<SubView>(initialTab || "all");
+  const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
@@ -469,24 +469,20 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <div>
-            <h3 className="text-lg font-semibold">Laporan Pemasukan/Pengeluaran</h3>
-            <p className="text-sm text-muted-foreground">
-              {getDateRangeDisplay(timeRange, customDateRange)}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
           <Select value={subView} onValueChange={(v) => setSubView(v as SubView)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua</SelectItem>
               <SelectItem value="expenses">Laporan Pengeluaran</SelectItem>
               <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground">
+            {getDateRangeDisplay(timeRange, customDateRange)}
+          </p>
           <ReportDateFilter
             timeRange={timeRange}
             onTimeRangeChange={setTimeRange}
