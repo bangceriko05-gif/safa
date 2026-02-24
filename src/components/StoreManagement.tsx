@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useStore } from "@/contexts/StoreContext";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ interface Store {
 }
 
 export default function StoreManagement() {
+  const { refreshStores } = useStore();
   const [stores, setStores] = useState<Store[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
@@ -180,6 +182,7 @@ export default function StoreManagement() {
       }
 
       fetchStores();
+      refreshStores();
       handleCloseDialog();
     } catch (error: any) {
       toast.error(error.message || "Terjadi kesalahan");
@@ -227,6 +230,7 @@ export default function StoreManagement() {
 
       toast.success("Outlet berhasil dihapus");
       fetchStores();
+      refreshStores();
     } catch (error: any) {
       toast.error(error.message || "Gagal menghapus outlet");
       console.error(error);

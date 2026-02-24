@@ -17,6 +17,7 @@ interface StoreContextType {
   currentStore: Store | null;
   userStores: Store[];
   setCurrentStore: (store: Store) => void;
+  refreshStores: () => Promise<void>;
   isLoading: boolean;
   userRole: string | null;
   isStoreInactive: boolean;
@@ -160,6 +161,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       currentStore, 
       userStores, 
       setCurrentStore, 
+      refreshStores: fetchUserStoresAndRole,
       isLoading, 
       userRole,
       isStoreInactive,
