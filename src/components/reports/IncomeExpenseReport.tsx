@@ -62,8 +62,11 @@ interface IncomeExpenseReportProps {
   initialTab?: "expenses" | "incomes";
 }
 
+type SubView = "all" | "expenses" | "incomes";
+
 export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
+  const [subView, setSubView] = useState<SubView>(initialTab || "all");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
@@ -465,15 +468,25 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">
-            {initialTab === "expenses" ? "Laporan Pengeluaran" : initialTab === "incomes" ? "Laporan Pemasukan" : "Laporan Pengeluaran / Pemasukan"}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {getDateRangeDisplay(timeRange, customDateRange)}
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Laporan Pemasukan/Pengeluaran</h3>
+            <p className="text-sm text-muted-foreground">
+              {getDateRangeDisplay(timeRange, customDateRange)}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <Select value={subView} onValueChange={(v) => setSubView(v as SubView)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua</SelectItem>
+              <SelectItem value="expenses">Laporan Pengeluaran</SelectItem>
+              <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
+            </SelectContent>
+          </Select>
           <ReportDateFilter
             timeRange={timeRange}
             onTimeRangeChange={setTimeRange}
@@ -498,8 +511,8 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
         </div>
       ) : (
         <>
-          <div className={`grid gap-4 ${!initialTab ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-            {(!initialTab || initialTab === "incomes") && (
+          <div className={`grid gap-4 ${subView === 'all' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+             {(subView === "all" || subView === "incomes") && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
@@ -511,7 +524,7 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
               </Card>
             )}
 
-            {(!initialTab || initialTab === "expenses") && (
+             {(subView === "all" || subView === "expenses") && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
@@ -523,7 +536,7 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
               </Card>
             )}
 
-            {!initialTab && (
+            {subView === "all" && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Selisih Bersih</CardTitle>
@@ -538,8 +551,8 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
             )}
           </div>
 
-          <div className={`grid gap-4 ${initialTab === "incomes" ? 'md:grid-cols-1' : initialTab === "expenses" ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-            {(!initialTab || initialTab === "expenses") && (
+           <div className={`grid gap-4 ${subView === "incomes" ? 'md:grid-cols-1' : subView === "expenses" ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+             {(subView === "all" || subView === "expenses") && (
               <>
                 {/* Expense Categories */}
                 <Card>
@@ -614,7 +627,7 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
               </>
             )}
 
-            {(!initialTab || initialTab === "incomes") && (
+             {(subView === "all" || subView === "incomes") && (
               /* Income by Payment Method */
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -651,8 +664,8 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
             )}
           </div>
 
-          <div className={`grid gap-4 ${initialTab ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
-            {(!initialTab || initialTab === "expenses") && (
+           <div className={`grid gap-4 ${subView !== "all" ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
+             {(subView === "all" || subView === "expenses") && (
               /* Expense List */
               <Card>
                 <CardHeader>
@@ -698,7 +711,7 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
               </Card>
             )}
 
-            {(!initialTab || initialTab === "incomes") && (
+            {(subView === "all" || subView === "incomes") && (
               /* Income List */
               <Card>
                 <CardHeader>
