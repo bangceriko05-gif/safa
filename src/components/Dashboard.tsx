@@ -509,6 +509,16 @@ export default function Dashboard() {
             <TransactionManagement 
               userRole={userRole} 
               onEditBooking={handleEditBooking} 
+              onAddBooking={() => {
+                setEditingBooking(null);
+                setSelectedSlot(null);
+                setIsModalOpen(true);
+              }}
+              onAddDeposit={() => {
+                setDepositRoomId(null);
+                setDepositRoomName("");
+                setShowDepositFormModal(true);
+              }}
               depositRefreshTrigger={depositRefreshTrigger}
             />
           </TabsContent>

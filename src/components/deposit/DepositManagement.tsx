@@ -37,7 +37,8 @@ import {
   Undo2, 
   Eye,
   Loader2,
-  Shield
+  Shield,
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -61,9 +62,10 @@ interface Deposit {
 
 interface DepositManagementProps {
   refreshTrigger?: number;
+  onAddDeposit?: () => void;
 }
 
-export default function DepositManagement({ refreshTrigger }: DepositManagementProps) {
+export default function DepositManagement({ refreshTrigger, onAddDeposit }: DepositManagementProps) {
   const { currentStore } = useStore();
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -221,7 +223,13 @@ export default function DepositManagement({ refreshTrigger }: DepositManagementP
           <Shield className="h-5 w-5 text-primary" />
           <CardTitle>Manajemen Deposit</CardTitle>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onAddDeposit && (
+            <Button size="sm" onClick={onAddDeposit}>
+              <Plus className="h-4 w-4 mr-1" />
+              Tambah Deposit
+            </Button>
+          )}
           <Button
             variant={filter === "all" ? "default" : "outline"}
             size="sm"

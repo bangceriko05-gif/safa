@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, ChevronLeft, ChevronRight, List, Printer, ImageIcon, Search, Copy, Infinity } from "lucide-react";
+import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, ChevronLeft, ChevronRight, List, Printer, ImageIcon, Search, Copy, Infinity, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, addDays, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -46,6 +46,7 @@ import CancelledBookings from "./CancelledBookings";
 interface ListBookingProps {
   userRole: string | null;
   onEditBooking: (booking: any) => void;
+  onAddBooking?: () => void;
 }
 
 interface BookingWithRoom {
@@ -66,7 +67,7 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
-export default function ListBooking({ userRole, onEditBooking }: ListBookingProps) {
+export default function ListBooking({ userRole, onEditBooking, onAddBooking }: ListBookingProps) {
   const { currentStore } = useStore();
   const [activeSubTab, setActiveSubTab] = useState("active");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
@@ -535,11 +536,17 @@ export default function ListBooking({ userRole, onEditBooking }: ListBookingProp
 
         <TabsContent value="active" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5" />
                 List Booking Aktif
               </CardTitle>
+              {onAddBooking && (
+                <Button onClick={onAddBooking} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Tambah Booking
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
         {/* Date Filter */}

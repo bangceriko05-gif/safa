@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
@@ -41,12 +42,29 @@ export default function DepositFormModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([]);
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("");
+  const [selectedRoomName, setSelectedRoomName] = useState<string>("");
 
   useEffect(() => {
     if (open) {
       resetForm();
+      if (!roomId && currentStore) {
+        fetchRooms();
+      }
     }
   }, [open]);
+
+  const fetchRooms = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("rooms")
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .eq("status", "active")
+      .order("name");
+    setRooms(data || []);
+  };
 
   const resetForm = () => {
     setDepositType("uang");
@@ -56,6 +74,8 @@ export default function DepositFormModal({
     setNotes("");
     setPhotoFile(null);
     setPhotoPreview(null);
+    setSelectedRoomId("");
+    setSelectedRoomName("");
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,8 +96,11 @@ export default function DepositFormModal({
   };
 
   const handleSubmit = async () => {
-    if (!roomId) {
-      toast.error("Kamar tidak valid");
+    const effectiveRoomId = roomId || selectedRoomId;
+    const effectiveRoomName = roomId ? roomName : selectedRoomName;
+    
+    if (!effectiveRoomId) {
+      toast.error("Pilih kamar terlebih dahulu");
       return;
     }
 
@@ -120,7 +143,7 @@ export default function DepositFormModal({
       const { error: insertError } = await supabase
         .from("room_deposits")
         .insert({
-          room_id: roomId,
+          room_id: effectiveRoomId,
           store_id: currentStore!.id,
           deposit_type: depositType,
           amount: depositType === "uang" ? parseFloat(amount.replace(/\D/g, "")) : null,
@@ -137,11 +160,11 @@ export default function DepositFormModal({
       await logActivity({
         actionType: "created",
         entityType: "Deposit",
-        description: `Menambahkan deposit ${depositType === "uang" ? `Rp ${amount}` : `Identitas (${identityType})`} untuk kamar: ${roomName}`,
+        description: `Menambahkan deposit ${depositType === "uang" ? `Rp ${amount}` : `Identitas (${identityType})`} untuk kamar: ${effectiveRoomName}`,
         storeId: currentStore?.id,
       });
 
-      toast.success(`Deposit berhasil ditambahkan untuk kamar ${roomName}`);
+      toast.success(`Deposit berhasil ditambahkan untuk kamar ${effectiveRoomName}`);
       onSuccess?.();
       onClose();
     } catch (error: any) {
@@ -162,12 +185,31 @@ export default function DepositFormModal({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Form Deposit - {roomName}
+            Form Deposit {roomId ? `- ${roomName}` : ''}
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1 max-h-[400px] pr-4">
           <div className="space-y-6">
+            {/* Room Selection (when no roomId provided) */}
+            {!roomId && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Pilih Kamar *</Label>
+                <Select value={selectedRoomId} onValueChange={(v) => {
+                  setSelectedRoomId(v);
+                  const room = rooms.find(r => r.id === v);
+                  setSelectedRoomName(room?.name || "");
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Pilih kamar" /></SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => (
+                      <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Deposit Type */}
             <div className="space-y-3">
               <Label className="text-base font-semibold">Jenis Deposit *</Label>
