@@ -8,10 +8,12 @@ import { useState } from "react";
 interface TransactionManagementProps {
   userRole: string | null;
   onEditBooking: (booking: any) => void;
+  onAddBooking?: () => void;
+  onAddDeposit?: () => void;
   depositRefreshTrigger: number;
 }
 
-export default function TransactionManagement({ userRole, onEditBooking, depositRefreshTrigger }: TransactionManagementProps) {
+export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
 
   return (
@@ -37,19 +39,19 @@ export default function TransactionManagement({ userRole, onEditBooking, deposit
         </TabsList>
 
         <TabsContent value="list-booking" className="mt-4">
-          <ListBooking userRole={userRole} onEditBooking={onEditBooking} />
+          <ListBooking userRole={userRole} onEditBooking={onEditBooking} onAddBooking={onAddBooking} />
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
-          <IncomeExpenseReport initialTab="expenses" />
+          <IncomeExpenseReport initialTab="expenses" showAddButton />
         </TabsContent>
 
         <TabsContent value="incomes" className="mt-4">
-          <IncomeExpenseReport initialTab="incomes" />
+          <IncomeExpenseReport initialTab="incomes" showAddButton />
         </TabsContent>
 
         <TabsContent value="deposits" className="mt-4">
-          <DepositManagement refreshTrigger={depositRefreshTrigger} />
+          <DepositManagement refreshTrigger={depositRefreshTrigger} onAddDeposit={onAddDeposit} />
         </TabsContent>
       </Tabs>
     </div>

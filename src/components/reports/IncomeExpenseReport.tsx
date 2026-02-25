@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, startOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy, Plus } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { 
@@ -60,11 +60,12 @@ interface DetailPopup {
 
 interface IncomeExpenseReportProps {
   initialTab?: "expenses" | "incomes";
+  showAddButton?: boolean;
 }
 
 type SubView = "all" | "expenses" | "incomes";
 
-export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportProps = {}) {
+export default function IncomeExpenseReport({ initialTab, showAddButton }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
@@ -75,8 +76,10 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
   const [detailPopup, setDetailPopup] = useState<DetailPopup | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseData | null>(null);
   const [editingIncome, setEditingIncome] = useState<IncomeData | null>(null);
-  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "" });
-  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "" });
+  const [addingExpense, setAddingExpense] = useState(false);
+  const [addingIncome, setAddingIncome] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
   const [stats, setStats] = useState({
     totalExpenses: 0,
@@ -269,6 +272,7 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
       amount: expense.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
       category: expense.category,
       payment_method: expense.payment_method === '-' ? '' : expense.payment_method,
+      date: expense.date,
     });
   };
 
@@ -300,6 +304,7 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
       amount: income.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
       customer_name: income.customer_name,
       payment_method: income.payment_method === 'Lainnya' ? '' : income.payment_method,
+      date: income.date,
     });
   };
 
@@ -321,6 +326,59 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
       fetchData();
     } catch (error) {
       toast.error("Gagal memperbarui pemasukan");
+    }
+  };
+
+  const handleAddExpense = async () => {
+    if (!currentStore) return;
+    if (!expenseForm.description.trim()) { toast.error("Deskripsi harus diisi"); return; }
+    if (!expenseForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Anda harus login"); return; }
+      const { error } = await supabase.from("expenses").insert([{
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
+        category: expenseForm.category || null,
+        payment_method: expenseForm.payment_method || null,
+        date: expenseForm.date,
+        created_by: user.id,
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil ditambahkan");
+      setAddingExpense(false);
+      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal menambahkan pengeluaran");
+    }
+  };
+
+  const handleAddIncome = async () => {
+    if (!currentStore) return;
+    if (!incomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
+    if (!incomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    if (!incomeForm.payment_method) { toast.error("Metode bayar harus diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Anda harus login"); return; }
+      const { error } = await supabase.from("incomes").insert([{
+        description: incomeForm.description || null,
+        amount: parseFloat(incomeForm.amount.replace(/\./g, "")) || 0,
+        customer_name: incomeForm.customer_name,
+        payment_method: incomeForm.payment_method,
+        date: incomeForm.date,
+        created_by: user.id,
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Pemasukan berhasil ditambahkan");
+      setAddingIncome(false);
+      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal menambahkan pemasukan");
     }
   };
 
@@ -478,6 +536,23 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
               <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
             </SelectContent>
           </Select>
+          {showAddButton && (
+            <Button
+              size="sm"
+              onClick={() => {
+                if (subView === "expenses") {
+                  setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+                  setAddingExpense(true);
+                } else {
+                  setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+                  setAddingIncome(true);
+                }
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Tambah {subView === "expenses" ? "Pengeluaran" : "Pemasukan"}
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <p className="text-sm text-muted-foreground">
@@ -898,6 +973,92 @@ export default function IncomeExpenseReport({ initialTab }: IncomeExpenseReportP
               <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} />
             </div>
             <Button className="w-full" onClick={handleSaveIncome}>Simpan</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Add Expense Dialog */}
+      <Dialog open={addingExpense} onOpenChange={setAddingExpense}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Pengeluaran</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tanggal</Label>
+              <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi</Label>
+              <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatExpenseAmount(e.target.value) })} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Kategori</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Pembayaran</Label>
+              <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  <SelectItem value="QRIS">QRIS</SelectItem>
+                  <SelectItem value="Debit">Debit</SelectItem>
+                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleAddExpense}>Tambah Pengeluaran</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Income Dialog */}
+      <Dialog open={addingIncome} onOpenChange={setAddingIncome}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Pemasukan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tanggal</Label>
+              <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Pelanggan</Label>
+              <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={incomeForm.amount} onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatExpenseAmount(e.target.value) })} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Bayar</Label>
+              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="QRIS">QRIS</SelectItem>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi (opsional)</Label>
+              <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
+            </div>
+            <Button className="w-full" onClick={handleAddIncome}>Tambah Pemasukan</Button>
           </div>
         </DialogContent>
       </Dialog>
