@@ -37,6 +37,10 @@ interface ReportStats {
   totalExpenses: number;
   totalAdditionalIncome: number;
   totalBookingRevenue: number;
+  totalPurchase: number;
+  purchaseTransactionCount: number;
+  incomeTransactionCount: number;
+  expenseTransactionCount: number;
 }
 
 interface ExpenseCategory {
@@ -113,6 +117,10 @@ export default function Reports() {
     totalExpenses: 0,
     totalAdditionalIncome: 0,
     totalBookingRevenue: 0,
+    totalPurchase: 0,
+    purchaseTransactionCount: 0,
+    incomeTransactionCount: 0,
+    expenseTransactionCount: 0,
   });
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [additionalIncomes, setAdditionalIncomes] = useState<AdditionalIncome[]>([]);
@@ -295,10 +303,10 @@ export default function Reports() {
       const startTimestamp = startOfDay(startDate).toISOString();
       const endTimestamp = endOfDay(endDate).toISOString();
 
-      const [bookingsResult, customersResult, expensesResult, incomesResult] = await Promise.all([
+      const [bookingsResult, customersResult, expensesResult, incomesResult, incomeProductsResult] = await Promise.all([
         supabase
           .from("bookings")
-          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at")
+          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status")
           .eq("store_id", currentStore.id)
           .gte("date", startDateStr)
           .lte("date", endDateStr),
@@ -321,7 +329,13 @@ export default function Reports() {
           .eq("store_id", currentStore.id)
           .gte("date", startDateStr)
           .lte("date", endDateStr)
-          .order("date", { ascending: false })
+          .order("date", { ascending: false }),
+        supabase
+          .from("income_products")
+          .select("subtotal, income_id, incomes!inner(date, store_id)")
+          .eq("incomes.store_id", currentStore.id)
+          .gte("incomes.date", startDateStr)
+          .lte("incomes.date", endDateStr)
       ]);
 
       if (bookingsResult.error) throw bookingsResult.error;
@@ -333,6 +347,7 @@ export default function Reports() {
       const customersData = customersResult.data || [];
       const expensesData = (expensesResult.data || []) as any[];
       const incomesData = (incomesResult.data || []) as any[];
+      const incomeProductsData = (incomeProductsResult.data || []) as any[];
 
       const creatorIds = Array.from(
         new Set([
@@ -364,7 +379,8 @@ export default function Reports() {
         creator_name: profilesById[income.created_by] || "Unknown",
       }));
 
-      const totalTransactions = bookings.filter(b => (b as any).status !== 'Cancelled' && (b as any).status !== 'BATAL').length;
+      const activeBookings = bookings.filter(b => (b as any).status !== 'Cancelled' && (b as any).status !== 'BATAL');
+      const totalTransactions = activeBookings.length;
       
       const paymentTotals: { [key: string]: number } = {};
       const bookingPaymentDetails: BookingPaymentDetail[] = [];
@@ -429,7 +445,7 @@ export default function Reports() {
         }
       });
 
-      const totalBookingRevenue = Object.values(paymentTotals).reduce((sum, total) => sum + total, 0);
+      const totalBookingRevenue = activeBookings.reduce((sum, b) => sum + (Number(b.price) || 0) + (Number(b.price_2) || 0), 0);
 
       const paymentMethodTotals = Object.entries(paymentTotals).map(([method, total]) => ({
         method,
@@ -452,6 +468,10 @@ export default function Reports() {
 
       const totalExpenses = expensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
       const totalAdditionalIncome = incomesData.reduce((sum, income) => sum + Number(income.amount), 0);
+      
+      // Calculate purchase total from income_products
+      const totalPurchase = incomeProductsData.reduce((sum: number, ip: any) => sum + (Number(ip.subtotal) || 0), 0);
+      const purchaseTransactionCount = new Set(incomeProductsData.map((ip: any) => ip.income_id)).size;
 
       setStats({
         totalTransactions,
@@ -461,6 +481,10 @@ export default function Reports() {
         totalExpenses,
         totalAdditionalIncome,
         totalBookingRevenue,
+        totalPurchase,
+        purchaseTransactionCount,
+        incomeTransactionCount: incomesData.length,
+        expenseTransactionCount: expensesData.length,
       });
 
       setExpenses(expensesWithCreator);
@@ -936,100 +960,92 @@ export default function Reports() {
 
     return (
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Total Hours Card */}
+        {/* Summary Cards - like reference image */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          {/* Penjualan */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShoppingCart className="h-3.5 w-3.5 text-blue-600" />
+                <span className="text-xs font-medium text-blue-600">Penjualan</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalBookingRevenue)}</div>
+              <p className="text-xs text-muted-foreground">{stats.totalTransactions} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Pemasukan */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+                <span className="text-xs font-medium text-green-600">Pemasukan</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalAdditionalIncome)}</div>
+              <p className="text-xs text-muted-foreground">{stats.incomeTransactionCount} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Pembelian */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("purchase")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Receipt className="h-3.5 w-3.5 text-orange-500" />
+                <span className="text-xs font-medium text-orange-500">Pembelian</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalPurchase)}</div>
+              <p className="text-xs text-muted-foreground">{stats.purchaseTransactionCount} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Pengeluaran */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+                <span className="text-xs font-medium text-destructive">Pengeluaran</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalExpenses)}</div>
+              <p className="text-xs text-muted-foreground">{stats.expenseTransactionCount} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Pendapatan */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalTransactions} transaksi</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {getDateRangeDisplayLocal(timeRange)}
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-xs font-medium text-emerald-600">Total Pendapatan</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalBookingRevenue + stats.totalAdditionalIncome)}</div>
             </CardContent>
           </Card>
 
-          {/* New Customers Card */}
+          {/* Total Biaya */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pelanggan Baru</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.newCustomers}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {getDateRangeDisplayLocal(timeRange)}
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
+                <span className="text-xs font-medium text-rose-600">Total Biaya</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalExpenses + stats.totalPurchase)}</div>
             </CardContent>
           </Card>
 
-          {/* Payment Methods Card */}
-          <Card className="md:col-span-2 lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total per Metode Payment</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {stats.paymentMethodTotals.length === 0 && stats.additionalIncomePaymentTotals.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Tidak ada data</p>
-              ) : (
-                <div className="space-y-2">
-                  {stats.paymentMethodTotals.map((item, index) => (
-                    <button
-                      key={`booking-${index}`}
-                      className="flex justify-between items-center w-full p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => {
-                        setSelectedPaymentMethod(item.method);
-                        setSelectedPaymentType('booking');
-                      }}
-                    >
-                      <div className="text-left">
-                        <span className="text-sm font-medium">{item.method}</span>
-                      </div>
-                      <span className="text-sm font-bold">{formatCurrency(item.total)}</span>
-                    </button>
-                  ))}
-
-                  {stats.additionalIncomePaymentTotals.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      {stats.additionalIncomePaymentTotals.map((item, index) => (
-                        <button
-                          key={`income-${index}`}
-                          className="w-full text-left p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => {
-                            setSelectedPaymentMethod(item.method);
-                            setSelectedPaymentType('income');
-                          }}
-                        >
-                          <div className="text-sm text-muted-foreground">
-                            Pemasukan {item.method} (Tambahan)
-                          </div>
-                          <div className="text-sm font-bold">
-                            {formatCurrency(item.total)}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="pt-2 mt-2 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold">Total Pemasukan</span>
-                      <span className="text-lg font-bold text-green-600">
-                        {formatCurrency(
-                          stats.paymentMethodTotals.reduce((sum, item) => sum + item.total, 0) +
-                          stats.additionalIncomePaymentTotals.reduce((sum, item) => sum + item.total, 0)
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
+          {/* Profit Bersih */}
+          <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <DollarSign className="h-3.5 w-3.5 text-green-700" />
+                <span className="text-xs font-medium text-green-700">Profit Bersih</span>
+              </div>
+              <div className="text-base font-bold text-green-700">
+                {formatCurrency(
+                  (stats.totalBookingRevenue + stats.totalAdditionalIncome) - (stats.totalExpenses + stats.totalPurchase)
+                )}
+              </div>
             </CardContent>
           </Card>
-
         </div>
 
         {/* Occupancy Chart & Room List */}
