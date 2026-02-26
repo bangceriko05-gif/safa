@@ -10,6 +10,7 @@ import { format, startOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy, Plus } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { 
@@ -582,8 +583,21 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
         </div>
       ) : (
         <>
-          <div className={`grid gap-4 ${subView === 'all' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-             {(subView === "all" || subView === "incomes") && (
+          {/* Top row: Total + Per Metode Bayar side by side */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {(subView === "all" || subView === "expenses") && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalExpenses)}</div>
+                </CardContent>
+              </Card>
+            )}
+
+            {(subView === "all" || subView === "incomes") && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
@@ -595,14 +609,54 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
               </Card>
             )}
 
-             {(subView === "all" || subView === "expenses") && (
+            {(subView === "all" || subView === "expenses") && (
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
-                  <TrendingDown className="h-4 w-4 text-red-600" />
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium">Pengeluaran per Metode Bayar</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExportExpense} disabled={loading || expenses.length === 0}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalExpenses)}</div>
+                  {stats.expensePaymentMethods.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {stats.expensePaymentMethods.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'expense_method', label: item.method })}>
+                          <span className="text-sm font-medium">{item.method}</span>
+                          <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {(subView === "all" || subView === "incomes") && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium">Pemasukan per Metode Bayar</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExportIncomeDetail} disabled={loading || incomes.length === 0}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {stats.incomePaymentMethods.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {stats.incomePaymentMethods.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}>
+                          <span className="text-sm font-medium">{item.method}</span>
+                          <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -622,120 +676,83 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
             )}
           </div>
 
-           <div className={`grid gap-4 ${subView === "incomes" ? 'md:grid-cols-1' : subView === "expenses" ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-             {(subView === "all" || subView === "expenses") && (
-              <>
-                {/* Expense Categories */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Pengeluaran per Kategori</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.expenseCategories.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
-                    ) : (
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {stats.expenseCategories.map((item, index) => {
-                          const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
-                          return (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                              onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}
-                            >
-                              <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium truncate">{item.category}</span>
-                                  <span className="text-sm font-bold text-red-600 shrink-0 ml-2">{formatCurrency(item.total)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-0.5">
-                                  <span className="text-xs text-muted-foreground">{ratio}%</span>
-                                  <span className="text-xs text-muted-foreground">{item.count} transaksi</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Expense by Payment Method */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm font-medium">Pengeluaran per Metode Bayar</CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportExpense}
-                      disabled={loading || expenses.length === 0}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.expensePaymentMethods.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
-                    ) : (
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {stats.expensePaymentMethods.map((item, index) => (
-                          <div
-                            key={index}
-                            className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                            onClick={() => setDetailPopup({ type: 'expense_method', label: item.method })}
-                          >
-                            <span className="text-sm font-medium">{item.method}</span>
-                            <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </>
-            )}
-
-             {(subView === "all" || subView === "incomes") && (
-              /* Income by Payment Method */
+          {/* Second row: Kategori list + Pie Chart */}
+          {(subView === "all" || subView === "expenses") && (
+            <div className="grid gap-4 md:grid-cols-2">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm font-medium">Pemasukan per Metode Bayar</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportIncomeDetail}
-                    disabled={loading || incomes.length === 0}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Pengeluaran per Kategori</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {stats.incomePaymentMethods.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Tidak ada pemasukan</p>
+                  {stats.expenseCategories.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada pengeluaran</p>
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {stats.incomePaymentMethods.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
-                          onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}
-                        >
-                          <span className="text-sm font-medium">{item.method}</span>
-                          <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
-                        </div>
-                      ))}
+                      {stats.expenseCategories.map((item, index) => {
+                        const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
+                        return (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}>
+                            <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium truncate">{item.category}</span>
+                                <span className="text-sm font-bold text-red-600 shrink-0 ml-2">{formatCurrency(item.total)}</span>
+                              </div>
+                              <div className="flex justify-between items-center mt-0.5">
+                                <span className="text-xs text-muted-foreground">{ratio}%</span>
+                                <span className="text-xs text-muted-foreground">{item.count} transaksi</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
               </Card>
-            )}
-          </div>
 
-           <div className={`grid gap-4 ${subView !== "all" ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
+              {/* Pie Chart per Kategori */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Grafik Pengeluaran per Kategori</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {stats.expenseCategories.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Tidak ada data</p>
+                  ) : (() => {
+                    const PIE_COLORS = ['hsl(0, 72%, 51%)', 'hsl(25, 95%, 53%)', 'hsl(45, 93%, 47%)', 'hsl(142, 71%, 45%)', 'hsl(199, 89%, 48%)', 'hsl(262, 83%, 58%)', 'hsl(330, 81%, 60%)', 'hsl(210, 40%, 60%)'];
+                    const pieData = stats.expenseCategories.map(c => ({ name: c.category, value: c.total }));
+                    return (
+                      <div>
+                        <div className="h-52">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
+                                {pieData.map((_, i) => (
+                                  <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {pieData.map((entry, i) => (
+                            <div key={i} className="flex items-center gap-1.5 text-xs">
+                              <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                              <span className="text-muted-foreground">{entry.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <div className={`grid gap-4 ${subView !== "all" ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
              {(subView === "all" || subView === "expenses") && (
               /* Expense List */
               <Card>
