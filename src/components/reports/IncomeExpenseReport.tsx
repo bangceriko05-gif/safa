@@ -722,12 +722,21 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                   ) : (() => {
                     const PIE_COLORS = ['hsl(0, 72%, 51%)', 'hsl(25, 95%, 53%)', 'hsl(45, 93%, 47%)', 'hsl(142, 71%, 45%)', 'hsl(199, 89%, 48%)', 'hsl(262, 83%, 58%)', 'hsl(330, 81%, 60%)', 'hsl(210, 40%, 60%)'];
                     const pieData = stats.expenseCategories.map(c => ({ name: c.category, value: c.total }));
+                    const totalValue = pieData.reduce((sum, d) => sum + d.value, 0);
+                    const renderLabel = ({ name, value, cx, x, y }: any) => {
+                      const pct = ((value / totalValue) * 100).toFixed(1);
+                      return (
+                        <text x={x} y={y} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-[10px]" fill="hsl(var(--foreground))">
+                          {name} {pct}%
+                        </text>
+                      );
+                    };
                     return (
                       <div>
-                        <div className="h-52">
+                        <div className="h-64">
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
+                              <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={renderLabel}>
                                 {pieData.map((_, i) => (
                                   <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                                 ))}
@@ -735,14 +744,6 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                               <Tooltip formatter={(value: number) => formatCurrency(value)} />
                             </PieChart>
                           </ResponsiveContainer>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {pieData.map((entry, i) => (
-                            <div key={i} className="flex items-center gap-1.5 text-xs">
-                              <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                              <span className="text-muted-foreground">{entry.name}</span>
-                            </div>
-                          ))}
                         </div>
                       </div>
                     );
