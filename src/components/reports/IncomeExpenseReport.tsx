@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, startOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy, Plus, Settings, Trash2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
@@ -82,6 +82,8 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
   const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
+  const [managingCategories, setManagingCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [stats, setStats] = useState({
     totalExpenses: 0,
     totalIncomes: 0,
@@ -105,6 +107,33 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
       .eq("store_id", currentStore.id)
       .order("name");
     setExpenseCategories(data || []);
+  };
+
+  const handleAddCategory = async () => {
+    if (!currentStore || !newCategoryName.trim()) return;
+    try {
+      const { error } = await supabase.from("expense_categories").insert([{
+        name: newCategoryName.trim(),
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Kategori berhasil ditambahkan");
+      setNewCategoryName("");
+      fetchExpenseCategories();
+    } catch (error) {
+      toast.error("Gagal menambahkan kategori");
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const { error } = await supabase.from("expense_categories").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Kategori berhasil dihapus");
+      fetchExpenseCategories();
+    } catch (error) {
+      toast.error("Gagal menghapus kategori");
+    }
   };
 
   const fetchData = async () => {
@@ -997,8 +1026,12 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
       {/* Add Expense Dialog */}
       <Dialog open={addingExpense} onOpenChange={setAddingExpense}>
         <DialogContent>
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>Tambah Pengeluaran</DialogTitle>
+            <Button variant="outline" size="sm" onClick={() => setManagingCategories(true)} className="mr-6">
+              <Settings className="h-4 w-4 mr-1" />
+              Kategori
+            </Button>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -1077,6 +1110,41 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
               <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
             </div>
             <Button className="w-full" onClick={handleAddIncome}>Tambah Pemasukan</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Management Dialog */}
+      <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kelola Kategori Pengeluaran</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Nama kategori baru"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              />
+              <Button onClick={handleAddCategory} disabled={!newCategoryName.trim()} size="icon" className="shrink-0">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-1">
+              {expenseCategories.map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between p-3 bg-muted/50 rounded">
+                  <span className="text-sm">{cat.name}</span>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(cat.id)}>
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              ))}
+              {expenseCategories.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Belum ada kategori</p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
