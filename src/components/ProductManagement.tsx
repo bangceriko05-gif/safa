@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Copy, Search } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,6 +46,7 @@ export default function ProductManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProductSectionExpanded, setIsProductSectionExpanded] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
@@ -279,6 +280,10 @@ export default function ProductManagement() {
 
   const availableStores = userStores.filter(s => s.id !== currentStore?.id);
 
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -311,6 +316,17 @@ export default function ProductManagement() {
             </Button>
           </div>
         </div>
+        {isProductSectionExpanded && (
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari produk..."
+              className="pl-9"
+            />
+          </div>
+        )}
       </CardHeader>
       {isProductSectionExpanded && (
         <CardContent>
@@ -331,14 +347,14 @@ export default function ProductManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.length === 0 ? (
+              {filteredProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={availableStores.length > 0 ? 4 : 3} className="text-center text-muted-foreground">
-                    Belum ada produk. Klik tombol "Tambah Produk" untuk menambahkan.
+                    {searchQuery ? "Tidak ada produk yang cocok" : "Belum ada produk. Klik tombol \"Tambah Produk\" untuk menambahkan."}
                   </TableCell>
                 </TableRow>
               ) : (
-                products.map((product) => (
+                filteredProducts.map((product) => (
                   <TableRow key={product.id}>
                     {availableStores.length > 0 && (
                       <TableCell>

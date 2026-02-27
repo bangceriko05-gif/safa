@@ -28,7 +28,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags } from "lucide-react";
+import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
@@ -77,6 +77,7 @@ export default function RoomManagement() {
   const [selectedRoomForVariant, setSelectedRoomForVariant] = useState<string | null>(null);
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
   const [isRoomSectionExpanded, setIsRoomSectionExpanded] = useState(true);
+  const [roomSearchQuery, setRoomSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     status: "Aktif",
@@ -573,11 +574,22 @@ export default function RoomManagement() {
               </Button>
             </div>
           </div>
+          {isRoomSectionExpanded && (
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={roomSearchQuery}
+                onChange={(e) => setRoomSearchQuery(e.target.value)}
+                placeholder="Cari kamar..."
+                className="pl-9"
+              />
+            </div>
+          )}
         </CardHeader>
         {isRoomSectionExpanded && (
           <CardContent>
           <div className="space-y-4">
-            {rooms.map((room) => (
+            {rooms.filter(r => r.name.toLowerCase().includes(roomSearchQuery.toLowerCase())).map((room) => (
               <div key={room.id} className="border rounded-lg">
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1">
