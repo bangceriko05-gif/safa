@@ -81,6 +81,12 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
   const [addingIncome, setAddingIncome] = useState(false);
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
   const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [incomeProducts, setIncomeProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number }[]>([]);
+  const [incomeDiscount, setIncomeDiscount] = useState({ type: "percentage" as "percentage" | "fixed", value: "" });
+  const [showDiscountPopover, setShowDiscountPopover] = useState(false);
+  const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [showProductSearch, setShowProductSearch] = useState(false);
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
   const [managingCategories, setManagingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -97,7 +103,18 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
     if (!currentStore) return;
     fetchData();
     fetchExpenseCategories();
+    fetchProducts();
   }, [timeRange, customDateRange, currentStore]);
+
+  const fetchProducts = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("products")
+      .select("id, name, price")
+      .eq("store_id", currentStore.id)
+      .order("name");
+    setAvailableProducts(data || []);
+  };
 
   const fetchExpenseCategories = async () => {
     if (!currentStore) return;
@@ -385,27 +402,83 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
     }
   };
 
+  const getIncomeTotal = () => {
+    const productsTotal = incomeProducts.reduce((sum, p) => sum + p.subtotal, 0);
+    const manualAmount = parseFloat(incomeForm.amount.replace(/\./g, "")) || 0;
+    const subtotal = incomeProducts.length > 0 ? productsTotal : manualAmount;
+    
+    let discountAmount = 0;
+    const discountVal = parseFloat(incomeDiscount.value) || 0;
+    if (incomeDiscount.type === "percentage") {
+      discountAmount = subtotal * (discountVal / 100);
+    } else {
+      discountAmount = discountVal;
+    }
+    return Math.max(0, subtotal - discountAmount);
+  };
+
+  const handleAddProductToIncome = (product: { id: string; name: string; price: number }) => {
+    const existing = incomeProducts.find(p => p.product_id === product.id);
+    if (existing) {
+      setIncomeProducts(incomeProducts.map(p => 
+        p.product_id === product.id 
+          ? { ...p, quantity: p.quantity + 1, subtotal: (p.quantity + 1) * p.product_price }
+          : p
+      ));
+    } else {
+      setIncomeProducts([...incomeProducts, {
+        product_id: product.id,
+        product_name: product.name,
+        product_price: product.price,
+        quantity: 1,
+        subtotal: product.price,
+      }]);
+    }
+    setProductSearch("");
+    setShowProductSearch(false);
+  };
+
   const handleAddIncome = async () => {
     if (!currentStore) return;
     if (!incomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
-    if (!incomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
     if (!incomeForm.payment_method) { toast.error("Metode bayar harus diisi"); return; }
+    const totalAmount = getIncomeTotal();
+    if (totalAmount <= 0 && incomeProducts.length === 0 && !incomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Anda harus login"); return; }
-      const { error } = await supabase.from("incomes").insert([{
+      
+      const { data: incomeData, error } = await supabase.from("incomes").insert([{
         description: incomeForm.description || null,
-        amount: parseFloat(incomeForm.amount.replace(/\./g, "")) || 0,
+        amount: totalAmount,
         customer_name: incomeForm.customer_name,
         payment_method: incomeForm.payment_method,
         date: incomeForm.date,
         created_by: user.id,
         store_id: currentStore.id,
-      }]);
+      }]).select().single();
       if (error) throw error;
+
+      // Insert income products if any
+      if (incomeProducts.length > 0 && incomeData) {
+        const { error: prodError } = await supabase.from("income_products").insert(
+          incomeProducts.map(p => ({
+            income_id: incomeData.id,
+            product_id: p.product_id,
+            product_name: p.product_name,
+            product_price: p.product_price,
+            quantity: p.quantity,
+            subtotal: p.subtotal,
+          }))
+        );
+        if (prodError) console.error("Error inserting income products:", prodError);
+      }
+
       toast.success("Pemasukan berhasil ditambahkan");
       setAddingIncome(false);
       setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      setIncomeProducts([]);
+      setIncomeDiscount({ type: "percentage", value: "" });
       fetchData();
     } catch (error) {
       toast.error("Gagal menambahkan pemasukan");
@@ -1076,28 +1149,34 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
       </Dialog>
 
       {/* Add Income Dialog */}
-      <Dialog open={addingIncome} onOpenChange={setAddingIncome}>
-        <DialogContent>
+      <Dialog open={addingIncome} onOpenChange={(open) => {
+        setAddingIncome(open);
+        if (!open) {
+          setIncomeProducts([]);
+          setIncomeDiscount({ type: "percentage", value: "" });
+          setProductSearch("");
+          setShowProductSearch(false);
+        }
+      }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Tambah Pemasukan</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Nama Pelanggan <span className="text-destructive">*</span></Label>
+                <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal</Label>
+                <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>Nama Pelanggan</Label>
-              <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
-            </div>
-            <div className="space-y-2">
-              <Label>Jumlah</Label>
-              <Input value={incomeForm.amount} onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatExpenseAmount(e.target.value) })} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Metode Bayar</Label>
+              <Label>Metode Bayar <span className="text-destructive">*</span></Label>
               <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Pilih metode bayar" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="QRIS">QRIS</SelectItem>
@@ -1109,7 +1188,146 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
               <Label>Deskripsi (opsional)</Label>
               <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
             </div>
-            <Button className="w-full" onClick={handleAddIncome}>Tambah Pemasukan</Button>
+
+            {/* Produk section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Produk (opsional)</Label>
+                <Button variant="outline" size="sm" onClick={() => setShowProductSearch(!showProductSearch)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Tambah Produk
+                </Button>
+              </div>
+              {showProductSearch && (
+                <div className="relative">
+                  <Input
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    placeholder="Cari produk..."
+                    autoFocus
+                  />
+                  {productSearch && (
+                    <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-y-auto">
+                      {availableProducts
+                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                        .map(product => (
+                          <div
+                            key={product.id}
+                            className="px-3 py-2 hover:bg-accent cursor-pointer text-sm flex justify-between"
+                            onClick={() => handleAddProductToIncome(product)}
+                          >
+                            <span>{product.name}</span>
+                            <span className="text-muted-foreground">{formatCurrency(product.price)}</span>
+                          </div>
+                        ))
+                      }
+                      {availableProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">Produk tidak ditemukan</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {incomeProducts.length > 0 && (
+                <div className="space-y-1">
+                  {incomeProducts.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                      <div className="flex-1">
+                        <span className="font-medium">{p.product_name}</span>
+                        <span className="text-muted-foreground ml-2">x{p.quantity} = {formatCurrency(p.subtotal)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                          if (p.quantity > 1) {
+                            setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity - 1, subtotal: (ip.quantity - 1) * ip.product_price } : ip));
+                          } else {
+                            setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i));
+                          }
+                        }}>
+                          <span className="text-xs">−</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                          setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity + 1, subtotal: (ip.quantity + 1) * ip.product_price } : ip));
+                        }}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Jumlah with Diskon */}
+            <div className="space-y-2">
+              <Label>Jumlah (jika tidak pakai produk)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatExpenseAmount(e.target.value) })}
+                  placeholder="0"
+                  disabled={incomeProducts.length > 0}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDiscountPopover(!showDiscountPopover)}
+                  type="button"
+                >
+                  Diskon
+                </Button>
+              </div>
+              {showDiscountPopover && (
+                <div className="flex gap-2 items-center p-3 border rounded-md bg-muted/30">
+                  <Select value={incomeDiscount.type} onValueChange={(v: "percentage" | "fixed") => setIncomeDiscount({ ...incomeDiscount, type: v })}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">Rp</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={incomeDiscount.value}
+                    onChange={(e) => setIncomeDiscount({ ...incomeDiscount, value: e.target.value.replace(/[^0-9.]/g, '') })}
+                    placeholder="0"
+                    className="flex-1"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Total summary */}
+            {(incomeProducts.length > 0 || (incomeDiscount.value && parseFloat(incomeDiscount.value) > 0)) && (
+              <div className="p-3 bg-muted/50 rounded space-y-1 text-sm">
+                {incomeProducts.length > 0 && (
+                  <div className="flex justify-between">
+                    <span>Subtotal Produk</span>
+                    <span className="font-medium">{formatCurrency(incomeProducts.reduce((s, p) => s + p.subtotal, 0))}</span>
+                  </div>
+                )}
+                {incomeDiscount.value && parseFloat(incomeDiscount.value) > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>Diskon {incomeDiscount.type === 'percentage' ? `${incomeDiscount.value}%` : ''}</span>
+                    <span>-{formatCurrency(
+                      incomeDiscount.type === 'percentage'
+                        ? (incomeProducts.length > 0 ? incomeProducts.reduce((s, p) => s + p.subtotal, 0) : parseFloat(incomeForm.amount.replace(/\./g, "")) || 0) * (parseFloat(incomeDiscount.value) / 100)
+                        : parseFloat(incomeDiscount.value) || 0
+                    )}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold border-t pt-1">
+                  <span>Total</span>
+                  <span>{formatCurrency(getIncomeTotal())}</span>
+                </div>
+              </div>
+            )}
+
+            <Button className="w-full" onClick={handleAddIncome}>Simpan</Button>
           </div>
         </DialogContent>
       </Dialog>
