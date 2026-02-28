@@ -921,9 +921,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                             {income.bid && income.bid !== '-' && (
                               <div className="flex items-center gap-1 mb-0.5">
                                 <div 
-                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
-                                  onClick={() => handleEditIncomeClick(income)}
-                                  title="Klik untuk edit"
+                                  className={`text-[10px] font-mono text-primary font-bold ${hasPermission("report_income_edit") ? "cursor-pointer hover:underline" : ""}`}
+                                  onClick={() => hasPermission("report_income_edit") && handleEditIncomeClick(income)}
+                                  title={hasPermission("report_income_edit") ? "Klik untuk edit" : ""}
                                 >
                                   {income.bid}
                                 </div>
