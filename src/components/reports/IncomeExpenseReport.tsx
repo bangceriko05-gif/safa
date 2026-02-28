@@ -795,7 +795,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                       {stats.expenseCategories.map((item, index) => {
                         const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
                         return (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}>
+                          <div key={index} className={`flex items-center gap-2 p-2 bg-muted/50 rounded ${hasPermission("report_expense_detail") ? "cursor-pointer hover:bg-muted" : ""} transition-colors`} onClick={() => hasPermission("report_expense_detail") && setDetailPopup({ type: 'expense_category', label: item.category })}>
                             <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center">
