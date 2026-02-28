@@ -1158,6 +1158,7 @@ export default function Reports() {
           </TabsContent>
         )}
       </Tabs>
+      )}
 
       {/* View Expense Detail Dialog */}
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
