@@ -754,7 +754,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {stats.incomePaymentMethods.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}>
+                        <div key={index} className={`flex justify-between items-center p-2 bg-muted/50 rounded ${hasPermission("report_income_detail") ? "cursor-pointer hover:bg-muted" : ""} transition-colors`} onClick={() => hasPermission("report_income_detail") && setDetailPopup({ type: 'income_method', label: item.method })}>
                           <span className="text-sm font-medium">{item.method}</span>
                           <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
                         </div>
