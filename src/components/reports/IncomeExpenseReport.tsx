@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, startOfMonth, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { TrendingUp, TrendingDown, DollarSign, Download, Printer, Copy, Plus, Settings, Trash2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
@@ -68,6 +69,7 @@ type SubView = "all" | "expenses" | "incomes";
 
 export default function IncomeExpenseReport({ initialTab, showAddButton }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
+  const { hasPermission } = usePermissions();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
@@ -639,7 +641,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
               <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
             </SelectContent>
           </Select>
-          {showAddButton && (
+          {showAddButton && ((subView === "expenses" && hasPermission("report_expense_add")) || (subView === "incomes" && hasPermission("report_income_add"))) && (
             <Button
               size="sm"
               onClick={() => {
@@ -726,7 +728,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {stats.expensePaymentMethods.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'expense_method', label: item.method })}>
+                        <div key={index} className={`flex justify-between items-center p-2 bg-muted/50 rounded ${hasPermission("report_expense_detail") ? "cursor-pointer hover:bg-muted" : ""} transition-colors`} onClick={() => hasPermission("report_expense_detail") && setDetailPopup({ type: 'expense_method', label: item.method })}>
                           <span className="text-sm font-medium">{item.method}</span>
                           <span className="text-sm font-bold text-red-600">{formatCurrency(item.total)}</span>
                         </div>
@@ -752,7 +754,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {stats.incomePaymentMethods.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'income_method', label: item.method })}>
+                        <div key={index} className={`flex justify-between items-center p-2 bg-muted/50 rounded ${hasPermission("report_income_detail") ? "cursor-pointer hover:bg-muted" : ""} transition-colors`} onClick={() => hasPermission("report_income_detail") && setDetailPopup({ type: 'income_method', label: item.method })}>
                           <span className="text-sm font-medium">{item.method}</span>
                           <span className="text-sm font-bold text-green-600">{formatCurrency(item.total)}</span>
                         </div>
@@ -793,7 +795,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                       {stats.expenseCategories.map((item, index) => {
                         const ratio = stats.totalExpenses > 0 ? ((item.total / stats.totalExpenses) * 100).toFixed(1) : '0';
                         return (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors" onClick={() => setDetailPopup({ type: 'expense_category', label: item.category })}>
+                          <div key={index} className={`flex items-center gap-2 p-2 bg-muted/50 rounded ${hasPermission("report_expense_detail") ? "cursor-pointer hover:bg-muted" : ""} transition-colors`} onClick={() => hasPermission("report_expense_detail") && setDetailPopup({ type: 'expense_category', label: item.category })}>
                             <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}.</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center">
@@ -873,9 +875,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                             {expense.bid && expense.bid !== '-' && (
                               <div className="flex items-center gap-1 mb-0.5">
                                 <div 
-                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
-                                  onClick={() => handleEditExpenseClick(expense)}
-                                  title="Klik untuk edit"
+                                  className={`text-[10px] font-mono text-primary font-bold ${hasPermission("report_expense_edit") ? "cursor-pointer hover:underline" : ""}`}
+                                  onClick={() => hasPermission("report_expense_edit") && handleEditExpenseClick(expense)}
+                                  title={hasPermission("report_expense_edit") ? "Klik untuk edit" : ""}
                                 >
                                   {expense.bid}
                                 </div>
@@ -919,9 +921,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
                             {income.bid && income.bid !== '-' && (
                               <div className="flex items-center gap-1 mb-0.5">
                                 <div 
-                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
-                                  onClick={() => handleEditIncomeClick(income)}
-                                  title="Klik untuk edit"
+                                  className={`text-[10px] font-mono text-primary font-bold ${hasPermission("report_income_edit") ? "cursor-pointer hover:underline" : ""}`}
+                                  onClick={() => hasPermission("report_income_edit") && handleEditIncomeClick(income)}
+                                  title={hasPermission("report_income_edit") ? "Klik untuk edit" : ""}
                                 >
                                   {income.bid}
                                 </div>

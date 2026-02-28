@@ -19,6 +19,7 @@ import { logActivity } from "@/utils/activityLogger";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/contexts/StoreContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
@@ -104,6 +105,7 @@ type ReportTab = "overview" | "sales" | "income-expense" | "purchase" | "employe
 
 export default function Reports() {
   const { currentStore } = useStore();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState<ReportTab>("overview");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
@@ -1070,56 +1072,76 @@ export default function Reports() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center gap-1.5">
-            <LayoutGrid className="h-4 w-4" />
-            <span className="hidden sm:inline">Keseluruhan</span>
-          </TabsTrigger>
-          <TabsTrigger value="sales" className="flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4" />
-            <span className="hidden sm:inline">Penjualan</span>
-          </TabsTrigger>
-          <TabsTrigger value="income-expense" className="flex items-center gap-1.5">
-            <Receipt className="h-4 w-4" />
-            <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
-          </TabsTrigger>
-          <TabsTrigger value="purchase" className="flex items-center gap-1.5">
-            <ShoppingCart className="h-4 w-4" />
-            <span className="hidden sm:inline">Pembelian</span>
-          </TabsTrigger>
-          <TabsTrigger value="employee" className="flex items-center gap-1.5">
-            <UserCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Kinerja</span>
-          </TabsTrigger>
+        <TabsList className="flex w-full">
+          {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
+            <TabsTrigger value="overview" className="flex items-center gap-1.5 flex-1">
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden sm:inline">Keseluruhan</span>
+            </TabsTrigger>
+          )}
+          {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
+            <TabsTrigger value="sales" className="flex items-center gap-1.5 flex-1">
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Penjualan</span>
+            </TabsTrigger>
+          )}
+          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
+            <TabsTrigger value="income-expense" className="flex items-center gap-1.5 flex-1">
+              <Receipt className="h-4 w-4" />
+              <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
+            </TabsTrigger>
+          )}
+          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
+            <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Pembelian</span>
+            </TabsTrigger>
+          )}
+          {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
+            <TabsTrigger value="employee" className="flex items-center gap-1.5 flex-1">
+              <UserCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Kinerja</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value="overview" className="mt-4">
-          <div className="flex justify-end mb-4">
-            <ReportDateFilter
-              timeRange={timeRange}
-              onTimeRangeChange={setTimeRange}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-            />
-          </div>
-          {renderOverviewContent()}
-        </TabsContent>
+        {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
+          <TabsContent value="overview" className="mt-4">
+            <div className="flex justify-end mb-4">
+              <ReportDateFilter
+                timeRange={timeRange}
+                onTimeRangeChange={setTimeRange}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={setCustomDateRange}
+              />
+            </div>
+            {renderOverviewContent()}
+          </TabsContent>
+        )}
 
-        <TabsContent value="sales" className="mt-4">
-          <SalesReport />
-        </TabsContent>
+        {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
+          <TabsContent value="sales" className="mt-4">
+            <SalesReport />
+          </TabsContent>
+        )}
 
-        <TabsContent value="income-expense" className="mt-4">
-          <IncomeExpenseReport />
-        </TabsContent>
+        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
+          <TabsContent value="income-expense" className="mt-4">
+            <IncomeExpenseReport />
+          </TabsContent>
+        )}
 
-        <TabsContent value="purchase" className="mt-4">
-          <PurchaseReport />
-        </TabsContent>
+        {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
+          <TabsContent value="purchase" className="mt-4">
+            <PurchaseReport />
+          </TabsContent>
+        )}
 
-        <TabsContent value="employee" className="mt-4">
-          <EmployeePerformanceReport />
-        </TabsContent>
+        {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
+          <TabsContent value="employee" className="mt-4">
+            <EmployeePerformanceReport />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* View Expense Detail Dialog */}
