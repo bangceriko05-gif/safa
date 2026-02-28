@@ -293,6 +293,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     { value: "#9CA3AF", label: "Gray" },
   ];
 
+  if (!hasPermission("manage_settings")) {
+    return <NoAccessMessage featureName="Pengaturan" />;
+  }
+
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
