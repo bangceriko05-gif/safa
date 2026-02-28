@@ -42,6 +42,8 @@ import {
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
 import { validateCustomerInput } from "@/utils/customerValidation";
+import { usePermissions } from "@/hooks/usePermissions";
+import NoAccessMessage from "./NoAccessMessage";
 
 interface Customer {
   id: string;
@@ -58,6 +60,7 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
+  const { hasAnyPermission } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -399,6 +402,10 @@ export default function CustomerManagement() {
 
     return true;
   });
+
+  if (!hasAnyPermission(["view_customers", "manage_customers"])) {
+    return <NoAccessMessage featureName="Pelanggan" />;
+  }
 
   return (
     <div className="space-y-6">

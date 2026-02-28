@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import NoAccessMessage from "./NoAccessMessage";
 import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
@@ -26,6 +28,7 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { currentStore } = useStore();
+  const { hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   
@@ -289,6 +292,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     { value: "#FFB6C1", label: "Light Pink" },
     { value: "#9CA3AF", label: "Gray" },
   ];
+
+  if (!hasPermission("manage_settings")) {
+    return <NoAccessMessage featureName="Pengaturan" />;
+  }
 
   return (
     <div className="space-y-4">

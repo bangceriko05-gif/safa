@@ -29,6 +29,7 @@ import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
+import NoAccessMessage from "./NoAccessMessage";
 
 interface ReportStats {
   totalTransactions: number;
@@ -1065,12 +1066,26 @@ export default function Reports() {
     );
   };
 
+  const allReportPermissions = [
+    "report_overview_view", "report_overview_detail",
+    "report_sales_view", "report_sales_detail",
+    "report_income_view", "report_income_detail",
+    "report_expense_view", "report_expense_detail",
+    "report_purchase_view", "report_purchase_detail",
+    "report_performance_view", "report_performance_detail",
+  ];
+
+  const hasAnyReportAccess = hasAnyPermission(allReportPermissions);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-2xl font-bold">Laporan</h2>
       </div>
 
+      {!hasAnyReportAccess ? (
+        <NoAccessMessage featureName="Laporan" />
+      ) : (
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
         <TabsList className="flex w-full">
           {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
@@ -1143,6 +1158,7 @@ export default function Reports() {
           </TabsContent>
         )}
       </Tabs>
+      )}
 
       {/* View Expense Detail Dialog */}
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>

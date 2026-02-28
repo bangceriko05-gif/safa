@@ -3,6 +3,8 @@ import { List, TrendingDown, TrendingUp, Shield } from "lucide-react";
 import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import DepositManagement from "./deposit/DepositManagement";
+import NoAccessMessage from "./NoAccessMessage";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useState } from "react";
 
 interface TransactionManagementProps {
@@ -14,7 +16,17 @@ interface TransactionManagementProps {
 }
 
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
+
+  const hasTransactionAccess = hasAnyPermission([
+    "view_bookings", "create_bookings", "edit_bookings",
+    "manage_expense", "manage_income"
+  ]);
+
+  if (!hasTransactionAccess) {
+    return <NoAccessMessage featureName="Transaksi" />;
+  }
 
   return (
     <div className="space-y-4">
