@@ -19,6 +19,7 @@ import { logActivity } from "@/utils/activityLogger";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/contexts/StoreContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
