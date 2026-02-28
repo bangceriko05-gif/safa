@@ -403,6 +403,10 @@ export default function CustomerManagement() {
     return true;
   });
 
+  if (!hasAnyPermission(["view_customers", "manage_customers"])) {
+    return <NoAccessMessage featureName="Pelanggan" />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
