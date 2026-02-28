@@ -60,6 +60,7 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
+  const { hasAnyPermission } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
