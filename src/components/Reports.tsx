@@ -29,6 +29,7 @@ import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
+import NoAccessMessage from "./NoAccessMessage";
 
 interface ReportStats {
   totalTransactions: number;
