@@ -641,7 +641,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
               <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
             </SelectContent>
           </Select>
-          {showAddButton && (
+          {showAddButton && ((subView === "expenses" && hasPermission("report_expense_add")) || (subView === "incomes" && hasPermission("report_income_add"))) && (
             <Button
               size="sm"
               onClick={() => {
