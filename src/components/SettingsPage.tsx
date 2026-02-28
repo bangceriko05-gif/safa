@@ -28,6 +28,7 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { currentStore } = useStore();
+  const { hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   
