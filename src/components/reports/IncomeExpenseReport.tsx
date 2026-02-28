@@ -69,6 +69,7 @@ type SubView = "all" | "expenses" | "incomes";
 
 export default function IncomeExpenseReport({ initialTab, showAddButton }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
+  const { hasPermission } = usePermissions();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
