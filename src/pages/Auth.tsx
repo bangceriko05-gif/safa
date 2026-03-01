@@ -41,25 +41,35 @@ export default function Auth() {
     // Clean up any previously stored passwords
     localStorage.removeItem("anka_pms_password");
 
+    const validateUserAccess = async (userId: string) => {
+      const { count, error } = await supabase
+        .from("user_store_access")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("Error validating user access:", error);
+        return false;
+      }
+
+      return (count ?? 0) > 0;
+    };
+
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          // Check if user exists in profiles (registered via User Management)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', session.user.id)
-            .single();
+      (event, session) => {
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+          void (async () => {
+            const hasAccess = await validateUserAccess(session.user.id);
 
-          if (!profile) {
-            // User not registered in PMS - sign out and show error
-            await supabase.auth.signOut();
-            toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
-            return;
-          }
+            if (!hasAccess) {
+              await supabase.auth.signOut();
+              toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
+              return;
+            }
 
-          navigate("/select-store");
+            navigate("/select-store");
+          })();
         }
       }
     );
