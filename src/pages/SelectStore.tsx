@@ -51,6 +51,20 @@ export default function SelectStore() {
         return;
       }
 
+      // Check if user has a profile (registered via User Management)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) {
+        await supabase.auth.signOut();
+        toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
+        navigate("/auth");
+        return;
+      }
+
       // Check if super admin
       const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
         _user_id: user.id
