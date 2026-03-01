@@ -964,7 +964,7 @@ export default function Reports() {
     return (
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
         {/* Summary Cards - like reference image */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {/* Penjualan */}
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
             <CardContent className="p-4">
@@ -989,18 +989,6 @@ export default function Reports() {
             </CardContent>
           </Card>
 
-          {/* Pembelian */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("purchase")}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Receipt className="h-3.5 w-3.5 text-orange-500" />
-                <span className="text-xs font-medium text-orange-500">Pembelian</span>
-              </div>
-              <div className="text-base font-bold">{formatCurrency(stats.totalPurchase)}</div>
-              <p className="text-xs text-muted-foreground">{stats.purchaseTransactionCount} transaksi</p>
-            </CardContent>
-          </Card>
-
           {/* Pengeluaran */}
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
             <CardContent className="p-4">
@@ -1013,38 +1001,16 @@ export default function Reports() {
             </CardContent>
           </Card>
 
-          {/* Total Pendapatan */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-xs font-medium text-emerald-600">Total Pendapatan</span>
-              </div>
-              <div className="text-base font-bold">{formatCurrency(stats.totalBookingRevenue + stats.totalAdditionalIncome)}</div>
-            </CardContent>
-          </Card>
-
-          {/* Total Biaya */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
-                <span className="text-xs font-medium text-rose-600">Total Biaya</span>
-              </div>
-              <div className="text-base font-bold">{formatCurrency(stats.totalExpenses + stats.totalPurchase)}</div>
-            </CardContent>
-          </Card>
-
-          {/* Profit Bersih */}
+          {/* Total Pendapatan = Penjualan + Pemasukan - Pengeluaran */}
           <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <DollarSign className="h-3.5 w-3.5 text-green-700" />
-                <span className="text-xs font-medium text-green-700">Profit Bersih</span>
+                <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
               </div>
               <div className="text-base font-bold text-green-700">
                 {formatCurrency(
-                  (stats.totalBookingRevenue + stats.totalAdditionalIncome) - (stats.totalExpenses + stats.totalPurchase)
+                  stats.totalBookingRevenue + stats.totalAdditionalIncome - stats.totalExpenses
                 )}
               </div>
             </CardContent>
