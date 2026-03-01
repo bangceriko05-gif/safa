@@ -43,8 +43,22 @@ export default function Auth() {
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
+          // Check if user exists in profiles (registered via User Management)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!profile) {
+            // User not registered in PMS - sign out and show error
+            await supabase.auth.signOut();
+            toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
+            return;
+          }
+
           navigate("/select-store");
         }
       }
