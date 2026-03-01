@@ -22,7 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Store {
@@ -329,10 +329,15 @@ export default function SuperAdminStoreManagement() {
               Tambah, edit, dan kelola semua outlet dalam sistem
             </CardDescription>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Outlet
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={fetchStores} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Outlet
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
