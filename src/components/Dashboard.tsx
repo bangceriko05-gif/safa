@@ -95,15 +95,29 @@ export default function Dashboard() {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
-      } else {
-        fetchUserRole(session.user.id);
+        return;
       }
+
+      // Check if user has a profile (registered via User Management)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile) {
+        await supabase.auth.signOut();
+        toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
+        navigate("/auth");
+        return;
+      }
+
+      setSession(session);
+      setUser(session.user);
+      fetchUserRole(session.user.id);
     });
 
     // Listen for display size changes
