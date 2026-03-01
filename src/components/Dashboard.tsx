@@ -101,14 +101,12 @@ export default function Dashboard() {
         return;
       }
 
-      // Check if user has a profile (registered via User Management)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', session.user.id)
-        .single();
+      const { count, error: accessError } = await supabase
+        .from("user_store_access")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id);
 
-      if (!profile) {
+      if (accessError || (count ?? 0) === 0) {
         await supabase.auth.signOut();
         toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
         navigate("/auth");
@@ -138,7 +136,7 @@ export default function Dashboard() {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setUserRole(data?.role || "user");
