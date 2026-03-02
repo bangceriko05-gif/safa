@@ -63,15 +63,16 @@ interface DetailPopup {
 interface IncomeExpenseReportProps {
   initialTab?: "expenses" | "incomes";
   showAddButton?: boolean;
+  hideDateFilter?: boolean;
 }
 
 type SubView = "all" | "expenses" | "incomes";
 
-export default function IncomeExpenseReport({ initialTab, showAddButton }: IncomeExpenseReportProps = {}) {
+export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>(hideDateFilter ? "today" : "thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
@@ -659,17 +660,19 @@ export default function IncomeExpenseReport({ initialTab, showAddButton }: Incom
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">
-            {getDateRangeDisplay(timeRange, customDateRange)}
-          </p>
-          <ReportDateFilter
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
-        </div>
+        {!hideDateFilter && (
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              {getDateRangeDisplay(timeRange, customDateRange)}
+            </p>
+            <ReportDateFilter
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+            />
+          </div>
+        )}
       </div>
 
       {loading ? (
