@@ -10,7 +10,7 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export type ReportTimeRange = "today" | "yesterday" | "thisMonth" | "lastMonth" | "custom";
+export type ReportTimeRange = "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom";
 
 interface ReportDateFilterProps {
   timeRange: ReportTimeRange;
@@ -42,6 +42,10 @@ export const getDateRange = (range: ReportTimeRange, customDateRange?: DateRange
       startDate = startOfMonth(lastMonth);
       endDate = endOfMonth(lastMonth);
       break;
+    case "allTime":
+      startDate = new Date(2020, 0, 1);
+      endDate = now;
+      break;
     case "custom":
       if (customDateRange?.from) {
         startDate = customDateRange.from;
@@ -62,6 +66,9 @@ export const getDateRange = (range: ReportTimeRange, customDateRange?: DateRange
 export const getDateRangeDisplay = (range: ReportTimeRange, customDateRange?: DateRange) => {
   const { startDate, endDate } = getDateRange(range, customDateRange);
   
+  if (range === "allTime") {
+    return "Semua Waktu";
+  }
   if (range === "today" || range === "yesterday") {
     return format(startDate, "d MMMM yyyy", { locale: localeId });
   } else {
@@ -102,6 +109,7 @@ export default function ReportDateFilter({
           <SelectItem value="yesterday">Kemarin</SelectItem>
           <SelectItem value="thisMonth">Bulan Ini</SelectItem>
           <SelectItem value="lastMonth">Bulan Lalu</SelectItem>
+          <SelectItem value="allTime">Semua Waktu</SelectItem>
           <SelectItem value="custom">Custom Tanggal</SelectItem>
         </SelectContent>
       </Select>
