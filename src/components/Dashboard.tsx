@@ -37,6 +37,8 @@ import StoreInactiveNotice from "./StoreInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
+import { usePermissions } from "@/hooks/usePermissions";
+import NoAccessMessage from "./NoAccessMessage";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
@@ -61,6 +63,7 @@ export default function Dashboard() {
   const [showDepositFormModal, setShowDepositFormModal] = useState(false);
   const [depositRefreshTrigger, setDepositRefreshTrigger] = useState(0);
   const navigate = useNavigate();
+  const { hasPermission: checkPerm, hasAnyPermission } = usePermissions();
 
   // Calculate days difference from today
   const getDaysDifference = () => {
@@ -422,7 +425,7 @@ export default function Dashboard() {
           <TabsList className="grid w-full max-w-7xl" style={{ 
             gridTemplateColumns: 
               (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
-              "1fr 1fr 1fr 1fr 1fr" 
+              "1fr 1fr 1fr 1fr 1fr 1fr" 
           }}>
             <TabsTrigger value="bookings">
               <Calendar className="mr-2 h-4 w-4" />
@@ -444,12 +447,12 @@ export default function Dashboard() {
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan
             </TabsTrigger>
+            <TabsTrigger value="rooms">
+              <Package className="mr-2 h-4 w-4" />
+              Produk & Inventori
+            </TabsTrigger>
             {(userRole === "admin" || userRole === "leader") && (
               <>
-                <TabsTrigger value="rooms">
-                  <Package className="mr-2 h-4 w-4" />
-                  Produk & Inventori
-                </TabsTrigger>
                 <TabsTrigger value="activity">
                   <History className="mr-2 h-4 w-4" />
                   Log
@@ -547,12 +550,16 @@ export default function Dashboard() {
             <SettingsPage userRole={userRole} />
           </TabsContent>
 
+          <TabsContent value="rooms" className="mt-6">
+            {hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
+              <RoomManagement />
+            ) : (
+              <NoAccessMessage featureName="Produk & Inventori" />
+            )}
+          </TabsContent>
+
           {(userRole === "admin" || userRole === "leader") && (
             <>
-              <TabsContent value="rooms" className="mt-6">
-                <RoomManagement />
-              </TabsContent>
-              
               <TabsContent value="activity" className="mt-6">
                 <ActivityLog />
               </TabsContent>
