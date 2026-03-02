@@ -55,11 +55,11 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
-          <IncomeExpenseReport initialTab="expenses" showAddButton />
+          <IncomeExpenseReport initialTab="expenses" showAddButton hideDateFilter />
         </TabsContent>
 
         <TabsContent value="incomes" className="mt-4">
-          <IncomeExpenseReport initialTab="incomes" showAddButton />
+          <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
         </TabsContent>
 
         <TabsContent value="deposits" className="mt-4">
