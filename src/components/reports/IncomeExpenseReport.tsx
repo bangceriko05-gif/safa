@@ -488,6 +488,34 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     }
   };
 
+  const handleDeleteExpense = async (expense: ExpenseData) => {
+    if (!confirm(`Hapus pengeluaran "${expense.description}"?`)) return;
+    try {
+      const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil dihapus");
+      setEditingExpense(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal menghapus pengeluaran");
+    }
+  };
+
+  const handleDeleteIncome = async (income: IncomeData) => {
+    if (!confirm(`Hapus pemasukan "${income.customer_name || income.description}"?`)) return;
+    try {
+      // Delete income products first
+      await supabase.from("income_products").delete().eq("income_id", income.id);
+      const { error } = await supabase.from("incomes").delete().eq("id", income.id);
+      if (error) throw error;
+      toast.success("Pemasukan berhasil dihapus");
+      setEditingIncome(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal menghapus pemasukan");
+    }
+  };
+
   const handlePrintExpense = (expense: ExpenseData) => {
     window.open(`/receipt/transaction?id=${expense.id}&type=expense`, '_blank');
   };
@@ -880,9 +908,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
                             {expense.bid && expense.bid !== '-' && (
                               <div className="flex items-center gap-1 mb-0.5">
                                 <div 
-                                  className={`text-[10px] font-mono text-primary font-bold ${hasPermission("report_expense_edit") ? "cursor-pointer hover:underline" : ""}`}
-                                  onClick={() => hasPermission("report_expense_edit") && handleEditExpenseClick(expense)}
-                                  title={hasPermission("report_expense_edit") ? "Klik untuk edit" : ""}
+                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
+                                  onClick={() => handleEditExpenseClick(expense)}
+                                  title="Klik untuk edit"
                                 >
                                   {expense.bid}
                                 </div>
@@ -926,9 +954,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
                             {income.bid && income.bid !== '-' && (
                               <div className="flex items-center gap-1 mb-0.5">
                                 <div 
-                                  className={`text-[10px] font-mono text-primary font-bold ${hasPermission("report_income_edit") ? "cursor-pointer hover:underline" : ""}`}
-                                  onClick={() => hasPermission("report_income_edit") && handleEditIncomeClick(income)}
-                                  title={hasPermission("report_income_edit") ? "Klik untuk edit" : ""}
+                                  className="text-[10px] font-mono text-primary font-bold cursor-pointer hover:underline"
+                                  onClick={() => handleEditIncomeClick(income)}
+                                  title="Klik untuk edit"
                                 >
                                   {income.bid}
                                 </div>
@@ -1064,7 +1092,13 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
                 </SelectContent>
               </Select>
             </div>
-            <Button className="w-full" onClick={handleSaveExpense}>Simpan</Button>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleSaveExpense}>Simpan</Button>
+              <Button variant="destructive" onClick={() => editingExpense && handleDeleteExpense(editingExpense)}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Hapus
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1099,7 +1133,13 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
               <Label>Deskripsi (opsional)</Label>
               <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} />
             </div>
-            <Button className="w-full" onClick={handleSaveIncome}>Simpan</Button>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleSaveIncome}>Simpan</Button>
+              <Button variant="destructive" onClick={() => editingIncome && handleDeleteIncome(editingIncome)}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Hapus
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
