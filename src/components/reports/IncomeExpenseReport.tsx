@@ -633,15 +633,17 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <Select value={subView} onValueChange={(v) => setSubView(v as SubView)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="expenses">Laporan Pengeluaran</SelectItem>
-              <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
-            </SelectContent>
-          </Select>
+          {!hideDateFilter && (
+            <Select value={subView} onValueChange={(v) => setSubView(v as SubView)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expenses">Laporan Pengeluaran</SelectItem>
+                <SelectItem value="incomes">Laporan Pemasukan</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           {showAddButton && ((subView === "expenses" && hasPermission("report_expense_add")) || (subView === "incomes" && hasPermission("report_income_add"))) && (
             <Button
               size="sm"
