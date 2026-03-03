@@ -91,6 +91,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const [productSearch, setProductSearch] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [managingCategories, setManagingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [stats, setStats] = useState({
@@ -107,6 +110,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     fetchData();
     fetchExpenseCategories();
     fetchProducts();
+    fetchCustomers();
   }, [timeRange, customDateRange, currentStore]);
 
   const fetchProducts = async () => {
@@ -117,6 +121,16 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
       .eq("store_id", currentStore.id)
       .order("name");
     setAvailableProducts(data || []);
+  };
+
+  const fetchCustomers = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("customers")
+      .select("id, name, phone")
+      .eq("store_id", currentStore.id)
+      .order("name");
+    setCustomers(data || []);
   };
 
   const fetchExpenseCategories = async () => {
@@ -349,6 +363,8 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
 
   const handleEditIncomeClick = (income: IncomeData) => {
     setEditingIncome(income);
+    setCustomerSearch("");
+    setShowCustomerDropdown(false);
     setIncomeForm({
       description: income.description,
       amount: income.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
@@ -1110,9 +1126,41 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
             <DialogTitle>Edit Pemasukan {editingIncome?.bid}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label>Nama Pelanggan</Label>
-              <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} />
+              <Input 
+                value={customerSearch || incomeForm.customer_name} 
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => { setCustomerSearch(""); setShowCustomerDropdown(true); }}
+                placeholder="Cari pelanggan..."
+                readOnly={false}
+              />
+              {showCustomerDropdown && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-popover border rounded-md shadow-md">
+                  {customers
+                    .filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || ""))
+                    .map(c => (
+                      <div
+                        key={c.id}
+                        className="px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                        onClick={() => {
+                          setIncomeForm({ ...incomeForm, customer_name: c.name });
+                          setCustomerSearch("");
+                          setShowCustomerDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{c.name}</div>
+                        <div className="text-xs text-muted-foreground">{c.phone}</div>
+                      </div>
+                    ))}
+                  {customers.filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || "")).length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan</div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Jumlah</Label>
@@ -1211,9 +1259,40 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label>Nama Pelanggan <span className="text-destructive">*</span></Label>
-                <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
+                <Input 
+                  value={customerSearch || incomeForm.customer_name} 
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value);
+                    setShowCustomerDropdown(true);
+                  }}
+                  onFocus={() => { setCustomerSearch(""); setShowCustomerDropdown(true); }}
+                  placeholder="Cari pelanggan..."
+                />
+                {showCustomerDropdown && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-popover border rounded-md shadow-md">
+                    {customers
+                      .filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || ""))
+                      .map(c => (
+                        <div
+                          key={c.id}
+                          className="px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                          onClick={() => {
+                            setIncomeForm({ ...incomeForm, customer_name: c.name });
+                            setCustomerSearch("");
+                            setShowCustomerDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium">{c.name}</div>
+                          <div className="text-xs text-muted-foreground">{c.phone}</div>
+                        </div>
+                      ))}
+                    {customers.filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || "")).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan</div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Tanggal</Label>
