@@ -193,6 +193,15 @@ export default function RoomManagement() {
         return;
       }
 
+      // Check room limit (25) when adding new room
+      if (!editingRoom) {
+        const currentRoomCount = rooms.length;
+        if (currentRoomCount >= 25) {
+          toast.error("Paket pembayaran Anda maksimal 25 kamar. Untuk mendapatkan lebih dari 25 kamar, lakukan pembayaran tambahan.");
+          return;
+        }
+      }
+
       if (editingRoom) {
         const { error } = await supabase
           .from("rooms")

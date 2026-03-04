@@ -390,9 +390,18 @@ export default function SuperAdminStoreManagement() {
                     </TableCell>
                     <TableCell>{store.location || "-"}</TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                        <span>{storeStats[store.id]?.rooms || 0}</span>
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center justify-center gap-1">
+                          <DoorOpen className="h-4 w-4 text-muted-foreground" />
+                          <span className={`${(storeStats[store.id]?.rooms || 0) > 25 ? 'text-destructive font-bold' : ''}`}>
+                            {storeStats[store.id]?.rooms || 0}
+                          </span>
+                        </div>
+                        {(storeStats[store.id]?.rooms || 0) > 25 && (
+                          <span className="text-[10px] text-destructive leading-tight text-center max-w-[120px]">
+                            Melebihi batas 25 kamar
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
