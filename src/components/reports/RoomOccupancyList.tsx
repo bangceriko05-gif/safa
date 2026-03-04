@@ -31,6 +31,9 @@ interface BookingDetail {
   start_time: string;
   end_time: string;
   duration: number;
+  ota_source: string | null;
+  variant_id: string | null;
+  durationLabel: string;
 }
 
 const ROOM_COLORS = [
@@ -126,7 +129,7 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
 
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, bid, date, customer_name, status, price, start_time, end_time, duration")
+        .select("id, bid, date, customer_name, status, price, start_time, end_time, duration, ota_source, variant_id")
         .eq("store_id", currentStore!.id)
         .eq("room_id", room.roomId)
         .gte("date", startDateStr)
@@ -135,7 +138,29 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
         .order("date", { ascending: false });
 
       if (error) throw error;
-      setRoomBookings(bookings || []);
+
+      // Fetch variant duration types for bookings that have variant_id
+      const variantIds = [...new Set((bookings || []).map(b => b.variant_id).filter(Boolean))] as string[];
+      let variantMap = new Map<string, string>();
+      if (variantIds.length > 0) {
+        const { data: variants } = await supabase
+          .from("room_variants")
+          .select("id, booking_duration_type")
+          .in("id", variantIds);
+        (variants || []).forEach(v => {
+          if (v.booking_duration_type) variantMap.set(v.id, v.booking_duration_type);
+        });
+      }
+
+      const enriched: BookingDetail[] = (bookings || []).map(b => {
+        const durationType = b.variant_id ? variantMap.get(b.variant_id) : null;
+        const isDaily = durationType === 'hari' || !!b.ota_source;
+        return {
+          ...b,
+          durationLabel: isDaily ? 'malam' : 'jam',
+        };
+      });
+      setRoomBookings(enriched);
     } catch (error) {
       console.error("Error fetching room bookings:", error);
       setRoomBookings([]);
