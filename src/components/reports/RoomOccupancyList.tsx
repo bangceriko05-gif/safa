@@ -154,7 +154,9 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
 
       const enriched: BookingDetail[] = (bookings || []).map(b => {
         const durationType = b.variant_id ? variantMap.get(b.variant_id) : null;
-        const isDaily = durationType === 'hari' || !!b.ota_source;
+        // Check if daily: variant says 'hari', or OTA, or matches PMS check-in/out pattern (14:00-12:00)
+        const isPMSPattern = b.start_time?.substring(0, 5) === '14:00' && b.end_time?.substring(0, 5) === '12:00';
+        const isDaily = durationType === 'hari' || !!b.ota_source || isPMSPattern;
         return {
           ...b,
           durationLabel: isDaily ? 'malam' : 'jam',
