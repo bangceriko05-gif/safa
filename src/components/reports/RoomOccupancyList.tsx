@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useStore } from "@/contexts/StoreContext";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { BedDouble, ChevronRight } from "lucide-react";
 
@@ -287,7 +287,15 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
                       <span className="text-sm font-semibold">{formatCurrency(b.price)}</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {format(new Date(b.date), "d MMM yyyy", { locale: localeId })} • {b.start_time} - {b.end_time} ({b.duration} jam)
+                      {b.durationLabel === 'malam' ? (
+                        <>
+                          {format(new Date(b.date), "d MMM yyyy", { locale: localeId })} - {format(addDays(new Date(b.date), b.duration), "d MMM yyyy", { locale: localeId })} ({b.duration} malam)
+                        </>
+                      ) : (
+                        <>
+                          {format(new Date(b.date), "d MMM yyyy", { locale: localeId })} • {b.start_time?.substring(0, 5)} - {b.end_time?.substring(0, 5)} ({b.duration} jam)
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
