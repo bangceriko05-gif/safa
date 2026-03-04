@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useStore } from "@/contexts/StoreContext";
 import { format, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { BedDouble, ChevronRight } from "lucide-react";
+import { BedDouble, ChevronRight, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface RoomOccupancyListProps {
   startDate: Date;
@@ -58,6 +59,7 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
   const [selectedRoom, setSelectedRoom] = useState<RoomOccupancyData | null>(null);
   const [roomBookings, setRoomBookings] = useState<BookingDetail[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!currentStore) return;
@@ -171,6 +173,11 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
     }
   };
 
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) return data;
+    return data.filter(r => r.roomName.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [data, searchQuery]);
+
   const totalRevenue = useMemo(() => data.reduce((s, d) => s + d.totalRevenue, 0), [data]);
 
   const formatCurrency = (val: number) =>
@@ -224,9 +231,18 @@ export default function RoomOccupancyList({ startDate, endDate }: RoomOccupancyL
           <BedDouble className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="px-2">
-          <ScrollArea className="h-[350px] pr-3">
+          <div className="relative mb-2 px-2">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Cari kamar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-xs"
+            />
+          </div>
+          <ScrollArea className="h-[310px] pr-3">
             <div className="space-y-1">
-              {data.map((room, index) => (
+              {filteredData.map((room, index) => (
                 <div
                   key={room.roomId}
                   onClick={() => handleRoomClick(room)}
