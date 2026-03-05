@@ -456,7 +456,7 @@ export default function Dashboard() {
         {/* Tabs for Bookings and User Management */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {/* Mobile: Dropdown */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -495,7 +495,7 @@ export default function Dashboard() {
           </div>
 
           {/* Desktop: Tabs */}
-          <TabsList className="hidden md:grid w-full max-w-7xl" style={{ 
+          <TabsList className="hidden lg:grid w-full max-w-7xl" style={{ 
             gridTemplateColumns: 
               (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
               "1fr 1fr 1fr 1fr 1fr 1fr" 
