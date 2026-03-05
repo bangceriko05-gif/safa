@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -453,7 +455,47 @@ export default function Dashboard() {
 
         {/* Tabs for Bookings and User Management */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-7xl" style={{ 
+          {/* Mobile: Dropdown */}
+          <div className="md:hidden">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bookings">
+                  <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
+                </SelectItem>
+                <SelectItem value="transactions">
+                  <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
+                </SelectItem>
+                <SelectItem value="customers">
+                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
+                </SelectItem>
+                <SelectItem value="reports">
+                  <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
+                </SelectItem>
+                <SelectItem value="settings">
+                  <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
+                </SelectItem>
+                <SelectItem value="rooms">
+                  <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
+                </SelectItem>
+                {(userRole === "admin" || userRole === "leader") && (
+                  <>
+                    <SelectItem value="activity">
+                      <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
+                    </SelectItem>
+                    <SelectItem value="users">
+                      <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
+                    </SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Desktop: Tabs */}
+          <TabsList className="hidden md:grid w-full max-w-7xl" style={{ 
             gridTemplateColumns: 
               (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
               "1fr 1fr 1fr 1fr 1fr 1fr" 
