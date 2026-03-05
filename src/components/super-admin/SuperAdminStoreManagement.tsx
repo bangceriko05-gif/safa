@@ -22,7 +22,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock } from "lucide-react";
+import { format, differenceInDays, parseISO } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Store {
@@ -34,6 +36,8 @@ interface Store {
   image_url: string | null;
   created_at: string;
   updated_at: string;
+  subscription_start_date: string | null;
+  subscription_end_date: string | null;
 }
 
 interface StoreStats {
@@ -56,6 +60,8 @@ export default function SuperAdminStoreManagement() {
     location: "",
     image_url: "",
     is_active: true,
+    subscription_start_date: "",
+    subscription_end_date: "",
   });
 
   useEffect(() => {
@@ -167,6 +173,8 @@ export default function SuperAdminStoreManagement() {
         location: formData.location.trim() || null,
         image_url: formData.image_url || null,
         is_active: formData.is_active,
+        subscription_start_date: formData.subscription_start_date || null,
+        subscription_end_date: formData.subscription_end_date || null,
         slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
@@ -221,6 +229,8 @@ export default function SuperAdminStoreManagement() {
       location: store.location || "",
       image_url: store.image_url || "",
       is_active: store.is_active,
+      subscription_start_date: store.subscription_start_date || "",
+      subscription_end_date: store.subscription_end_date || "",
     });
     setPreviewUrl(store.image_url || null);
     setIsDialogOpen(true);
@@ -303,6 +313,8 @@ export default function SuperAdminStoreManagement() {
       location: "",
       image_url: "",
       is_active: true,
+      subscription_start_date: "",
+      subscription_end_date: "",
     });
   };
 
@@ -348,6 +360,7 @@ export default function SuperAdminStoreManagement() {
                 <TableHead className="w-20">Foto</TableHead>
                 <TableHead>Nama Outlet</TableHead>
                 <TableHead>Lokasi</TableHead>
+                <TableHead>Langganan</TableHead>
                 <TableHead className="text-center">Kamar</TableHead>
                 <TableHead className="text-center">Produk</TableHead>
                 <TableHead className="text-center">User</TableHead>
@@ -358,7 +371,7 @@ export default function SuperAdminStoreManagement() {
             <TableBody>
               {stores.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     Belum ada outlet. Klik tombol "Tambah Outlet" untuk menambahkan.
                   </TableCell>
                 </TableRow>
@@ -389,6 +402,26 @@ export default function SuperAdminStoreManagement() {
                       </div>
                     </TableCell>
                     <TableCell>{store.location || "-"}</TableCell>
+                    <TableCell>
+                      {store.subscription_end_date ? (
+                        <div className="text-xs space-y-0.5">
+                          <div className="flex items-center gap-1">
+                            <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{format(parseISO(store.subscription_start_date!), "d MMM yyyy", { locale: localeId })}</span>
+                          </div>
+                          <div className="text-muted-foreground">s/d {format(parseISO(store.subscription_end_date), "d MMM yyyy", { locale: localeId })}</div>
+                          {(() => {
+                            const daysLeft = differenceInDays(parseISO(store.subscription_end_date), new Date());
+                            if (daysLeft < 0) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Expired</Badge>;
+                            if (daysLeft <= 7) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
+                            if (daysLeft <= 30) return <Badge className="text-[10px] px-1.5 py-0 bg-amber-500">{daysLeft} hari lagi</Badge>;
+                            return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
+                          })()}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Belum diatur</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
                         <div className="flex items-center justify-center gap-1">
@@ -537,6 +570,27 @@ export default function SuperAdminStoreManagement() {
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="Contoh: Malang"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="subscription_start_date">Mulai Langganan</Label>
+                <Input
+                  id="subscription_start_date"
+                  type="date"
+                  value={formData.subscription_start_date}
+                  onChange={(e) => setFormData({ ...formData, subscription_start_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subscription_end_date">Akhir Langganan</Label>
+                <Input
+                  id="subscription_end_date"
+                  type="date"
+                  value={formData.subscription_end_date}
+                  onChange={(e) => setFormData({ ...formData, subscription_end_date: e.target.value })}
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between">

@@ -1187,6 +1187,8 @@ export type Database = {
           location: string | null
           name: string
           slug: string
+          subscription_end_date: string | null
+          subscription_start_date: string | null
           updated_at: string
         }
         Insert: {
@@ -1199,6 +1201,8 @@ export type Database = {
           location?: string | null
           name: string
           slug: string
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -1211,6 +1215,8 @@ export type Database = {
           location?: string | null
           name?: string
           slug?: string
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1340,7 +1346,7 @@ export type Database = {
         Args: {
           p_max_requests?: number
           p_phone: string
-          p_time_window?: unknown
+          p_time_window?: string
         }
         Returns: boolean
       }

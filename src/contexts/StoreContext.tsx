@@ -11,6 +11,8 @@ interface Store {
   is_active: boolean;
   image_url?: string | null;
   calendar_type?: string | null;
+  subscription_start_date?: string | null;
+  subscription_end_date?: string | null;
 }
 
 interface StoreContextType {
