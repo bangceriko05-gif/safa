@@ -396,6 +396,37 @@ export default function Dashboard() {
                 "User"
               })
             </p>
+            {currentStore.subscription_end_date && (() => {
+              const endDate = new Date(currentStore.subscription_end_date);
+              const daysLeft = differenceInDays(endDate, new Date());
+              const endFormatted = format(endDate, "d MMMM yyyy", { locale: idLocale });
+              if (daysLeft < 0) {
+                return (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
+                    ⚠️ Langganan expired sejak {endFormatted}
+                  </div>
+                );
+              }
+              if (daysLeft <= 7) {
+                return (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
+                    ⏰ Langganan berakhir {endFormatted} ({daysLeft} hari lagi)
+                  </div>
+                );
+              }
+              if (daysLeft <= 30) {
+                return (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-700 text-xs font-medium">
+                    📅 Langganan berakhir {endFormatted} ({daysLeft} hari lagi)
+                  </div>
+                );
+              }
+              return (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                  ✅ Aktif hingga {endFormatted} ({daysLeft} hari lagi)
+                </div>
+              );
+            })()}
             <StoreSelector />
           </div>
           <div className="flex gap-2">
