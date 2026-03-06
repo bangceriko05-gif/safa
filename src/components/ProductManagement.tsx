@@ -45,7 +45,7 @@ export default function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isProductSectionExpanded, setIsProductSectionExpanded] = useState(true);
+  const [isProductSectionExpanded, setIsProductSectionExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
