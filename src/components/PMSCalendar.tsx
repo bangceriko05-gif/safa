@@ -1088,8 +1088,9 @@ export default function PMSCalendar({
             <table className="w-full border-collapse min-w-max">
               <thead className="sticky top-0 z-20">
                 <tr className="border-b-2 border-border bg-muted">
-                  <th className="p-3 text-left font-semibold text-sm sticky left-0 bg-muted z-30 border-r-2 border-border min-w-[150px]">
-                    Kamar
+                  <th className="p-1.5 lg:p-3 text-left font-semibold text-xs lg:text-sm sticky left-0 bg-muted z-30 border-r-2 border-border min-w-[60px] lg:min-w-[150px]">
+                    <span className="hidden lg:inline">Kamar</span>
+                    <span className="lg:hidden text-[10px]">Kamar</span>
                   </th>
                   {visibleDates.map((date) => {
                     const dayName = format(date, "EEE", { locale: idLocale });
@@ -1135,25 +1136,26 @@ export default function PMSCalendar({
                       onClick={canSelectForDeposit ? () => onDepositRoomSelect?.(room.id) : undefined}
                     >
                       <td className={cn(
-                        "p-3 text-sm font-medium sticky left-0 bg-card border-r-2 border-border z-10",
+                        "p-1.5 lg:p-3 text-xs lg:text-sm font-medium sticky left-0 bg-card border-r-2 border-border z-10",
                         isBlocked && "opacity-50",
                         depositMode && canSelectForDeposit && "bg-amber-50/50",
                         depositMode && hasDeposit && "bg-amber-100/50"
                       )}>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 lg:gap-2">
                             {depositMode && (
                               <div className={cn(
-                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                "w-4 h-4 lg:w-5 lg:h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0",
                                 hasDeposit ? "bg-amber-500 border-amber-500" : "border-muted-foreground/30"
                               )}>
-                                {hasDeposit && <Shield className="w-3 h-3 text-white" />}
+                                {hasDeposit && <Shield className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-white" />}
                               </div>
                             )}
                             <div
-                              className="w-2.5 h-2.5 rounded-full"
+                              className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full flex-shrink-0"
                               style={{ backgroundColor: isBlocked ? "#9CA3AF" : "#3B82F6" }}
                             />
-                            {room.name}
+                            <span className="hidden lg:inline">{room.name}</span>
+                            <span className="lg:hidden truncate">{room.name.split(' ')[0]}</span>
                             {!depositMode && hasDeposit && (
                               <div 
                                 className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 cursor-pointer hover:bg-amber-200 transition-colors" 
