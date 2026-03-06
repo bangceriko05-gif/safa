@@ -76,7 +76,7 @@ export default function RoomManagement() {
   const [editingVariant, setEditingVariant] = useState<RoomVariant | null>(null);
   const [selectedRoomForVariant, setSelectedRoomForVariant] = useState<string | null>(null);
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
-  const [isRoomSectionExpanded, setIsRoomSectionExpanded] = useState(true);
+  const [isRoomSectionExpanded, setIsRoomSectionExpanded] = useState(false);
   const [roomSearchQuery, setRoomSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
