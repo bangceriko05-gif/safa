@@ -931,9 +931,7 @@ export default function ScheduleTable({
   };
 
   // Filter & deduplicate rooms: show only active rooms for regular users
-  const roomsByStatus = (userRole === "admin" || userRole === "leader")
-    ? rooms
-    : rooms.filter((room) => room.status === "Aktif");
+  const roomsByStatus = rooms;
 
   // Untuk tanggal lampau, sembunyikan ruangan yang dibuat setelah tanggal yang dipilih
   const filteredRooms = roomsByStatus.filter((room) => {

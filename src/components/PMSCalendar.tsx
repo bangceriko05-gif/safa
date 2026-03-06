@@ -778,9 +778,7 @@ export default function PMSCalendar({
   };
 
   // Filter rooms
-  const displayRooms = (userRole === "admin" || userRole === "leader")
-    ? rooms
-    : rooms.filter((room) => room.status === "Aktif");
+  const displayRooms = rooms;
 
   const isToday = (date: Date) => isSameDay(date, new Date());
   const isSelected = (date: Date) => isSameDay(date, selectedDate);
