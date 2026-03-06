@@ -436,19 +436,20 @@ export default function Dashboard() {
               onClick={() => setDepositMode(!depositMode)} 
               variant={depositMode ? "default" : "outline"}
               className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+              size="default"
             >
-              <Shield className="mr-2 h-4 w-4" />
-              {depositMode ? "Batal Pilih" : "Deposit"}
+              <Shield className="lg:mr-2 h-4 w-4" />
+              <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
             </Button>
             {(userRole === "admin" || userRole === "leader") && (
               <Button onClick={handleExportToExcel} variant="outline">
-                <FileDown className="mr-2 h-4 w-4" />
-                Export Excel
+                <FileDown className="lg:mr-2 h-4 w-4" />
+                <span className="hidden lg:inline">Export Excel</span>
               </Button>
             )}
             <Button onClick={handleLogout} variant="outline">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              <LogOut className="lg:mr-2 h-4 w-4" />
+              <span className="hidden lg:inline">Logout</span>
             </Button>
           </div>
         </div>
