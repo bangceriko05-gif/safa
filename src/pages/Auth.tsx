@@ -295,16 +295,18 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">atau</span>
-            </div>
-          </div>
+          {isLogin && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">atau</span>
+                </div>
+              </div>
 
-          <Button
+              <Button
             type="button"
             variant="outline"
             className="w-full"
@@ -334,6 +336,8 @@ export default function Auth() {
             </svg>
             Masuk dengan Google
           </Button>
+            </>
+          )}
 
           <div className="mt-4 text-center text-sm">
             <button
