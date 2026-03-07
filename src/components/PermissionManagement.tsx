@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Shield, User, Users, Check, Save } from "lucide-react";
+import { Loader2, Shield, User, Users, Save, RefreshCw } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Permission {
@@ -35,23 +35,98 @@ interface RolePermission {
   permission_id: string;
 }
 
-// Permission categories for better organization
-const permissionCategories: Record<string, string[]> = {
-  "Booking": ["create_bookings", "edit_bookings", "delete_bookings", "view_bookings", "checkin_bookings", "checkout_bookings", "cancel_bookings", "cancel_checkout_bookings"],
-  "Kamar": ["manage_rooms", "view_rooms"],
-  "Pelanggan": ["manage_customers", "view_customers"],
-  "Keuangan": ["manage_income", "manage_expense"],
-  "Laporan - Keseluruhan": ["report_overview_view", "report_overview_detail"],
-  "Laporan - Penjualan": ["report_sales_view", "report_sales_detail"],
-  "Laporan - Pemasukan": ["report_income_view", "report_income_detail", "report_income_add", "report_income_edit", "report_income_delete"],
-  "Laporan - Pengeluaran": ["report_expense_view", "report_expense_detail", "report_expense_add", "report_expense_edit", "report_expense_delete"],
-  "Laporan - Pembelian": ["report_purchase_view", "report_purchase_detail"],
-  "Laporan - Kinerja": ["report_performance_view", "report_performance_detail"],
-  "Produk": ["manage_products", "view_products"],
-  "Toko": ["manage_stores", "view_stores"],
-  "Pengguna": ["manage_users", "manage_permissions", "view_auth_orphans", "view_user_orphans"],
-  "Pengaturan": ["manage_settings", "view_activity_logs"],
-};
+// Action columns for the matrix
+const ACTION_COLUMNS = ["Lihat", "Detail", "Tambah", "Ubah", "Hapus"] as const;
+
+// Matrix structure: maps category > items > action columns to permission names
+interface MatrixItem {
+  label: string;
+  actions: Partial<Record<typeof ACTION_COLUMNS[number], string>>;
+}
+
+interface MatrixSubCategory {
+  label: string;
+  items: MatrixItem[];
+}
+
+interface MatrixCategory {
+  label: string;
+  subCategories?: MatrixSubCategory[];
+  items?: MatrixItem[];
+  // standalone permissions that don't fit the matrix (shown as simple checkboxes)
+  standalone?: { label: string; permissionName: string }[];
+}
+
+const permissionMatrix: MatrixCategory[] = [
+  {
+    label: "Booking",
+    items: [
+      { label: "Booking", actions: { Lihat: "view_bookings", Tambah: "create_bookings", Ubah: "edit_bookings", Hapus: "delete_bookings" } },
+      { label: "Check-in", actions: { Lihat: "checkin_bookings" } },
+      { label: "Check-out", actions: { Lihat: "checkout_bookings" } },
+      { label: "Batal Booking", actions: { Lihat: "cancel_bookings" } },
+      { label: "Batal Checkout", actions: { Lihat: "cancel_checkout_bookings" } },
+    ],
+  },
+  {
+    label: "Kamar & Pelanggan",
+    items: [
+      { label: "Kamar", actions: { Lihat: "view_rooms", Ubah: "manage_rooms" } },
+      { label: "Pelanggan", actions: { Lihat: "view_customers", Ubah: "manage_customers" } },
+    ],
+  },
+  {
+    label: "Produk & Toko",
+    items: [
+      { label: "Produk", actions: { Lihat: "view_products", Ubah: "manage_products" } },
+      { label: "Toko", actions: { Lihat: "view_stores", Ubah: "manage_stores" } },
+    ],
+  },
+  {
+    label: "Laporan",
+    items: [
+      { label: "Keseluruhan", actions: { Lihat: "report_overview_view", Detail: "report_overview_detail" } },
+      { label: "Penjualan", actions: { Lihat: "report_sales_view", Detail: "report_sales_detail" } },
+      { label: "Pemasukan", actions: { Lihat: "report_income_view", Detail: "report_income_detail", Tambah: "report_income_add", Ubah: "report_income_edit", Hapus: "report_income_delete" } },
+      { label: "Pengeluaran", actions: { Lihat: "report_expense_view", Detail: "report_expense_detail", Tambah: "report_expense_add", Ubah: "report_expense_edit", Hapus: "report_expense_delete" } },
+      { label: "Pembelian", actions: { Lihat: "report_purchase_view", Detail: "report_purchase_detail" } },
+      { label: "Kinerja", actions: { Lihat: "report_performance_view", Detail: "report_performance_detail" } },
+    ],
+    standalone: [
+      { label: "Lihat Laporan Keuangan", permissionName: "view_reports" },
+      { label: "Kelola Pemasukan", permissionName: "manage_income" },
+      { label: "Kelola Pengeluaran", permissionName: "manage_expense" },
+    ],
+  },
+  {
+    label: "Pengguna & Pengaturan",
+    items: [
+      { label: "Pengguna", actions: { Lihat: "manage_users" } },
+      { label: "Permission", actions: { Lihat: "manage_permissions" } },
+      { label: "Pengaturan", actions: { Lihat: "manage_settings" } },
+      { label: "Log Aktivitas", actions: { Lihat: "view_activity_logs" } },
+      { label: "Auth Orphans", actions: { Lihat: "view_auth_orphans" } },
+      { label: "User Orphans", actions: { Lihat: "view_user_orphans" } },
+    ],
+  },
+];
+
+// Collect all permission names used in the matrix
+function getAllMatrixPermissionNames(): string[] {
+  const names: string[] = [];
+  permissionMatrix.forEach(cat => {
+    cat.items?.forEach(item => {
+      Object.values(item.actions).forEach(name => { if (name) names.push(name); });
+    });
+    cat.subCategories?.forEach(sub => {
+      sub.items.forEach(item => {
+        Object.values(item.actions).forEach(name => { if (name) names.push(name); });
+      });
+    });
+    cat.standalone?.forEach(s => names.push(s.permissionName));
+  });
+  return names;
+}
 
 export default function PermissionManagement() {
   const { currentStore } = useStore();
@@ -68,6 +143,14 @@ export default function PermissionManagement() {
   const [hasUnsavedUserChanges, setHasUnsavedUserChanges] = useState(false);
   const [hasUnsavedRoleChanges, setHasUnsavedRoleChanges] = useState(false);
 
+  // Build a name->id map for quick lookup
+  const permissionNameToId = new Map<string, string>();
+  const permissionIdToName = new Map<string, string>();
+  permissions.forEach(p => {
+    permissionNameToId.set(p.name, p.id);
+    permissionIdToName.set(p.id, p.name);
+  });
+
   useEffect(() => {
     fetchData();
   }, [currentStore?.id]);
@@ -75,59 +158,50 @@ export default function PermissionManagement() {
   useEffect(() => {
     if (selectedUserId) {
       fetchUserPermissions(selectedUserId);
+      setPendingUserChanges(new Set());
+      setHasUnsavedUserChanges(false);
     }
   }, [selectedUserId]);
 
   useEffect(() => {
     if (selectedRole) {
       fetchRolePermissions(selectedRole);
+      setPendingRoleChanges(new Set());
+      setHasUnsavedRoleChanges(false);
     }
   }, [selectedRole]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch all permissions
       const { data: permData, error: permError } = await supabase
         .from("permissions")
         .select("*")
         .order("name");
-
       if (permError) throw permError;
       setPermissions(permData || []);
 
-      // Filter users by current store access
       if (currentStore?.id) {
-        // First get user IDs that have access to the current store
         const { data: storeAccessData, error: storeAccessError } = await supabase
           .from("user_store_access")
           .select("user_id")
           .eq("store_id", currentStore.id);
-
         if (storeAccessError) throw storeAccessError;
-
         const userIds = storeAccessData?.map(access => access.user_id) || [];
-
         if (userIds.length > 0) {
-          // Fetch profiles for users with access to this store
           const { data: userData, error: userError } = await supabase
             .from("profiles")
             .select("id, name, email")
             .in("id", userIds)
             .order("name");
-
           if (userError) throw userError;
           setUsers(userData || []);
         } else {
           setUsers([]);
         }
       } else {
-        // No store selected, show no users
         setUsers([]);
       }
-      
-      // Reset selected user when store changes
       setSelectedUserId("");
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -143,7 +217,6 @@ export default function PermissionManagement() {
         .from("user_permissions")
         .select("id, permission_id, user_id")
         .eq("user_id", userId);
-
       if (error) throw error;
       setUserPermissions(data || []);
     } catch (error: any) {
@@ -154,12 +227,10 @@ export default function PermissionManagement() {
 
   const fetchRolePermissions = async (role: 'admin' | 'leader' | 'user') => {
     try {
-      // Get permissions from role_permissions table
       const { data, error } = await supabase
         .from("role_permissions")
         .select("id, role, permission_id")
         .eq("role", role);
-
       if (error) throw error;
       setRolePermissions(data || []);
     } catch (error: any) {
@@ -168,125 +239,129 @@ export default function PermissionManagement() {
     }
   };
 
-  const hasPermission = (permissionId: string) => {
-    return userPermissions.some((up) => up.permission_id === permissionId);
-  };
+  const hasUserPerm = (permissionId: string) => userPermissions.some(up => up.permission_id === permissionId);
+  const hasRolePerm = (permissionId: string) => rolePermissions.some(rp => rp.permission_id === permissionId);
 
-  const hasRolePermission = (permissionId: string) => {
-    return rolePermissions.some((rp) => rp.permission_id === permissionId);
-  };
-
-  // Get permissions grouped by category
-  const getPermissionsByCategory = () => {
-    const result: Record<string, Permission[]> = {};
-    
-    Object.entries(permissionCategories).forEach(([category, permNames]) => {
-      const categoryPerms = permissions.filter(p => permNames.includes(p.name));
-      if (categoryPerms.length > 0) {
-        result[category] = categoryPerms;
-      }
-    });
-    
-    // Add uncategorized permissions
-    const categorizedNames = Object.values(permissionCategories).flat();
-    const uncategorized = permissions.filter(p => !categorizedNames.includes(p.name));
-    if (uncategorized.length > 0) {
-      result["Lainnya"] = uncategorized;
-    }
-    
-    return result;
-  };
-
-  const toggleUserPermissionLocal = (permissionId: string) => {
+  const toggleUserLocal = (permissionId: string) => {
     setPendingUserChanges(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(permissionId)) {
-        newSet.delete(permissionId);
-      } else {
-        newSet.add(permissionId);
-      }
-      return newSet;
+      const n = new Set(prev);
+      n.has(permissionId) ? n.delete(permissionId) : n.add(permissionId);
+      return n;
     });
     setHasUnsavedUserChanges(true);
   };
 
-  const toggleRolePermissionLocal = (permissionId: string) => {
+  const toggleRoleLocal = (permissionId: string) => {
     setPendingRoleChanges(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(permissionId)) {
-        newSet.delete(permissionId);
-      } else {
-        newSet.add(permissionId);
-      }
-      return newSet;
+      const n = new Set(prev);
+      n.has(permissionId) ? n.delete(permissionId) : n.add(permissionId);
+      return n;
     });
     setHasUnsavedRoleChanges(true);
   };
 
-  const isUserPermissionChecked = (permissionId: string) => {
-    const hasExisting = hasPermission(permissionId);
-    const isPending = pendingUserChanges.has(permissionId);
-    return hasExisting ? !isPending : isPending;
+  const isUserChecked = (permissionId: string) => {
+    const has = hasUserPerm(permissionId);
+    const pending = pendingUserChanges.has(permissionId);
+    return has ? !pending : pending;
   };
 
-  const isRolePermissionChecked = (permissionId: string) => {
-    const hasExisting = hasRolePermission(permissionId);
-    const isPending = pendingRoleChanges.has(permissionId);
-    return hasExisting ? !isPending : isPending;
+  const isRoleChecked = (permissionId: string) => {
+    const has = hasRolePerm(permissionId);
+    const pending = pendingRoleChanges.has(permissionId);
+    return has ? !pending : pending;
   };
 
+  // Get all permission IDs for a category
+  const getCategoryPermissionIds = (cat: MatrixCategory): string[] => {
+    const ids: string[] = [];
+    cat.items?.forEach(item => {
+      Object.values(item.actions).forEach(name => {
+        const id = permissionNameToId.get(name);
+        if (id) ids.push(id);
+      });
+    });
+    cat.subCategories?.forEach(sub => {
+      sub.items.forEach(item => {
+        Object.values(item.actions).forEach(name => {
+          const id = permissionNameToId.get(name);
+          if (id) ids.push(id);
+        });
+      });
+    });
+    cat.standalone?.forEach(s => {
+      const id = permissionNameToId.get(s.permissionName);
+      if (id) ids.push(id);
+    });
+    return ids;
+  };
+
+  // Get all permission IDs for a column within a category
+  const getColumnPermissionIds = (cat: MatrixCategory, col: typeof ACTION_COLUMNS[number]): string[] => {
+    const ids: string[] = [];
+    cat.items?.forEach(item => {
+      const name = item.actions[col];
+      if (name) {
+        const id = permissionNameToId.get(name);
+        if (id) ids.push(id);
+      }
+    });
+    cat.subCategories?.forEach(sub => {
+      sub.items.forEach(item => {
+        const name = item.actions[col];
+        if (name) {
+          const id = permissionNameToId.get(name);
+          if (id) ids.push(id);
+        }
+      });
+    });
+    return ids;
+  };
+
+  const toggleAllInCategory = (catPermIds: string[], isCheckedFn: (id: string) => boolean, toggleFn: (id: string) => void) => {
+    const allChecked = catPermIds.every(id => isCheckedFn(id));
+    catPermIds.forEach(id => {
+      const currently = isCheckedFn(id);
+      if (allChecked && currently) toggleFn(id);
+      if (!allChecked && !currently) toggleFn(id);
+    });
+  };
+
+  const toggleColumn = (colPermIds: string[], isCheckedFn: (id: string) => boolean, toggleFn: (id: string) => void) => {
+    const allChecked = colPermIds.every(id => isCheckedFn(id));
+    colPermIds.forEach(id => {
+      const currently = isCheckedFn(id);
+      if (allChecked && currently) toggleFn(id);
+      if (!allChecked && !currently) toggleFn(id);
+    });
+  };
+
+  // Save handlers
   const handleSaveUserPermissions = async () => {
     if (!selectedUserId || pendingUserChanges.size === 0) {
       toast.info("Tidak ada perubahan untuk disimpan");
       return;
     }
-
     setSaving(true);
     try {
       const currentUser = await supabase.auth.getUser();
       if (!currentUser.data.user) throw new Error("User not authenticated");
-
       const toAdd: string[] = [];
       const toRemove: string[] = [];
-
       pendingUserChanges.forEach(permId => {
-        if (hasPermission(permId)) {
-          toRemove.push(permId);
-        } else {
-          toAdd.push(permId);
-        }
+        if (hasUserPerm(permId)) toRemove.push(permId);
+        else toAdd.push(permId);
       });
-
-      // Remove permissions
       if (toRemove.length > 0) {
-        const { error } = await supabase
-          .from("user_permissions")
-          .delete()
-          .eq("user_id", selectedUserId)
-          .in("permission_id", toRemove);
+        const { error } = await supabase.from("user_permissions").delete().eq("user_id", selectedUserId).in("permission_id", toRemove);
         if (error) throw error;
       }
-
-      // Add permissions
       if (toAdd.length > 0) {
-        const newPermissions = toAdd.map(permId => ({
-          user_id: selectedUserId,
-          permission_id: permId,
-          granted_by: currentUser.data.user.id,
-        }));
-        const { error } = await supabase
-          .from("user_permissions")
-          .insert(newPermissions);
+        const newPerms = toAdd.map(permId => ({ user_id: selectedUserId, permission_id: permId, granted_by: currentUser.data.user!.id }));
+        const { error } = await supabase.from("user_permissions").insert(newPerms);
         if (error) throw error;
       }
-
-      await logActivity({
-        actionType: "updated",
-        entityType: "Permission",
-        description: `Mengubah ${toAdd.length + toRemove.length} permission untuk pengguna`,
-        storeId: currentStore?.id,
-      });
-
+      await logActivity({ actionType: "updated", entityType: "Permission", description: `Mengubah ${toAdd.length + toRemove.length} permission untuk pengguna`, storeId: currentStore?.id });
       toast.success("Perubahan permission berhasil disimpan");
       setPendingUserChanges(new Set());
       setHasUnsavedUserChanges(false);
@@ -304,43 +379,32 @@ export default function PermissionManagement() {
       toast.info("Tidak ada perubahan untuk disimpan");
       return;
     }
-
     setSaving(true);
     try {
       const toAdd: string[] = [];
       const toRemove: string[] = [];
-
       pendingRoleChanges.forEach(permId => {
-        if (hasRolePermission(permId)) {
-          toRemove.push(permId);
-        } else {
-          toAdd.push(permId);
-        }
+        if (hasRolePerm(permId)) toRemove.push(permId);
+        else toAdd.push(permId);
       });
-
-      // Remove permissions from role_permissions
       for (const permId of toRemove) {
-        const existingPerm = rolePermissions.find(rp => rp.permission_id === permId);
-        if (existingPerm) {
-          await supabase.from("role_permissions").delete().eq("id", existingPerm.id);
+        const existing = rolePermissions.find(rp => rp.permission_id === permId);
+        if (existing) await supabase.from("role_permissions").delete().eq("id", existing.id);
+      }
+      for (const permId of toAdd) {
+        await supabase.from("role_permissions").insert({ role: selectedRole, permission_id: permId });
+      }
+
+      // Sync to users with this role
+      if (toRemove.length > 0) {
+        const { data: userRoles } = await supabase.from("user_roles").select("user_id").eq("role", selectedRole);
+        if (userRoles && userRoles.length > 0) {
+          const userIds = userRoles.map(ur => ur.user_id);
+          await supabase.from("user_permissions").delete().in("permission_id", toRemove).in("user_id", userIds);
         }
       }
 
-      // Add permissions to role_permissions
-      for (const permId of toAdd) {
-        await supabase.from("role_permissions").insert({
-          role: selectedRole,
-          permission_id: permId,
-        });
-      }
-
-      await logActivity({
-        actionType: "updated",
-        entityType: "Permission",
-        description: `Mengubah ${toAdd.length + toRemove.length} permission untuk role ${selectedRole}`,
-        storeId: currentStore?.id,
-      });
-
+      await logActivity({ actionType: "updated", entityType: "Permission", description: `Mengubah ${toAdd.length + toRemove.length} permission untuk role ${selectedRole}`, storeId: currentStore?.id });
       toast.success("Perubahan permission role berhasil disimpan");
       setPendingRoleChanges(new Set());
       setHasUnsavedRoleChanges(false);
@@ -353,329 +417,19 @@ export default function PermissionManagement() {
     }
   };
 
-  const handleTogglePermission = async (permissionId: string, permissionName: string) => {
-    if (!selectedUserId) {
-      toast.error("Pilih pengguna terlebih dahulu");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const currentUser = await supabase.auth.getUser();
-      if (!currentUser.data.user) throw new Error("User not authenticated");
-
-      const existingPermission = userPermissions.find((up) => up.permission_id === permissionId);
-
-      if (existingPermission) {
-        // Remove permission
-        const { error } = await supabase
-          .from("user_permissions")
-          .delete()
-          .eq("id", existingPermission.id);
-
-        if (error) throw error;
-
-        await logActivity({
-          actionType: "deleted",
-          entityType: "Permission",
-          entityId: existingPermission.id,
-          description: `Mencabut permission '${permissionName}' dari pengguna`,
-          storeId: currentStore?.id,
-        });
-
-        toast.success("Permission berhasil dicabut");
-      } else {
-        // Add permission
-        const { error } = await supabase
-          .from("user_permissions")
-          .insert({
-            user_id: selectedUserId,
-            permission_id: permissionId,
-            granted_by: currentUser.data.user.id,
-          });
-
-        if (error) throw error;
-
-        await logActivity({
-          actionType: "created",
-          entityType: "Permission",
-          entityId: permissionId,
-          description: `Memberikan permission '${permissionName}' ke pengguna`,
-          storeId: currentStore?.id,
-        });
-
-        toast.success("Permission berhasil diberikan");
-      }
-
-      // Refresh user permissions
-      fetchUserPermissions(selectedUserId);
-    } catch (error: any) {
-      console.error("Error toggling permission:", error);
-      toast.error("Gagal mengubah permission");
-    } finally {
-      setSaving(false);
-    }
+  const handleSelectAll = (isCheckedFn: (id: string) => boolean, toggleFn: (id: string) => void) => {
+    permissions.forEach(p => {
+      if (!isCheckedFn(p.id)) toggleFn(p.id);
+    });
   };
 
-  const handleSelectAll = async () => {
-    if (!selectedUserId) {
-      toast.error("Pilih pengguna terlebih dahulu");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const currentUser = await supabase.auth.getUser();
-      if (!currentUser.data.user) throw new Error("User not authenticated");
-
-      // Get permissions that user doesn't have yet
-      const permissionsToAdd = permissions.filter(
-        (perm) => !hasPermission(perm.id)
-      );
-
-      if (permissionsToAdd.length === 0) {
-        toast.info("Pengguna sudah memiliki semua permission");
-        return;
-      }
-
-      // Add all missing permissions
-      const newPermissions = permissionsToAdd.map((perm) => ({
-        user_id: selectedUserId,
-        permission_id: perm.id,
-        granted_by: currentUser.data.user.id,
-      }));
-
-      const { error } = await supabase
-        .from("user_permissions")
-        .insert(newPermissions);
-
-      if (error) throw error;
-
-      await logActivity({
-        actionType: "created",
-        entityType: "Permission",
-        description: `Memberikan semua permission ke pengguna`,
-      });
-
-      toast.success(`${permissionsToAdd.length} permission berhasil diberikan`);
-      fetchUserPermissions(selectedUserId);
-    } catch (error: any) {
-      console.error("Error selecting all permissions:", error);
-      toast.error("Gagal memberikan semua permission");
-    } finally {
-      setSaving(false);
-    }
+  const handleDeselectAll = (isCheckedFn: (id: string) => boolean, toggleFn: (id: string) => void) => {
+    permissions.forEach(p => {
+      if (isCheckedFn(p.id)) toggleFn(p.id);
+    });
   };
 
-  const handleDeselectAll = async () => {
-    if (!selectedUserId) {
-      toast.error("Pilih pengguna terlebih dahulu");
-      return;
-    }
-
-    if (userPermissions.length === 0) {
-      toast.info("Pengguna tidak memiliki permission");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("user_permissions")
-        .delete()
-        .eq("user_id", selectedUserId);
-
-      if (error) throw error;
-
-      await logActivity({
-        actionType: "deleted",
-        entityType: "Permission",
-        description: `Mencabut semua permission dari pengguna`,
-      });
-
-      toast.success("Semua permission berhasil dicabut");
-      fetchUserPermissions(selectedUserId);
-    } catch (error: any) {
-      console.error("Error deselecting all permissions:", error);
-      toast.error("Gagal mencabut semua permission");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleToggleRolePermission = async (permissionId: string, permissionName: string) => {
-    if (!selectedRole) {
-      toast.error("Pilih role terlebih dahulu");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const existingPermission = rolePermissions.find((rp) => rp.permission_id === permissionId);
-
-      if (existingPermission) {
-        // Remove permission from role_permissions table
-        const { error } = await supabase
-          .from("role_permissions")
-          .delete()
-          .eq("id", existingPermission.id);
-
-        if (error) throw error;
-
-        // Also remove from all existing users with this role
-        const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", selectedRole);
-
-        if (userRoles && userRoles.length > 0) {
-          const userIds = userRoles.map(ur => ur.user_id);
-          await supabase
-            .from("user_permissions")
-            .delete()
-            .eq("permission_id", permissionId)
-            .in("user_id", userIds);
-        }
-
-        await logActivity({
-          actionType: "deleted",
-          entityType: "Permission",
-          entityId: existingPermission.id,
-          description: `Mencabut permission '${permissionName}' dari role ${selectedRole}`,
-        });
-
-        toast.success(`Permission dicabut dari role ${selectedRole}`);
-      } else {
-        // Add permission to role_permissions table
-        const { error: insertError } = await supabase
-          .from("role_permissions")
-          .insert({
-            role: selectedRole,
-            permission_id: permissionId,
-          });
-
-        if (insertError) throw insertError;
-
-        // Trigger will automatically assign to all users with this role
-        await logActivity({
-          actionType: "created",
-          entityType: "Permission",
-          entityId: permissionId,
-          description: `Memberikan permission '${permissionName}' ke role ${selectedRole}`,
-        });
-
-        toast.success(`Permission diberikan ke role ${selectedRole}`);
-      }
-
-      // Refresh role permissions
-      fetchRolePermissions(selectedRole);
-    } catch (error: any) {
-      console.error("Error toggling role permission:", error);
-      toast.error("Gagal mengubah permission untuk role");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Select all role permissions
-  const handleRoleSelectAll = async () => {
-    if (!selectedRole) {
-      toast.error("Pilih role terlebih dahulu");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Get permissions that role doesn't have yet
-      const permissionsToAdd = permissions.filter(
-        (perm) => !hasRolePermission(perm.id)
-      );
-
-      if (permissionsToAdd.length === 0) {
-        toast.info("Role sudah memiliki semua permission");
-        setSaving(false);
-        return;
-      }
-
-      // Add all missing permissions to role_permissions table
-      for (const perm of permissionsToAdd) {
-        await supabase.from("role_permissions").insert({
-          role: selectedRole,
-          permission_id: perm.id,
-        });
-      }
-
-      await logActivity({
-        actionType: "created",
-        entityType: "Permission",
-        description: `Memberikan semua permission ke role ${selectedRole}`,
-      });
-
-      toast.success(`${permissionsToAdd.length} permission berhasil diberikan ke role ${selectedRole}`);
-      fetchRolePermissions(selectedRole);
-    } catch (error: any) {
-      console.error("Error selecting all role permissions:", error);
-      toast.error("Gagal memberikan semua permission");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Deselect all role permissions
-  const handleRoleDeselectAll = async () => {
-    if (!selectedRole) {
-      toast.error("Pilih role terlebih dahulu");
-      return;
-    }
-
-    if (rolePermissions.length === 0) {
-      toast.info("Role tidak memiliki permission");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Remove all permissions from role_permissions table
-      const { error } = await supabase
-        .from("role_permissions")
-        .delete()
-        .eq("role", selectedRole);
-
-      if (error) throw error;
-
-      // Also remove from all existing users with this role
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", selectedRole);
-
-      if (userRoles && userRoles.length > 0) {
-        const userIds = userRoles.map(ur => ur.user_id);
-        const permIds = rolePermissions.map(rp => rp.permission_id);
-        await supabase
-          .from("user_permissions")
-          .delete()
-          .in("permission_id", permIds)
-          .in("user_id", userIds);
-      }
-
-      await logActivity({
-        actionType: "deleted",
-        entityType: "Permission",
-        description: `Mencabut semua permission dari role ${selectedRole}`,
-      });
-
-      toast.success(`Semua permission berhasil dicabut dari role ${selectedRole}`);
-      fetchRolePermissions(selectedRole);
-    } catch (error: any) {
-      console.error("Error deselecting all role permissions:", error);
-      toast.error("Gagal mencabut semua permission");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const selectedUser = users.find((u) => u.id === selectedUserId);
+  const selectedUser = users.find(u => u.id === selectedUserId);
 
   if (loading) {
     return (
@@ -685,154 +439,170 @@ export default function PermissionManagement() {
     );
   }
 
+  // Render the matrix table for a category
+  const renderMatrixTable = (
+    cat: MatrixCategory,
+    isCheckedFn: (id: string) => boolean,
+    toggleFn: (id: string) => void
+  ) => {
+    const items = cat.items || [];
+    const hasActions = items.some(item => Object.keys(item.actions).length > 0);
+    const catPermIds = getCategoryPermissionIds(cat);
+    const allCatChecked = catPermIds.length > 0 && catPermIds.every(id => isCheckedFn(id));
+    const someCatChecked = catPermIds.some(id => isCheckedFn(id));
+
+    return (
+      <div key={cat.label} className="border rounded-lg overflow-hidden">
+        {/* Category header with master checkbox */}
+        <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
+          <Checkbox
+            checked={allCatChecked}
+            // @ts-ignore
+            indeterminate={someCatChecked && !allCatChecked}
+            disabled={saving || catPermIds.length === 0}
+            onCheckedChange={() => toggleAllInCategory(catPermIds, isCheckedFn, toggleFn)}
+          />
+          <span className="font-semibold text-sm">{cat.label}</span>
+        </div>
+
+        {hasActions && items.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left px-3 py-2 font-medium w-[40%]"></th>
+                  {ACTION_COLUMNS.map(col => {
+                    const colIds = getColumnPermissionIds(cat, col);
+                    if (colIds.length === 0) return <th key={col} className="text-center px-2 py-2 font-medium min-w-[70px]">{col}</th>;
+                    const allColChecked = colIds.every(id => isCheckedFn(id));
+                    return (
+                      <th key={col} className="text-center px-2 py-2 font-medium min-w-[70px]">
+                        <div className="flex items-center justify-center gap-1">
+                          <span>{col}</span>
+                          <Checkbox
+                            checked={allColChecked}
+                            disabled={saving}
+                            className="h-3.5 w-3.5"
+                            onCheckedChange={() => toggleColumn(colIds, isCheckedFn, toggleFn)}
+                          />
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => (
+                  <tr key={item.label} className={idx % 2 === 0 ? "" : "bg-muted/20"}>
+                    <td className="px-3 py-2 text-muted-foreground">{item.label}</td>
+                    {ACTION_COLUMNS.map(col => {
+                      const permName = item.actions[col];
+                      if (!permName) return <td key={col} className="text-center px-2 py-2"></td>;
+                      const permId = permissionNameToId.get(permName);
+                      if (!permId) return <td key={col} className="text-center px-2 py-2"></td>;
+                      return (
+                        <td key={col} className="text-center px-2 py-2">
+                          <Checkbox
+                            checked={isCheckedFn(permId)}
+                            disabled={saving}
+                            onCheckedChange={() => toggleFn(permId)}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Standalone permissions */}
+        {cat.standalone && cat.standalone.length > 0 && (
+          <div className="border-t">
+            {cat.standalone.map(s => {
+              const permId = permissionNameToId.get(s.permissionName);
+              if (!permId) return null;
+              return (
+                <div key={s.permissionName} className="flex items-center gap-2 px-4 py-2 hover:bg-muted/30">
+                  <Checkbox
+                    checked={isCheckedFn(permId)}
+                    disabled={saving}
+                    onCheckedChange={() => toggleFn(permId)}
+                  />
+                  <span className="text-sm text-muted-foreground">{s.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPermissionContent = (
+    mode: 'user' | 'role',
+    isCheckedFn: (id: string) => boolean,
+    toggleFn: (id: string) => void,
+    saveFn: () => Promise<void>,
+    hasUnsaved: boolean
+  ) => (
+    <div className="space-y-4">
+      {/* Bulk actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => handleSelectAll(isCheckedFn, toggleFn)} disabled={saving}>
+            Pilih Semua
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handleDeselectAll(isCheckedFn, toggleFn)} disabled={saving}>
+            Hapus Semua
+          </Button>
+        </div>
+        <Button onClick={saveFn} disabled={saving || !hasUnsaved} size="sm">
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Simpan
+        </Button>
+      </div>
+
+      {/* Matrix tables */}
+      <div className="space-y-4">
+        {permissionMatrix.map(cat => renderMatrixTable(cat, isCheckedFn, toggleFn))}
+      </div>
+    </div>
+  );
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5" />
-          <CardTitle>Manajemen Permission</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            <CardTitle>Manajemen Permission</CardTitle>
+          </div>
+          <Button variant="ghost" size="icon" onClick={fetchData} disabled={loading}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
-        <CardDescription>
-          Atur hak akses pengguna secara detail
-        </CardDescription>
+        <CardDescription>Atur hak akses pengguna secara detail</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="user" className="space-y-6">
+        <Tabs defaultValue="role" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="user" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Per Pengguna
-            </TabsTrigger>
             <TabsTrigger value="role" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Per Role
             </TabsTrigger>
+            <TabsTrigger value="user" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Per Pengguna
+            </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="user" className="space-y-4">
-            <div className="space-y-2">
-              <Label>Pilih Pengguna</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih pengguna..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedUserId && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b">
-                  <h3 className="font-semibold">
-                    Permissions untuk {selectedUser?.name}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {userPermissions.length} dari {permissions.length} permission aktif
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleSelectAll}
-                      disabled={saving || userPermissions.length === permissions.length}
-                    >
-                      Pilih Semua
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleDeselectAll}
-                      disabled={saving || userPermissions.length === 0}
-                    >
-                      Hapus Semua
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {Object.entries(getPermissionsByCategory()).map(([category, categoryPerms]) => (
-                    <div key={category} className="space-y-3">
-                      <h4 className="font-medium text-sm text-primary border-b pb-2 flex items-center gap-2">
-                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-semibold">
-                          {category}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          ({categoryPerms.filter(p => isUserPermissionChecked(p.id)).length}/{categoryPerms.length})
-                        </span>
-                      </h4>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {categoryPerms.map((permission) => {
-                          const isChecked = isUserPermissionChecked(permission.id);
-                          const hasChanged = pendingUserChanges.has(permission.id);
-                          return (
-                            <div
-                              key={permission.id}
-                              className={`flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors ${hasChanged ? 'border-primary bg-primary/5' : ''}`}
-                            >
-                              <Checkbox
-                                id={permission.id}
-                                checked={isChecked}
-                                disabled={saving}
-                                onCheckedChange={() => toggleUserPermissionLocal(permission.id)}
-                              />
-                              <div className="flex-1 space-y-1">
-                                <Label
-                                  htmlFor={permission.id}
-                                  className="cursor-pointer font-medium text-sm"
-                                >
-                                  {permission.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  {permission.description}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* OK Button for User Permissions */}
-                <div className="flex justify-end pt-4 border-t">
-                  <Button
-                    onClick={handleSaveUserPermissions}
-                    disabled={saving || !hasUnsavedUserChanges}
-                    className="min-w-[120px]"
-                  >
-                    {saving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    OK - Simpan
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {!selectedUserId && (
-              <div className="text-center py-8 text-muted-foreground">
-                Pilih pengguna untuk mengelola permissions
-              </div>
-            )}
-          </TabsContent>
 
           <TabsContent value="role" className="space-y-4">
             <div className="space-y-2">
               <Label>Pilih Role</Label>
-              <Select 
-                value={selectedRole} 
-                onValueChange={(value) => setSelectedRole(value as 'admin' | 'leader' | 'user' | '')}
-              >
-                <SelectTrigger>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as any)}>
+                <SelectTrigger className="max-w-xs">
                   <SelectValue placeholder="Pilih role..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -842,108 +612,43 @@ export default function PermissionManagement() {
                 </SelectContent>
               </Select>
             </div>
-
-            {selectedRole && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b">
-                  <div>
-                    <h3 className="font-semibold capitalize">
-                      Permissions untuk role {selectedRole}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Permissions ini akan otomatis diberikan ke semua user baru dengan role {selectedRole}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {rolePermissions.length} dari {permissions.length} permission aktif
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRoleSelectAll}
-                      disabled={saving || rolePermissions.length === permissions.length}
-                    >
-                      Pilih Semua
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRoleDeselectAll}
-                      disabled={saving || rolePermissions.length === 0}
-                    >
-                      Hapus Semua
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {Object.entries(getPermissionsByCategory()).map(([category, categoryPerms]) => (
-                    <div key={category} className="space-y-3">
-                      <h4 className="font-medium text-sm text-primary border-b pb-2 flex items-center gap-2">
-                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-semibold">
-                          {category}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          ({categoryPerms.filter(p => isRolePermissionChecked(p.id)).length}/{categoryPerms.length})
-                        </span>
-                      </h4>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {categoryPerms.map((permission) => {
-                          const isChecked = isRolePermissionChecked(permission.id);
-                          const hasChanged = pendingRoleChanges.has(permission.id);
-                          return (
-                            <div
-                              key={permission.id}
-                              className={`flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors ${hasChanged ? 'border-primary bg-primary/5' : ''}`}
-                            >
-                              <Checkbox
-                                id={`role-${permission.id}`}
-                                checked={isChecked}
-                                disabled={saving}
-                                onCheckedChange={() => toggleRolePermissionLocal(permission.id)}
-                              />
-                              <div className="flex-1 space-y-1">
-                                <Label
-                                  htmlFor={`role-${permission.id}`}
-                                  className="cursor-pointer font-medium text-sm"
-                                >
-                                  {permission.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  {permission.description}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* OK Button for Role Permissions */}
-                <div className="flex justify-end pt-4 border-t">
-                  <Button
-                    onClick={handleSaveRolePermissions}
-                    disabled={saving || !hasUnsavedRoleChanges}
-                    className="min-w-[120px]"
-                  >
-                    {saving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    OK - Simpan
-                  </Button>
-                </div>
-              </div>
+            {selectedRole ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Permissions ini akan otomatis diberikan ke semua user baru dengan role <strong className="capitalize">{selectedRole}</strong>
+                </p>
+                {renderPermissionContent('role', isRoleChecked, toggleRoleLocal, handleSaveRolePermissions, hasUnsavedRoleChanges)}
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">Pilih role untuk mengelola permissions</div>
             )}
+          </TabsContent>
 
-            {!selectedRole && (
-              <div className="text-center py-8 text-muted-foreground">
-                Pilih role untuk mengelola permissions
-              </div>
+          <TabsContent value="user" className="space-y-4">
+            <div className="space-y-2">
+              <Label>Pilih Pengguna</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="max-w-xs">
+                  <SelectValue placeholder="Pilih pengguna..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedUserId ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Permissions untuk <strong>{selectedUser?.name}</strong> — {userPermissions.length} dari {permissions.length} aktif
+                </p>
+                {renderPermissionContent('user', isUserChecked, toggleUserLocal, handleSaveUserPermissions, hasUnsavedUserChanges)}
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">Pilih pengguna untuk mengelola permissions</div>
             )}
           </TabsContent>
         </Tabs>
