@@ -638,11 +638,29 @@ export default function Dashboard() {
                 <ActivityLog />
               </TabsContent>
 
-              <TabsContent value="users" className="mt-6 space-y-6">
-                <UserManagement />
-                {userRole === "admin" && (
-                  <PermissionManagement />
-                )}
+              <TabsContent value="users" className="mt-6">
+                <Tabs defaultValue="user-management" className="space-y-4">
+                  <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
+                    <TabsTrigger value="user-management" className="flex items-center gap-2">
+                      <UserCog className="h-4 w-4" />
+                      Manajemen Pengguna
+                    </TabsTrigger>
+                    {userRole === "admin" && (
+                      <TabsTrigger value="permission-management" className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Manajemen Permission
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                  <TabsContent value="user-management">
+                    <UserManagement />
+                  </TabsContent>
+                  {userRole === "admin" && (
+                    <TabsContent value="permission-management">
+                      <PermissionManagement />
+                    </TabsContent>
+                  )}
+                </Tabs>
               </TabsContent>
             </>
           )}
