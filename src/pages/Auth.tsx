@@ -336,6 +336,8 @@ export default function Auth() {
             </svg>
             Masuk dengan Google
           </Button>
+            </>
+          )}
 
           <div className="mt-4 text-center text-sm">
             <button
