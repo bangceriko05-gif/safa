@@ -675,7 +675,7 @@ export default function Dashboard() {
             <Reports />
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-6">
+          <TabsContent value="settings" forceMount className={`mt-6 ${activeTab !== "settings" ? "hidden" : ""}`}>
             <SettingsPage userRole={userRole} />
           </TabsContent>
 
