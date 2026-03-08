@@ -692,6 +692,22 @@ export default function SalesReport() {
 
             {/* Sumber Penjualan */}
             <TabsContent value="source" className="space-y-4">
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!currentStore) return;
+                    const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
+                    exportSalesSourceTab(getExportData(), currentStore.name, dateRangeStr);
+                    toast.success("Laporan Sumber berhasil di-export!");
+                  }}
+                  disabled={loading || activeBookings.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Excel
+                </Button>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
