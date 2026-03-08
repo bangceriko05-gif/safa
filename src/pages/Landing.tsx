@@ -424,6 +424,7 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+      <DemoRequestDialog open={showDemoDialog} onOpenChange={setShowDemoDialog} />
     </div>
   );
 }
