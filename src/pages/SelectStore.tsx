@@ -130,14 +130,6 @@ export default function SelectStore() {
     
     setCurrentStore(store);
     
-    // Log login activity for this specific store
-    await logActivity({
-      actionType: 'login',
-      entityType: 'System',
-      description: `Login ke ${store.name}`,
-      storeId: store.id,
-    });
-    
     navigate("/");
   };
 
