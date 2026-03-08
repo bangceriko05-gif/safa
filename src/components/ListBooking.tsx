@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import BookingDetailPopup from "./BookingDetailPopup";
 import CancelledBookings from "./CancelledBookings";
 
@@ -68,6 +69,7 @@ interface BookingWithRoom {
 }
 
 export default function ListBooking({ userRole, onEditBooking, onAddBooking }: ListBookingProps) {
+  const isMobile = useIsMobile();
   const { currentStore } = useStore();
   const [activeSubTab, setActiveSubTab] = useState("active");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
@@ -551,60 +553,35 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
             <CardContent className="space-y-4">
         {/* Date Filter */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateFilterChange("today")}
-              className={cn(
-                dateFilter === "today" && "bg-primary text-primary-foreground"
-              )}
-            >
-              Hari Ini
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateFilterChange("yesterday")}
-              className={cn(
-                dateFilter === "yesterday" && "bg-primary text-primary-foreground"
-              )}
-            >
-              Kemarin
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateFilterChange("thisMonth")}
-              className={cn(
-                dateFilter === "thisMonth" && "bg-primary text-primary-foreground"
-              )}
-            >
-              Bulan Ini
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateFilterChange("lastMonth")}
-              className={cn(
-                dateFilter === "lastMonth" && "bg-primary text-primary-foreground"
-              )}
-            >
-              Bulan Lalu
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateFilterChange("allTime")}
-              className={cn(
-                "gap-1",
-                dateFilter === "allTime" && "bg-primary text-primary-foreground"
-              )}
-            >
-              <Infinity className="h-3 w-3" />
-              All Time
-            </Button>
-          </div>
+          {isMobile ? (
+            <Select value={dateFilter} onValueChange={(v) => {
+              if (v === "custom") {
+                handleDateFilterChange("custom");
+              } else {
+                handleDateFilterChange(v as any);
+              }
+            }}>
+              <SelectTrigger className="w-[160px]">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hari Ini</SelectItem>
+                <SelectItem value="yesterday">Kemarin</SelectItem>
+                <SelectItem value="thisMonth">Bulan Ini</SelectItem>
+                <SelectItem value="lastMonth">Bulan Lalu</SelectItem>
+                <SelectItem value="allTime">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("today")} className={cn(dateFilter === "today" && "bg-primary text-primary-foreground")}>Hari Ini</Button>
+              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")} className={cn(dateFilter === "yesterday" && "bg-primary text-primary-foreground")}>Kemarin</Button>
+              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")} className={cn(dateFilter === "thisMonth" && "bg-primary text-primary-foreground")}>Bulan Ini</Button>
+              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("lastMonth")} className={cn(dateFilter === "lastMonth" && "bg-primary text-primary-foreground")}>Bulan Lalu</Button>
+              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("allTime")} className={cn("gap-1", dateFilter === "allTime" && "bg-primary text-primary-foreground")}><Infinity className="h-3 w-3" />All Time</Button>
+            </div>
+          )}
           
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
@@ -639,7 +616,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
                 onSelect={(range) => setPendingDateRange(range)}
                 defaultMonth={pendingDateRange?.from || new Date()}
                 initialFocus
-                numberOfMonths={2}
+                numberOfMonths={isMobile ? 1 : 2}
                 locale={idLocale}
                 className="pointer-events-auto"
               />
