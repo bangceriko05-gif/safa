@@ -330,55 +330,6 @@ export default function PaymentMethodReport() {
             </Card>
           )}
 
-          {/* Detail Table */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {selectedMethod ? `Rincian: ${selectedMethod}` : 'Semua Transaksi'}
-              </CardTitle>
-              {selectedMethod && (
-                <Button variant="ghost" size="sm" onClick={() => setSelectedMethod(null)}>
-                  Tampilkan Semua
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {filteredDetails.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Tidak ada data</p>
-              ) : (
-                <div className="max-h-96 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>BID</TableHead>
-                        <TableHead>Tipe</TableHead>
-                        <TableHead>Pelanggan</TableHead>
-                        <TableHead>Metode</TableHead>
-                        <TableHead>Tanggal</TableHead>
-                        <TableHead className="text-right">Jumlah</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredDetails.map((d) => (
-                        <TableRow key={d.id}>
-                          <TableCell className="font-mono text-xs">{d.bid || '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant={d.type === 'booking' ? 'default' : 'secondary'} className="text-xs">
-                              {d.type === 'booking' ? 'Booking' : 'Pemasukan'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{d.customer_name}</TableCell>
-                          <TableCell>{d.payment_method}</TableCell>
-                          <TableCell>{format(new Date(d.date), "d MMM yyyy", { locale: localeId })}</TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(d.amount)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </>
       )}
     </div>
