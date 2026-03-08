@@ -625,6 +625,7 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          hotel_name: string
           id: string
           room_count: string
           whatsapp: string
@@ -633,6 +634,7 @@ export type Database = {
           created_at?: string
           email: string
           full_name: string
+          hotel_name?: string
           id?: string
           room_count: string
           whatsapp: string
@@ -641,6 +643,7 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string
+          hotel_name?: string
           id?: string
           room_count?: string
           whatsapp?: string

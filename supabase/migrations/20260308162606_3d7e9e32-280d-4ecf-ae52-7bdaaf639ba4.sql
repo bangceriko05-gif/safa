@@ -1,0 +1,1 @@
+ALTER TABLE public.demo_requests ADD COLUMN IF NOT EXISTS hotel_name text NOT NULL DEFAULT '';
