@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
 import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
