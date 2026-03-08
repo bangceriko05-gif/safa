@@ -23,7 +23,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ChevronDown, ChevronRight, ToggleRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ChevronDown, ChevronRight, ToggleRight, LayoutDashboard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { logActivity } from "@/utils/activityLogger";
@@ -49,6 +50,7 @@ interface StoreStats {
 }
 
 export default function SuperAdminStoreManagement() {
+  const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [storeStats, setStoreStats] = useState<Record<string, StoreStats>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -468,6 +470,17 @@ export default function SuperAdminStoreManagement() {
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              localStorage.setItem("current_store_id", store.id);
+                              navigate("/");
+                            }}
+                            title="Buka Dashboard PMS"
+                          >
+                            <LayoutDashboard className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
