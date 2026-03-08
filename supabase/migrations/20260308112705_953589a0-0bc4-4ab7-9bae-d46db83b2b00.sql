@@ -1,0 +1,1 @@
+ALTER TABLE public.landing_page_settings ADD COLUMN element_styles jsonb DEFAULT '{}'::jsonb;
