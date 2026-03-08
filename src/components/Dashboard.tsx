@@ -699,7 +699,7 @@ export default function Dashboard() {
                 <ActivityLog />
               </TabsContent>
 
-              <TabsContent value="users" className="mt-6">
+              <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
                 <Tabs defaultValue="user-management" className="space-y-4">
                   <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
                     <TabsTrigger value="user-management" className="flex items-center gap-2">
