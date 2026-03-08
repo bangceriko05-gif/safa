@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -372,6 +372,46 @@ function PositionPanel({ field, style, onStyleChange, onClose }: {
     </div>
   );
 }
+/* ─── Editor Context ─── */
+interface EditorContextType {
+  mode: "edit" | "drag" | null;
+  selectedField: string | null;
+  elementStyles: ElementStyles;
+  getElementStyle: (field: string) => React.CSSProperties;
+  onUpdate: (field: string, value: any) => void;
+  onElementClick: (field: string, e: React.MouseEvent) => void;
+  onContextMenu: (field: string, e: React.MouseEvent) => void;
+}
+const EditorContext = createContext<EditorContextType | null>(null);
+
+/* ─── Editable Text Element (stable component) ─── */
+function EditableText({ field, children, className = "", as: Tag = "span" }: {
+  field: string; children: React.ReactNode; className?: string; as?: keyof JSX.IntrinsicElements;
+}) {
+  const ctx = useContext(EditorContext)!;
+  const El = Tag as any;
+  const isEdit = ctx.mode === "edit";
+  const isDrag = ctx.mode === "drag";
+  const isSelected = ctx.selectedField === field;
+  const hasDragOffset = ctx.elementStyles[field]?.offsetX || ctx.elementStyles[field]?.offsetY;
+
+  return (
+    <El
+      contentEditable={isEdit}
+      suppressContentEditableWarning
+      className={`${className} outline-none rounded px-0.5 -mx-0.5 transition-all ${
+        isEdit ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5"
+          : `cursor-pointer hover:ring-2 hover:ring-accent/50 hover:bg-accent/10 ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`
+      } ${hasDragOffset ? "ring-1 ring-dashed ring-accent/40" : ""}`}
+      style={ctx.getElementStyle(field)}
+      onBlur={isEdit ? (e: React.FocusEvent<HTMLElement>) => ctx.onUpdate(field, e.currentTarget.textContent || "") : undefined}
+      onClick={isDrag ? (e: React.MouseEvent) => ctx.onElementClick(field, e) : undefined}
+      onContextMenu={(e: React.MouseEvent) => ctx.onContextMenu(field, e)}
+    >
+      {children}
+    </El>
+  );
+}
 
 /* ─── Visual Editor Preview ─── */
 function LandingPreview({
@@ -406,31 +446,9 @@ function LandingPreview({
     if (mode === "drag") { e.preventDefault(); e.stopPropagation(); setSelectedField(field); }
   };
 
-  const EditableText = ({ field, children, className = "", as: Tag = "span" }: {
-    field: string; children: React.ReactNode; className?: string; as?: keyof JSX.IntrinsicElements;
-  }) => {
-    const El = Tag as any;
-    const isEdit = mode === "edit";
-    const isDrag = mode === "drag";
-    const isSelected = selectedField === field;
-    const hasDragOffset = elementStyles[field]?.offsetX || elementStyles[field]?.offsetY;
-
-    return (
-      <El
-        contentEditable={isEdit}
-        suppressContentEditableWarning
-        className={`${className} outline-none rounded px-0.5 -mx-0.5 transition-all ${
-          isEdit ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5"
-            : `cursor-pointer hover:ring-2 hover:ring-accent/50 hover:bg-accent/10 ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`
-        } ${hasDragOffset ? "ring-1 ring-dashed ring-accent/40" : ""}`}
-        style={getElementStyle(field)}
-        onBlur={isEdit ? (e: React.FocusEvent<HTMLElement>) => onUpdate(field, e.currentTarget.textContent || "") : undefined}
-        onClick={isDrag ? (e: React.MouseEvent) => handleElementClick(field, e) : undefined}
-        onContextMenu={(e: React.MouseEvent) => handleContextMenu(field, e)}
-      >
-        {children}
-      </El>
-    );
+  const editorCtx: EditorContextType = {
+    mode, selectedField, elementStyles, getElementStyle,
+    onUpdate, onElementClick: handleElementClick, onContextMenu: handleContextMenu,
   };
 
   // Feature item helpers
@@ -464,6 +482,7 @@ function LandingPreview({
   };
 
   return (
+    <EditorContext.Provider value={editorCtx}>
     <div ref={previewRef} className="relative">
       {/* Mode Toggle Bar */}
       <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg border flex-wrap">
@@ -972,5 +991,6 @@ function LandingPreview({
         </div>
       </div>
     </div>
+    </EditorContext.Provider>
   );
 }
