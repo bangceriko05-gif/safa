@@ -594,7 +594,7 @@ export default function Dashboard() {
             );
           })()}
 
-          <TabsContent value="bookings" className="space-y-6 mt-6">
+          <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
             {/* Room Summary - shown for all store types */}
             <RoomSummary selectedDate={selectedDate} />
 
@@ -649,7 +649,7 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="transactions" className="mt-6">
+          <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
             <TransactionManagement 
               userRole={userRole} 
               onEditBooking={handleEditBooking} 
@@ -667,19 +667,19 @@ export default function Dashboard() {
             />
           </TabsContent>
 
-          <TabsContent value="customers" className="mt-6">
+          <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
             <CustomerManagement />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
             <Reports />
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-6">
+          <TabsContent value="settings" forceMount className={`mt-6 ${activeTab !== "settings" ? "hidden" : ""}`}>
             <SettingsPage userRole={userRole} />
           </TabsContent>
 
-          <TabsContent value="rooms" className="mt-6">
+          <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
             {hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
               <RoomManagement />
             ) : (
@@ -688,18 +688,18 @@ export default function Dashboard() {
           </TabsContent>
 
           {isFeatureEnabled("booking_requests") && (
-            <TabsContent value="booking-requests" className="mt-6">
+            <TabsContent value="booking-requests" forceMount className={`mt-6 ${activeTab !== "booking-requests" ? "hidden" : ""}`}>
               <BookingRequestsManagement />
             </TabsContent>
           )}
 
           {(userRole === "admin" || userRole === "leader") && (
             <>
-              <TabsContent value="activity" className="mt-6">
+              <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
                 <ActivityLog />
               </TabsContent>
 
-              <TabsContent value="users" className="mt-6">
+              <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
                 <Tabs defaultValue="user-management" className="space-y-4">
                   <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
                     <TabsTrigger value="user-management" className="flex items-center gap-2">
