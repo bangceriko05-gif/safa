@@ -1,0 +1,23 @@
+
+ALTER TABLE public.landing_page_settings
+  ADD COLUMN IF NOT EXISTS navbar_brand text DEFAULT 'ANKA PMS',
+  ADD COLUMN IF NOT EXISTS features_tagline text DEFAULT 'Fitur Unggulan',
+  ADD COLUMN IF NOT EXISTS features_title text DEFAULT 'Semua yang Anda Butuhkan',
+  ADD COLUMN IF NOT EXISTS features_description text DEFAULT 'ANKA PMS dilengkapi fitur lengkap untuk mengelola operasional properti Anda dari A sampai Z.',
+  ADD COLUMN IF NOT EXISTS features_items jsonb DEFAULT '[{"title":"Manajemen Booking","description":"Kelola reservasi kamar secara real-time dengan kalender interaktif dan notifikasi otomatis."},{"title":"Multi Outlet","description":"Satu dashboard untuk mengelola banyak properti. Pantau semua cabang dari satu tempat."},{"title":"Laporan Lengkap","description":"Laporan penjualan, okupansi, keuangan, dan performa karyawan yang komprehensif."},{"title":"Manajemen Transaksi","description":"Catat pemasukan, pengeluaran, dan kelola metode pembayaran dengan mudah."},{"title":"Manajemen Pelanggan","description":"Database pelanggan terintegrasi dengan riwayat booking dan data identitas."},{"title":"Keamanan & Hak Akses","description":"Sistem role & permission granular untuk mengontrol akses setiap pengguna."}]'::jsonb,
+  ADD COLUMN IF NOT EXISTS benefits_tagline text DEFAULT 'Kenapa ANKA PMS?',
+  ADD COLUMN IF NOT EXISTS benefits_title text DEFAULT 'Tingkatkan Efisiensi Operasional Anda',
+  ADD COLUMN IF NOT EXISTS benefits_items jsonb DEFAULT '["Booking online terintegrasi WhatsApp","Dashboard real-time multi cabang","Sistem deposit & check-in/out digital","Cetak struk & laporan otomatis","Manajemen produk & inventori","Akses dari perangkat apapun"]'::jsonb,
+  ADD COLUMN IF NOT EXISTS stats_properties_label text DEFAULT 'Properti telah menggunakan ANKA PMS',
+  ADD COLUMN IF NOT EXISTS btn_hero_primary text DEFAULT 'Coba Gratis',
+  ADD COLUMN IF NOT EXISTS btn_hero_secondary text DEFAULT 'Jadwalkan Demo',
+  ADD COLUMN IF NOT EXISTS btn_benefits text DEFAULT 'Mulai Sekarang',
+  ADD COLUMN IF NOT EXISTS btn_cta_primary text DEFAULT 'Daftar Gratis',
+  ADD COLUMN IF NOT EXISTS btn_cta_secondary text DEFAULT 'Hubungi Kami',
+  ADD COLUMN IF NOT EXISTS navbar_menu_features text DEFAULT 'Fitur',
+  ADD COLUMN IF NOT EXISTS navbar_menu_benefits text DEFAULT 'Keunggulan',
+  ADD COLUMN IF NOT EXISTS navbar_menu_contact text DEFAULT 'Kontak',
+  ADD COLUMN IF NOT EXISTS navbar_btn_login text DEFAULT 'Masuk',
+  ADD COLUMN IF NOT EXISTS footer_menu_title text DEFAULT 'Menu',
+  ADD COLUMN IF NOT EXISTS footer_contact_title text DEFAULT 'Kontak',
+  ADD COLUMN IF NOT EXISTS copyright_text text DEFAULT 'ANKA PMS. All rights reserved.';
