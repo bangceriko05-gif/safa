@@ -497,6 +497,11 @@ export default function Dashboard() {
                     <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
                   </SelectItem>
                 )}
+                {isFeatureEnabled("booking_requests") && (
+                  <SelectItem value="booking-requests">
+                    <span className="flex items-center gap-2"><Inbox className="h-4 w-4" /> Booking Request</span>
+                  </SelectItem>
+                )}
                 {(userRole === "admin" || userRole === "leader") && (
                   <>
                     {isFeatureEnabled("activity_log") && (
