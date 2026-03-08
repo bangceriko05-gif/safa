@@ -683,15 +683,34 @@ function LandingPreview({
               {data.features_items.map((f, idx) => {
                 const Icon = FEATURE_ICONS[idx % FEATURE_ICONS.length];
                 return (
-                  <div key={idx} className="bg-card rounded-lg border-0 shadow-sm p-3 space-y-2">
+                  <div key={idx} className="bg-card rounded-lg border-0 shadow-sm p-3 space-y-2 relative group">
+                    {mode === "edit" && (
+                      <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeFeatureItem(idx)}><Trash2 className="h-3 w-3" /></Button>
+                    )}
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Icon className="h-4 w-4 text-primary" />
                     </div>
-                    <h4 className="text-xs font-semibold text-foreground">{f.title}</h4>
-                    <p className="text-[10px] text-muted-foreground">{f.description}</p>
+                    <h4
+                      contentEditable={mode === "edit"}
+                      suppressContentEditableWarning
+                      className={`text-xs font-semibold text-foreground outline-none rounded px-0.5 -mx-0.5 ${mode === "edit" ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5" : ""}`}
+                      onBlur={mode === "edit" ? (e) => updateFeatureItem(idx, "title", e.currentTarget.textContent || "") : undefined}
+                    >{f.title}</h4>
+                    <p
+                      contentEditable={mode === "edit"}
+                      suppressContentEditableWarning
+                      className={`text-[10px] text-muted-foreground outline-none rounded px-0.5 -mx-0.5 ${mode === "edit" ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5" : ""}`}
+                      onBlur={mode === "edit" ? (e) => updateFeatureItem(idx, "description", e.currentTarget.textContent || "") : undefined}
+                    >{f.description}</p>
                   </div>
                 );
               })}
+              {mode === "edit" && (
+                <button onClick={addFeatureItem} className="bg-card rounded-lg border-2 border-dashed border-muted-foreground/20 p-3 flex flex-col items-center justify-center gap-1 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                  <Plus className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Tambah Fitur</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
