@@ -554,7 +554,7 @@ function LandingPreview({
                 className="h-7 text-[10px] flex-1 gap-1"
                 onClick={() => {
                   const current = elementStyles.hero_image?.scaleX;
-                  updateElementStyle("hero_image", { scaleX: current === -1 ? undefined : -1 });
+                  onStyleUpdate("hero_image", { scaleX: current === -1 ? undefined : -1 });
                 }}
               >
                 ↔ Mirror Horizontal
