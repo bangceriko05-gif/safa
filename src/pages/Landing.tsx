@@ -283,7 +283,6 @@ export default function Landing() {
               className="w-full max-w-md md:max-w-lg drop-shadow-xl"
               style={{ transform: elementStyles.hero_image?.scaleX === -1 ? 'scaleX(-1)' : undefined }}
             />
-            />
           </div>
         </div>
       </section>
