@@ -245,7 +245,7 @@ export default function Landing() {
             <Button variant="ghost" onClick={() => navigate("/auth")}>
               {settings.navbar_btn_login}
             </Button>
-            <Button onClick={() => navigate("/auth")}>
+            <Button onClick={() => setShowDemoDialog(true)}>
               {settings.btn_hero_primary}
             </Button>
           </div>
