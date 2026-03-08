@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import heroIllustration from "@/assets/hero-illustration.png";
+import DemoRequestDialog from "@/components/DemoRequestDialog";
 
 const FEATURE_ICONS = [CalendarDays, DoorOpen, BarChart3, CreditCard, Users, Shield];
 
