@@ -345,6 +345,12 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                   <span className="hidden sm:inline">Kamar</span>
                 </TabsTrigger>
               )}
+              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota") && (
+                <TabsTrigger value="ota" className="text-xs sm:text-sm">
+                  <Globe className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">OTA</span>
+                </TabsTrigger>
+              )}
               {userRole === "admin" && isFeatureEnabled("settings.outlet") && (
                 <TabsTrigger value="outlet" className="text-xs sm:text-sm">
                   <Store className="mr-1 sm:mr-2 h-4 w-4" />

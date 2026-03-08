@@ -687,6 +687,12 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
+          {isFeatureEnabled("booking_requests") && (
+            <TabsContent value="booking-requests" className="mt-6">
+              <BookingRequestsManagement />
+            </TabsContent>
+          )}
+
           {(userRole === "admin" || userRole === "leader") && (
             <>
               <TabsContent value="activity" className="mt-6">

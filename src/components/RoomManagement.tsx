@@ -549,10 +549,12 @@ export default function RoomManagement() {
     toast.success("Ukuran tampilan berhasil diubah");
   };
 
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+
   return (
     <div className="space-y-6">
       {/* Product Management Section */}
-      <ProductManagement />
+      {isFeatureEnabled("products_inventory.products") && <ProductManagement />}
 
       {/* Room Management Section */}
       <Card>
