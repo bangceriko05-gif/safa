@@ -83,6 +83,8 @@ export default function CustomerManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [identityFilter, setIdentityFilter] = useState<string>("all"); // all, KTP, SIM, Passport
   const [showMissingKtp, setShowMissingKtp] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
 
   useEffect(() => {
     if (!currentStore) return;
