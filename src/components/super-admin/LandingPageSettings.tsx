@@ -477,7 +477,7 @@ function LandingPreview({
   return (
     <div ref={previewRef} className="relative">
       {/* Mode Toggle Bar */}
-      <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg border">
+      <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg border flex-wrap">
         <span className="text-xs font-medium text-muted-foreground mr-1">Mode:</span>
         <Button
           size="sm"
@@ -497,6 +497,124 @@ function LandingPreview({
           <Move className="h-3 w-3" />
           Geser Posisi
         </Button>
+
+        <div className="h-5 w-px bg-border mx-1" />
+
+        {/* Hero Image */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+              <Image className="h-3 w-3" />
+              Gambar
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3 space-y-3" align="start">
+            <p className="text-xs font-semibold">URL Gambar Hero</p>
+            <Input
+              className="h-8 text-xs"
+              value={data.hero_image_url || ""}
+              onChange={(e) => onUpdate("hero_image_url", e.target.value)}
+              placeholder="https://example.com/image.png"
+            />
+            {data.hero_image_url && (
+              <img src={data.hero_image_url} alt="Preview" className="w-full h-24 object-contain rounded border bg-muted" />
+            )}
+            <p className="text-[10px] text-muted-foreground">Kosongkan untuk menggunakan gambar default.</p>
+          </PopoverContent>
+        </Popover>
+
+        {/* Contact Info */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+              <Phone className="h-3 w-3" />
+              Kontak
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3 space-y-2.5" align="start">
+            <p className="text-xs font-semibold">Informasi Kontak</p>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Email</label>
+              <Input className="h-7 text-xs" value={data.contact_email} onChange={(e) => onUpdate("contact_email", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Telepon</label>
+              <Input className="h-7 text-xs" value={data.contact_phone} onChange={(e) => onUpdate("contact_phone", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">WhatsApp (tanpa +)</label>
+              <Input className="h-7 text-xs" value={data.contact_whatsapp} onChange={(e) => onUpdate("contact_whatsapp", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Alamat</label>
+              <Input className="h-7 text-xs" value={data.contact_address} onChange={(e) => onUpdate("contact_address", e.target.value)} />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Statistics */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+              <BarChart3 className="h-3 w-3" />
+              Statistik
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3 space-y-2.5" align="start">
+            <p className="text-xs font-semibold">Angka Statistik</p>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Jumlah Properti</label>
+              <Input className="h-7 text-xs" value={data.stats_properties} onChange={(e) => onUpdate("stats_properties", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Support</label>
+              <Input className="h-7 text-xs" value={data.stats_support} onChange={(e) => onUpdate("stats_support", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Uptime</label>
+              <Input className="h-7 text-xs" value={data.stats_uptime} onChange={(e) => onUpdate("stats_uptime", e.target.value)} />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* CTA */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+              <ArrowRight className="h-3 w-3" />
+              CTA
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3 space-y-2.5" align="start">
+            <p className="text-xs font-semibold">Call to Action</p>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Judul CTA</label>
+              <Input className="h-7 text-xs" value={data.cta_title} onChange={(e) => onUpdate("cta_title", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Deskripsi CTA</label>
+              <Textarea className="text-xs min-h-[60px]" value={data.cta_description} onChange={(e) => onUpdate("cta_description", e.target.value)} rows={2} />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Footer */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+              <Globe className="h-3 w-3" />
+              Footer
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3 space-y-2.5" align="start">
+            <p className="text-xs font-semibold">Footer</p>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground">Deskripsi Footer</label>
+              <Textarea className="text-xs min-h-[60px]" value={data.footer_description} onChange={(e) => onUpdate("footer_description", e.target.value)} rows={2} />
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Palette className="h-3 w-3" />
           Klik kanan pada teks untuk ubah font & warna
