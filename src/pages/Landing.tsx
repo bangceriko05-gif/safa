@@ -150,6 +150,18 @@ export default function Landing() {
     fetchSettings();
   }, []);
 
+  const getStyle = (field: string): React.CSSProperties => {
+    const s = elementStyles[field];
+    if (!s) return {};
+    return {
+      fontFamily: s.fontFamily && s.fontFamily !== 'inherit' ? s.fontFamily : undefined,
+      fontSize: s.fontSize && s.fontSize !== 'inherit' ? s.fontSize : undefined,
+      color: s.color || undefined,
+      transform: s.offsetX || s.offsetY ? `translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)` : undefined,
+      position: s.offsetX || s.offsetY ? 'relative' : undefined,
+    } as React.CSSProperties;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
