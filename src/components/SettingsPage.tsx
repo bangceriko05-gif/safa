@@ -16,6 +16,7 @@ import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
 import OtaSourceManagement from "./OtaSourceManagement";
+import PaymentMethodSettings from "./PaymentMethodSettings";
 
 interface StatusColor {
   id: string;
