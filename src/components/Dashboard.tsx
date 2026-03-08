@@ -695,7 +695,7 @@ export default function Dashboard() {
 
           {(userRole === "admin" || userRole === "leader") && (
             <>
-              <TabsContent value="activity" className="mt-6">
+              <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
                 <ActivityLog />
               </TabsContent>
 
