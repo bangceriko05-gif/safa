@@ -1171,9 +1171,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
               <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="QRIS">QRIS</SelectItem>
-                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
