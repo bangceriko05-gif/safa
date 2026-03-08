@@ -649,7 +649,7 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="transactions" className="mt-6">
+          <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
             <TransactionManagement 
               userRole={userRole} 
               onEditBooking={handleEditBooking} 
