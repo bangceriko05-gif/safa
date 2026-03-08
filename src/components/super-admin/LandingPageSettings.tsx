@@ -79,7 +79,6 @@ const COLOR_PRESETS = [
 export default function LandingPageSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [data, setData] = useState<LandingPageData | null>(null);
   const [elementStyles, setElementStyles] = useState<ElementStyles>({});
 
@@ -173,263 +172,29 @@ export default function LandingPageSettings() {
     );
   }
 
-  if (showPreview) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">Preview Landing Page</h3>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <Pencil className="h-3 w-3" />
-              Klik teks untuk edit · Klik kanan untuk styling · Tahan & geser untuk pindah posisi
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Simpan
-            </Button>
-            <Button variant="outline" onClick={() => setShowPreview(false)}>
-              <EyeOff className="mr-2 h-4 w-4" />
-              Editor
-            </Button>
-          </div>
-        </div>
-        <LandingPreview
-          data={data}
-          onUpdate={updateField}
-          elementStyles={elementStyles}
-          onStyleUpdate={updateElementStyle}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Preview Toggle */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Edit konten landing page dan lihat preview secara real-time</p>
-        <Button variant="outline" onClick={() => setShowPreview(true)}>
-          <Eye className="mr-2 h-4 w-4" />
-          Preview
-        </Button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Preview Landing Page</h3>
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Pencil className="h-3 w-3" />
+            Klik teks untuk edit · Klik kanan untuk styling · Tahan & geser untuk pindah posisi
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Simpan
+          </Button>
+        </div>
       </div>
-
-      {/* Hero Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Hero Section
-          </CardTitle>
-          <CardDescription>Bagian utama landing page yang pertama kali dilihat pengunjung</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="hero_tagline">Tagline</Label>
-            <Input
-              id="hero_tagline"
-              value={data.hero_tagline}
-              onChange={(e) => updateField("hero_tagline", e.target.value)}
-              placeholder="#SolusiPropertiAnda"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero_title">Judul Utama</Label>
-            <Textarea
-              id="hero_title"
-              value={data.hero_title}
-              onChange={(e) => updateField("hero_title", e.target.value)}
-              placeholder="Kelola Properti Lebih Mudah & Efisien!"
-              rows={2}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero_description">Deskripsi</Label>
-            <Textarea
-              id="hero_description"
-              value={data.hero_description}
-              onChange={(e) => updateField("hero_description", e.target.value)}
-              placeholder="Deskripsi singkat tentang ANKA PMS..."
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero_image_url" className="flex items-center gap-2">
-              <Image className="h-4 w-4" />
-              URL Gambar Hero (opsional)
-            </Label>
-            <Input
-              id="hero_image_url"
-              value={data.hero_image_url || ""}
-              onChange={(e) => updateField("hero_image_url", e.target.value)}
-              placeholder="https://example.com/image.png"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Contact Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Informasi Kontak
-          </CardTitle>
-          <CardDescription>Data kontak yang ditampilkan di landing page</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="contact_email" className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Email
-            </Label>
-            <Input
-              id="contact_email"
-              type="email"
-              value={data.contact_email}
-              onChange={(e) => updateField("contact_email", e.target.value)}
-              placeholder="info@anka.management"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact_phone">Telepon</Label>
-            <Input
-              id="contact_phone"
-              value={data.contact_phone}
-              onChange={(e) => updateField("contact_phone", e.target.value)}
-              placeholder="+62 812 3456 7890"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact_whatsapp">WhatsApp (tanpa +)</Label>
-            <Input
-              id="contact_whatsapp"
-              value={data.contact_whatsapp}
-              onChange={(e) => updateField("contact_whatsapp", e.target.value)}
-              placeholder="6281234567890"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact_address" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Alamat
-            </Label>
-            <Input
-              id="contact_address"
-              value={data.contact_address}
-              onChange={(e) => updateField("contact_address", e.target.value)}
-              placeholder="Malang, Jawa Timur"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Statistik
-          </CardTitle>
-          <CardDescription>Angka-angka yang ditampilkan di section keunggulan</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="stats_properties">Jumlah Properti</Label>
-            <Input
-              id="stats_properties"
-              value={data.stats_properties}
-              onChange={(e) => updateField("stats_properties", e.target.value)}
-              placeholder="100+"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="stats_support">Support</Label>
-            <Input
-              id="stats_support"
-              value={data.stats_support}
-              onChange={(e) => updateField("stats_support", e.target.value)}
-              placeholder="24/7"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="stats_uptime">Uptime</Label>
-            <Input
-              id="stats_uptime"
-              value={data.stats_uptime}
-              onChange={(e) => updateField("stats_uptime", e.target.value)}
-              placeholder="99.9%"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CTA Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Call to Action</CardTitle>
-          <CardDescription>Section ajakan untuk mendaftar</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cta_title">Judul CTA</Label>
-            <Input
-              id="cta_title"
-              value={data.cta_title}
-              onChange={(e) => updateField("cta_title", e.target.value)}
-              placeholder="Siap Mengelola Properti Lebih Baik?"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cta_description">Deskripsi CTA</Label>
-            <Textarea
-              id="cta_description"
-              value={data.cta_description}
-              onChange={(e) => updateField("cta_description", e.target.value)}
-              placeholder="Daftar sekarang dan nikmati..."
-              rows={2}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Footer */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Footer</CardTitle>
-          <CardDescription>Teks di bagian bawah landing page</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="footer_description">Deskripsi Footer</Label>
-            <Textarea
-              id="footer_description"
-              value={data.footer_description}
-              onChange={(e) => updateField("footer_description", e.target.value)}
-              placeholder="Solusi manajemen properti modern..."
-              rows={2}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => setShowPreview(true)}>
-          <Eye className="mr-2 h-4 w-4" />
-          Preview
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving} size="lg">
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Simpan Perubahan
-        </Button>
-      </div>
+      <LandingPreview
+        data={data}
+        onUpdate={updateField}
+        elementStyles={elementStyles}
+        onStyleUpdate={updateElementStyle}
+      />
     </div>
   );
 }
