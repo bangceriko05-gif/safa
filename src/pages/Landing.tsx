@@ -333,7 +333,7 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <Button size="lg" className="mt-8" onClick={() => navigate("/auth")}>
+              <Button size="lg" className="mt-8" onClick={() => setShowDemoDialog(true)}>
                 {settings.btn_benefits}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
