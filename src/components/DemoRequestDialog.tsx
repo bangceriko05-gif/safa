@@ -18,6 +18,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [roomCount, setRoomCount] = useState("");
+  const [hotelName, setHotelName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
