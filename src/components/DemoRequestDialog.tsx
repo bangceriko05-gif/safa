@@ -113,6 +113,17 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="demo-hotel">Nama Hotel / Properti</Label>
+            <Input
+              id="demo-hotel"
+              placeholder="Masukkan nama hotel atau properti"
+              value={hotelName}
+              onChange={(e) => setHotelName(e.target.value)}
+              maxLength={100}
+              required
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="demo-email">Email</Label>
             <Input
               id="demo-email"
