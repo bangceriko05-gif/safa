@@ -57,6 +57,7 @@ interface DuplicationOptions {
   products: boolean;
   categories: boolean;
   statusColors: boolean;
+  storeFeatures: boolean;
 }
 
 export default function StoreDuplication() {
