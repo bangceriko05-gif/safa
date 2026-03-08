@@ -148,18 +148,16 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
           </div>
           <div className="space-y-2">
             <Label htmlFor="demo-rooms">Jumlah Kamar</Label>
-            <Select value={roomCount} onValueChange={setRoomCount} required>
-              <SelectTrigger id="demo-rooms">
-                <SelectValue placeholder="Pilih jumlah kamar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1-10">1 - 10 kamar</SelectItem>
-                <SelectItem value="11-25">11 - 25 kamar</SelectItem>
-                <SelectItem value="26-50">26 - 50 kamar</SelectItem>
-                <SelectItem value="51-100">51 - 100 kamar</SelectItem>
-                <SelectItem value="100+">100+ kamar</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="demo-rooms"
+              type="number"
+              placeholder="Masukkan jumlah kamar"
+              value={roomCount}
+              onChange={(e) => setRoomCount(e.target.value)}
+              min={1}
+              maxLength={10}
+              required
+            />
           </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
