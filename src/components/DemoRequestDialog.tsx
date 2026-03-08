@@ -18,13 +18,14 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [roomCount, setRoomCount] = useState("");
+  const [hotelName, setHotelName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fullName.trim() || !email.trim() || !whatsapp.trim() || !roomCount) {
+    if (!fullName.trim() || !email.trim() || !whatsapp.trim() || !roomCount || !hotelName.trim()) {
       toast({ title: "Lengkapi semua field", variant: "destructive" });
       return;
     }
@@ -48,6 +49,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
         email: email.trim(),
         whatsapp: whatsapp.trim(),
         room_count: roomCount,
+        hotel_name: hotelName.trim(),
       });
 
       if (error) throw error;
@@ -66,6 +68,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
       setEmail("");
       setWhatsapp("");
       setRoomCount("");
+      setHotelName("");
       setIsSuccess(false);
     }
     onOpenChange(val);
@@ -105,6 +108,17 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
               placeholder="Masukkan nama lengkap"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              maxLength={100}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="demo-hotel">Nama Hotel / Properti</Label>
+            <Input
+              id="demo-hotel"
+              placeholder="Masukkan nama hotel atau properti"
+              value={hotelName}
+              onChange={(e) => setHotelName(e.target.value)}
               maxLength={100}
               required
             />
