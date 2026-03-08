@@ -283,11 +283,11 @@ export default function Landing() {
                 <p className="text-muted-foreground" style={getStyle('stats_properties_label')}>Properti telah menggunakan ANKA PMS</p>
                 <div className="grid grid-cols-2 gap-6 pt-4">
                   <div>
-                    <div className="text-3xl font-bold text-foreground">{settings.stats_support}</div>
+                    <div className="text-3xl font-bold text-foreground" style={getStyle('stats_support')}>{settings.stats_support}</div>
                     <p className="text-sm text-muted-foreground">Support</p>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-foreground">{settings.stats_uptime}</div>
+                    <div className="text-3xl font-bold text-foreground" style={getStyle('stats_uptime')}>{settings.stats_uptime}</div>
                     <p className="text-sm text-muted-foreground">Uptime</p>
                   </div>
                 </div>
