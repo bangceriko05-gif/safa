@@ -80,6 +80,7 @@ export default function StoreDuplication() {
     products: true,
     categories: true,
     statusColors: true,
+    storeFeatures: true,
   });
 
   useEffect(() => {
