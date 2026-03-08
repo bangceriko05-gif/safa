@@ -55,6 +55,17 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
       if (error) throw error;
 
       setIsSuccess(true);
+
+      // Send email notification (fire and forget)
+      supabase.functions.invoke("send-demo-notification", {
+        body: {
+          fullName: fullName.trim(),
+          email: email.trim(),
+          whatsapp: whatsapp.trim(),
+          roomCount,
+          hotelName: hotelName.trim(),
+        },
+      }).catch((err) => console.error("Email notification failed:", err));
     } catch (error) {
       toast({ title: "Gagal mengirim permintaan demo", description: "Silakan coba lagi.", variant: "destructive" });
     } finally {
