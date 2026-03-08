@@ -740,6 +740,7 @@ export default function RoomManagement() {
         </CardContent>
         )}
       </Card>
+      )}
 
       {/* Add/Edit Room Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
