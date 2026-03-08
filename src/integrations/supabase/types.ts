@@ -951,6 +951,10 @@ export type Database = {
           footer_contact_title: string | null
           footer_description: string | null
           footer_menu_title: string | null
+          gallery_description: string | null
+          gallery_items: Json | null
+          gallery_tagline: string | null
+          gallery_title: string | null
           hero_description: string | null
           hero_image_url: string | null
           hero_tagline: string | null
@@ -961,6 +965,15 @@ export type Database = {
           navbar_menu_benefits: string | null
           navbar_menu_contact: string | null
           navbar_menu_features: string | null
+          navbar_menu_gallery: string | null
+          navbar_menu_pricing: string | null
+          partner_logos: Json | null
+          partners_tagline: string | null
+          partners_title: string | null
+          pricing_description: string | null
+          pricing_items: Json | null
+          pricing_tagline: string | null
+          pricing_title: string | null
           stats_properties: string | null
           stats_properties_label: string | null
           stats_support: string | null
@@ -992,6 +1005,10 @@ export type Database = {
           footer_contact_title?: string | null
           footer_description?: string | null
           footer_menu_title?: string | null
+          gallery_description?: string | null
+          gallery_items?: Json | null
+          gallery_tagline?: string | null
+          gallery_title?: string | null
           hero_description?: string | null
           hero_image_url?: string | null
           hero_tagline?: string | null
@@ -1002,6 +1019,15 @@ export type Database = {
           navbar_menu_benefits?: string | null
           navbar_menu_contact?: string | null
           navbar_menu_features?: string | null
+          navbar_menu_gallery?: string | null
+          navbar_menu_pricing?: string | null
+          partner_logos?: Json | null
+          partners_tagline?: string | null
+          partners_title?: string | null
+          pricing_description?: string | null
+          pricing_items?: Json | null
+          pricing_tagline?: string | null
+          pricing_title?: string | null
           stats_properties?: string | null
           stats_properties_label?: string | null
           stats_support?: string | null
@@ -1033,6 +1059,10 @@ export type Database = {
           footer_contact_title?: string | null
           footer_description?: string | null
           footer_menu_title?: string | null
+          gallery_description?: string | null
+          gallery_items?: Json | null
+          gallery_tagline?: string | null
+          gallery_title?: string | null
           hero_description?: string | null
           hero_image_url?: string | null
           hero_tagline?: string | null
@@ -1043,6 +1073,15 @@ export type Database = {
           navbar_menu_benefits?: string | null
           navbar_menu_contact?: string | null
           navbar_menu_features?: string | null
+          navbar_menu_gallery?: string | null
+          navbar_menu_pricing?: string | null
+          partner_logos?: Json | null
+          partners_tagline?: string | null
+          partners_title?: string | null
+          pricing_description?: string | null
+          pricing_items?: Json | null
+          pricing_tagline?: string | null
+          pricing_title?: string | null
           stats_properties?: string | null
           stats_properties_label?: string | null
           stats_support?: string | null
