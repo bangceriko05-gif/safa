@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer } from "lucide-react";
+import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer, Scale } from "lucide-react";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
