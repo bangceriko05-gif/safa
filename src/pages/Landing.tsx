@@ -279,8 +279,8 @@ export default function Landing() {
             </div>
             <div className="bg-gradient-to-br from-primary/5 to-primary/15 rounded-3xl p-8 md:p-12">
               <div className="space-y-6 text-center">
-                <div className="text-5xl font-extrabold text-primary">{settings.stats_properties}</div>
-                <p className="text-muted-foreground">Properti telah menggunakan ANKA PMS</p>
+                <div className="text-5xl font-extrabold text-primary" style={getStyle('stats_properties')}>{settings.stats_properties}</div>
+                <p className="text-muted-foreground" style={getStyle('stats_properties_label')}>Properti telah menggunakan ANKA PMS</p>
                 <div className="grid grid-cols-2 gap-6 pt-4">
                   <div>
                     <div className="text-3xl font-bold text-foreground">{settings.stats_support}</div>
