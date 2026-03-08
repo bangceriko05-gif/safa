@@ -482,6 +482,7 @@ function LandingPreview({
   };
 
   return (
+    <EditorContext.Provider value={editorCtx}>
     <div ref={previewRef} className="relative">
       {/* Mode Toggle Bar */}
       <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg border flex-wrap">
