@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer, Scale } from "lucide-react";
+import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer, Scale, CreditCard } from "lucide-react";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -32,6 +32,7 @@ import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AccountingReport from "./reports/AccountingReport";
+import PaymentMethodReport from "./reports/PaymentMethodReport";
 
 interface ReportStats {
   totalTransactions: number;
@@ -104,7 +105,7 @@ interface BookingPaymentDetail {
   type: 'booking' | 'booking_2';
 }
 
-type ReportTab = "overview" | "sales" | "income-expense" | "purchase" | "employee" | "accounting";
+type ReportTab = "overview" | "sales" | "income-expense" | "payment-method" | "purchase" | "employee" | "accounting";
 
 export default function Reports() {
   const { currentStore } = useStore();
@@ -1085,6 +1086,12 @@ export default function Reports() {
               <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
             </TabsTrigger>
           )}
+          {isFeatureEnabled("reports.income_expense") && (
+            <TabsTrigger value="payment-method" className="flex items-center gap-1.5 flex-1">
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Metode Payment</span>
+            </TabsTrigger>
+          )}
           {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
             <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
               <ShoppingCart className="h-4 w-4" />
@@ -1126,6 +1133,12 @@ export default function Reports() {
         {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && isFeatureEnabled("reports.income_expense") && (
           <TabsContent value="income-expense" className="mt-4">
             <IncomeExpenseReport />
+          </TabsContent>
+        )}
+
+        {isFeatureEnabled("reports.income_expense") && (
+          <TabsContent value="payment-method" className="mt-4">
+            <PaymentMethodReport />
           </TabsContent>
         )}
 
