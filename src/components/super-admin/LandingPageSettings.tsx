@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image } from "lucide-react";
+import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface LandingPageData {
@@ -29,6 +29,7 @@ interface LandingPageData {
 export default function LandingPageSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [data, setData] = useState<LandingPageData | null>(null);
 
   useEffect(() => {
@@ -110,8 +111,32 @@ export default function LandingPageSettings() {
     );
   }
 
+  if (showPreview) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Preview Landing Page</h3>
+          <Button variant="outline" onClick={() => setShowPreview(false)}>
+            <EyeOff className="mr-2 h-4 w-4" />
+            Kembali ke Editor
+          </Button>
+        </div>
+        <LandingPreview data={data} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Preview Toggle */}
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">Edit konten landing page dan lihat preview secara real-time</p>
+        <Button variant="outline" onClick={() => setShowPreview(true)}>
+          <Eye className="mr-2 h-4 w-4" />
+          Preview
+        </Button>
+      </div>
+
       {/* Hero Section */}
       <Card>
         <CardHeader>
@@ -312,7 +337,11 @@ export default function LandingPageSettings() {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={() => setShowPreview(true)}>
+          <Eye className="mr-2 h-4 w-4" />
+          Preview
+        </Button>
         <Button onClick={handleSave} disabled={isSaving} size="lg">
           {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -321,6 +350,137 @@ export default function LandingPageSettings() {
           )}
           Simpan Perubahan
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Live Preview Component ─── */
+function LandingPreview({ data }: { data: LandingPageData }) {
+  const benefits = [
+    "Booking online terintegrasi WhatsApp",
+    "Dashboard real-time multi cabang",
+    "Sistem deposit & check-in/out digital",
+    "Cetak struk & laporan otomatis",
+    "Manajemen produk & inventori",
+    "Akses dari perangkat apapun",
+  ];
+
+  return (
+    <div className="border rounded-xl overflow-hidden bg-background shadow-lg">
+      {/* Navbar Preview */}
+      <div className="border-b bg-card/80 px-6 py-3 flex items-center justify-between">
+        <span className="text-lg font-bold text-primary">ANKA PMS</span>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span>Fitur</span>
+          <span>Keunggulan</span>
+          <span>Kontak</span>
+          <span className="px-3 py-1 rounded bg-primary text-primary-foreground text-xs">Coba Gratis</span>
+        </div>
+      </div>
+
+      {/* Hero Preview */}
+      <div className="px-6 py-10 md:py-14">
+        <div className="max-w-2xl">
+          <p className="text-primary font-semibold text-sm mb-2">{data.hero_tagline}</p>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
+            {data.hero_title}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6 max-w-lg">
+            {data.hero_description}
+          </p>
+          <div className="flex gap-3">
+            <span className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">
+              Coba Gratis <ArrowRight className="h-3 w-3" />
+            </span>
+            <span className="inline-flex items-center px-4 py-2 border rounded-md text-xs font-medium text-muted-foreground">
+              Jadwalkan Demo
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Preview */}
+      <div className="px-6 py-8 bg-secondary/30">
+        <div className="grid grid-cols-3 gap-4 max-w-md mx-auto text-center">
+          <div>
+            <div className="text-2xl font-extrabold text-primary">{data.stats_properties}</div>
+            <p className="text-xs text-muted-foreground">Properti</p>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-foreground">{data.stats_support}</div>
+            <p className="text-xs text-muted-foreground">Support</p>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-foreground">{data.stats_uptime}</div>
+            <p className="text-xs text-muted-foreground">Uptime</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Benefits Preview */}
+      <div className="px-6 py-8">
+        <h3 className="text-lg font-bold text-foreground mb-4">Kenapa ANKA PMS?</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {benefits.map((b) => (
+            <div key={b} className="flex items-center gap-2 text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <span className="text-foreground">{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA Preview */}
+      <div className="px-6 py-8 bg-primary text-center">
+        <h3 className="text-lg font-bold text-primary-foreground mb-2">{data.cta_title}</h3>
+        <p className="text-xs text-primary-foreground/80 mb-4 max-w-md mx-auto">{data.cta_description}</p>
+        <div className="flex gap-3 justify-center">
+          <span className="inline-flex items-center gap-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-xs font-medium">
+            Daftar Gratis <ArrowRight className="h-3 w-3" />
+          </span>
+          <span className="inline-flex items-center px-4 py-2 border border-primary-foreground/30 text-primary-foreground rounded-md text-xs font-medium">
+            Hubungi Kami
+          </span>
+        </div>
+      </div>
+
+      {/* Footer Preview */}
+      <div className="px-6 py-6 bg-foreground">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <h4 className="text-sm font-bold text-background mb-2">ANKA PMS</h4>
+            <p className="text-xs text-background/60">{data.footer_description}</p>
+          </div>
+          <div>
+            <h5 className="text-xs font-semibold text-background mb-2">Menu</h5>
+            <div className="space-y-1 text-xs text-background/60">
+              <p>Fitur</p>
+              <p>Keunggulan</p>
+              <p>Masuk</p>
+            </div>
+          </div>
+          <div>
+            <h5 className="text-xs font-semibold text-background mb-2">Kontak</h5>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-background/60">
+                <Mail className="h-3 w-3" />
+                <span>{data.contact_email}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-background/60">
+                <Phone className="h-3 w-3" />
+                <span>{data.contact_phone}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-background/60">
+                <MapPin className="h-3 w-3" />
+                <span>{data.contact_address}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-background/10 mt-4 pt-3 text-center">
+          <p className="text-background/40 text-[10px]">© {new Date().getFullYear()} ANKA PMS. All rights reserved.</p>
+        </div>
       </div>
     </div>
   );
