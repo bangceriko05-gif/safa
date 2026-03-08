@@ -33,6 +33,7 @@ import { logActivity } from "@/utils/activityLogger";
 import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
 import { useStore } from "@/contexts/StoreContext";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface Room {
   id: string;
