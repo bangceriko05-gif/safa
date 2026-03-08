@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import {
   Dialog,
   DialogContent,
