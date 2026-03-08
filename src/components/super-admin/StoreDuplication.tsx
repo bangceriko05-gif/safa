@@ -40,7 +40,8 @@ import {
   Palette, 
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ToggleLeft
 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 
