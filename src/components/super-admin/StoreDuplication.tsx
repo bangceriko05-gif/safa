@@ -291,6 +291,30 @@ export default function StoreDuplication() {
 
           await supabase.from("status_colors").insert(newColors);
           details.push(`✓ ${colors.length} warna status disalin`);
+      }
+
+      // 7. Copy store features if selected
+      if (options.storeFeatures) {
+        const { data: features, error: featError } = await supabase
+          .from("store_features")
+          .select("feature_key, is_enabled")
+          .eq("store_id", selectedStoreId);
+
+        if (!featError && features && features.length > 0) {
+          // Delete auto-created features first (from trigger)
+          await supabase
+            .from("store_features")
+            .delete()
+            .eq("store_id", newStore.id);
+
+          const newFeatures = features.map(f => ({
+            feature_key: f.feature_key,
+            is_enabled: f.is_enabled,
+            store_id: newStore.id,
+          }));
+
+          await supabase.from("store_features").insert(newFeatures);
+          details.push(`✓ ${features.length} pengaturan fitur disalin`);
         }
       }
 
