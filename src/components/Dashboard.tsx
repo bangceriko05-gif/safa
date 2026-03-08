@@ -40,12 +40,14 @@ import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 export default function Dashboard() {
   const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName } = useStore();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -432,15 +434,17 @@ export default function Dashboard() {
             <StoreSelector />
           </div>
           <div className="flex gap-2">
-            <Button 
-              onClick={() => setDepositMode(!depositMode)} 
-              variant={depositMode ? "default" : "outline"}
-              className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-              size="default"
-            >
-              <Shield className="lg:mr-2 h-4 w-4" />
-              <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
-            </Button>
+            {isFeatureEnabled("deposit") && (
+              <Button 
+                onClick={() => setDepositMode(!depositMode)} 
+                variant={depositMode ? "default" : "outline"}
+                className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                size="default"
+              >
+                <Shield className="lg:mr-2 h-4 w-4" />
+                <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
+              </Button>
+            )}
             {(userRole === "admin" || userRole === "leader") && (
               <Button onClick={handleExportToExcel} variant="outline">
                 <FileDown className="lg:mr-2 h-4 w-4" />
@@ -463,32 +467,48 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bookings">
-                  <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
-                </SelectItem>
-                <SelectItem value="transactions">
-                  <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
-                </SelectItem>
-                <SelectItem value="customers">
-                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
-                </SelectItem>
-                <SelectItem value="reports">
-                  <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
-                </SelectItem>
-                <SelectItem value="settings">
-                  <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
-                </SelectItem>
-                <SelectItem value="rooms">
-                  <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
-                </SelectItem>
+                {isFeatureEnabled("calendar") && (
+                  <SelectItem value="bookings">
+                    <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
+                  </SelectItem>
+                )}
+                {isFeatureEnabled("transactions") && (
+                  <SelectItem value="transactions">
+                    <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
+                  </SelectItem>
+                )}
+                {isFeatureEnabled("customers") && (
+                  <SelectItem value="customers">
+                    <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
+                  </SelectItem>
+                )}
+                {isFeatureEnabled("reports") && (
+                  <SelectItem value="reports">
+                    <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
+                  </SelectItem>
+                )}
+                {isFeatureEnabled("settings") && (
+                  <SelectItem value="settings">
+                    <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
+                  </SelectItem>
+                )}
+                {isFeatureEnabled("products_inventory") && (
+                  <SelectItem value="rooms">
+                    <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
+                  </SelectItem>
+                )}
                 {(userRole === "admin" || userRole === "leader") && (
                   <>
-                    <SelectItem value="activity">
-                      <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
-                    </SelectItem>
-                    <SelectItem value="users">
-                      <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
-                    </SelectItem>
+                    {isFeatureEnabled("activity_log") && (
+                      <SelectItem value="activity">
+                        <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
+                      </SelectItem>
+                    )}
+                    {isFeatureEnabled("user_management") && (
+                      <SelectItem value="users">
+                        <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
+                      </SelectItem>
+                    )}
                   </>
                 )}
               </SelectContent>
@@ -496,48 +516,71 @@ export default function Dashboard() {
           </div>
 
           {/* Desktop: Tabs */}
-          <TabsList className="hidden lg:grid w-full max-w-7xl" style={{ 
-            gridTemplateColumns: 
-              (userRole === "admin" || userRole === "leader") ? "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" : 
-              "1fr 1fr 1fr 1fr 1fr 1fr" 
-          }}>
-            <TabsTrigger value="bookings">
-              <Calendar className="mr-2 h-4 w-4" />
-              Kalender
-            </TabsTrigger>
-            <TabsTrigger value="transactions">
-              <Receipt className="mr-2 h-4 w-4" />
-              Transaksi
-            </TabsTrigger>
-            <TabsTrigger value="customers">
-              <Users className="mr-2 h-4 w-4" />
-              Pelanggan
-            </TabsTrigger>
-            <TabsTrigger value="reports">
-              <FileText className="mr-2 h-4 w-4" />
-              Laporan
-            </TabsTrigger>
-            <TabsTrigger value="settings">
-              <Settings className="mr-2 h-4 w-4" />
-              Pengaturan
-            </TabsTrigger>
-            <TabsTrigger value="rooms">
-              <Package className="mr-2 h-4 w-4" />
-              Produk & Inventori
-            </TabsTrigger>
-            {(userRole === "admin" || userRole === "leader") && (
-              <>
-                <TabsTrigger value="activity">
-                  <History className="mr-2 h-4 w-4" />
-                  Log
-                </TabsTrigger>
-                <TabsTrigger value="users">
-                  <UserCog className="mr-2 h-4 w-4" />
-                  Pengguna
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+          {(() => {
+            const tabs = [];
+            if (isFeatureEnabled("calendar")) tabs.push("calendar");
+            if (isFeatureEnabled("transactions")) tabs.push("transactions");
+            if (isFeatureEnabled("customers")) tabs.push("customers");
+            if (isFeatureEnabled("reports")) tabs.push("reports");
+            if (isFeatureEnabled("settings")) tabs.push("settings");
+            if (isFeatureEnabled("products_inventory")) tabs.push("products_inventory");
+            if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log")) tabs.push("activity_log");
+            if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management")) tabs.push("user_management");
+            const cols = tabs.length;
+
+            return (
+              <TabsList className="hidden lg:grid w-full max-w-7xl" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+                {isFeatureEnabled("calendar") && (
+                  <TabsTrigger value="bookings">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Kalender
+                  </TabsTrigger>
+                )}
+                {isFeatureEnabled("transactions") && (
+                  <TabsTrigger value="transactions">
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Transaksi
+                  </TabsTrigger>
+                )}
+                {isFeatureEnabled("customers") && (
+                  <TabsTrigger value="customers">
+                    <Users className="mr-2 h-4 w-4" />
+                    Pelanggan
+                  </TabsTrigger>
+                )}
+                {isFeatureEnabled("reports") && (
+                  <TabsTrigger value="reports">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Laporan
+                  </TabsTrigger>
+                )}
+                {isFeatureEnabled("settings") && (
+                  <TabsTrigger value="settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Pengaturan
+                  </TabsTrigger>
+                )}
+                {isFeatureEnabled("products_inventory") && (
+                  <TabsTrigger value="rooms">
+                    <Package className="mr-2 h-4 w-4" />
+                    Produk & Inventori
+                  </TabsTrigger>
+                )}
+                {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log") && (
+                  <TabsTrigger value="activity">
+                    <History className="mr-2 h-4 w-4" />
+                    Log
+                  </TabsTrigger>
+                )}
+                {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management") && (
+                  <TabsTrigger value="users">
+                    <UserCog className="mr-2 h-4 w-4" />
+                    Pengguna
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            );
+          })()}
 
           <TabsContent value="bookings" className="space-y-6 mt-6">
             {/* Room Summary - shown for all store types */}

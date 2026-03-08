@@ -21,11 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ChevronDown, ChevronRight, ToggleRight } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { logActivity } from "@/utils/activityLogger";
+import StoreFeatureToggle from "./StoreFeatureToggle";
 
 interface Store {
   id: string;
@@ -54,6 +56,7 @@ export default function SuperAdminStoreManagement() {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -377,104 +380,126 @@ export default function SuperAdminStoreManagement() {
                 </TableRow>
               ) : (
                 stores.map((store) => (
-                  <TableRow key={store.id}>
-                    <TableCell>
-                      {store.image_url ? (
-                        <img
-                          src={store.image_url}
-                          alt={store.name}
-                          className="w-12 h-12 object-cover rounded-md"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  <>
+                    <TableRow key={store.id} className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {expandedStoreId === store.id ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          {store.image_url ? (
+                            <img
+                              src={store.image_url}
+                              alt={store.name}
+                              className="w-12 h-12 object-cover rounded-md"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{store.name}</p>
-                        {store.description && (
-                          <p className="text-sm text-muted-foreground truncate max-w-xs">
-                            {store.description}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{store.location || "-"}</TableCell>
-                    <TableCell>
-                      {store.subscription_end_date ? (
-                        <div className="text-xs space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{format(parseISO(store.subscription_start_date!), "d MMM yyyy", { locale: localeId })}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{store.name}</p>
+                          {store.description && (
+                            <p className="text-sm text-muted-foreground truncate max-w-xs">
+                              {store.description}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{store.location || "-"}</TableCell>
+                      <TableCell>
+                        {store.subscription_end_date ? (
+                          <div className="text-xs space-y-0.5">
+                            <div className="flex items-center gap-1">
+                              <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{format(parseISO(store.subscription_start_date!), "d MMM yyyy", { locale: localeId })}</span>
+                            </div>
+                            <div className="text-muted-foreground">s/d {format(parseISO(store.subscription_end_date), "d MMM yyyy", { locale: localeId })}</div>
+                            {(() => {
+                              const daysLeft = differenceInDays(parseISO(store.subscription_end_date), new Date());
+                              if (daysLeft < 0) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Expired</Badge>;
+                              if (daysLeft <= 7) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
+                              if (daysLeft <= 30) return <Badge className="text-[10px] px-1.5 py-0 bg-amber-500">{daysLeft} hari lagi</Badge>;
+                              return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
+                            })()}
                           </div>
-                          <div className="text-muted-foreground">s/d {format(parseISO(store.subscription_end_date), "d MMM yyyy", { locale: localeId })}</div>
-                          {(() => {
-                            const daysLeft = differenceInDays(parseISO(store.subscription_end_date), new Date());
-                            if (daysLeft < 0) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Expired</Badge>;
-                            if (daysLeft <= 7) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
-                            if (daysLeft <= 30) return <Badge className="text-[10px] px-1.5 py-0 bg-amber-500">{daysLeft} hari lagi</Badge>;
-                            return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
-                          })()}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Belum diatur</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="flex items-center justify-center gap-1">
-                          <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                          <span className={`${(storeStats[store.id]?.rooms || 0) > 25 ? 'text-destructive font-bold' : ''}`}>
-                            {storeStats[store.id]?.rooms || 0}
-                          </span>
-                        </div>
-                        {(storeStats[store.id]?.rooms || 0) > 25 && (
-                          <span className="text-[10px] text-destructive leading-tight text-center max-w-[120px]">
-                            Melebihi batas 25 kamar
-                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Belum diatur</span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span>{storeStats[store.id]?.products || 0}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>{storeStats[store.id]?.users || 0}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Switch
-                        checked={store.is_active}
-                        onCheckedChange={() => handleToggleActive(store)}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(store)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(store)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center justify-center gap-1">
+                            <DoorOpen className="h-4 w-4 text-muted-foreground" />
+                            <span className={`${(storeStats[store.id]?.rooms || 0) > 25 ? 'text-destructive font-bold' : ''}`}>
+                              {storeStats[store.id]?.rooms || 0}
+                            </span>
+                          </div>
+                          {(storeStats[store.id]?.rooms || 0) > 25 && (
+                            <span className="text-[10px] text-destructive leading-tight text-center max-w-[120px]">
+                              Melebihi batas 25 kamar
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span>{storeStats[store.id]?.products || 0}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>{storeStats[store.id]?.users || 0}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={store.is_active}
+                          onCheckedChange={() => handleToggleActive(store)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(store)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(store)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expandedStoreId === store.id && (
+                      <TableRow key={`${store.id}-features`}>
+                        <TableCell colSpan={9} className="bg-muted/30 p-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <ToggleRight className="h-4 w-4 text-primary" />
+                              Fitur Aktif untuk {store.name}
+                            </div>
+                            <StoreFeatureToggle storeId={store.id} storeName={store.name} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 ))
               )}
             </TableBody>
