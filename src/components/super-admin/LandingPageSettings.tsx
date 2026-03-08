@@ -621,36 +621,6 @@ function LandingPreview({
           </PopoverContent>
         </Popover>
 
-        {/* Buttons & Labels */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><Type className="h-3 w-3" /> Label</Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-3 space-y-2.5 max-h-[70vh] overflow-y-auto" align="start">
-            <p className="text-xs font-semibold">Navbar & Menu</p>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Brand / Logo Teks</label><Input className="h-7 text-xs" value={data.navbar_brand} onChange={(e) => onUpdate("navbar_brand", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Menu: Fitur</label><Input className="h-7 text-xs" value={data.navbar_menu_features} onChange={(e) => onUpdate("navbar_menu_features", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Menu: Keunggulan</label><Input className="h-7 text-xs" value={data.navbar_menu_benefits} onChange={(e) => onUpdate("navbar_menu_benefits", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Menu: Kontak</label><Input className="h-7 text-xs" value={data.navbar_menu_contact} onChange={(e) => onUpdate("navbar_menu_contact", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tombol Login</label><Input className="h-7 text-xs" value={data.navbar_btn_login} onChange={(e) => onUpdate("navbar_btn_login", e.target.value)} /></div>
-            
-            <div className="border-t pt-2 mt-2" />
-            <p className="text-xs font-semibold">Tombol-tombol</p>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Hero: Tombol Utama</label><Input className="h-7 text-xs" value={data.btn_hero_primary} onChange={(e) => onUpdate("btn_hero_primary", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Hero: Tombol Sekunder</label><Input className="h-7 text-xs" value={data.btn_hero_secondary} onChange={(e) => onUpdate("btn_hero_secondary", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Keunggulan: Tombol</label><Input className="h-7 text-xs" value={data.btn_benefits} onChange={(e) => onUpdate("btn_benefits", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">CTA: Tombol Utama</label><Input className="h-7 text-xs" value={data.btn_cta_primary} onChange={(e) => onUpdate("btn_cta_primary", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">CTA: Tombol Sekunder</label><Input className="h-7 text-xs" value={data.btn_cta_secondary} onChange={(e) => onUpdate("btn_cta_secondary", e.target.value)} /></div>
-
-            <div className="border-t pt-2 mt-2" />
-            <p className="text-xs font-semibold">Footer</p>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul Menu</label><Input className="h-7 text-xs" value={data.footer_menu_title} onChange={(e) => onUpdate("footer_menu_title", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul Kontak</label><Input className="h-7 text-xs" value={data.footer_contact_title} onChange={(e) => onUpdate("footer_contact_title", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Copyright</label><Input className="h-7 text-xs" value={data.copyright_text} onChange={(e) => onUpdate("copyright_text", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi Footer</label><Textarea className="text-xs min-h-[40px]" value={data.footer_description} onChange={(e) => onUpdate("footer_description", e.target.value)} rows={2} /></div>
-          </PopoverContent>
-        </Popover>
-
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Palette className="h-3 w-3" /> Klik kanan pada teks untuk ubah font & warna
         </div>
@@ -713,15 +683,34 @@ function LandingPreview({
               {data.features_items.map((f, idx) => {
                 const Icon = FEATURE_ICONS[idx % FEATURE_ICONS.length];
                 return (
-                  <div key={idx} className="bg-card rounded-lg border-0 shadow-sm p-3 space-y-2">
+                  <div key={idx} className="bg-card rounded-lg border-0 shadow-sm p-3 space-y-2 relative group">
+                    {mode === "edit" && (
+                      <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeFeatureItem(idx)}><Trash2 className="h-3 w-3" /></Button>
+                    )}
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Icon className="h-4 w-4 text-primary" />
                     </div>
-                    <h4 className="text-xs font-semibold text-foreground">{f.title}</h4>
-                    <p className="text-[10px] text-muted-foreground">{f.description}</p>
+                    <h4
+                      contentEditable={mode === "edit"}
+                      suppressContentEditableWarning
+                      className={`text-xs font-semibold text-foreground outline-none rounded px-0.5 -mx-0.5 ${mode === "edit" ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5" : ""}`}
+                      onBlur={mode === "edit" ? (e) => updateFeatureItem(idx, "title", e.currentTarget.textContent || "") : undefined}
+                    >{f.title}</h4>
+                    <p
+                      contentEditable={mode === "edit"}
+                      suppressContentEditableWarning
+                      className={`text-[10px] text-muted-foreground outline-none rounded px-0.5 -mx-0.5 ${mode === "edit" ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5" : ""}`}
+                      onBlur={mode === "edit" ? (e) => updateFeatureItem(idx, "description", e.currentTarget.textContent || "") : undefined}
+                    >{f.description}</p>
                   </div>
                 );
               })}
+              {mode === "edit" && (
+                <button onClick={addFeatureItem} className="bg-card rounded-lg border-2 border-dashed border-muted-foreground/20 p-3 flex flex-col items-center justify-center gap-1 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                  <Plus className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Tambah Fitur</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -734,11 +723,25 @@ function LandingPreview({
               <EditableText field="benefits_title" as="h3" className="text-lg font-bold text-foreground mb-4">{data.benefits_title}</EditableText>
               <div className="space-y-2">
                 {data.benefits_items.map((b, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
+                  <div key={idx} className="flex items-center gap-2 text-xs group">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    <span className="text-foreground">{b}</span>
+                    <span
+                      contentEditable={mode === "edit"}
+                      suppressContentEditableWarning
+                      className={`text-foreground outline-none rounded px-0.5 -mx-0.5 flex-1 ${mode === "edit" ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5" : ""}`}
+                      onBlur={mode === "edit" ? (e) => updateBenefitItem(idx, e.currentTarget.textContent || "") : undefined}
+                    >{b}</span>
+                    {mode === "edit" && (
+                      <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={() => removeBenefitItem(idx)}><Trash2 className="h-3 w-3" /></Button>
+                    )}
                   </div>
                 ))}
+                {mode === "edit" && (
+                  <button onClick={addBenefitItem} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Tambah keunggulan</span>
+                  </button>
+                )}
               </div>
               <EditableText field="btn_benefits" className="inline-flex items-center gap-1 mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">{data.btn_benefits} <ArrowRight className="h-3 w-3" /></EditableText>
             </div>
@@ -779,9 +782,9 @@ function LandingPreview({
             <div>
               <EditableText field="footer_menu_title" as="h5" className="text-xs font-semibold text-background mb-2">{data.footer_menu_title}</EditableText>
               <div className="space-y-1 text-xs text-background/60">
-                <p>{data.navbar_menu_features}</p>
-                <p>{data.navbar_menu_benefits}</p>
-                <p>{data.navbar_btn_login}</p>
+                <EditableText field="navbar_menu_features" as="p">{data.navbar_menu_features}</EditableText>
+                <EditableText field="navbar_menu_benefits" as="p">{data.navbar_menu_benefits}</EditableText>
+                <EditableText field="navbar_btn_login" as="p">{data.navbar_btn_login}</EditableText>
               </div>
             </div>
             <div>
