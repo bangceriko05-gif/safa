@@ -1549,9 +1549,9 @@ export default function BookingRequestsManagement() {
                     <SelectValue placeholder="Pilih metode" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="QRIS">QRIS</SelectItem>
-                    <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
+                    {paymentMethodOptions.map(method => (
+                      <SelectItem key={method} value={method}>{method}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
