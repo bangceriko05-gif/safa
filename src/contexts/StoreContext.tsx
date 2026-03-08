@@ -29,7 +29,7 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ["/booking", "/auth"];
+const PUBLIC_ROUTES = ["/", "/booking", "/auth"];
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [currentStore, setCurrentStoreState] = useState<Store | null>(null);
