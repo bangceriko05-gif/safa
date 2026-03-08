@@ -483,7 +483,7 @@ function LandingPreview({
           size="sm"
           variant={mode === "edit" ? "default" : "outline"}
           className="h-7 text-xs gap-1"
-          onClick={() => { setMode("edit"); setSelectedField(null); }}
+          onClick={() => { setMode(mode === "edit" ? null : "edit"); setSelectedField(null); }}
         >
           <Pencil className="h-3 w-3" />
           Edit Teks
@@ -492,7 +492,7 @@ function LandingPreview({
           size="sm"
           variant={mode === "drag" ? "default" : "outline"}
           className="h-7 text-xs gap-1"
-          onClick={() => setMode("drag")}
+          onClick={() => { setMode(mode === "drag" ? null : "drag"); setSelectedField(null); }}
         >
           <Move className="h-3 w-3" />
           Geser Posisi
