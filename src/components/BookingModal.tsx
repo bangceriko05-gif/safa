@@ -2150,9 +2150,9 @@ export default function BookingModal({
                 <SelectValue placeholder="Pilih metode pembayaran" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                <SelectItem value="Qris">Qris</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
+                {paymentMethodOptions.map(method => (
+                  <SelectItem key={method} value={method}>{method}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
