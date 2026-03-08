@@ -491,6 +491,18 @@ export default function StoreDuplication() {
                     </div>
                   </div>
 
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                    <Checkbox
+                      id="storeFeatures"
+                      checked={options.storeFeatures}
+                      onCheckedChange={(checked) => setOptions({ ...options, storeFeatures: !!checked })}
+                    />
+                    <div className="flex items-center gap-2">
+                      <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+                      <Label htmlFor="storeFeatures" className="cursor-pointer">Pengaturan Fitur (Aktif/Nonaktif)</Label>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
