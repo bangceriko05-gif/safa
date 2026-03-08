@@ -547,7 +547,17 @@ export default function CustomerManagement() {
           <div className="rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/50">
+                  {isSelectionMode && (
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        checked={paginatedCustomers.length > 0 && selectedIds.size === paginatedCustomers.length}
+                        onChange={toggleSelectAll}
+                        className="h-4 w-4 rounded border-input"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Nama</TableHead>
                   <TableHead>Nomor HP</TableHead>
                   <TableHead>Identitas</TableHead>
