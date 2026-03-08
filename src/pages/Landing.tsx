@@ -61,6 +61,16 @@ const benefits = [
   "Akses dari perangkat apapun",
 ];
 
+interface ElementStyle {
+  fontFamily?: string;
+  fontSize?: string;
+  color?: string;
+  offsetX?: number;
+  offsetY?: number;
+}
+
+type ElementStyles = Record<string, ElementStyle>;
+
 interface LandingSettings {
   hero_tagline: string;
   hero_title: string;
@@ -98,6 +108,7 @@ const defaultSettings: LandingSettings = {
 export default function Landing() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<LandingSettings>(defaultSettings);
+  const [elementStyles, setElementStyles] = useState<ElementStyles>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -125,6 +136,9 @@ export default function Landing() {
             cta_description: data.cta_description || defaultSettings.cta_description,
             footer_description: data.footer_description || defaultSettings.footer_description,
           });
+          if (data.element_styles && typeof data.element_styles === 'object') {
+            setElementStyles(data.element_styles as ElementStyles);
+          }
         }
       } catch (error) {
         console.error("Error fetching landing settings:", error);
@@ -135,6 +149,18 @@ export default function Landing() {
 
     fetchSettings();
   }, []);
+
+  const getStyle = (field: string): React.CSSProperties => {
+    const s = elementStyles[field];
+    if (!s) return {};
+    return {
+      fontFamily: s.fontFamily && s.fontFamily !== 'inherit' ? s.fontFamily : undefined,
+      fontSize: s.fontSize && s.fontSize !== 'inherit' ? s.fontSize : undefined,
+      color: s.color || undefined,
+      transform: s.offsetX || s.offsetY ? `translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)` : undefined,
+      position: s.offsetX || s.offsetY ? 'relative' : undefined,
+    } as React.CSSProperties;
+  };
 
   if (isLoading) {
     return (
@@ -171,12 +197,12 @@ export default function Landing() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div>
-              <p className="text-primary font-semibold text-lg mb-3">{settings.hero_tagline}</p>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight whitespace-pre-line">
+              <p className="text-primary font-semibold text-lg mb-3" style={getStyle('hero_tagline')}>{settings.hero_tagline}</p>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight whitespace-pre-line" style={getStyle('hero_title')}>
                 {settings.hero_title}
               </h2>
             </div>
-            <p className="text-lg text-muted-foreground max-w-lg">
+            <p className="text-lg text-muted-foreground max-w-lg" style={getStyle('hero_description')}>
               {settings.hero_description}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -253,15 +279,15 @@ export default function Landing() {
             </div>
             <div className="bg-gradient-to-br from-primary/5 to-primary/15 rounded-3xl p-8 md:p-12">
               <div className="space-y-6 text-center">
-                <div className="text-5xl font-extrabold text-primary">{settings.stats_properties}</div>
-                <p className="text-muted-foreground">Properti telah menggunakan ANKA PMS</p>
+                <div className="text-5xl font-extrabold text-primary" style={getStyle('stats_properties')}>{settings.stats_properties}</div>
+                <p className="text-muted-foreground" style={getStyle('stats_properties_label')}>Properti telah menggunakan ANKA PMS</p>
                 <div className="grid grid-cols-2 gap-6 pt-4">
                   <div>
-                    <div className="text-3xl font-bold text-foreground">{settings.stats_support}</div>
+                    <div className="text-3xl font-bold text-foreground" style={getStyle('stats_support')}>{settings.stats_support}</div>
                     <p className="text-sm text-muted-foreground">Support</p>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-foreground">{settings.stats_uptime}</div>
+                    <div className="text-3xl font-bold text-foreground" style={getStyle('stats_uptime')}>{settings.stats_uptime}</div>
                     <p className="text-sm text-muted-foreground">Uptime</p>
                   </div>
                 </div>
@@ -274,10 +300,10 @@ export default function Landing() {
       {/* CTA Section */}
       <section className="py-16 md:py-24 bg-primary">
         <div className="container mx-auto px-4 text-center">
-          <h3 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+          <h3 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4" style={getStyle('cta_title')}>
             {settings.cta_title}
           </h3>
-          <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
+          <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto" style={getStyle('cta_description')}>
             {settings.cta_description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -300,7 +326,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <h4 className="text-xl font-bold text-background mb-4">ANKA PMS</h4>
-              <p className="text-background/60">
+              <p className="text-background/60" style={getStyle('footer_description')}>
                 {settings.footer_description}
               </p>
             </div>
