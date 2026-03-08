@@ -490,7 +490,7 @@ export default function CustomerManagement() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCustomers.map((customer) => {
+                  paginatedCustomers.map((customer) => {
                     const canModify = userRole === "admin" || userRole === "leader" || customer.created_by === userId;
                     
                     return (
