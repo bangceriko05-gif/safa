@@ -51,7 +51,7 @@ export default function SuperAdmin() {
       setIsLoading(false);
     } catch (error) {
       console.error("Error checking super admin access:", error);
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 
