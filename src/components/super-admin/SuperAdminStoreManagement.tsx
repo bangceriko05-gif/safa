@@ -473,6 +473,17 @@ export default function SuperAdminStoreManagement() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => {
+                              localStorage.setItem("current_store_id", store.id);
+                              navigate("/");
+                            }}
+                            title="Buka Dashboard PMS"
+                          >
+                            <LayoutDashboard className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleEdit(store)}
                           >
                             <Pencil className="h-4 w-4" />
