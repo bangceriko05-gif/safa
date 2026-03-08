@@ -471,12 +471,6 @@ export default function Dashboard() {
                 <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
               </Button>
             )}
-            {(userRole === "admin" || userRole === "leader") && (
-              <Button onClick={handleExportToExcel} variant="outline">
-                <FileDown className="lg:mr-2 h-4 w-4" />
-                <span className="hidden lg:inline">Export Excel</span>
-              </Button>
-            )}
             <Button onClick={handleLogout} variant="outline">
               <LogOut className="lg:mr-2 h-4 w-4" />
               <span className="hidden lg:inline">Logout</span>
