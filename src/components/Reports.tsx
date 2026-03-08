@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer } from "lucide-react";
+import { Loader2, Clock, DollarSign, Users, Plus, Trash2, TrendingDown, TrendingUp, CalendarIcon, Pencil, Copy, LayoutGrid, ShoppingCart, Receipt, UserCheck, Settings, Printer, Scale } from "lucide-react";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -31,6 +31,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
+import AccountingReport from "./reports/AccountingReport";
 
 interface ReportStats {
   totalTransactions: number;
@@ -103,7 +104,7 @@ interface BookingPaymentDetail {
   type: 'booking' | 'booking_2';
 }
 
-type ReportTab = "overview" | "sales" | "income-expense" | "purchase" | "employee";
+type ReportTab = "overview" | "sales" | "income-expense" | "purchase" | "employee" | "accounting";
 
 export default function Reports() {
   const { currentStore } = useStore();
@@ -1086,6 +1087,12 @@ export default function Reports() {
               <span className="hidden sm:inline">Kinerja</span>
             </TabsTrigger>
           )}
+          {isFeatureEnabled("reports.accounting") && (
+            <TabsTrigger value="accounting" className="flex items-center gap-1.5 flex-1">
+              <Scale className="h-4 w-4" />
+              <span className="hidden sm:inline">Akuntansi</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
@@ -1123,6 +1130,12 @@ export default function Reports() {
         {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && isFeatureEnabled("reports.employee") && (
           <TabsContent value="employee" className="mt-4">
             <EmployeePerformanceReport />
+          </TabsContent>
+        )}
+
+        {isFeatureEnabled("reports.accounting") && (
+          <TabsContent value="accounting" className="mt-4">
+            <AccountingReport />
           </TabsContent>
         )}
       </Tabs>

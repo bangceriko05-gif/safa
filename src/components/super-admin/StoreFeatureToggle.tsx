@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe } from "lucide-react";
 
 interface StoreFeature {
   id: string;
@@ -38,6 +38,7 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
       "reports.income_expense": { label: "Pemasukan & Pengeluaran", icon: TrendingDown },
       "reports.purchase": { label: "Pembelian", icon: ShoppingCart },
       "reports.employee": { label: "Performa Karyawan", icon: UserCog },
+      "reports.accounting": { label: "Akuntansi", icon: Scale },
     },
   },
   settings: {
@@ -49,7 +50,7 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
       "settings.print": { label: "Nota", icon: Printer },
       "settings.rooms": { label: "Kamar", icon: Bed },
       "settings.outlet": { label: "Outlet", icon: Store },
-      "settings.ota": { label: "OTA", icon: Inbox },
+      "settings.ota": { label: "OTA", icon: Globe },
     },
   },
   products_inventory: {
