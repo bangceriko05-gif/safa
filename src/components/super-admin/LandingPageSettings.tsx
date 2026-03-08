@@ -782,9 +782,9 @@ function LandingPreview({
             <div>
               <EditableText field="footer_menu_title" as="h5" className="text-xs font-semibold text-background mb-2">{data.footer_menu_title}</EditableText>
               <div className="space-y-1 text-xs text-background/60">
-                <p>{data.navbar_menu_features}</p>
-                <p>{data.navbar_menu_benefits}</p>
-                <p>{data.navbar_btn_login}</p>
+                <EditableText field="navbar_menu_features" as="p">{data.navbar_menu_features}</EditableText>
+                <EditableText field="navbar_menu_benefits" as="p">{data.navbar_menu_benefits}</EditableText>
+                <EditableText field="navbar_btn_login" as="p">{data.navbar_btn_login}</EditableText>
               </div>
             </div>
             <div>
