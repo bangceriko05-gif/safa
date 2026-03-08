@@ -62,7 +62,7 @@ export const ActivityLog = () => {
       const { data, error } = await supabase
         .from("activity_logs")
         .select("*")
-        .eq("store_id", currentStore.id)
+        .or(`store_id.eq.${currentStore.id},store_id.is.null`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
