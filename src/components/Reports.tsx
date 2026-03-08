@@ -31,6 +31,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
+import AccountingReport from "./reports/AccountingReport";
 
 interface ReportStats {
   totalTransactions: number;
