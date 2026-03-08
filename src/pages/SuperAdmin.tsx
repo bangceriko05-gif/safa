@@ -115,7 +115,7 @@ export default function SuperAdmin() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="stores" className="space-y-6">
-          <TabsList className="grid w-full max-w-xl grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="stores" className="flex items-center gap-2">
               <Store className="h-4 w-4" />
               Kelola Outlet
@@ -127,6 +127,10 @@ export default function SuperAdmin() {
             <TabsTrigger value="landing" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Landing Page
+            </TabsTrigger>
+            <TabsTrigger value="demo" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Demo Requests
             </TabsTrigger>
           </TabsList>
 
@@ -140,6 +144,10 @@ export default function SuperAdmin() {
 
           <TabsContent value="landing">
             <LandingPageSettings />
+          </TabsContent>
+
+          <TabsContent value="demo">
+            <DemoRequestsManagement />
           </TabsContent>
         </Tabs>
       </main>
