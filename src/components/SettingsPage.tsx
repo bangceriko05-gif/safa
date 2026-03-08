@@ -609,6 +609,12 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
               onClose={() => setIsRoomSettingsOpen(false)}
             />
 
+          </TabsContent>
+        )}
+
+        {/* OTA Management */}
+        {(userRole === "admin" || userRole === "leader") && (
+          <TabsContent value="ota" className="mt-4">
             <OtaSourceManagement />
           </TabsContent>
         )}
