@@ -723,9 +723,17 @@ function LandingPreview({
               <EditableText field="benefits_title" as="h3" className="text-lg font-bold text-foreground mb-4">{data.benefits_title}</EditableText>
               <div className="space-y-2">
                 {data.benefits_items.map((b, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
+                  <div key={idx} className="flex items-center gap-2 text-xs group">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    <span className="text-foreground">{b}</span>
+                    <span
+                      contentEditable={mode === "edit"}
+                      suppressContentEditableWarning
+                      className={`text-foreground outline-none rounded px-0.5 -mx-0.5 flex-1 ${mode === "edit" ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5" : ""}`}
+                      onBlur={mode === "edit" ? (e) => updateBenefitItem(idx, e.currentTarget.textContent || "") : undefined}
+                    >{b}</span>
+                    {mode === "edit" && (
+                      <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={() => removeBenefitItem(idx)}><Trash2 className="h-3 w-3" /></Button>
+                    )}
                   </div>
                 ))}
               </div>
