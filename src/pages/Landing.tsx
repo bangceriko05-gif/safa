@@ -71,6 +71,7 @@ interface ElementStyle {
   color?: string;
   offsetX?: number;
   offsetY?: number;
+  scaleX?: number;
 }
 
 type ElementStyles = Record<string, ElementStyle>;
