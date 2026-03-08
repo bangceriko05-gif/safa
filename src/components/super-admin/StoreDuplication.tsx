@@ -291,6 +291,7 @@ export default function StoreDuplication() {
 
           await supabase.from("status_colors").insert(newColors);
           details.push(`✓ ${colors.length} warna status disalin`);
+        }
       }
 
       // 7. Copy store features if selected
