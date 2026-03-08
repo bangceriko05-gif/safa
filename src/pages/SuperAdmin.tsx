@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Store, Copy, ArrowLeft, Shield } from "lucide-react";
+import { Loader2, Store, Copy, ArrowLeft, Shield, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import SuperAdminStoreManagement from "@/components/super-admin/SuperAdminStoreManagement";
 import StoreDuplication from "@/components/super-admin/StoreDuplication";
@@ -91,9 +91,21 @@ export default function SuperAdmin() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span>Login sebagai:</span>
               <span className="font-medium text-foreground">{userName}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate("/auth");
+                }}
+                className="ml-2"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
