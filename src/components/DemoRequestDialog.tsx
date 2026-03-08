@@ -49,6 +49,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
         email: email.trim(),
         whatsapp: whatsapp.trim(),
         room_count: roomCount,
+        hotel_name: hotelName.trim(),
       });
 
       if (error) throw error;
