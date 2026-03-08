@@ -1132,6 +1132,12 @@ export default function Reports() {
             <EmployeePerformanceReport />
           </TabsContent>
         )}
+
+        {isFeatureEnabled("reports.accounting") && (
+          <TabsContent value="accounting" className="mt-4">
+            <AccountingReport />
+          </TabsContent>
+        )}
       </Tabs>
       )}
 
