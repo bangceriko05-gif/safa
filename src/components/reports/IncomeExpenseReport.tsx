@@ -72,6 +72,7 @@ type SubView = "all" | "expenses" | "incomes";
 export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
+  const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>(hideDateFilter ? "today" : "thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
