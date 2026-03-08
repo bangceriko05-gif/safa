@@ -372,6 +372,39 @@ function PositionPanel({ field, style, onStyleChange, onClose }: {
     </div>
   );
 }
+/* ─── Editable Text Element ─── */
+function EditableTextElement({ field, children, className = "", as: Tag = "span", mode, selectedField, elementStyles, getElementStyle, onUpdate, onElementClick, onContextMenu }: {
+  field: string; children: React.ReactNode; className?: string; as?: keyof JSX.IntrinsicElements;
+  mode: "edit" | "drag" | null; selectedField: string | null;
+  elementStyles: ElementStyles;
+  getElementStyle: (field: string) => React.CSSProperties;
+  onUpdate: (field: string, value: any) => void;
+  onElementClick: (field: string, e: React.MouseEvent) => void;
+  onContextMenu: (field: string, e: React.MouseEvent) => void;
+}) {
+  const El = Tag as any;
+  const isEdit = mode === "edit";
+  const isDrag = mode === "drag";
+  const isSelected = selectedField === field;
+  const hasDragOffset = elementStyles[field]?.offsetX || elementStyles[field]?.offsetY;
+
+  return (
+    <El
+      contentEditable={isEdit}
+      suppressContentEditableWarning
+      className={`${className} outline-none rounded px-0.5 -mx-0.5 transition-all ${
+        isEdit ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5"
+          : `cursor-pointer hover:ring-2 hover:ring-accent/50 hover:bg-accent/10 ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`
+      } ${hasDragOffset ? "ring-1 ring-dashed ring-accent/40" : ""}`}
+      style={getElementStyle(field)}
+      onBlur={isEdit ? (e: React.FocusEvent<HTMLElement>) => onUpdate(field, e.currentTarget.textContent || "") : undefined}
+      onClick={isDrag ? (e: React.MouseEvent) => onElementClick(field, e) : undefined}
+      onContextMenu={(e: React.MouseEvent) => onContextMenu(field, e)}
+    >
+      {children}
+    </El>
+  );
+}
 
 /* ─── Visual Editor Preview ─── */
 function LandingPreview({
@@ -408,30 +441,14 @@ function LandingPreview({
 
   const EditableText = ({ field, children, className = "", as: Tag = "span" }: {
     field: string; children: React.ReactNode; className?: string; as?: keyof JSX.IntrinsicElements;
-  }) => {
-    const El = Tag as any;
-    const isEdit = mode === "edit";
-    const isDrag = mode === "drag";
-    const isSelected = selectedField === field;
-    const hasDragOffset = elementStyles[field]?.offsetX || elementStyles[field]?.offsetY;
-
-    return (
-      <El
-        contentEditable={isEdit}
-        suppressContentEditableWarning
-        className={`${className} outline-none rounded px-0.5 -mx-0.5 transition-all ${
-          isEdit ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5"
-            : `cursor-pointer hover:ring-2 hover:ring-accent/50 hover:bg-accent/10 ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`
-        } ${hasDragOffset ? "ring-1 ring-dashed ring-accent/40" : ""}`}
-        style={getElementStyle(field)}
-        onBlur={isEdit ? (e: React.FocusEvent<HTMLElement>) => onUpdate(field, e.currentTarget.textContent || "") : undefined}
-        onClick={isDrag ? (e: React.MouseEvent) => handleElementClick(field, e) : undefined}
-        onContextMenu={(e: React.MouseEvent) => handleContextMenu(field, e)}
-      >
-        {children}
-      </El>
-    );
-  };
+  }) => (
+    <EditableTextElement
+      field={field} children={children} className={className} as={Tag}
+      mode={mode} selectedField={selectedField} elementStyles={elementStyles}
+      getElementStyle={getElementStyle} onUpdate={onUpdate}
+      onElementClick={handleElementClick} onContextMenu={handleContextMenu}
+    />
+  );
 
   // Feature item helpers
   const updateFeatureItem = (idx: number, key: "title" | "description", value: string) => {
