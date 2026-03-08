@@ -1086,6 +1086,12 @@ export default function Reports() {
               <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
             </TabsTrigger>
           )}
+          {isFeatureEnabled("reports.income_expense") && (
+            <TabsTrigger value="payment-method" className="flex items-center gap-1.5 flex-1">
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Metode Payment</span>
+            </TabsTrigger>
+          )}
           {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
             <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
               <ShoppingCart className="h-4 w-4" />
