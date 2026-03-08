@@ -197,12 +197,12 @@ export default function Landing() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div>
-              <p className="text-primary font-semibold text-lg mb-3">{settings.hero_tagline}</p>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight whitespace-pre-line">
+              <p className="text-primary font-semibold text-lg mb-3" style={getStyle('hero_tagline')}>{settings.hero_tagline}</p>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight whitespace-pre-line" style={getStyle('hero_title')}>
                 {settings.hero_title}
               </h2>
             </div>
-            <p className="text-lg text-muted-foreground max-w-lg">
+            <p className="text-lg text-muted-foreground max-w-lg" style={getStyle('hero_description')}>
               {settings.hero_description}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
