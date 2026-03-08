@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package } from "lucide-react";
 
