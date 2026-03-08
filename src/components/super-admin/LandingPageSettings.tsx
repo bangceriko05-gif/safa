@@ -60,6 +60,7 @@ interface ElementStyle {
   color?: string;
   offsetX?: number;
   offsetY?: number;
+  scaleX?: number;
 }
 
 type ElementStyles = Record<string, ElementStyle>;
@@ -537,7 +538,7 @@ function LandingPreview({
             </div>
             {data.hero_image_url ? (
               <div className="relative">
-                <img src={data.hero_image_url} alt="Preview" className="w-full h-28 object-contain rounded border bg-muted" />
+                <img src={data.hero_image_url} alt="Preview" className="w-full h-28 object-contain rounded border bg-muted" style={{ transform: elementStyles.hero_image?.scaleX === -1 ? 'scaleX(-1)' : undefined }} />
                 <Button variant="destructive" size="sm" className="absolute top-1 right-1 h-6 text-[10px] px-2" onClick={() => onUpdate("hero_image_url", "")}>Hapus</Button>
               </div>
             ) : (
@@ -545,6 +546,20 @@ function LandingPreview({
                 <span className="text-[10px] text-muted-foreground">Menggunakan gambar default</span>
               </div>
             )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={elementStyles.hero_image?.scaleX === -1 ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[10px] flex-1 gap-1"
+                onClick={() => {
+                  const current = elementStyles.hero_image?.scaleX;
+                  onStyleUpdate("hero_image", { scaleX: current === -1 ? undefined : -1 });
+                }}
+              >
+                ↔ Mirror Horizontal
+              </Button>
+            </div>
             <details className="text-[10px]">
               <summary className="text-muted-foreground cursor-pointer hover:text-foreground">Atau masukkan URL gambar</summary>
               <Input className="h-7 text-xs mt-1.5" value={data.hero_image_url || ""} onChange={(e) => onUpdate("hero_image_url", e.target.value)} placeholder="https://example.com/image.png" />
@@ -666,7 +681,7 @@ function LandingPreview({
               </div>
             </div>
             <div className="flex justify-center">
-              <img src={data.hero_image_url || heroIllustration} alt="ANKA PMS" className="w-full max-w-[240px] md:max-w-[280px] drop-shadow-xl object-contain" />
+              <img src={data.hero_image_url || heroIllustration} alt="ANKA PMS" className="w-full max-w-[240px] md:max-w-[280px] drop-shadow-xl object-contain" style={{ transform: elementStyles.hero_image?.scaleX === -1 ? 'scaleX(-1)' : undefined }} />
             </div>
           </div>
         </div>

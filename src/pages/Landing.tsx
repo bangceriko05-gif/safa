@@ -71,6 +71,7 @@ interface ElementStyle {
   color?: string;
   offsetX?: number;
   offsetY?: number;
+  scaleX?: number;
 }
 
 type ElementStyles = Record<string, ElementStyle>;
@@ -280,6 +281,7 @@ export default function Landing() {
               src={settings.hero_image_url || heroIllustration}
               alt="ANKA PMS Hotel Management"
               className="w-full max-w-md md:max-w-lg drop-shadow-xl"
+              style={{ transform: elementStyles.hero_image?.scaleX === -1 ? 'scaleX(-1)' : undefined }}
             />
           </div>
         </div>
