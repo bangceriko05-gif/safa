@@ -497,6 +497,11 @@ export default function Dashboard() {
                     <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
                   </SelectItem>
                 )}
+                {isFeatureEnabled("booking_requests") && (
+                  <SelectItem value="booking-requests">
+                    <span className="flex items-center gap-2"><Inbox className="h-4 w-4" /> Booking Request</span>
+                  </SelectItem>
+                )}
                 {(userRole === "admin" || userRole === "leader") && (
                   <>
                     {isFeatureEnabled("activity_log") && (
@@ -524,6 +529,7 @@ export default function Dashboard() {
             if (isFeatureEnabled("reports")) tabs.push("reports");
             if (isFeatureEnabled("settings")) tabs.push("settings");
             if (isFeatureEnabled("products_inventory")) tabs.push("products_inventory");
+            if (isFeatureEnabled("booking_requests")) tabs.push("booking_requests");
             if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log")) tabs.push("activity_log");
             if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management")) tabs.push("user_management");
             const cols = tabs.length;
@@ -564,6 +570,12 @@ export default function Dashboard() {
                   <TabsTrigger value="rooms">
                     <Package className="mr-2 h-4 w-4" />
                     Produk & Inventori
+                  </TabsTrigger>
+                )}
+                {isFeatureEnabled("booking_requests") && (
+                  <TabsTrigger value="booking-requests">
+                    <Inbox className="mr-2 h-4 w-4" />
+                    Booking Request
                   </TabsTrigger>
                 )}
                 {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log") && (
@@ -674,6 +686,12 @@ export default function Dashboard() {
               <NoAccessMessage featureName="Produk & Inventori" />
             )}
           </TabsContent>
+
+          {isFeatureEnabled("booking_requests") && (
+            <TabsContent value="booking-requests" className="mt-6">
+              <BookingRequestsManagement />
+            </TabsContent>
+          )}
 
           {(userRole === "admin" || userRole === "leader") && (
             <>

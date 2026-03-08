@@ -33,6 +33,7 @@ import { logActivity } from "@/utils/activityLogger";
 import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
 import { useStore } from "@/contexts/StoreContext";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface Room {
   id: string;
@@ -548,12 +549,15 @@ export default function RoomManagement() {
     toast.success("Ukuran tampilan berhasil diubah");
   };
 
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+
   return (
     <div className="space-y-6">
       {/* Product Management Section */}
-      <ProductManagement />
+      {isFeatureEnabled("products_inventory.products") && <ProductManagement />}
 
       {/* Room Management Section */}
+      {isFeatureEnabled("products_inventory.rooms") && (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -736,6 +740,7 @@ export default function RoomManagement() {
         </CardContent>
         )}
       </Card>
+      )}
 
       {/* Add/Edit Room Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>

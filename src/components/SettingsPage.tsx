@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Bell, Bed, Store, Palette, Type, Printer } from "lucide-react";
+import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -309,6 +309,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           if (isFeatureEnabled("settings.notifications")) settingsTabs.push("notifications");
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print")) settingsTabs.push("print");
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms")) settingsTabs.push("rooms");
+          if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota")) settingsTabs.push("ota");
           if (userRole === "admin" && isFeatureEnabled("settings.outlet")) settingsTabs.push("outlet");
           const cols = settingsTabs.length;
 
@@ -342,6 +343,12 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                 <TabsTrigger value="rooms" className="text-xs sm:text-sm">
                   <Bed className="mr-1 sm:mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Kamar</span>
+                </TabsTrigger>
+              )}
+              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota") && (
+                <TabsTrigger value="ota" className="text-xs sm:text-sm">
+                  <Globe className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">OTA</span>
                 </TabsTrigger>
               )}
               {userRole === "admin" && isFeatureEnabled("settings.outlet") && (
@@ -602,6 +609,12 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
               onClose={() => setIsRoomSettingsOpen(false)}
             />
 
+          </TabsContent>
+        )}
+
+        {/* OTA Management */}
+        {(userRole === "admin" || userRole === "leader") && (
+          <TabsContent value="ota" className="mt-4">
             <OtaSourceManagement />
           </TabsContent>
         )}
