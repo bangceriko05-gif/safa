@@ -895,6 +895,66 @@ export type Database = {
           },
         ]
       }
+      landing_page_settings: {
+        Row: {
+          contact_address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_whatsapp: string | null
+          created_at: string | null
+          cta_description: string | null
+          cta_title: string | null
+          footer_description: string | null
+          hero_description: string | null
+          hero_image_url: string | null
+          hero_tagline: string | null
+          hero_title: string | null
+          id: string
+          stats_properties: string | null
+          stats_support: string | null
+          stats_uptime: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string | null
+          cta_description?: string | null
+          cta_title?: string | null
+          footer_description?: string | null
+          hero_description?: string | null
+          hero_image_url?: string | null
+          hero_tagline?: string | null
+          hero_title?: string | null
+          id?: string
+          stats_properties?: string | null
+          stats_support?: string | null
+          stats_uptime?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string | null
+          cta_description?: string | null
+          cta_title?: string | null
+          footer_description?: string | null
+          hero_description?: string | null
+          hero_image_url?: string | null
+          hero_tagline?: string | null
+          hero_title?: string | null
+          id?: string
+          stats_properties?: string | null
+          stats_support?: string | null
+          stats_uptime?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       login_settings: {
         Row: {
           background_color: string | null
