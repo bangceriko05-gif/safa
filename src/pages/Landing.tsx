@@ -136,6 +136,7 @@ export default function Landing() {
   const [settings, setSettings] = useState<LandingSettings>(defaultSettings);
   const [elementStyles, setElementStyles] = useState<ElementStyles>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [showDemoDialog, setShowDemoDialog] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
