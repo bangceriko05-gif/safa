@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import SuperAdminStoreManagement from "@/components/super-admin/SuperAdminStoreManagement";
 import StoreDuplication from "@/components/super-admin/StoreDuplication";
 import LandingPageSettings from "@/components/super-admin/LandingPageSettings";
+import DemoRequestsManagement from "@/components/super-admin/DemoRequestsManagement";
 
 export default function SuperAdmin() {
   const navigate = useNavigate();
