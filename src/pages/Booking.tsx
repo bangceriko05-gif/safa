@@ -1361,9 +1361,9 @@ export default function Booking() {
                       <SelectValue placeholder="Pilih metode pembayaran" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cash">Bayar di Tempat (Cash)</SelectItem>
-                      <SelectItem value="Transfer">Transfer Bank</SelectItem>
-                      <SelectItem value="QRIS">QRIS</SelectItem>
+                      {paymentMethodOptions.map(method => (
+                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
