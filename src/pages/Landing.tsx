@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,6 +15,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  Loader2,
 } from "lucide-react";
 import heroIllustration from "@/assets/hero-illustration.png";
 
@@ -58,8 +61,88 @@ const benefits = [
   "Akses dari perangkat apapun",
 ];
 
+interface LandingSettings {
+  hero_tagline: string;
+  hero_title: string;
+  hero_description: string;
+  hero_image_url: string | null;
+  contact_email: string;
+  contact_phone: string;
+  contact_whatsapp: string;
+  contact_address: string;
+  stats_properties: string;
+  stats_support: string;
+  stats_uptime: string;
+  cta_title: string;
+  cta_description: string;
+  footer_description: string;
+}
+
+const defaultSettings: LandingSettings = {
+  hero_tagline: "#SolusiPropertiAnda",
+  hero_title: "Kelola Properti Lebih Mudah & Efisien!",
+  hero_description: "ANKA PMS adalah sistem manajemen properti all-in-one untuk hotel, kost, guest house, dan penginapan. Kelola booking, keuangan, dan operasional dari satu platform.",
+  hero_image_url: null,
+  contact_email: "info@anka.management",
+  contact_phone: "+62 812 3456 7890",
+  contact_whatsapp: "6281234567890",
+  contact_address: "Malang, Jawa Timur",
+  stats_properties: "100+",
+  stats_support: "24/7",
+  stats_uptime: "99.9%",
+  cta_title: "Siap Mengelola Properti Lebih Baik?",
+  cta_description: "Daftar sekarang dan nikmati semua fitur premium ANKA PMS untuk properti Anda.",
+  footer_description: "Solusi manajemen properti modern untuk hotel, kost, guest house, dan penginapan di Indonesia.",
+};
+
 export default function Landing() {
   const navigate = useNavigate();
+  const [settings, setSettings] = useState<LandingSettings>(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("landing_page_settings")
+          .select("*")
+          .single();
+
+        if (!error && data) {
+          setSettings({
+            hero_tagline: data.hero_tagline || defaultSettings.hero_tagline,
+            hero_title: data.hero_title || defaultSettings.hero_title,
+            hero_description: data.hero_description || defaultSettings.hero_description,
+            hero_image_url: data.hero_image_url,
+            contact_email: data.contact_email || defaultSettings.contact_email,
+            contact_phone: data.contact_phone || defaultSettings.contact_phone,
+            contact_whatsapp: data.contact_whatsapp || defaultSettings.contact_whatsapp,
+            contact_address: data.contact_address || defaultSettings.contact_address,
+            stats_properties: data.stats_properties || defaultSettings.stats_properties,
+            stats_support: data.stats_support || defaultSettings.stats_support,
+            stats_uptime: data.stats_uptime || defaultSettings.stats_uptime,
+            cta_title: data.cta_title || defaultSettings.cta_title,
+            cta_description: data.cta_description || defaultSettings.cta_description,
+            footer_description: data.footer_description || defaultSettings.footer_description,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching landing settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,14 +171,13 @@ export default function Landing() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div>
-              <p className="text-primary font-semibold text-lg mb-3">#SolusiPropertiAnda</p>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight">
-                Kelola Properti <br />Lebih Mudah & <br />Efisien!
+              <p className="text-primary font-semibold text-lg mb-3">{settings.hero_tagline}</p>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight whitespace-pre-line">
+                {settings.hero_title}
               </h2>
             </div>
             <p className="text-lg text-muted-foreground max-w-lg">
-              ANKA PMS adalah sistem manajemen properti all-in-one untuk hotel, kost, guest house, dan penginapan. 
-              Kelola booking, keuangan, dan operasional dari satu platform.
+              {settings.hero_description}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="text-base px-8 py-6" onClick={() => navigate("/auth")}>
@@ -103,7 +185,7 @@ export default function Landing() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button size="lg" variant="outline" className="text-base px-8 py-6" asChild>
-                <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer">
+                <a href={`https://wa.me/${settings.contact_whatsapp}`} target="_blank" rel="noopener noreferrer">
                   Jadwalkan Demo
                 </a>
               </Button>
@@ -111,7 +193,7 @@ export default function Landing() {
           </div>
           <div className="flex justify-center">
             <img
-              src={heroIllustration}
+              src={settings.hero_image_url || heroIllustration}
               alt="ANKA PMS Hotel Management"
               className="w-full max-w-md md:max-w-lg drop-shadow-xl"
             />
@@ -171,15 +253,15 @@ export default function Landing() {
             </div>
             <div className="bg-gradient-to-br from-primary/5 to-primary/15 rounded-3xl p-8 md:p-12">
               <div className="space-y-6 text-center">
-                <div className="text-5xl font-extrabold text-primary">100+</div>
+                <div className="text-5xl font-extrabold text-primary">{settings.stats_properties}</div>
                 <p className="text-muted-foreground">Properti telah menggunakan ANKA PMS</p>
                 <div className="grid grid-cols-2 gap-6 pt-4">
                   <div>
-                    <div className="text-3xl font-bold text-foreground">24/7</div>
+                    <div className="text-3xl font-bold text-foreground">{settings.stats_support}</div>
                     <p className="text-sm text-muted-foreground">Support</p>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-foreground">99.9%</div>
+                    <div className="text-3xl font-bold text-foreground">{settings.stats_uptime}</div>
                     <p className="text-sm text-muted-foreground">Uptime</p>
                   </div>
                 </div>
@@ -193,10 +275,10 @@ export default function Landing() {
       <section className="py-16 md:py-24 bg-primary">
         <div className="container mx-auto px-4 text-center">
           <h3 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-            Siap Mengelola Properti Lebih Baik?
+            {settings.cta_title}
           </h3>
           <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-            Daftar sekarang dan nikmati semua fitur premium ANKA PMS untuk properti Anda.
+            {settings.cta_description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" className="text-base px-8 py-6" onClick={() => navigate("/auth")}>
@@ -204,7 +286,7 @@ export default function Landing() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button size="lg" variant="outline" className="text-base px-8 py-6 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-              <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer">
+              <a href={`https://wa.me/${settings.contact_whatsapp}`} target="_blank" rel="noopener noreferrer">
                 Hubungi Kami
               </a>
             </Button>
@@ -219,7 +301,7 @@ export default function Landing() {
             <div>
               <h4 className="text-xl font-bold text-background mb-4">ANKA PMS</h4>
               <p className="text-background/60">
-                Solusi manajemen properti modern untuk hotel, kost, guest house, dan penginapan di Indonesia.
+                {settings.footer_description}
               </p>
             </div>
             <div>
@@ -235,15 +317,15 @@ export default function Landing() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-background/60">
                   <Mail className="h-4 w-4" />
-                  <span>info@anka.management</span>
+                  <span>{settings.contact_email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-background/60">
                   <Phone className="h-4 w-4" />
-                  <span>+62 812 3456 7890</span>
+                  <span>{settings.contact_phone}</span>
                 </div>
                 <div className="flex items-center gap-2 text-background/60">
                   <MapPin className="h-4 w-4" />
-                  <span>Malang, Jawa Timur</span>
+                  <span>{settings.contact_address}</span>
                 </div>
               </div>
             </div>
