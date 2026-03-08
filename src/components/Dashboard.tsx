@@ -594,7 +594,7 @@ export default function Dashboard() {
             );
           })()}
 
-          <TabsContent value="bookings" className="space-y-6 mt-6">
+          <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
             {/* Room Summary - shown for all store types */}
             <RoomSummary selectedDate={selectedDate} />
 
