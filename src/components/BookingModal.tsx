@@ -92,6 +92,7 @@ export default function BookingModal({
   userId,
 }: BookingModalProps) {
   const { currentStore } = useStore();
+  const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
