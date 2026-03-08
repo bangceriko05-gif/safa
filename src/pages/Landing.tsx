@@ -136,6 +136,9 @@ export default function Landing() {
             cta_description: data.cta_description || defaultSettings.cta_description,
             footer_description: data.footer_description || defaultSettings.footer_description,
           });
+          if (data.element_styles && typeof data.element_styles === 'object') {
+            setElementStyles(data.element_styles as ElementStyles);
+          }
         }
       } catch (error) {
         console.error("Error fetching landing settings:", error);
