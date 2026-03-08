@@ -904,6 +904,7 @@ export type Database = {
           created_at: string | null
           cta_description: string | null
           cta_title: string | null
+          element_styles: Json | null
           footer_description: string | null
           hero_description: string | null
           hero_image_url: string | null
@@ -923,6 +924,7 @@ export type Database = {
           created_at?: string | null
           cta_description?: string | null
           cta_title?: string | null
+          element_styles?: Json | null
           footer_description?: string | null
           hero_description?: string | null
           hero_image_url?: string | null
@@ -942,6 +944,7 @@ export type Database = {
           created_at?: string | null
           cta_description?: string | null
           cta_title?: string | null
+          element_styles?: Json | null
           footer_description?: string | null
           hero_description?: string | null
           hero_image_url?: string | null
