@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2, Pencil, Move, Type, Palette, RotateCcw } from "lucide-react";
+import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2, Pencil, Move, Type, Palette, RotateCcw, ArrowUp, ArrowDown, ArrowLeft as ArrowLeftIcon, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface LandingPageData {
