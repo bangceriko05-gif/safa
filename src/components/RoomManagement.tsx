@@ -557,6 +557,7 @@ export default function RoomManagement() {
       {isFeatureEnabled("products_inventory.products") && <ProductManagement />}
 
       {/* Room Management Section */}
+      {isFeatureEnabled("products_inventory.rooms") && (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
