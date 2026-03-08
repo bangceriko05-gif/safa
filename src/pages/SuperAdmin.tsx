@@ -114,7 +114,7 @@ export default function SuperAdmin() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="stores" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-xl grid-cols-3">
             <TabsTrigger value="stores" className="flex items-center gap-2">
               <Store className="h-4 w-4" />
               Kelola Outlet
@@ -122,6 +122,10 @@ export default function SuperAdmin() {
             <TabsTrigger value="duplicate" className="flex items-center gap-2">
               <Copy className="h-4 w-4" />
               Salin Outlet
+            </TabsTrigger>
+            <TabsTrigger value="landing" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Landing Page
             </TabsTrigger>
           </TabsList>
 
@@ -131,6 +135,10 @@ export default function SuperAdmin() {
 
           <TabsContent value="duplicate">
             <StoreDuplication />
+          </TabsContent>
+
+          <TabsContent value="landing">
+            <LandingPageSettings />
           </TabsContent>
         </Tabs>
       </main>
