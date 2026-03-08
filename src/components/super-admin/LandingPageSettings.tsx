@@ -15,43 +15,26 @@ interface FeatureItem {
   description: string;
 }
 
+interface GalleryItem { title: string; description: string; image_url: string; }
+interface PricingItem { name: string; price: string; period: string; features: string[]; is_popular: boolean; btn_text: string; }
+interface PartnerLogo { name: string; logo_url: string; }
+
 interface LandingPageData {
   id: string;
-  hero_tagline: string;
-  hero_title: string;
-  hero_description: string;
-  hero_image_url: string | null;
-  contact_email: string;
-  contact_phone: string;
-  contact_whatsapp: string;
-  contact_address: string;
-  stats_properties: string;
-  stats_support: string;
-  stats_uptime: string;
-  stats_properties_label: string;
-  cta_title: string;
-  cta_description: string;
-  footer_description: string;
-  navbar_brand: string;
-  features_tagline: string;
-  features_title: string;
-  features_description: string;
-  features_items: FeatureItem[];
-  benefits_tagline: string;
-  benefits_title: string;
-  benefits_items: string[];
-  btn_hero_primary: string;
-  btn_hero_secondary: string;
-  btn_benefits: string;
-  btn_cta_primary: string;
-  btn_cta_secondary: string;
-  navbar_menu_features: string;
-  navbar_menu_benefits: string;
-  navbar_menu_contact: string;
-  navbar_btn_login: string;
-  footer_menu_title: string;
-  footer_contact_title: string;
-  copyright_text: string;
+  hero_tagline: string; hero_title: string; hero_description: string; hero_image_url: string | null;
+  contact_email: string; contact_phone: string; contact_whatsapp: string; contact_address: string;
+  stats_properties: string; stats_support: string; stats_uptime: string; stats_properties_label: string;
+  cta_title: string; cta_description: string; footer_description: string; navbar_brand: string;
+  features_tagline: string; features_title: string; features_description: string; features_items: FeatureItem[];
+  benefits_tagline: string; benefits_title: string; benefits_items: string[];
+  btn_hero_primary: string; btn_hero_secondary: string; btn_benefits: string;
+  btn_cta_primary: string; btn_cta_secondary: string;
+  navbar_menu_features: string; navbar_menu_benefits: string; navbar_menu_contact: string;
+  navbar_btn_login: string; footer_menu_title: string; footer_contact_title: string; copyright_text: string;
+  navbar_menu_pricing: string; navbar_menu_gallery: string;
+  gallery_tagline: string; gallery_title: string; gallery_description: string; gallery_items: GalleryItem[];
+  pricing_tagline: string; pricing_title: string; pricing_description: string; pricing_items: PricingItem[];
+  partners_tagline: string; partners_title: string; partner_logos: PartnerLogo[];
 }
 
 interface ElementStyle {
