@@ -5,6 +5,8 @@ import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import DepositManagement from "./deposit/DepositManagement";
 import NoAccessMessage from "./NoAccessMessage";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
+import { useStore } from "@/contexts/StoreContext";
 import { useState } from "react";
 
 interface TransactionManagementProps {
@@ -17,6 +19,8 @@ interface TransactionManagementProps {
 
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
   const { hasPermission, hasAnyPermission } = usePermissions();
+  const { currentStore } = useStore();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
 
   const hasTransactionAccess = hasAnyPermission([
@@ -28,43 +32,48 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
     return <NoAccessMessage featureName="Transaksi" />;
   }
 
+  const tabs = [
+    { key: "list-booking", feature: "transactions.list_booking", label: "List Booking", icon: List },
+    { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
+    { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: TrendingUp },
+    { key: "deposits", feature: "transactions.deposits", label: "Deposit", icon: Shield },
+  ].filter(t => isFeatureEnabled(t.feature));
+
   return (
     <div className="space-y-4">
-      <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          <TabsTrigger value="list-booking">
-            <List className="mr-2 h-4 w-4" />
-            List Booking
-          </TabsTrigger>
-          <TabsTrigger value="expenses">
-            <TrendingDown className="mr-2 h-4 w-4" />
-            Pengeluaran
-          </TabsTrigger>
-          <TabsTrigger value="incomes">
-            <TrendingUp className="mr-2 h-4 w-4" />
-            Pemasukan
-          </TabsTrigger>
-          <TabsTrigger value="deposits">
-            <Shield className="mr-2 h-4 w-4" />
-            Deposit
-          </TabsTrigger>
+      <Tabs value={tabs.some(t => t.key === activeSubTab) ? activeSubTab : tabs[0]?.key} onValueChange={setActiveSubTab}>
+        <TabsList className={`grid w-full max-w-2xl`} style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+          {tabs.map(tab => (
+            <TabsTrigger key={tab.key} value={tab.key}>
+              <tab.icon className="mr-2 h-4 w-4" />
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="list-booking" className="mt-4">
-          <ListBooking userRole={userRole} onEditBooking={onEditBooking} onAddBooking={onAddBooking} />
-        </TabsContent>
+        {isFeatureEnabled("transactions.list_booking") && (
+          <TabsContent value="list-booking" className="mt-4">
+            <ListBooking userRole={userRole} onEditBooking={onEditBooking} onAddBooking={onAddBooking} />
+          </TabsContent>
+        )}
 
-        <TabsContent value="expenses" className="mt-4">
-          <IncomeExpenseReport initialTab="expenses" showAddButton hideDateFilter />
-        </TabsContent>
+        {isFeatureEnabled("transactions.expenses") && (
+          <TabsContent value="expenses" className="mt-4">
+            <IncomeExpenseReport initialTab="expenses" showAddButton hideDateFilter />
+          </TabsContent>
+        )}
 
-        <TabsContent value="incomes" className="mt-4">
-          <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
-        </TabsContent>
+        {isFeatureEnabled("transactions.incomes") && (
+          <TabsContent value="incomes" className="mt-4">
+            <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
+          </TabsContent>
+        )}
 
-        <TabsContent value="deposits" className="mt-4">
-          <DepositManagement refreshTrigger={depositRefreshTrigger} onAddDeposit={onAddDeposit} />
-        </TabsContent>
+        {isFeatureEnabled("transactions.deposits") && (
+          <TabsContent value="deposits" className="mt-4">
+            <DepositManagement refreshTrigger={depositRefreshTrigger} onAddDeposit={onAddDeposit} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
