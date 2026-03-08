@@ -68,6 +68,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
       setEmail("");
       setWhatsapp("");
       setRoomCount("");
+      setHotelName("");
       setIsSuccess(false);
     }
     onOpenChange(val);
