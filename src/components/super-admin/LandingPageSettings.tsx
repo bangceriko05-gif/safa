@@ -404,7 +404,7 @@ function LandingPreview({
   elementStyles: ElementStyles;
   onStyleUpdate: (field: string, style: Partial<ElementStyle>) => void;
 }) {
-  const [mode, setMode] = useState<"edit" | "drag">("edit");
+  const [mode, setMode] = useState<"edit" | "drag" | null>("edit");
   const [activeToolbar, setActiveToolbar] = useState<{ field: string; x: number; y: number } | null>(null);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -483,7 +483,7 @@ function LandingPreview({
           size="sm"
           variant={mode === "edit" ? "default" : "outline"}
           className="h-7 text-xs gap-1"
-          onClick={() => { setMode("edit"); setSelectedField(null); }}
+          onClick={() => { setMode(mode === "edit" ? null : "edit"); setSelectedField(null); }}
         >
           <Pencil className="h-3 w-3" />
           Edit Teks
@@ -492,7 +492,7 @@ function LandingPreview({
           size="sm"
           variant={mode === "drag" ? "default" : "outline"}
           className="h-7 text-xs gap-1"
-          onClick={() => setMode("drag")}
+          onClick={() => { setMode(mode === "drag" ? null : "drag"); setSelectedField(null); }}
         >
           <Move className="h-3 w-3" />
           Geser Posisi
