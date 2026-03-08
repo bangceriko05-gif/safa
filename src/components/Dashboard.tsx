@@ -434,15 +434,17 @@ export default function Dashboard() {
             <StoreSelector />
           </div>
           <div className="flex gap-2">
-            <Button 
-              onClick={() => setDepositMode(!depositMode)} 
-              variant={depositMode ? "default" : "outline"}
-              className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-              size="default"
-            >
-              <Shield className="lg:mr-2 h-4 w-4" />
-              <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
-            </Button>
+            {isFeatureEnabled("deposit") && (
+              <Button 
+                onClick={() => setDepositMode(!depositMode)} 
+                variant={depositMode ? "default" : "outline"}
+                className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                size="default"
+              >
+                <Shield className="lg:mr-2 h-4 w-4" />
+                <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
+              </Button>
+            )}
             {(userRole === "admin" || userRole === "leader") && (
               <Button onClick={handleExportToExcel} variant="outline">
                 <FileDown className="lg:mr-2 h-4 w-4" />
