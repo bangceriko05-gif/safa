@@ -367,6 +367,54 @@ export default function CustomerManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const idsArray = Array.from(selectedIds);
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .in("id", idsArray);
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'Pelanggan',
+        entityId: idsArray[0],
+        description: `Menghapus ${idsArray.length} pelanggan sekaligus`,
+        storeId: currentStore?.id,
+      });
+
+      toast.success(`${idsArray.length} pelanggan berhasil dihapus`);
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+      fetchCustomers();
+    } catch (error: any) {
+      toast.error("Gagal menghapus pelanggan");
+      console.error(error);
+    } finally {
+      setBulkDeleteOpen(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedCustomers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedCustomers.map(c => c.id)));
+    }
+  };
+
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingCustomer(null);
