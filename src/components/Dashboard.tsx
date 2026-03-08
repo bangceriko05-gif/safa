@@ -529,6 +529,7 @@ export default function Dashboard() {
             if (isFeatureEnabled("reports")) tabs.push("reports");
             if (isFeatureEnabled("settings")) tabs.push("settings");
             if (isFeatureEnabled("products_inventory")) tabs.push("products_inventory");
+            if (isFeatureEnabled("booking_requests")) tabs.push("booking_requests");
             if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log")) tabs.push("activity_log");
             if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management")) tabs.push("user_management");
             const cols = tabs.length;
