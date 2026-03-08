@@ -897,61 +897,124 @@ export type Database = {
       }
       landing_page_settings: {
         Row: {
+          benefits_items: Json | null
+          benefits_tagline: string | null
+          benefits_title: string | null
+          btn_benefits: string | null
+          btn_cta_primary: string | null
+          btn_cta_secondary: string | null
+          btn_hero_primary: string | null
+          btn_hero_secondary: string | null
           contact_address: string | null
           contact_email: string | null
           contact_phone: string | null
           contact_whatsapp: string | null
+          copyright_text: string | null
           created_at: string | null
           cta_description: string | null
           cta_title: string | null
           element_styles: Json | null
+          features_description: string | null
+          features_items: Json | null
+          features_tagline: string | null
+          features_title: string | null
+          footer_contact_title: string | null
           footer_description: string | null
+          footer_menu_title: string | null
           hero_description: string | null
           hero_image_url: string | null
           hero_tagline: string | null
           hero_title: string | null
           id: string
+          navbar_brand: string | null
+          navbar_btn_login: string | null
+          navbar_menu_benefits: string | null
+          navbar_menu_contact: string | null
+          navbar_menu_features: string | null
           stats_properties: string | null
+          stats_properties_label: string | null
           stats_support: string | null
           stats_uptime: string | null
           updated_at: string | null
         }
         Insert: {
+          benefits_items?: Json | null
+          benefits_tagline?: string | null
+          benefits_title?: string | null
+          btn_benefits?: string | null
+          btn_cta_primary?: string | null
+          btn_cta_secondary?: string | null
+          btn_hero_primary?: string | null
+          btn_hero_secondary?: string | null
           contact_address?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           contact_whatsapp?: string | null
+          copyright_text?: string | null
           created_at?: string | null
           cta_description?: string | null
           cta_title?: string | null
           element_styles?: Json | null
+          features_description?: string | null
+          features_items?: Json | null
+          features_tagline?: string | null
+          features_title?: string | null
+          footer_contact_title?: string | null
           footer_description?: string | null
+          footer_menu_title?: string | null
           hero_description?: string | null
           hero_image_url?: string | null
           hero_tagline?: string | null
           hero_title?: string | null
           id?: string
+          navbar_brand?: string | null
+          navbar_btn_login?: string | null
+          navbar_menu_benefits?: string | null
+          navbar_menu_contact?: string | null
+          navbar_menu_features?: string | null
           stats_properties?: string | null
+          stats_properties_label?: string | null
           stats_support?: string | null
           stats_uptime?: string | null
           updated_at?: string | null
         }
         Update: {
+          benefits_items?: Json | null
+          benefits_tagline?: string | null
+          benefits_title?: string | null
+          btn_benefits?: string | null
+          btn_cta_primary?: string | null
+          btn_cta_secondary?: string | null
+          btn_hero_primary?: string | null
+          btn_hero_secondary?: string | null
           contact_address?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           contact_whatsapp?: string | null
+          copyright_text?: string | null
           created_at?: string | null
           cta_description?: string | null
           cta_title?: string | null
           element_styles?: Json | null
+          features_description?: string | null
+          features_items?: Json | null
+          features_tagline?: string | null
+          features_title?: string | null
+          footer_contact_title?: string | null
           footer_description?: string | null
+          footer_menu_title?: string | null
           hero_description?: string | null
           hero_image_url?: string | null
           hero_tagline?: string | null
           hero_title?: string | null
           id?: string
+          navbar_brand?: string | null
+          navbar_btn_login?: string | null
+          navbar_menu_benefits?: string | null
+          navbar_menu_contact?: string | null
+          navbar_menu_features?: string | null
           stats_properties?: string | null
+          stats_properties_label?: string | null
           stats_support?: string | null
           stats_uptime?: string | null
           updated_at?: string | null
