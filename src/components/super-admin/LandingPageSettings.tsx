@@ -681,7 +681,7 @@ function LandingPreview({
               </div>
             </div>
             <div className="flex justify-center">
-              <img src={data.hero_image_url || heroIllustration} alt="ANKA PMS" className="w-full max-w-[240px] md:max-w-[280px] drop-shadow-xl object-contain" />
+              <img src={data.hero_image_url || heroIllustration} alt="ANKA PMS" className="w-full max-w-[240px] md:max-w-[280px] drop-shadow-xl object-contain" style={{ transform: elementStyles.hero_image?.scaleX === -1 ? 'scaleX(-1)' : undefined }} />
             </div>
           </div>
         </div>
