@@ -487,7 +487,7 @@ export default function SuperAdminStoreManagement() {
                       </TableCell>
                     </TableRow>
                     {expandedStoreId === store.id && (
-                      <TableRow key={`${store.id}-features`}>
+                      <TableRow>
                         <TableCell colSpan={9} className="bg-muted/30 p-4">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium">
