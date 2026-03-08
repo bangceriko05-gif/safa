@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,7 +55,18 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
-  const [activeTab, setActiveTab] = useState("bookings");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
+  const setActiveTab = (tab: string) => {
+    setActiveTabRaw(tab);
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", tab);
+    if (tab !== "reports") {
+      params.delete("reportTab");
+      params.delete("accountingTab");
+    }
+    setSearchParams(params, { replace: true });
+  };
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
   });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package } from "lucide-react";
 
@@ -13,7 +13,18 @@ import AssetManagement from "./accounting/AssetManagement";
 type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets";
 
 export default function AccountingReport() {
-  const [activeTab, setActiveTab] = useState<AccountingTab>("balance");
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const [activeTab, setActiveTabState] = useState<AccountingTab>(() => {
+    const param = searchParams.get("accountingTab");
+    return (param as AccountingTab) || "balance";
+  });
+
+  const setActiveTab = (tab: AccountingTab) => {
+    setActiveTabState(tab);
+    const params = new URLSearchParams(window.location.search);
+    params.set("accountingTab", tab);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
 
   const tabs = [
     { key: "balance" as const, label: "Neraca", icon: Scale },
