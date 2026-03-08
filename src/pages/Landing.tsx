@@ -326,7 +326,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <h4 className="text-xl font-bold text-background mb-4">ANKA PMS</h4>
-              <p className="text-background/60">
+              <p className="text-background/60" style={getStyle('footer_description')}>
                 {settings.footer_description}
               </p>
             </div>
