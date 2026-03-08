@@ -20,6 +20,7 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
