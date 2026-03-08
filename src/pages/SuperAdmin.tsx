@@ -35,7 +35,7 @@ export default function SuperAdmin() {
 
       if (!isSuperAdminResult) {
         toast.error("Akses ditolak. Hanya Super Admin yang dapat mengakses halaman ini.");
-        navigate("/");
+        navigate("/dashboard");
         return;
       }
 
