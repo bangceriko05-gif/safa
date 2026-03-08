@@ -22,6 +22,12 @@ export async function logActivity({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Skip logging for super admins
+    const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
+      _user_id: user.id
+    });
+    if (isSuperAdmin) return;
+
     // Get user profile for name
     const { data: profile } = await supabase
       .from('profiles')
