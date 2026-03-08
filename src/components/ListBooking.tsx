@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import BookingDetailPopup from "./BookingDetailPopup";
 import CancelledBookings from "./CancelledBookings";
 
