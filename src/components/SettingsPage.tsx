@@ -311,6 +311,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print")) settingsTabs.push("print");
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms")) settingsTabs.push("rooms");
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota")) settingsTabs.push("ota");
+          if ((userRole === "admin" || userRole === "leader")) settingsTabs.push("payment-methods");
           if (userRole === "admin" && isFeatureEnabled("settings.outlet")) settingsTabs.push("outlet");
           const cols = settingsTabs.length;
 
