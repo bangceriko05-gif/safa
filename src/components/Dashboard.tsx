@@ -671,7 +671,7 @@ export default function Dashboard() {
             <CustomerManagement />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
             <Reports />
           </TabsContent>
 
