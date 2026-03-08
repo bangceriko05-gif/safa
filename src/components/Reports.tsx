@@ -1136,6 +1136,12 @@ export default function Reports() {
           </TabsContent>
         )}
 
+        {isFeatureEnabled("reports.income_expense") && (
+          <TabsContent value="payment-method" className="mt-4">
+            <PaymentMethodReport />
+          </TabsContent>
+        )}
+
         {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
           <TabsContent value="purchase" className="mt-4">
             <PurchaseReport />
