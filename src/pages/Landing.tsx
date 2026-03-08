@@ -270,10 +270,8 @@ export default function Landing() {
                 {settings.btn_hero_primary}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="text-base px-8 py-6" asChild>
-                <a href={`https://wa.me/${settings.contact_whatsapp}`} target="_blank" rel="noopener noreferrer">
-                  {settings.btn_hero_secondary}
-                </a>
+              <Button size="lg" variant="outline" className="text-base px-8 py-6" onClick={() => setShowDemoDialog(true)}>
+                {settings.btn_hero_secondary}
               </Button>
             </div>
           </div>
