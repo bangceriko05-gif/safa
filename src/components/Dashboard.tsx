@@ -572,6 +572,12 @@ export default function Dashboard() {
                     Produk & Inventori
                   </TabsTrigger>
                 )}
+                {isFeatureEnabled("booking_requests") && (
+                  <TabsTrigger value="booking-requests">
+                    <Inbox className="mr-2 h-4 w-4" />
+                    Booking Request
+                  </TabsTrigger>
+                )}
                 {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log") && (
                   <TabsTrigger value="activity">
                     <History className="mr-2 h-4 w-4" />
