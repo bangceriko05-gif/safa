@@ -627,6 +627,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           </TabsContent>
         )}
 
+        {/* Payment Method Settings */}
+        {(userRole === "admin" || userRole === "leader") && (
+          <TabsContent value="payment-methods" className="mt-4">
+            <PaymentMethodSettings />
+          </TabsContent>
+        )}
+
         {/* Outlet Management */}
         {userRole === "admin" && (
           <TabsContent value="outlet" className="mt-4">
