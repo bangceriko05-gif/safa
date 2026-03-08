@@ -302,42 +302,57 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full" style={{ 
-          gridTemplateColumns: userRole === "admin" 
-            ? "repeat(6, 1fr)" 
-            : (userRole === "leader" ? "repeat(5, 1fr)" : "repeat(3, 1fr)")
-        }}>
-          <TabsTrigger value="display" className="text-xs sm:text-sm">
-            <Monitor className="mr-1 sm:mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Tampilan</span>
-          </TabsTrigger>
-          <TabsTrigger value="colors" className="text-xs sm:text-sm">
-            <Palette className="mr-1 sm:mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Warna</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="text-xs sm:text-sm">
-            <Bell className="mr-1 sm:mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Notifikasi</span>
-          </TabsTrigger>
-          {(userRole === "admin" || userRole === "leader") && (
-            <>
-              <TabsTrigger value="print" className="text-xs sm:text-sm">
-                <Printer className="mr-1 sm:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Nota</span>
-              </TabsTrigger>
-              <TabsTrigger value="rooms" className="text-xs sm:text-sm">
-                <Bed className="mr-1 sm:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Kamar</span>
-              </TabsTrigger>
-            </>
-          )}
-          {userRole === "admin" && (
-            <TabsTrigger value="outlet" className="text-xs sm:text-sm">
-              <Store className="mr-1 sm:mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Outlet</span>
-            </TabsTrigger>
-          )}
-        </TabsList>
+        {(() => {
+          const settingsTabs = [];
+          if (isFeatureEnabled("settings.display")) settingsTabs.push("display");
+          if (isFeatureEnabled("settings.colors")) settingsTabs.push("colors");
+          if (isFeatureEnabled("settings.notifications")) settingsTabs.push("notifications");
+          if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print")) settingsTabs.push("print");
+          if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms")) settingsTabs.push("rooms");
+          if (userRole === "admin" && isFeatureEnabled("settings.outlet")) settingsTabs.push("outlet");
+          const cols = settingsTabs.length;
+
+          return (
+            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+              {isFeatureEnabled("settings.display") && (
+                <TabsTrigger value="display" className="text-xs sm:text-sm">
+                  <Monitor className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Tampilan</span>
+                </TabsTrigger>
+              )}
+              {isFeatureEnabled("settings.colors") && (
+                <TabsTrigger value="colors" className="text-xs sm:text-sm">
+                  <Palette className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Warna</span>
+                </TabsTrigger>
+              )}
+              {isFeatureEnabled("settings.notifications") && (
+                <TabsTrigger value="notifications" className="text-xs sm:text-sm">
+                  <Bell className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Notifikasi</span>
+                </TabsTrigger>
+              )}
+              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print") && (
+                <TabsTrigger value="print" className="text-xs sm:text-sm">
+                  <Printer className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Nota</span>
+                </TabsTrigger>
+              )}
+              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms") && (
+                <TabsTrigger value="rooms" className="text-xs sm:text-sm">
+                  <Bed className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Kamar</span>
+                </TabsTrigger>
+              )}
+              {userRole === "admin" && isFeatureEnabled("settings.outlet") && (
+                <TabsTrigger value="outlet" className="text-xs sm:text-sm">
+                  <Store className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Outlet</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+          );
+        })()}
 
         {/* Display Settings */}
         <TabsContent value="display" className="mt-4 space-y-4">
