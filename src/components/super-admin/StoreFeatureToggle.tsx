@@ -38,6 +38,7 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
       "reports.income_expense": { label: "Pemasukan & Pengeluaran", icon: TrendingDown },
       "reports.purchase": { label: "Pembelian", icon: ShoppingCart },
       "reports.employee": { label: "Performa Karyawan", icon: UserCog },
+      "reports.accounting": { label: "Akuntansi", icon: Scale },
     },
   },
   settings: {
