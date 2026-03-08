@@ -15,43 +15,26 @@ interface FeatureItem {
   description: string;
 }
 
+interface GalleryItem { title: string; description: string; image_url: string; }
+interface PricingItem { name: string; price: string; period: string; features: string[]; is_popular: boolean; btn_text: string; }
+interface PartnerLogo { name: string; logo_url: string; }
+
 interface LandingPageData {
   id: string;
-  hero_tagline: string;
-  hero_title: string;
-  hero_description: string;
-  hero_image_url: string | null;
-  contact_email: string;
-  contact_phone: string;
-  contact_whatsapp: string;
-  contact_address: string;
-  stats_properties: string;
-  stats_support: string;
-  stats_uptime: string;
-  stats_properties_label: string;
-  cta_title: string;
-  cta_description: string;
-  footer_description: string;
-  navbar_brand: string;
-  features_tagline: string;
-  features_title: string;
-  features_description: string;
-  features_items: FeatureItem[];
-  benefits_tagline: string;
-  benefits_title: string;
-  benefits_items: string[];
-  btn_hero_primary: string;
-  btn_hero_secondary: string;
-  btn_benefits: string;
-  btn_cta_primary: string;
-  btn_cta_secondary: string;
-  navbar_menu_features: string;
-  navbar_menu_benefits: string;
-  navbar_menu_contact: string;
-  navbar_btn_login: string;
-  footer_menu_title: string;
-  footer_contact_title: string;
-  copyright_text: string;
+  hero_tagline: string; hero_title: string; hero_description: string; hero_image_url: string | null;
+  contact_email: string; contact_phone: string; contact_whatsapp: string; contact_address: string;
+  stats_properties: string; stats_support: string; stats_uptime: string; stats_properties_label: string;
+  cta_title: string; cta_description: string; footer_description: string; navbar_brand: string;
+  features_tagline: string; features_title: string; features_description: string; features_items: FeatureItem[];
+  benefits_tagline: string; benefits_title: string; benefits_items: string[];
+  btn_hero_primary: string; btn_hero_secondary: string; btn_benefits: string;
+  btn_cta_primary: string; btn_cta_secondary: string;
+  navbar_menu_features: string; navbar_menu_benefits: string; navbar_menu_contact: string;
+  navbar_btn_login: string; footer_menu_title: string; footer_contact_title: string; copyright_text: string;
+  navbar_menu_pricing: string; navbar_menu_gallery: string;
+  gallery_tagline: string; gallery_title: string; gallery_description: string; gallery_items: GalleryItem[];
+  pricing_tagline: string; pricing_title: string; pricing_description: string; pricing_items: PricingItem[];
+  partners_tagline: string; partners_title: string; partner_logos: PartnerLogo[];
 }
 
 interface ElementStyle {
@@ -145,41 +128,38 @@ export default function LandingPageSettings() {
 
       setData({
         id: settings.id,
-        hero_tagline: settings.hero_tagline || "",
-        hero_title: settings.hero_title || "",
-        hero_description: settings.hero_description || "",
-        hero_image_url: settings.hero_image_url,
-        contact_email: settings.contact_email || "",
-        contact_phone: settings.contact_phone || "",
-        contact_whatsapp: settings.contact_whatsapp || "",
-        contact_address: settings.contact_address || "",
-        stats_properties: settings.stats_properties || "",
-        stats_support: settings.stats_support || "",
-        stats_uptime: settings.stats_uptime || "",
-        stats_properties_label: raw.stats_properties_label || "Properti telah menggunakan ANKA PMS",
-        cta_title: settings.cta_title || "",
-        cta_description: settings.cta_description || "",
-        footer_description: settings.footer_description || "",
-        navbar_brand: raw.navbar_brand || "ANKA PMS",
-        features_tagline: raw.features_tagline || "Fitur Unggulan",
-        features_title: raw.features_title || "Semua yang Anda Butuhkan",
-        features_description: raw.features_description || "",
-        features_items: featuresItems,
+        hero_tagline: settings.hero_tagline || "", hero_title: settings.hero_title || "",
+        hero_description: settings.hero_description || "", hero_image_url: settings.hero_image_url,
+        contact_email: settings.contact_email || "", contact_phone: settings.contact_phone || "",
+        contact_whatsapp: settings.contact_whatsapp || "", contact_address: settings.contact_address || "",
+        stats_properties: settings.stats_properties || "", stats_support: settings.stats_support || "",
+        stats_uptime: settings.stats_uptime || "", stats_properties_label: raw.stats_properties_label || "Properti telah menggunakan ANKA PMS",
+        cta_title: settings.cta_title || "", cta_description: settings.cta_description || "",
+        footer_description: settings.footer_description || "", navbar_brand: raw.navbar_brand || "ANKA PMS",
+        features_tagline: raw.features_tagline || "Fitur Unggulan", features_title: raw.features_title || "Semua yang Anda Butuhkan",
+        features_description: raw.features_description || "", features_items: featuresItems,
         benefits_tagline: raw.benefits_tagline || "Kenapa ANKA PMS?",
-        benefits_title: raw.benefits_title || "Tingkatkan Efisiensi Operasional Anda",
-        benefits_items: benefitsItems,
-        btn_hero_primary: raw.btn_hero_primary || "Coba Gratis",
-        btn_hero_secondary: raw.btn_hero_secondary || "Jadwalkan Demo",
-        btn_benefits: raw.btn_benefits || "Mulai Sekarang",
-        btn_cta_primary: raw.btn_cta_primary || "Daftar Gratis",
+        benefits_title: raw.benefits_title || "Tingkatkan Efisiensi Operasional Anda", benefits_items: benefitsItems,
+        btn_hero_primary: raw.btn_hero_primary || "Coba Gratis", btn_hero_secondary: raw.btn_hero_secondary || "Jadwalkan Demo",
+        btn_benefits: raw.btn_benefits || "Mulai Sekarang", btn_cta_primary: raw.btn_cta_primary || "Daftar Gratis",
         btn_cta_secondary: raw.btn_cta_secondary || "Hubungi Kami",
-        navbar_menu_features: raw.navbar_menu_features || "Fitur",
-        navbar_menu_benefits: raw.navbar_menu_benefits || "Keunggulan",
-        navbar_menu_contact: raw.navbar_menu_contact || "Kontak",
-        navbar_btn_login: raw.navbar_btn_login || "Masuk",
-        footer_menu_title: raw.footer_menu_title || "Menu",
-        footer_contact_title: raw.footer_contact_title || "Kontak",
+        navbar_menu_features: raw.navbar_menu_features || "Fitur", navbar_menu_benefits: raw.navbar_menu_benefits || "Keunggulan",
+        navbar_menu_contact: raw.navbar_menu_contact || "Kontak", navbar_btn_login: raw.navbar_btn_login || "Masuk",
+        footer_menu_title: raw.footer_menu_title || "Menu", footer_contact_title: raw.footer_contact_title || "Kontak",
         copyright_text: raw.copyright_text || "ANKA PMS. All rights reserved.",
+        navbar_menu_pricing: raw.navbar_menu_pricing || "Harga",
+        navbar_menu_gallery: raw.navbar_menu_gallery || "Gallery",
+        gallery_tagline: raw.gallery_tagline || "Preview Aplikasi",
+        gallery_title: raw.gallery_title || "Lihat ANKA PMS Beraksi",
+        gallery_description: raw.gallery_description || "",
+        gallery_items: Array.isArray(raw.gallery_items) ? raw.gallery_items as GalleryItem[] : [],
+        pricing_tagline: raw.pricing_tagline || "Paket Harga",
+        pricing_title: raw.pricing_title || "Pilih Paket yang Tepat",
+        pricing_description: raw.pricing_description || "",
+        pricing_items: Array.isArray(raw.pricing_items) ? raw.pricing_items as PricingItem[] : [],
+        partners_tagline: raw.partners_tagline || "Dipercaya Oleh",
+        partners_title: raw.partners_title || "Brand yang Sudah Bekerjasama",
+        partner_logos: Array.isArray(raw.partner_logos) ? raw.partner_logos as PartnerLogo[] : [],
       });
       if (settings.element_styles && typeof settings.element_styles === "object") {
         setElementStyles(settings.element_styles as ElementStyles);
@@ -200,42 +180,29 @@ export default function LandingPageSettings() {
       const { error } = await supabase
         .from("landing_page_settings")
         .update({
-          hero_tagline: data.hero_tagline,
-          hero_title: data.hero_title,
-          hero_description: data.hero_description,
-          hero_image_url: data.hero_image_url,
-          contact_email: data.contact_email,
-          contact_phone: data.contact_phone,
-          contact_whatsapp: data.contact_whatsapp,
-          contact_address: data.contact_address,
-          stats_properties: data.stats_properties,
-          stats_support: data.stats_support,
-          stats_uptime: data.stats_uptime,
-          cta_title: data.cta_title,
-          cta_description: data.cta_description,
-          footer_description: data.footer_description,
-          element_styles: elementStyles as any,
-          navbar_brand: data.navbar_brand,
-          features_tagline: data.features_tagline,
-          features_title: data.features_title,
-          features_description: data.features_description,
-          features_items: data.features_items as any,
-          benefits_tagline: data.benefits_tagline,
-          benefits_title: data.benefits_title,
-          benefits_items: data.benefits_items as any,
+          hero_tagline: data.hero_tagline, hero_title: data.hero_title, hero_description: data.hero_description,
+          hero_image_url: data.hero_image_url, contact_email: data.contact_email, contact_phone: data.contact_phone,
+          contact_whatsapp: data.contact_whatsapp, contact_address: data.contact_address,
+          stats_properties: data.stats_properties, stats_support: data.stats_support, stats_uptime: data.stats_uptime,
+          cta_title: data.cta_title, cta_description: data.cta_description, footer_description: data.footer_description,
+          element_styles: elementStyles as any, navbar_brand: data.navbar_brand,
+          features_tagline: data.features_tagline, features_title: data.features_title,
+          features_description: data.features_description, features_items: data.features_items as any,
+          benefits_tagline: data.benefits_tagline, benefits_title: data.benefits_title, benefits_items: data.benefits_items as any,
           stats_properties_label: data.stats_properties_label,
-          btn_hero_primary: data.btn_hero_primary,
-          btn_hero_secondary: data.btn_hero_secondary,
-          btn_benefits: data.btn_benefits,
-          btn_cta_primary: data.btn_cta_primary,
-          btn_cta_secondary: data.btn_cta_secondary,
-          navbar_menu_features: data.navbar_menu_features,
-          navbar_menu_benefits: data.navbar_menu_benefits,
-          navbar_menu_contact: data.navbar_menu_contact,
-          navbar_btn_login: data.navbar_btn_login,
-          footer_menu_title: data.footer_menu_title,
-          footer_contact_title: data.footer_contact_title,
+          btn_hero_primary: data.btn_hero_primary, btn_hero_secondary: data.btn_hero_secondary,
+          btn_benefits: data.btn_benefits, btn_cta_primary: data.btn_cta_primary, btn_cta_secondary: data.btn_cta_secondary,
+          navbar_menu_features: data.navbar_menu_features, navbar_menu_benefits: data.navbar_menu_benefits,
+          navbar_menu_contact: data.navbar_menu_contact, navbar_btn_login: data.navbar_btn_login,
+          footer_menu_title: data.footer_menu_title, footer_contact_title: data.footer_contact_title,
           copyright_text: data.copyright_text,
+          navbar_menu_pricing: data.navbar_menu_pricing, navbar_menu_gallery: data.navbar_menu_gallery,
+          gallery_tagline: data.gallery_tagline, gallery_title: data.gallery_title,
+          gallery_description: data.gallery_description, gallery_items: data.gallery_items as any,
+          pricing_tagline: data.pricing_tagline, pricing_title: data.pricing_title,
+          pricing_description: data.pricing_description, pricing_items: data.pricing_items as any,
+          partners_tagline: data.partners_tagline, partners_title: data.partners_title,
+          partner_logos: data.partner_logos as any,
         } as any)
         .eq("id", data.id);
 
@@ -636,6 +603,117 @@ function LandingPreview({
           </PopoverContent>
         </Popover>
 
+        {/* Gallery Editor */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><Image className="h-3 w-3" /> Gallery</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 p-3 space-y-2.5 max-h-[70vh] overflow-y-auto" align="start">
+            <p className="text-xs font-semibold">Gallery / Demo Preview</p>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tagline</label><Input className="h-7 text-xs" value={data.gallery_tagline} onChange={(e) => onUpdate("gallery_tagline", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={data.gallery_title} onChange={(e) => onUpdate("gallery_title", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi</label><Input className="h-7 text-xs" value={data.gallery_description} onChange={(e) => onUpdate("gallery_description", e.target.value)} /></div>
+            {data.gallery_items.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5 relative">
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive" onClick={() => { const items = [...data.gallery_items]; items.splice(idx, 1); onUpdate("gallery_items", items); }}><Trash2 className="h-3 w-3" /></Button>
+                <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={item.title} onChange={(e) => { const items = [...data.gallery_items]; items[idx] = { ...items[idx], title: e.target.value }; onUpdate("gallery_items", items); }} /></div>
+                <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi</label><Input className="h-7 text-xs" value={item.description} onChange={(e) => { const items = [...data.gallery_items]; items[idx] = { ...items[idx], description: e.target.value }; onUpdate("gallery_items", items); }} /></div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">URL Gambar</label>
+                  <div className="flex gap-1">
+                    <Input className="h-7 text-xs flex-1" value={item.image_url} onChange={(e) => { const items = [...data.gallery_items]; items[idx] = { ...items[idx], image_url: e.target.value }; onUpdate("gallery_items", items); }} placeholder="https://..." />
+                    <label className="flex items-center justify-center px-2 h-7 border rounded cursor-pointer hover:bg-muted text-[10px]">
+                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        const ext = file.name.split('.').pop();
+                        const path = `landing/gallery-${Date.now()}.${ext}`;
+                        const { data: uploadData, error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+                        if (error) { toast.error("Gagal upload"); return; }
+                        const { data: urlData } = supabase.storage.from("store-images").getPublicUrl(uploadData.path);
+                        const items = [...data.gallery_items]; items[idx] = { ...items[idx], image_url: urlData.publicUrl }; onUpdate("gallery_items", items);
+                      }} />Upload
+                    </label>
+                  </div>
+                </div>
+                {item.image_url && <img src={item.image_url} alt="" className="w-full h-16 object-cover rounded" />}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("gallery_items", [...data.gallery_items, { title: "Screenshot Baru", description: "Deskripsi", image_url: "" }])}><Plus className="h-3 w-3" /> Tambah Gallery</Button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Pricing Editor */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><CreditCard className="h-3 w-3" /> Harga</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 p-3 space-y-2.5 max-h-[70vh] overflow-y-auto" align="start">
+            <p className="text-xs font-semibold">Paket Harga</p>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tagline</label><Input className="h-7 text-xs" value={data.pricing_tagline} onChange={(e) => onUpdate("pricing_tagline", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={data.pricing_title} onChange={(e) => onUpdate("pricing_title", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi</label><Input className="h-7 text-xs" value={data.pricing_description} onChange={(e) => onUpdate("pricing_description", e.target.value)} /></div>
+            {data.pricing_items.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5 relative">
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive" onClick={() => { const items = [...data.pricing_items]; items.splice(idx, 1); onUpdate("pricing_items", items); }}><Trash2 className="h-3 w-3" /></Button>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Nama Paket</label><Input className="h-7 text-xs" value={item.name} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], name: e.target.value }; onUpdate("pricing_items", items); }} /></div>
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Harga</label><Input className="h-7 text-xs" value={item.price} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], price: e.target.value }; onUpdate("pricing_items", items); }} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Periode</label><Input className="h-7 text-xs" value={item.period} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], period: e.target.value }; onUpdate("pricing_items", items); }} placeholder="bulan" /></div>
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Teks Tombol</label><Input className="h-7 text-xs" value={item.btn_text} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], btn_text: e.target.value }; onUpdate("pricing_items", items); }} /></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={item.is_popular} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], is_popular: e.target.checked }; onUpdate("pricing_items", items); }} />
+                  <label className="text-[10px] text-muted-foreground">Populer</label>
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">Fitur (satu per baris)</label>
+                  <Textarea className="text-xs min-h-[50px]" value={item.features.join("\n")} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], features: e.target.value.split("\n").filter(Boolean) }; onUpdate("pricing_items", items); }} rows={3} />
+                </div>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("pricing_items", [...data.pricing_items, { name: "Paket Baru", price: "Rp 0", period: "bulan", features: ["Fitur 1"], is_popular: false, btn_text: "Mulai Sekarang" }])}><Plus className="h-3 w-3" /> Tambah Paket</Button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Partners Editor */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><Users className="h-3 w-3" /> Partner</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3 space-y-2.5 max-h-[60vh] overflow-y-auto" align="start">
+            <p className="text-xs font-semibold">Brand Partner</p>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tagline</label><Input className="h-7 text-xs" value={data.partners_tagline} onChange={(e) => onUpdate("partners_tagline", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={data.partners_title} onChange={(e) => onUpdate("partners_title", e.target.value)} /></div>
+            {data.partner_logos.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5 relative">
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive" onClick={() => { const items = [...data.partner_logos]; items.splice(idx, 1); onUpdate("partner_logos", items); }}><Trash2 className="h-3 w-3" /></Button>
+                <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Nama Brand</label><Input className="h-7 text-xs" value={item.name} onChange={(e) => { const items = [...data.partner_logos]; items[idx] = { ...items[idx], name: e.target.value }; onUpdate("partner_logos", items); }} /></div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">Logo URL</label>
+                  <div className="flex gap-1">
+                    <Input className="h-7 text-xs flex-1" value={item.logo_url} onChange={(e) => { const items = [...data.partner_logos]; items[idx] = { ...items[idx], logo_url: e.target.value }; onUpdate("partner_logos", items); }} placeholder="https://..." />
+                    <label className="flex items-center justify-center px-2 h-7 border rounded cursor-pointer hover:bg-muted text-[10px]">
+                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        const ext = file.name.split('.').pop();
+                        const path = `landing/partner-${Date.now()}.${ext}`;
+                        const { data: uploadData, error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+                        if (error) { toast.error("Gagal upload"); return; }
+                        const { data: urlData } = supabase.storage.from("store-images").getPublicUrl(uploadData.path);
+                        const items = [...data.partner_logos]; items[idx] = { ...items[idx], logo_url: urlData.publicUrl }; onUpdate("partner_logos", items);
+                      }} />Upload
+                    </label>
+                  </div>
+                </div>
+                {item.logo_url && <img src={item.logo_url} alt="" className="h-8 object-contain" />}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("partner_logos", [...data.partner_logos, { name: "Brand Baru", logo_url: "" }])}><Plus className="h-3 w-3" /> Tambah Partner</Button>
+          </PopoverContent>
+        </Popover>
+
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Palette className="h-3 w-3" /> Klik kanan pada teks untuk ubah font & warna
         </div>
@@ -729,6 +807,74 @@ function LandingPreview({
             </div>
           </div>
         </div>
+
+        {/* Partners Preview */}
+        {data.partner_logos.length > 0 && (
+          <div className="px-6 py-6 border-y bg-muted/30">
+            <div className="text-center mb-4">
+              <p className="text-primary font-semibold text-xs mb-1">{data.partners_tagline}</p>
+              <p className="text-sm font-bold text-foreground">{data.partners_title}</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              {data.partner_logos.map((p, idx) => (
+                <div key={idx} className="grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
+                  {p.logo_url ? <img src={p.logo_url} alt={p.name} className="h-8 w-auto max-w-[100px] object-contain" /> : <span className="text-[10px] text-muted-foreground">{p.name}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gallery Preview */}
+        {data.gallery_items.length > 0 && (
+          <div className="px-6 py-6 bg-secondary/30">
+            <div className="text-center mb-4">
+              <p className="text-primary font-semibold text-xs mb-1">{data.gallery_tagline}</p>
+              <p className="text-sm font-bold text-foreground">{data.gallery_title}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{data.gallery_description}</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {data.gallery_items.map((g, idx) => (
+                <div key={idx} className="bg-card rounded-lg overflow-hidden shadow-sm">
+                  {g.image_url && <img src={g.image_url} alt={g.title} className="w-full h-20 object-cover" />}
+                  <div className="p-2">
+                    <p className="text-[10px] font-semibold text-foreground">{g.title}</p>
+                    <p className="text-[8px] text-muted-foreground">{g.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pricing Preview */}
+        {data.pricing_items.length > 0 && (
+          <div className="px-6 py-6">
+            <div className="text-center mb-4">
+              <p className="text-primary font-semibold text-xs mb-1">{data.pricing_tagline}</p>
+              <p className="text-sm font-bold text-foreground">{data.pricing_title}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{data.pricing_description}</p>
+            </div>
+            <div className={`grid gap-3 ${data.pricing_items.length === 1 ? '' : data.pricing_items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {data.pricing_items.map((p, idx) => (
+                <div key={idx} className={`bg-card rounded-lg border p-3 space-y-2 ${p.is_popular ? 'border-primary shadow-md' : ''}`}>
+                  {p.is_popular && <span className="text-[8px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded font-semibold">Populer</span>}
+                  <p className="text-xs font-bold text-foreground">{p.name}</p>
+                  <p className="text-lg font-extrabold text-foreground">{p.price}<span className="text-[10px] font-normal text-muted-foreground">/{p.period}</span></p>
+                  <div className="space-y-1">
+                    {p.features.map((f, fIdx) => (
+                      <div key={fIdx} className="flex items-center gap-1 text-[9px]">
+                        <CheckCircle2 className="h-2.5 w-2.5 text-primary flex-shrink-0" />
+                        <span className="text-foreground">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={`text-center py-1 rounded text-[10px] font-medium ${p.is_popular ? 'bg-primary text-primary-foreground' : 'border text-muted-foreground'}`}>{p.btn_text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Benefits Preview */}
         <div className="px-6 py-8">
