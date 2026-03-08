@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, Loader2, AlertTriangle, Copy, Check, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { logActivity } from "@/utils/activityLogger";
+
 
 interface StoreData {
   id: string;

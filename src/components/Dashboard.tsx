@@ -38,7 +38,7 @@ import DepositFormModal from "./deposit/DepositFormModal";
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
-import { logActivity } from "@/utils/activityLogger";
+
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
