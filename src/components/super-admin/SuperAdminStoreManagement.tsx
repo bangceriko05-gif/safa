@@ -50,6 +50,7 @@ interface StoreStats {
 }
 
 export default function SuperAdminStoreManagement() {
+  const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [storeStats, setStoreStats] = useState<Record<string, StoreStats>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
