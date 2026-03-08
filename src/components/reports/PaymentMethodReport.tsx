@@ -219,10 +219,28 @@ export default function PaymentMethodReport() {
       'Deskripsi': d.description || '-',
     }));
 
+    // Create per-method sheets
+    const perMethodSheets = paymentMethods.map(m => {
+      const methodDetails = details.filter(d => d.payment_method === m.method);
+      return {
+        name: m.method.substring(0, 31),
+        data: methodDetails.length > 0
+          ? methodDetails.map(d => ({
+              'BID': d.bid || '-',
+              'Tipe': d.type === 'booking' ? 'Booking' : 'Pemasukan',
+              'Nama Pelanggan': d.customer_name,
+              'Jumlah': d.amount,
+              'Tanggal': d.date,
+              'Deskripsi': d.description || '-',
+            }))
+          : [{ 'BID': '', 'Tipe': '', 'Nama Pelanggan': '', 'Jumlah': '', 'Tanggal': '', 'Deskripsi': '' }],
+      };
+    });
+
     exportMultipleSheets([
       { name: 'Ringkasan', data: summarySheet },
       { name: 'Per Metode', data: methodSheet },
-      { name: 'Detail Transaksi', data: detailSheet },
+      ...perMethodSheets,
     ], getExportFileName('Laporan_Metode_Pembayaran', currentStore.name, dateRangeStr));
 
     toast.success("Laporan Metode Pembayaran berhasil di-export!");
