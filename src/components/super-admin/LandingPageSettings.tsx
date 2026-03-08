@@ -621,36 +621,6 @@ function LandingPreview({
           </PopoverContent>
         </Popover>
 
-        {/* Buttons & Labels */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><Type className="h-3 w-3" /> Label</Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-3 space-y-2.5 max-h-[70vh] overflow-y-auto" align="start">
-            <p className="text-xs font-semibold">Navbar & Menu</p>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Brand / Logo Teks</label><Input className="h-7 text-xs" value={data.navbar_brand} onChange={(e) => onUpdate("navbar_brand", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Menu: Fitur</label><Input className="h-7 text-xs" value={data.navbar_menu_features} onChange={(e) => onUpdate("navbar_menu_features", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Menu: Keunggulan</label><Input className="h-7 text-xs" value={data.navbar_menu_benefits} onChange={(e) => onUpdate("navbar_menu_benefits", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Menu: Kontak</label><Input className="h-7 text-xs" value={data.navbar_menu_contact} onChange={(e) => onUpdate("navbar_menu_contact", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tombol Login</label><Input className="h-7 text-xs" value={data.navbar_btn_login} onChange={(e) => onUpdate("navbar_btn_login", e.target.value)} /></div>
-            
-            <div className="border-t pt-2 mt-2" />
-            <p className="text-xs font-semibold">Tombol-tombol</p>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Hero: Tombol Utama</label><Input className="h-7 text-xs" value={data.btn_hero_primary} onChange={(e) => onUpdate("btn_hero_primary", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Hero: Tombol Sekunder</label><Input className="h-7 text-xs" value={data.btn_hero_secondary} onChange={(e) => onUpdate("btn_hero_secondary", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Keunggulan: Tombol</label><Input className="h-7 text-xs" value={data.btn_benefits} onChange={(e) => onUpdate("btn_benefits", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">CTA: Tombol Utama</label><Input className="h-7 text-xs" value={data.btn_cta_primary} onChange={(e) => onUpdate("btn_cta_primary", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">CTA: Tombol Sekunder</label><Input className="h-7 text-xs" value={data.btn_cta_secondary} onChange={(e) => onUpdate("btn_cta_secondary", e.target.value)} /></div>
-
-            <div className="border-t pt-2 mt-2" />
-            <p className="text-xs font-semibold">Footer</p>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul Menu</label><Input className="h-7 text-xs" value={data.footer_menu_title} onChange={(e) => onUpdate("footer_menu_title", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul Kontak</label><Input className="h-7 text-xs" value={data.footer_contact_title} onChange={(e) => onUpdate("footer_contact_title", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Copyright</label><Input className="h-7 text-xs" value={data.copyright_text} onChange={(e) => onUpdate("copyright_text", e.target.value)} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi Footer</label><Textarea className="text-xs min-h-[40px]" value={data.footer_description} onChange={(e) => onUpdate("footer_description", e.target.value)} rows={2} /></div>
-          </PopoverContent>
-        </Popover>
-
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Palette className="h-3 w-3" /> Klik kanan pada teks untuk ubah font & warna
         </div>
