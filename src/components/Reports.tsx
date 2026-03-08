@@ -108,6 +108,7 @@ type ReportTab = "overview" | "sales" | "income-expense" | "purchase" | "employe
 export default function Reports() {
   const { currentStore } = useStore();
   const { hasPermission, hasAnyPermission } = usePermissions();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState<ReportTab>("overview");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
