@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -85,6 +85,9 @@ export default function CustomerManagement() {
   const [showMissingKtp, setShowMissingKtp] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -364,6 +367,54 @@ export default function CustomerManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const idsArray = Array.from(selectedIds);
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .in("id", idsArray);
+
+      if (error) throw error;
+
+      await logActivity({
+        actionType: 'deleted',
+        entityType: 'Pelanggan',
+        entityId: idsArray[0],
+        description: `Menghapus ${idsArray.length} pelanggan sekaligus`,
+        storeId: currentStore?.id,
+      });
+
+      toast.success(`${idsArray.length} pelanggan berhasil dihapus`);
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+      fetchCustomers();
+    } catch (error: any) {
+      toast.error("Gagal menghapus pelanggan");
+      console.error(error);
+    } finally {
+      setBulkDeleteOpen(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedCustomers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedCustomers.map(c => c.id)));
+    }
+  };
+
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingCustomer(null);
@@ -421,10 +472,33 @@ export default function CustomerManagement() {
           <h2 className="text-2xl font-bold text-foreground">Data Pelanggan</h2>
           <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Pelanggan
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isSelectionMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setIsSelectionMode(!isSelectionMode);
+              setSelectedIds(new Set());
+            }}
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            {isSelectionMode ? "Batal Pilih" : "Pilih"}
+          </Button>
+          {isSelectionMode && selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Hapus ({selectedIds.size})
+            </Button>
+          )}
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Pelanggan
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -473,7 +547,17 @@ export default function CustomerManagement() {
           <div className="rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/50">
+                  {isSelectionMode && (
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        checked={paginatedCustomers.length > 0 && selectedIds.size === paginatedCustomers.length}
+                        onChange={toggleSelectAll}
+                        className="h-4 w-4 rounded border-input"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Nama</TableHead>
                   <TableHead>Nomor HP</TableHead>
                   <TableHead>Identitas</TableHead>
@@ -485,7 +569,7 @@ export default function CustomerManagement() {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={isSelectionMode ? 7 : 6} className="text-center text-muted-foreground py-8">
                       {customers.length === 0 ? "Belum ada data pelanggan" : "Tidak ada pelanggan yang cocok dengan filter"}
                     </TableCell>
                   </TableRow>
@@ -494,7 +578,17 @@ export default function CustomerManagement() {
                     const canModify = userRole === "admin" || userRole === "leader" || customer.created_by === userId;
                     
                     return (
-                      <TableRow key={customer.id}>
+                      <TableRow key={customer.id} className={selectedIds.has(customer.id) ? "bg-primary/5" : ""}>
+                        {isSelectionMode && (
+                          <TableCell className="w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(customer.id)}
+                              onChange={() => toggleSelect(customer.id)}
+                              className="h-4 w-4 rounded border-input"
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell>{customer.phone}</TableCell>
                         <TableCell>
@@ -812,7 +906,24 @@ export default function CustomerManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* View Identity Document Dialog */}
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus {selectedIds.size} Pelanggan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus {selectedIds.size} pelanggan yang dipilih? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Hapus Semua
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={!!viewingIdentity} onOpenChange={() => setViewingIdentity(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
