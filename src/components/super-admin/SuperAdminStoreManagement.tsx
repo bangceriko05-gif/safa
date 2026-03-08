@@ -499,7 +499,7 @@ export default function SuperAdminStoreManagement() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 ))
               )}
             </TableBody>
