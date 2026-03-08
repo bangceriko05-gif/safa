@@ -40,7 +40,8 @@ import {
   Palette, 
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ToggleLeft
 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 
@@ -56,6 +57,7 @@ interface DuplicationOptions {
   products: boolean;
   categories: boolean;
   statusColors: boolean;
+  storeFeatures: boolean;
 }
 
 export default function StoreDuplication() {
@@ -78,6 +80,7 @@ export default function StoreDuplication() {
     products: true,
     categories: true,
     statusColors: true,
+    storeFeatures: true,
   });
 
   useEffect(() => {
@@ -291,6 +294,31 @@ export default function StoreDuplication() {
         }
       }
 
+      // 7. Copy store features if selected
+      if (options.storeFeatures) {
+        const { data: features, error: featError } = await supabase
+          .from("store_features")
+          .select("feature_key, is_enabled")
+          .eq("store_id", selectedStoreId);
+
+        if (!featError && features && features.length > 0) {
+          // Delete auto-created features first (from trigger)
+          await supabase
+            .from("store_features")
+            .delete()
+            .eq("store_id", newStore.id);
+
+          const newFeatures = features.map(f => ({
+            feature_key: f.feature_key,
+            is_enabled: f.is_enabled,
+            store_id: newStore.id,
+          }));
+
+          await supabase.from("store_features").insert(newFeatures);
+          details.push(`✓ ${features.length} pengaturan fitur disalin`);
+        }
+      }
+
       // Log activity
       await logActivity({
         actionType: 'created',
@@ -460,6 +488,18 @@ export default function StoreDuplication() {
                     <div className="flex items-center gap-2">
                       <Palette className="h-4 w-4 text-muted-foreground" />
                       <Label htmlFor="statusColors" className="cursor-pointer">Warna Status Booking</Label>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                    <Checkbox
+                      id="storeFeatures"
+                      checked={options.storeFeatures}
+                      onCheckedChange={(checked) => setOptions({ ...options, storeFeatures: !!checked })}
+                    />
+                    <div className="flex items-center gap-2">
+                      <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+                      <Label htmlFor="storeFeatures" className="cursor-pointer">Pengaturan Fitur (Aktif/Nonaktif)</Label>
                     </div>
                   </div>
 
