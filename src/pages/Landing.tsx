@@ -372,7 +372,7 @@ export default function Landing() {
               {settings.btn_cta_primary}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="text-base px-8 py-6 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
+            <Button size="lg" variant="secondary" className="text-base px-8 py-6 bg-white/20 text-white border-white/40 hover:bg-white/30 border" asChild>
               <a href={`https://wa.me/${settings.contact_whatsapp}`} target="_blank" rel="noopener noreferrer">
                 {settings.btn_cta_secondary}
               </a>
