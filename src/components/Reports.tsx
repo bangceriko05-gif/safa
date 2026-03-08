@@ -32,6 +32,7 @@ import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AccountingReport from "./reports/AccountingReport";
+import PaymentMethodReport from "./reports/PaymentMethodReport";
 
 interface ReportStats {
   totalTransactions: number;
