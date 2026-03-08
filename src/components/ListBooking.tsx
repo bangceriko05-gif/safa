@@ -69,6 +69,7 @@ interface BookingWithRoom {
 }
 
 export default function ListBooking({ userRole, onEditBooking, onAddBooking }: ListBookingProps) {
+  const isMobile = useIsMobile();
   const { currentStore } = useStore();
   const [activeSubTab, setActiveSubTab] = useState("active");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
