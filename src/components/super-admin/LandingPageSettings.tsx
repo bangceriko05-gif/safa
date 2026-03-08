@@ -736,6 +736,12 @@ function LandingPreview({
                     )}
                   </div>
                 ))}
+                {mode === "edit" && (
+                  <button onClick={addBenefitItem} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Tambah keunggulan</span>
+                  </button>
+                )}
               </div>
               <EditableText field="btn_benefits" className="inline-flex items-center gap-1 mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">{data.btn_benefits} <ArrowRight className="h-3 w-3" /></EditableText>
             </div>
