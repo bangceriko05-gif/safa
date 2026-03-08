@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Store, Copy, ArrowLeft, Shield, LogOut } from "lucide-react";
+import { Loader2, Store, Copy, ArrowLeft, Shield, LogOut, Globe } from "lucide-react";
 import { toast } from "sonner";
 import SuperAdminStoreManagement from "@/components/super-admin/SuperAdminStoreManagement";
 import StoreDuplication from "@/components/super-admin/StoreDuplication";
+import LandingPageSettings from "@/components/super-admin/LandingPageSettings";
 
 export default function SuperAdmin() {
   const navigate = useNavigate();
