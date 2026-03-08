@@ -79,7 +79,6 @@ const COLOR_PRESETS = [
 export default function LandingPageSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [data, setData] = useState<LandingPageData | null>(null);
   const [elementStyles, setElementStyles] = useState<ElementStyles>({});
 
