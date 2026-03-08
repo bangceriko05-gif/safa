@@ -130,7 +130,7 @@ export default function SelectStore() {
     
     setCurrentStore(store);
     
-    navigate("/");
+    navigate("/dashboard");
   };
 
   if (loading) {

@@ -35,7 +35,7 @@ export default function SuperAdmin() {
 
       if (!isSuperAdminResult) {
         toast.error("Akses ditolak. Hanya Super Admin yang dapat mengakses halaman ini.");
-        navigate("/");
+        navigate("/dashboard");
         return;
       }
 
@@ -51,7 +51,7 @@ export default function SuperAdmin() {
       setIsLoading(false);
     } catch (error) {
       console.error("Error checking super admin access:", error);
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 
@@ -77,7 +77,7 @@ export default function SuperAdmin() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/dashboard")}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>

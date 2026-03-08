@@ -475,7 +475,7 @@ export default function SuperAdminStoreManagement() {
                             size="sm"
                             onClick={() => {
                               localStorage.setItem("current_store_id", store.id);
-                              navigate("/");
+                              navigate("/dashboard");
                             }}
                             title="Buka Dashboard PMS"
                           >
