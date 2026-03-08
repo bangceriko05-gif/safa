@@ -679,7 +679,7 @@ export default function Dashboard() {
             <SettingsPage userRole={userRole} />
           </TabsContent>
 
-          <TabsContent value="rooms" className="mt-6">
+          <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
             {hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
               <RoomManagement />
             ) : (
