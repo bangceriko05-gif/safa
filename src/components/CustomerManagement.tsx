@@ -569,7 +569,7 @@ export default function CustomerManagement() {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={isSelectionMode ? 7 : 6} className="text-center text-muted-foreground py-8">
                       {customers.length === 0 ? "Belum ada data pelanggan" : "Tidak ada pelanggan yang cocok dengan filter"}
                     </TableCell>
                   </TableRow>
@@ -578,7 +578,17 @@ export default function CustomerManagement() {
                     const canModify = userRole === "admin" || userRole === "leader" || customer.created_by === userId;
                     
                     return (
-                      <TableRow key={customer.id}>
+                      <TableRow key={customer.id} className={selectedIds.has(customer.id) ? "bg-primary/5" : ""}>
+                        {isSelectionMode && (
+                          <TableCell className="w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(customer.id)}
+                              onChange={() => toggleSelect(customer.id)}
+                              className="h-4 w-4 rounded border-input"
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell>{customer.phone}</TableCell>
                         <TableCell>
