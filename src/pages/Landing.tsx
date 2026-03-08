@@ -61,6 +61,16 @@ const benefits = [
   "Akses dari perangkat apapun",
 ];
 
+interface ElementStyle {
+  fontFamily?: string;
+  fontSize?: string;
+  color?: string;
+  offsetX?: number;
+  offsetY?: number;
+}
+
+type ElementStyles = Record<string, ElementStyle>;
+
 interface LandingSettings {
   hero_tagline: string;
   hero_title: string;
