@@ -50,7 +50,7 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
       "settings.print": { label: "Nota", icon: Printer },
       "settings.rooms": { label: "Kamar", icon: Bed },
       "settings.outlet": { label: "Outlet", icon: Store },
-      "settings.ota": { label: "OTA", icon: Inbox },
+      "settings.ota": { label: "OTA", icon: Globe },
     },
   },
   products_inventory: {
