@@ -381,22 +381,33 @@ function LandingPreview({ data }: { data: LandingPageData }) {
 
       {/* Hero Preview */}
       <div className="px-6 py-10 md:py-14">
-        <div className="max-w-2xl">
-          <p className="text-primary font-semibold text-sm mb-2">{data.hero_tagline}</p>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
-            {data.hero_title}
-          </h2>
-          <p className="text-sm text-muted-foreground mb-6 max-w-lg">
-            {data.hero_description}
-          </p>
-          <div className="flex gap-3">
-            <span className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">
-              Coba Gratis <ArrowRight className="h-3 w-3" />
-            </span>
-            <span className="inline-flex items-center px-4 py-2 border rounded-md text-xs font-medium text-muted-foreground">
-              Jadwalkan Demo
-            </span>
+        <div className="flex items-center gap-8">
+          <div className="flex-1">
+            <p className="text-primary font-semibold text-sm mb-2">{data.hero_tagline}</p>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
+              {data.hero_title}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6 max-w-lg">
+              {data.hero_description}
+            </p>
+            <div className="flex gap-3">
+              <span className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">
+                Coba Gratis <ArrowRight className="h-3 w-3" />
+              </span>
+              <span className="inline-flex items-center px-4 py-2 border rounded-md text-xs font-medium text-muted-foreground">
+                Jadwalkan Demo
+              </span>
+            </div>
           </div>
+          {data.hero_image_url && (
+            <div className="hidden md:block flex-shrink-0 w-1/3">
+              <img
+                src={data.hero_image_url}
+                alt="Hero"
+                className="w-full h-auto object-contain rounded-lg"
+              />
+            </div>
+          )}
         </div>
       </div>
 
