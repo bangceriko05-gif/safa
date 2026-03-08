@@ -165,6 +165,7 @@ export default function Dashboard() {
     window.addEventListener("display-size-changed", handleDisplaySizeChange);
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       window.removeEventListener("display-size-changed", handleDisplaySizeChange);
     };
