@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import heroIllustration from "@/assets/hero-illustration.png";
+import DemoRequestDialog from "@/components/DemoRequestDialog";
 
 const FEATURE_ICONS = [CalendarDays, DoorOpen, BarChart3, CreditCard, Users, Shield];
 
@@ -135,6 +136,7 @@ export default function Landing() {
   const [settings, setSettings] = useState<LandingSettings>(defaultSettings);
   const [elementStyles, setElementStyles] = useState<ElementStyles>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [showDemoDialog, setShowDemoDialog] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -268,10 +270,8 @@ export default function Landing() {
                 {settings.btn_hero_primary}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="text-base px-8 py-6" asChild>
-                <a href={`https://wa.me/${settings.contact_whatsapp}`} target="_blank" rel="noopener noreferrer">
-                  {settings.btn_hero_secondary}
-                </a>
+              <Button size="lg" variant="outline" className="text-base px-8 py-6" onClick={() => setShowDemoDialog(true)}>
+                {settings.btn_hero_secondary}
               </Button>
             </div>
           </div>
@@ -424,6 +424,7 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+      <DemoRequestDialog open={showDemoDialog} onOpenChange={setShowDemoDialog} />
     </div>
   );
 }

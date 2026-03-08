@@ -620,6 +620,33 @@ export type Database = {
           },
         ]
       }
+      demo_requests: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          room_count: string
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          room_count: string
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          room_count?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           created_at: string
