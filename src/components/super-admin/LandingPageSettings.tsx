@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2, Pencil, Move, Type, Palette, RotateCcw, ArrowUp, ArrowDown, ArrowLeft as ArrowLeftIcon, ChevronRight, X } from "lucide-react";
+import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2, Pencil, Move, Type, Palette, RotateCcw, ArrowUp, ArrowDown, ArrowLeft as ArrowLeftIcon, ChevronRight, X, CalendarDays, DoorOpen, CreditCard, Users, Shield } from "lucide-react";
+import heroIllustration from "@/assets/hero-illustration.png";
 import { toast } from "sonner";
 
 interface LandingPageData {
@@ -759,28 +760,33 @@ function LandingPreview({
       )}
 
       <div className="border rounded-xl overflow-hidden bg-background shadow-lg select-none">
-        {/* Navbar Preview */}
-        <div className="border-b bg-card/80 px-6 py-3 flex items-center justify-between">
-          <span className="text-lg font-bold text-primary">ANKA PMS</span>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>Fitur</span>
-            <span>Keunggulan</span>
-            <span>Kontak</span>
-            <span className="px-3 py-1 rounded bg-primary text-primary-foreground text-xs">Coba Gratis</span>
+        {/* Navbar Preview - matches Landing.tsx */}
+        <div className="border-b bg-card/80 backdrop-blur-md px-6 py-3 flex items-center justify-between">
+          <span className="text-lg font-bold text-primary tracking-tight">ANKA PMS</span>
+          <div className="flex items-center gap-6 text-xs font-medium text-muted-foreground">
+            <span className="hover:text-foreground cursor-default">Fitur</span>
+            <span className="hover:text-foreground cursor-default">Keunggulan</span>
+            <span className="hover:text-foreground cursor-default">Kontak</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground cursor-default">Masuk</span>
+            <span className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium">Coba Gratis</span>
           </div>
         </div>
 
-        {/* Hero Preview */}
+        {/* Hero Preview - 2 column with image */}
         <div className="px-6 py-10 md:py-14">
-          <div className="flex items-center gap-8">
-            <div className="flex-1">
-              <EditableText field="hero_tagline" as="p" className="text-primary font-semibold text-sm mb-2">
-                {data.hero_tagline}
-              </EditableText>
-              <EditableText field="hero_title" as="h2" className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
-                {data.hero_title}
-              </EditableText>
-              <EditableText field="hero_description" as="p" className="text-sm text-muted-foreground mb-6 max-w-lg">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <div>
+                <EditableText field="hero_tagline" as="p" className="text-primary font-semibold text-sm mb-2">
+                  {data.hero_tagline}
+                </EditableText>
+                <EditableText field="hero_title" as="h2" className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line">
+                  {data.hero_title}
+                </EditableText>
+              </div>
+              <EditableText field="hero_description" as="p" className="text-sm text-muted-foreground max-w-lg">
                 {data.hero_description}
               </EditableText>
               <div className="flex gap-3">
@@ -792,48 +798,85 @@ function LandingPreview({
                 </span>
               </div>
             </div>
-            {data.hero_image_url && (
-              <div className="hidden md:block flex-shrink-0 w-1/3">
-                <img src={data.hero_image_url} alt="Hero" className="w-full h-auto object-contain rounded-lg" />
-              </div>
-            )}
+            <div className="flex justify-center">
+              <img
+                src={data.hero_image_url || heroIllustration}
+                alt="ANKA PMS"
+                className="w-full max-w-[240px] md:max-w-[280px] drop-shadow-xl object-contain"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Stats Preview */}
-        <div className="px-6 py-8 bg-secondary/30">
-          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto text-center">
+        {/* Features Preview - matches Landing.tsx */}
+        <div className="py-8 bg-secondary/30">
+          <div className="px-6">
+            <div className="text-center mb-6">
+              <p className="text-primary font-semibold text-xs mb-1">Fitur Unggulan</p>
+              <h3 className="text-lg font-bold text-foreground">Semua yang Anda Butuhkan</h3>
+              <p className="text-muted-foreground text-xs mt-1 max-w-md mx-auto">
+                ANKA PMS dilengkapi fitur lengkap untuk mengelola operasional properti Anda dari A sampai Z.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                { icon: CalendarDays, title: "Manajemen Booking", desc: "Kelola reservasi kamar secara real-time." },
+                { icon: DoorOpen, title: "Multi Outlet", desc: "Satu dashboard untuk banyak properti." },
+                { icon: BarChart3, title: "Laporan Lengkap", desc: "Laporan penjualan & keuangan." },
+                { icon: CreditCard, title: "Manajemen Transaksi", desc: "Catat pemasukan & pengeluaran." },
+                { icon: Users, title: "Manajemen Pelanggan", desc: "Database pelanggan terintegrasi." },
+                { icon: Shield, title: "Keamanan & Hak Akses", desc: "Sistem role & permission granular." },
+              ].map((f) => (
+                <div key={f.title} className="bg-card rounded-lg border-0 shadow-sm p-3 space-y-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <f.icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <h4 className="text-xs font-semibold text-foreground">{f.title}</h4>
+                  <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Benefits Preview - 2 column with stats */}
+        <div className="px-6 py-8">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <EditableText field="stats_properties" as="div" className="text-2xl font-extrabold text-primary">
+              <p className="text-primary font-semibold text-xs mb-1">Kenapa ANKA PMS?</p>
+              <h3 className="text-lg font-bold text-foreground mb-4">Tingkatkan Efisiensi Operasional Anda</h3>
+              <div className="space-y-2">
+                {benefits.map((b) => (
+                  <div key={b} className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    <span className="text-foreground">{b}</span>
+                  </div>
+                ))}
+              </div>
+              <span className="inline-flex items-center gap-1 mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">
+                Mulai Sekarang <ArrowRight className="h-3 w-3" />
+              </span>
+            </div>
+            <div className="bg-gradient-to-br from-primary/5 to-primary/15 rounded-2xl p-6 text-center">
+              <EditableText field="stats_properties" as="div" className="text-3xl font-extrabold text-primary">
                 {data.stats_properties}
               </EditableText>
-              <p className="text-xs text-muted-foreground">Properti</p>
-            </div>
-            <div>
-              <EditableText field="stats_support" as="div" className="text-2xl font-bold text-foreground">
-                {data.stats_support}
-              </EditableText>
-              <p className="text-xs text-muted-foreground">Support</p>
-            </div>
-            <div>
-              <EditableText field="stats_uptime" as="div" className="text-2xl font-bold text-foreground">
-                {data.stats_uptime}
-              </EditableText>
-              <p className="text-xs text-muted-foreground">Uptime</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Benefits Preview */}
-        <div className="px-6 py-8">
-          <h3 className="text-lg font-bold text-foreground mb-4">Kenapa ANKA PMS?</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {benefits.map((b) => (
-              <div key={b} className="flex items-center gap-2 text-xs">
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                <span className="text-foreground">{b}</span>
+              <p className="text-xs text-muted-foreground mt-1" style={getElementStyle('stats_properties_label')}>Properti telah menggunakan ANKA PMS</p>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <EditableText field="stats_support" as="div" className="text-xl font-bold text-foreground">
+                    {data.stats_support}
+                  </EditableText>
+                  <p className="text-[10px] text-muted-foreground">Support</p>
+                </div>
+                <div>
+                  <EditableText field="stats_uptime" as="div" className="text-xl font-bold text-foreground">
+                    {data.stats_uptime}
+                  </EditableText>
+                  <p className="text-[10px] text-muted-foreground">Uptime</p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
 
