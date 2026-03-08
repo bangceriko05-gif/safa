@@ -1097,12 +1097,10 @@ export default function Reports() {
               <span className="hidden sm:inline">Kinerja</span>
             </TabsTrigger>
           )}
-          {isFeatureEnabled("reports.accounting") && (
-            <TabsTrigger value="accounting" className="flex items-center gap-1.5 flex-1">
-              <Scale className="h-4 w-4" />
-              <span className="hidden sm:inline">Akuntansi</span>
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="accounting" className="flex items-center gap-1.5 flex-1">
+            <Scale className="h-4 w-4" />
+            <span className="hidden sm:inline">Akuntansi</span>
+          </TabsTrigger>
         </TabsList>
 
         {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
@@ -1143,11 +1141,23 @@ export default function Reports() {
           </TabsContent>
         )}
 
-        {isFeatureEnabled("reports.accounting") && (
-          <TabsContent value="accounting" className="mt-4">
+        <TabsContent value="accounting" className="mt-4">
+          {isFeatureEnabled("reports.accounting") ? (
             <AccountingReport />
-          </TabsContent>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Scale className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Fitur ini tidak aktif
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Lakukan pembayaran untuk mengaktifkan fitur Akuntansi.
+              </p>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
       )}
 
