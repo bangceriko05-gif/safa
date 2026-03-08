@@ -38,7 +38,7 @@ import DepositFormModal from "./deposit/DepositFormModal";
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
-import { logActivity } from "@/utils/activityLogger";
+
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
@@ -189,14 +189,6 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      // Log logout activity with current store
-      await logActivity({
-        actionType: 'login',
-        entityType: 'System',
-        description: `Logout dari ${currentStore?.name || 'sistem'}`,
-        storeId: currentStore?.id,
-      });
-
       // Sign out from Supabase first
       await supabase.auth.signOut();
       
