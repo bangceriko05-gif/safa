@@ -27,10 +27,12 @@ serve(async (req: Request) => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
-    const NOTIFICATION_EMAIL = Deno.env.get("DEMO_NOTIFICATION_EMAIL");
-    if (!NOTIFICATION_EMAIL) {
+    const rawNotificationEmail = Deno.env.get("DEMO_NOTIFICATION_EMAIL");
+    if (!rawNotificationEmail) {
       throw new Error("DEMO_NOTIFICATION_EMAIL is not configured");
     }
+    const NOTIFICATION_EMAIL = rawNotificationEmail.trim();
+    console.log("Notification email:", JSON.stringify(NOTIFICATION_EMAIL));
 
     const resend = new Resend(RESEND_API_KEY);
     const body: DemoNotificationRequest = await req.json();
