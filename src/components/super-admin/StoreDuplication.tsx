@@ -424,7 +424,28 @@ export default function StoreDuplication() {
 
               {/* Duplication Options */}
               <div className="space-y-4">
-                <Label>Data yang Akan Disalin</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Data yang Akan Disalin</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allSelected = Object.values(options).every(Boolean);
+                      const newVal = !allSelected;
+                      setOptions({
+                        rooms: newVal,
+                        roomVariants: newVal,
+                        products: newVal,
+                        categories: newVal,
+                        statusColors: newVal,
+                        storeFeatures: newVal,
+                      });
+                    }}
+                  >
+                    {Object.values(options).every(Boolean) ? "Batal Semua" : "Pilih Semua"}
+                  </Button>
+                </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="flex items-center space-x-3 p-3 border rounded-lg">
                     <Checkbox
