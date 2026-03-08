@@ -603,6 +603,117 @@ function LandingPreview({
           </PopoverContent>
         </Popover>
 
+        {/* Gallery Editor */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><Image className="h-3 w-3" /> Gallery</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 p-3 space-y-2.5 max-h-[70vh] overflow-y-auto" align="start">
+            <p className="text-xs font-semibold">Gallery / Demo Preview</p>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tagline</label><Input className="h-7 text-xs" value={data.gallery_tagline} onChange={(e) => onUpdate("gallery_tagline", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={data.gallery_title} onChange={(e) => onUpdate("gallery_title", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi</label><Input className="h-7 text-xs" value={data.gallery_description} onChange={(e) => onUpdate("gallery_description", e.target.value)} /></div>
+            {data.gallery_items.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5 relative">
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive" onClick={() => { const items = [...data.gallery_items]; items.splice(idx, 1); onUpdate("gallery_items", items); }}><Trash2 className="h-3 w-3" /></Button>
+                <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={item.title} onChange={(e) => { const items = [...data.gallery_items]; items[idx] = { ...items[idx], title: e.target.value }; onUpdate("gallery_items", items); }} /></div>
+                <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi</label><Input className="h-7 text-xs" value={item.description} onChange={(e) => { const items = [...data.gallery_items]; items[idx] = { ...items[idx], description: e.target.value }; onUpdate("gallery_items", items); }} /></div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">URL Gambar</label>
+                  <div className="flex gap-1">
+                    <Input className="h-7 text-xs flex-1" value={item.image_url} onChange={(e) => { const items = [...data.gallery_items]; items[idx] = { ...items[idx], image_url: e.target.value }; onUpdate("gallery_items", items); }} placeholder="https://..." />
+                    <label className="flex items-center justify-center px-2 h-7 border rounded cursor-pointer hover:bg-muted text-[10px]">
+                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        const ext = file.name.split('.').pop();
+                        const path = `landing/gallery-${Date.now()}.${ext}`;
+                        const { data: uploadData, error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+                        if (error) { toast.error("Gagal upload"); return; }
+                        const { data: urlData } = supabase.storage.from("store-images").getPublicUrl(uploadData.path);
+                        const items = [...data.gallery_items]; items[idx] = { ...items[idx], image_url: urlData.publicUrl }; onUpdate("gallery_items", items);
+                      }} />Upload
+                    </label>
+                  </div>
+                </div>
+                {item.image_url && <img src={item.image_url} alt="" className="w-full h-16 object-cover rounded" />}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("gallery_items", [...data.gallery_items, { title: "Screenshot Baru", description: "Deskripsi", image_url: "" }])}><Plus className="h-3 w-3" /> Tambah Gallery</Button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Pricing Editor */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><CreditCard className="h-3 w-3" /> Harga</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 p-3 space-y-2.5 max-h-[70vh] overflow-y-auto" align="start">
+            <p className="text-xs font-semibold">Paket Harga</p>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tagline</label><Input className="h-7 text-xs" value={data.pricing_tagline} onChange={(e) => onUpdate("pricing_tagline", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={data.pricing_title} onChange={(e) => onUpdate("pricing_title", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Deskripsi</label><Input className="h-7 text-xs" value={data.pricing_description} onChange={(e) => onUpdate("pricing_description", e.target.value)} /></div>
+            {data.pricing_items.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5 relative">
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive" onClick={() => { const items = [...data.pricing_items]; items.splice(idx, 1); onUpdate("pricing_items", items); }}><Trash2 className="h-3 w-3" /></Button>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Nama Paket</label><Input className="h-7 text-xs" value={item.name} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], name: e.target.value }; onUpdate("pricing_items", items); }} /></div>
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Harga</label><Input className="h-7 text-xs" value={item.price} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], price: e.target.value }; onUpdate("pricing_items", items); }} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Periode</label><Input className="h-7 text-xs" value={item.period} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], period: e.target.value }; onUpdate("pricing_items", items); }} placeholder="bulan" /></div>
+                  <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Teks Tombol</label><Input className="h-7 text-xs" value={item.btn_text} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], btn_text: e.target.value }; onUpdate("pricing_items", items); }} /></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={item.is_popular} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], is_popular: e.target.checked }; onUpdate("pricing_items", items); }} />
+                  <label className="text-[10px] text-muted-foreground">Populer</label>
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">Fitur (satu per baris)</label>
+                  <Textarea className="text-xs min-h-[50px]" value={item.features.join("\n")} onChange={(e) => { const items = [...data.pricing_items]; items[idx] = { ...items[idx], features: e.target.value.split("\n").filter(Boolean) }; onUpdate("pricing_items", items); }} rows={3} />
+                </div>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("pricing_items", [...data.pricing_items, { name: "Paket Baru", price: "Rp 0", period: "bulan", features: ["Fitur 1"], is_popular: false, btn_text: "Mulai Sekarang" }])}><Plus className="h-3 w-3" /> Tambah Paket</Button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Partners Editor */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"><Users className="h-3 w-3" /> Partner</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3 space-y-2.5 max-h-[60vh] overflow-y-auto" align="start">
+            <p className="text-xs font-semibold">Brand Partner</p>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Tagline</label><Input className="h-7 text-xs" value={data.partners_tagline} onChange={(e) => onUpdate("partners_tagline", e.target.value)} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-medium text-muted-foreground">Judul</label><Input className="h-7 text-xs" value={data.partners_title} onChange={(e) => onUpdate("partners_title", e.target.value)} /></div>
+            {data.partner_logos.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5 relative">
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-5 w-5 text-destructive" onClick={() => { const items = [...data.partner_logos]; items.splice(idx, 1); onUpdate("partner_logos", items); }}><Trash2 className="h-3 w-3" /></Button>
+                <div className="space-y-0.5"><label className="text-[10px] font-medium text-muted-foreground">Nama Brand</label><Input className="h-7 text-xs" value={item.name} onChange={(e) => { const items = [...data.partner_logos]; items[idx] = { ...items[idx], name: e.target.value }; onUpdate("partner_logos", items); }} /></div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">Logo URL</label>
+                  <div className="flex gap-1">
+                    <Input className="h-7 text-xs flex-1" value={item.logo_url} onChange={(e) => { const items = [...data.partner_logos]; items[idx] = { ...items[idx], logo_url: e.target.value }; onUpdate("partner_logos", items); }} placeholder="https://..." />
+                    <label className="flex items-center justify-center px-2 h-7 border rounded cursor-pointer hover:bg-muted text-[10px]">
+                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        const ext = file.name.split('.').pop();
+                        const path = `landing/partner-${Date.now()}.${ext}`;
+                        const { data: uploadData, error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+                        if (error) { toast.error("Gagal upload"); return; }
+                        const { data: urlData } = supabase.storage.from("store-images").getPublicUrl(uploadData.path);
+                        const items = [...data.partner_logos]; items[idx] = { ...items[idx], logo_url: urlData.publicUrl }; onUpdate("partner_logos", items);
+                      }} />Upload
+                    </label>
+                  </div>
+                </div>
+                {item.logo_url && <img src={item.logo_url} alt="" className="h-8 object-contain" />}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("partner_logos", [...data.partner_logos, { name: "Brand Baru", logo_url: "" }])}><Plus className="h-3 w-3" /> Tambah Partner</Button>
+          </PopoverContent>
+        </Popover>
+
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Palette className="h-3 w-3" /> Klik kanan pada teks untuk ubah font & warna
         </div>
