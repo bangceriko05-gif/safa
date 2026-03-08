@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ type SubView = "all" | "expenses" | "incomes";
 export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
+  const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>(hideDateFilter ? "today" : "thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
@@ -1100,11 +1102,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
               <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Transfer">Transfer</SelectItem>
-                  <SelectItem value="QRIS">QRIS</SelectItem>
-                  <SelectItem value="Debit">Debit</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1171,9 +1171,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
               <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="QRIS">QRIS</SelectItem>
-                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1230,11 +1230,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
               <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Transfer">Transfer</SelectItem>
-                  <SelectItem value="QRIS">QRIS</SelectItem>
-                  <SelectItem value="Debit">Debit</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1304,9 +1302,9 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
               <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih metode bayar" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="QRIS">QRIS</SelectItem>
-                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

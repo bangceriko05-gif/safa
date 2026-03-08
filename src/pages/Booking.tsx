@@ -93,6 +93,7 @@ export default function Booking() {
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<string[]>(["Cash", "Transfer", "QRIS"]);
 
   // Payment timer state
   const [bookingRequestId, setBookingRequestId] = useState<string | null>(null);
@@ -109,6 +110,18 @@ export default function Booking() {
     if (selectedBranch) {
       fetchRooms(selectedBranch);
       fetchCategories(selectedBranch);
+      // Fetch payment methods for selected branch
+      supabase
+        .from("payment_methods")
+        .select("name")
+        .eq("store_id", selectedBranch)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setPaymentMethodOptions(data.map((d: any) => d.name));
+          }
+        });
       setSelectedCategory("");
       setSelectedRoom("");
       setSelectedVariant("");
@@ -1348,9 +1361,9 @@ export default function Booking() {
                       <SelectValue placeholder="Pilih metode pembayaran" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cash">Bayar di Tempat (Cash)</SelectItem>
-                      <SelectItem value="Transfer">Transfer Bank</SelectItem>
-                      <SelectItem value="QRIS">QRIS</SelectItem>
+                      {paymentMethodOptions.map(method => (
+                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

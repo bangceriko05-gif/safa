@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -201,6 +202,7 @@ function StatusDropdown({ request, onStatusChange, isUpdating }: StatusDropdownP
 
 export default function BookingRequestsManagement() {
   const { currentStore } = useStore();
+  const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
@@ -1548,9 +1550,9 @@ export default function BookingRequestsManagement() {
                     <SelectValue placeholder="Pilih metode" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="QRIS">QRIS</SelectItem>
-                    <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
+                    {paymentMethodOptions.map(method => (
+                      <SelectItem key={method} value={method}>{method}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

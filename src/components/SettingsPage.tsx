@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe } from "lucide-react";
+import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
 import OtaSourceManagement from "./OtaSourceManagement";
+import PaymentMethodSettings from "./PaymentMethodSettings";
 
 interface StatusColor {
   id: string;
@@ -310,6 +311,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print")) settingsTabs.push("print");
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms")) settingsTabs.push("rooms");
           if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota")) settingsTabs.push("ota");
+          if ((userRole === "admin" || userRole === "leader")) settingsTabs.push("payment-methods");
           if (userRole === "admin" && isFeatureEnabled("settings.outlet")) settingsTabs.push("outlet");
           const cols = settingsTabs.length;
 
@@ -349,6 +351,12 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                 <TabsTrigger value="ota" className="text-xs sm:text-sm">
                   <Globe className="mr-1 sm:mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">OTA</span>
+                </TabsTrigger>
+              )}
+              {(userRole === "admin" || userRole === "leader") && (
+                <TabsTrigger value="payment-methods" className="text-xs sm:text-sm">
+                  <CreditCard className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Metode Bayar</span>
                 </TabsTrigger>
               )}
               {userRole === "admin" && isFeatureEnabled("settings.outlet") && (
@@ -616,6 +624,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         {(userRole === "admin" || userRole === "leader") && (
           <TabsContent value="ota" className="mt-4">
             <OtaSourceManagement />
+          </TabsContent>
+        )}
+
+        {/* Payment Method Settings */}
+        {(userRole === "admin" || userRole === "leader") && (
+          <TabsContent value="payment-methods" className="mt-4">
+            <PaymentMethodSettings />
           </TabsContent>
         )}
 
