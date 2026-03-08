@@ -115,13 +115,29 @@ export default function LandingPageSettings() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Preview Landing Page</h3>
-          <Button variant="outline" onClick={() => setShowPreview(false)}>
-            <EyeOff className="mr-2 h-4 w-4" />
-            Kembali ke Editor
-          </Button>
+          <div>
+            <h3 className="text-lg font-semibold">Preview Landing Page</h3>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <Pencil className="h-3 w-3" />
+              Klik langsung pada teks untuk mengedit
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Simpan
+            </Button>
+            <Button variant="outline" onClick={() => setShowPreview(false)}>
+              <EyeOff className="mr-2 h-4 w-4" />
+              Kembali ke Editor
+            </Button>
+          </div>
         </div>
-        <LandingPreview data={data} />
+        <LandingPreview data={data} onUpdate={updateField} />
       </div>
     );
   }
