@@ -358,7 +358,7 @@ export default function SuperAdminStoreManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-20">Foto</TableHead>
-                <TableHead>Nama Outlet</TableHead>
+                <TableHead>Nama Hotel</TableHead>
                 <TableHead>Lokasi</TableHead>
                 <TableHead>Langganan</TableHead>
                 <TableHead className="text-center">Kamar</TableHead>
