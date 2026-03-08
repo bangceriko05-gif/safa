@@ -473,27 +473,6 @@ export default function CustomerManagement() {
           <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={isSelectionMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setIsSelectionMode(!isSelectionMode);
-              setSelectedIds(new Set());
-            }}
-          >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            {isSelectionMode ? "Batal Pilih" : "Pilih"}
-          </Button>
-          {isSelectionMode && selectedIds.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Hapus ({selectedIds.size})
-            </Button>
-          )}
           <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
             <Plus className="mr-2 h-4 w-4" />
             Tambah Pelanggan
