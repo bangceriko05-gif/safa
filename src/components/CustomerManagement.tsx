@@ -555,10 +555,69 @@ export default function CustomerManagement() {
               </TableBody>
             </Table>
           </div>
+          
+          {/* Pagination controls */}
+          {filteredCustomers.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Tampilkan</span>
+                <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                  <SelectTrigger className="w-[80px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="200">200</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>dari {filteredCustomers.length} data</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  Sebelumnya
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1]) > 1) acc.push("...");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === "..." ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={currentPage === p ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    )
+                  )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Berikutnya
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
     <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
