@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Globe, Phone, Mail, MapPin, BarChart3, Image, Eye, EyeOff, ArrowRight, CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 interface LandingPageData {
@@ -115,13 +115,29 @@ export default function LandingPageSettings() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Preview Landing Page</h3>
-          <Button variant="outline" onClick={() => setShowPreview(false)}>
-            <EyeOff className="mr-2 h-4 w-4" />
-            Kembali ke Editor
-          </Button>
+          <div>
+            <h3 className="text-lg font-semibold">Preview Landing Page</h3>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <Pencil className="h-3 w-3" />
+              Klik langsung pada teks untuk mengedit
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Simpan
+            </Button>
+            <Button variant="outline" onClick={() => setShowPreview(false)}>
+              <EyeOff className="mr-2 h-4 w-4" />
+              Kembali ke Editor
+            </Button>
+          </div>
         </div>
-        <LandingPreview data={data} />
+        <LandingPreview data={data} onUpdate={updateField} />
       </div>
     );
   }
@@ -355,8 +371,8 @@ export default function LandingPageSettings() {
   );
 }
 
-/* ─── Live Preview Component ─── */
-function LandingPreview({ data }: { data: LandingPageData }) {
+/* ─── Inline Editable Preview Component ─── */
+function LandingPreview({ data, onUpdate }: { data: LandingPageData; onUpdate: (field: keyof LandingPageData, value: string) => void }) {
   const benefits = [
     "Booking online terintegrasi WhatsApp",
     "Dashboard real-time multi cabang",
@@ -365,6 +381,25 @@ function LandingPreview({ data }: { data: LandingPageData }) {
     "Manajemen produk & inventori",
     "Akses dari perangkat apapun",
   ];
+
+  const EditableText = ({ field, children, className = "", as: Tag = "span" }: {
+    field: keyof LandingPageData;
+    children: React.ReactNode;
+    className?: string;
+    as?: keyof JSX.IntrinsicElements;
+  }) => {
+    const El = Tag as any;
+    return (
+      <El
+        contentEditable
+        suppressContentEditableWarning
+        className={`${className} outline-none cursor-text rounded px-0.5 -mx-0.5 transition-all hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5`}
+        onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate(field, e.currentTarget.textContent || "")}
+      >
+        {children}
+      </El>
+    );
+  };
 
   return (
     <div className="border rounded-xl overflow-hidden bg-background shadow-lg">
@@ -383,13 +418,15 @@ function LandingPreview({ data }: { data: LandingPageData }) {
       <div className="px-6 py-10 md:py-14">
         <div className="flex items-center gap-8">
           <div className="flex-1">
-            <p className="text-primary font-semibold text-sm mb-2">{data.hero_tagline}</p>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
+            <EditableText field="hero_tagline" as="p" className="text-primary font-semibold text-sm mb-2">
+              {data.hero_tagline}
+            </EditableText>
+            <EditableText field="hero_title" as="h2" className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
               {data.hero_title}
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6 max-w-lg">
+            </EditableText>
+            <EditableText field="hero_description" as="p" className="text-sm text-muted-foreground mb-6 max-w-lg">
               {data.hero_description}
-            </p>
+            </EditableText>
             <div className="flex gap-3">
               <span className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">
                 Coba Gratis <ArrowRight className="h-3 w-3" />
@@ -401,11 +438,7 @@ function LandingPreview({ data }: { data: LandingPageData }) {
           </div>
           {data.hero_image_url && (
             <div className="hidden md:block flex-shrink-0 w-1/3">
-              <img
-                src={data.hero_image_url}
-                alt="Hero"
-                className="w-full h-auto object-contain rounded-lg"
-              />
+              <img src={data.hero_image_url} alt="Hero" className="w-full h-auto object-contain rounded-lg" />
             </div>
           )}
         </div>
@@ -415,15 +448,21 @@ function LandingPreview({ data }: { data: LandingPageData }) {
       <div className="px-6 py-8 bg-secondary/30">
         <div className="grid grid-cols-3 gap-4 max-w-md mx-auto text-center">
           <div>
-            <div className="text-2xl font-extrabold text-primary">{data.stats_properties}</div>
+            <EditableText field="stats_properties" as="div" className="text-2xl font-extrabold text-primary">
+              {data.stats_properties}
+            </EditableText>
             <p className="text-xs text-muted-foreground">Properti</p>
           </div>
           <div>
-            <div className="text-2xl font-bold text-foreground">{data.stats_support}</div>
+            <EditableText field="stats_support" as="div" className="text-2xl font-bold text-foreground">
+              {data.stats_support}
+            </EditableText>
             <p className="text-xs text-muted-foreground">Support</p>
           </div>
           <div>
-            <div className="text-2xl font-bold text-foreground">{data.stats_uptime}</div>
+            <EditableText field="stats_uptime" as="div" className="text-2xl font-bold text-foreground">
+              {data.stats_uptime}
+            </EditableText>
             <p className="text-xs text-muted-foreground">Uptime</p>
           </div>
         </div>
@@ -444,8 +483,12 @@ function LandingPreview({ data }: { data: LandingPageData }) {
 
       {/* CTA Preview */}
       <div className="px-6 py-8 bg-primary text-center">
-        <h3 className="text-lg font-bold text-primary-foreground mb-2">{data.cta_title}</h3>
-        <p className="text-xs text-primary-foreground/80 mb-4 max-w-md mx-auto">{data.cta_description}</p>
+        <EditableText field="cta_title" as="h3" className="text-lg font-bold text-primary-foreground mb-2">
+          {data.cta_title}
+        </EditableText>
+        <EditableText field="cta_description" as="p" className="text-xs text-primary-foreground/80 mb-4 max-w-md mx-auto">
+          {data.cta_description}
+        </EditableText>
         <div className="flex gap-3 justify-center">
           <span className="inline-flex items-center gap-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-xs font-medium">
             Daftar Gratis <ArrowRight className="h-3 w-3" />
@@ -461,7 +504,9 @@ function LandingPreview({ data }: { data: LandingPageData }) {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <h4 className="text-sm font-bold text-background mb-2">ANKA PMS</h4>
-            <p className="text-xs text-background/60">{data.footer_description}</p>
+            <EditableText field="footer_description" as="p" className="text-xs text-background/60">
+              {data.footer_description}
+            </EditableText>
           </div>
           <div>
             <h5 className="text-xs font-semibold text-background mb-2">Menu</h5>
@@ -475,16 +520,16 @@ function LandingPreview({ data }: { data: LandingPageData }) {
             <h5 className="text-xs font-semibold text-background mb-2">Kontak</h5>
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs text-background/60">
-                <Mail className="h-3 w-3" />
-                <span>{data.contact_email}</span>
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <EditableText field="contact_email">{data.contact_email}</EditableText>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-background/60">
-                <Phone className="h-3 w-3" />
-                <span>{data.contact_phone}</span>
+                <Phone className="h-3 w-3 flex-shrink-0" />
+                <EditableText field="contact_phone">{data.contact_phone}</EditableText>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-background/60">
-                <MapPin className="h-3 w-3" />
-                <span>{data.contact_address}</span>
+                <MapPin className="h-3 w-3 flex-shrink-0" />
+                <EditableText field="contact_address">{data.contact_address}</EditableText>
               </div>
             </div>
           </div>
