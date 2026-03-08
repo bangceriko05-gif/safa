@@ -1087,6 +1087,12 @@ export default function Reports() {
               <span className="hidden sm:inline">Kinerja</span>
             </TabsTrigger>
           )}
+          {isFeatureEnabled("reports.accounting") && (
+            <TabsTrigger value="accounting" className="flex items-center gap-1.5 flex-1">
+              <Scale className="h-4 w-4" />
+              <span className="hidden sm:inline">Akuntansi</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
