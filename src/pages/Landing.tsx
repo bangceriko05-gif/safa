@@ -108,6 +108,7 @@ const defaultSettings: LandingSettings = {
 export default function Landing() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<LandingSettings>(defaultSettings);
+  const [elementStyles, setElementStyles] = useState<ElementStyles>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
