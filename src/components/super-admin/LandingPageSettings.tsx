@@ -509,17 +509,73 @@ function LandingPreview({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-3 space-y-3" align="start">
-            <p className="text-xs font-semibold">URL Gambar Hero</p>
-            <Input
-              className="h-8 text-xs"
-              value={data.hero_image_url || ""}
-              onChange={(e) => onUpdate("hero_image_url", e.target.value)}
-              placeholder="https://example.com/image.png"
-            />
-            {data.hero_image_url && (
-              <img src={data.hero_image_url} alt="Preview" className="w-full h-24 object-contain rounded border bg-muted" />
+            <p className="text-xs font-semibold">Gambar Hero</p>
+            
+            {/* Upload button */}
+            <div className="space-y-2">
+              <label className="flex items-center justify-center gap-2 px-3 py-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("Ukuran file maksimal 5MB");
+                      return;
+                    }
+                    const ext = file.name.split('.').pop();
+                    const path = `landing/hero-${Date.now()}.${ext}`;
+                    const { data: uploadData, error } = await supabase.storage
+                      .from("store-images")
+                      .upload(path, file, { upsert: true });
+                    if (error) {
+                      toast.error("Gagal upload gambar: " + error.message);
+                      return;
+                    }
+                    const { data: urlData } = supabase.storage
+                      .from("store-images")
+                      .getPublicUrl(uploadData.path);
+                    onUpdate("hero_image_url", urlData.publicUrl);
+                    toast.success("Gambar berhasil diupload!");
+                  }}
+                />
+                <Image className="h-5 w-5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Klik untuk upload gambar</span>
+              </label>
+              <p className="text-[10px] text-muted-foreground text-center">Max 5MB · JPG, PNG, WEBP</p>
+            </div>
+
+            {/* Preview */}
+            {data.hero_image_url ? (
+              <div className="relative">
+                <img src={data.hero_image_url} alt="Preview" className="w-full h-28 object-contain rounded border bg-muted" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-1 right-1 h-6 text-[10px] px-2"
+                  onClick={() => onUpdate("hero_image_url", "")}
+                >
+                  Hapus
+                </Button>
+              </div>
+            ) : (
+              <div className="w-full h-20 rounded border bg-muted flex items-center justify-center">
+                <span className="text-[10px] text-muted-foreground">Menggunakan gambar default</span>
+              </div>
             )}
-            <p className="text-[10px] text-muted-foreground">Kosongkan untuk menggunakan gambar default.</p>
+
+            {/* URL fallback */}
+            <details className="text-[10px]">
+              <summary className="text-muted-foreground cursor-pointer hover:text-foreground">Atau masukkan URL gambar</summary>
+              <Input
+                className="h-7 text-xs mt-1.5"
+                value={data.hero_image_url || ""}
+                onChange={(e) => onUpdate("hero_image_url", e.target.value)}
+                placeholder="https://example.com/image.png"
+              />
+            </details>
           </PopoverContent>
         </Popover>
 
