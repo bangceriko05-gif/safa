@@ -300,10 +300,10 @@ export default function Landing() {
       {/* CTA Section */}
       <section className="py-16 md:py-24 bg-primary">
         <div className="container mx-auto px-4 text-center">
-          <h3 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+          <h3 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4" style={getStyle('cta_title')}>
             {settings.cta_title}
           </h3>
-          <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
+          <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto" style={getStyle('cta_description')}>
             {settings.cta_description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
