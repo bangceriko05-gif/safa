@@ -991,5 +991,6 @@ function LandingPreview({
         </div>
       </div>
     </div>
+    </EditorContext.Provider>
   );
 }
