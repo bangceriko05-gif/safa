@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe } from "lucide-react";
 
 interface StoreFeature {
   id: string;
