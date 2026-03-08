@@ -110,6 +110,18 @@ export default function Booking() {
     if (selectedBranch) {
       fetchRooms(selectedBranch);
       fetchCategories(selectedBranch);
+      // Fetch payment methods for selected branch
+      supabase
+        .from("payment_methods")
+        .select("name")
+        .eq("store_id", selectedBranch)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setPaymentMethodOptions(data.map((d: any) => d.name));
+          }
+        });
       setSelectedCategory("");
       setSelectedRoom("");
       setSelectedVariant("");
