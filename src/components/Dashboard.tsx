@@ -40,6 +40,7 @@ import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 import { logActivity } from "@/utils/activityLogger";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
