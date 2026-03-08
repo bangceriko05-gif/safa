@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -380,8 +380,8 @@ export default function SuperAdminStoreManagement() {
                 </TableRow>
               ) : (
                 stores.map((store) => (
-                  <>
-                    <TableRow key={store.id} className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
+                  <React.Fragment key={store.id}>
+                    <TableRow className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {expandedStoreId === store.id ? (
@@ -487,7 +487,7 @@ export default function SuperAdminStoreManagement() {
                       </TableCell>
                     </TableRow>
                     {expandedStoreId === store.id && (
-                      <TableRow key={`${store.id}-features`}>
+                      <TableRow>
                         <TableCell colSpan={9} className="bg-muted/30 p-4">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium">
@@ -499,7 +499,7 @@ export default function SuperAdminStoreManagement() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 ))
               )}
             </TableBody>
