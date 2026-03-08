@@ -381,7 +381,6 @@ export default function CustomerManagement() {
   };
 
   const filteredCustomers = customers.filter((customer) => {
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
@@ -391,19 +390,25 @@ export default function CustomerManagement() {
         (customer.identity_number && customer.identity_number.toLowerCase().includes(query));
       if (!matchesSearch) return false;
     }
-
-    // Identity type filter
     if (identityFilter !== "all") {
       if (customer.identity_type !== identityFilter) return false;
     }
-
-    // Missing KTP filter
     if (showMissingKtp) {
       if (customer.identity_document_url) return false;
     }
-
     return true;
   });
+
+  const totalPages = Math.ceil(filteredCustomers.length / pageSize);
+  const paginatedCustomers = filteredCustomers.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, identityFilter, showMissingKtp, pageSize]);
 
   if (!hasAnyPermission(["view_customers", "manage_customers"])) {
     return <NoAccessMessage featureName="Pelanggan" />;
