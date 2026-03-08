@@ -93,6 +93,7 @@ export default function Booking() {
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<string[]>(["Cash", "Transfer", "QRIS"]);
 
   // Payment timer state
   const [bookingRequestId, setBookingRequestId] = useState<string | null>(null);
