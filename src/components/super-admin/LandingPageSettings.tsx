@@ -551,6 +551,81 @@ function StyleToolbar({
   );
 }
 
+/* ─── Position Control Panel ─── */
+function PositionPanel({
+  field,
+  style,
+  onStyleChange,
+  onClose,
+}: {
+  field: string;
+  style: ElementStyle;
+  onStyleChange: (field: string, style: Partial<ElementStyle>) => void;
+  onClose: () => void;
+}) {
+  const step = 5;
+  const x = style.offsetX || 0;
+  const y = style.offsetY || 0;
+
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-card border rounded-xl shadow-xl p-3 flex items-center gap-4 min-w-[380px]">
+      <div className="flex items-center gap-2">
+        <Move className="h-4 w-4 text-primary" />
+        <span className="text-xs font-semibold text-foreground">{field}</span>
+      </div>
+
+      {/* Arrow Controls */}
+      <div className="grid grid-cols-3 gap-0.5 w-fit">
+        <div />
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onStyleChange(field, { offsetY: y - step })}>
+          <ArrowUp className="h-3 w-3" />
+        </Button>
+        <div />
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onStyleChange(field, { offsetX: x - step })}>
+          <ArrowLeftIcon className="h-3 w-3" />
+        </Button>
+        <Button variant="outline" size="icon" className="h-7 w-7 text-[9px] font-mono" onClick={() => onStyleChange(field, { offsetX: 0, offsetY: 0 })}>
+          0
+        </Button>
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onStyleChange(field, { offsetX: x + step })}>
+          <ChevronRight className="h-3 w-3" />
+        </Button>
+        <div />
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onStyleChange(field, { offsetY: y + step })}>
+          <ArrowDown className="h-3 w-3" />
+        </Button>
+        <div />
+      </div>
+
+      {/* Numeric Inputs */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground font-medium">X</span>
+          <Input
+            type="number"
+            className="h-7 w-16 text-xs text-center"
+            value={x}
+            onChange={(e) => onStyleChange(field, { offsetX: parseInt(e.target.value) || 0 })}
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground font-medium">Y</span>
+          <Input
+            type="number"
+            className="h-7 w-16 text-xs text-center"
+            value={y}
+            onChange={(e) => onStyleChange(field, { offsetY: parseInt(e.target.value) || 0 })}
+          />
+        </div>
+      </div>
+
+      <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={onClose}>
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
+
 /* ─── Visual Editor Preview ─── */
 function LandingPreview({
   data,
@@ -565,7 +640,7 @@ function LandingPreview({
 }) {
   const [mode, setMode] = useState<"edit" | "drag">("edit");
   const [activeToolbar, setActiveToolbar] = useState<{ field: string; x: number; y: number } | null>(null);
-  const [dragState, setDragState] = useState<{ field: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const benefits = [
@@ -576,41 +651,6 @@ function LandingPreview({
     "Manajemen produk & inventori",
     "Akses dari perangkat apapun",
   ];
-
-  const handleMouseDown = useCallback((field: string, e: React.MouseEvent) => {
-    if (mode !== "drag") return;
-    e.preventDefault();
-    const style = elementStyles[field] || {};
-    setDragState({
-      field,
-      startX: e.clientX,
-      startY: e.clientY,
-      origX: style.offsetX || 0,
-      origY: style.offsetY || 0,
-    });
-  }, [mode, elementStyles]);
-
-  useEffect(() => {
-    if (!dragState) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = e.clientX - dragState.startX;
-      const dy = e.clientY - dragState.startY;
-      onStyleUpdate(dragState.field, {
-        offsetX: dragState.origX + dx,
-        offsetY: dragState.origY + dy,
-      });
-    };
-
-    const handleMouseUp = () => setDragState(null);
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragState, onStyleUpdate]);
 
   const getElementStyle = (field: string): React.CSSProperties => {
     const s = elementStyles[field];
@@ -629,6 +669,14 @@ function LandingPreview({
     setActiveToolbar({ field, x: Math.min(e.clientX, window.innerWidth - 300), y: Math.min(e.clientY, window.innerHeight - 350) });
   };
 
+  const handleElementClick = (field: string, e: React.MouseEvent) => {
+    if (mode === "drag") {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedField(field);
+    }
+  };
+
   const EditableText = ({ field, children, className = "", as: Tag = "span" }: {
     field: keyof LandingPageData;
     children: React.ReactNode;
@@ -638,6 +686,7 @@ function LandingPreview({
     const El = Tag as any;
     const isEdit = mode === "edit";
     const isDrag = mode === "drag";
+    const isSelected = selectedField === field;
     const hasDragOffset = elementStyles[field]?.offsetX || elementStyles[field]?.offsetY;
 
     return (
@@ -647,11 +696,11 @@ function LandingPreview({
         className={`${className} outline-none rounded px-0.5 -mx-0.5 transition-all ${
           isEdit
             ? "cursor-text hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5"
-            : "cursor-move hover:ring-2 hover:ring-accent/50 hover:bg-accent/10"
+            : `cursor-pointer hover:ring-2 hover:ring-accent/50 hover:bg-accent/10 ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`
         } ${hasDragOffset ? "ring-1 ring-dashed ring-accent/40" : ""}`}
         style={getElementStyle(field)}
         onBlur={isEdit ? (e: React.FocusEvent<HTMLElement>) => onUpdate(field, e.currentTarget.textContent || "") : undefined}
-        onMouseDown={isDrag ? (e: React.MouseEvent) => handleMouseDown(field, e) : undefined}
+        onClick={isDrag ? (e: React.MouseEvent) => handleElementClick(field, e) : undefined}
         onContextMenu={(e: React.MouseEvent) => handleContextMenu(field, e)}
       >
         {children}
@@ -668,7 +717,7 @@ function LandingPreview({
           size="sm"
           variant={mode === "edit" ? "default" : "outline"}
           className="h-7 text-xs gap-1"
-          onClick={() => setMode("edit")}
+          onClick={() => { setMode("edit"); setSelectedField(null); }}
         >
           <Pencil className="h-3 w-3" />
           Edit Teks
@@ -696,6 +745,16 @@ function LandingPreview({
           onStyleChange={onStyleUpdate}
           position={{ x: activeToolbar.x, y: activeToolbar.y }}
           onClose={() => setActiveToolbar(null)}
+        />
+      )}
+
+      {/* Position Control Panel */}
+      {mode === "drag" && selectedField && (
+        <PositionPanel
+          field={selectedField}
+          style={elementStyles[selectedField] || {}}
+          onStyleChange={onStyleUpdate}
+          onClose={() => setSelectedField(null)}
         />
       )}
 
