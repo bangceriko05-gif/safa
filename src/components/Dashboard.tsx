@@ -460,7 +460,7 @@ export default function Dashboard() {
             <StoreSelector />
           </div>
           <div className="flex gap-2">
-            {isFeatureEnabled("deposit") && (
+            {isFeatureEnabled("deposit") && activeTab === "bookings" && (
               <Button 
                 onClick={() => setDepositMode(!depositMode)} 
                 variant={depositMode ? "default" : "outline"}
