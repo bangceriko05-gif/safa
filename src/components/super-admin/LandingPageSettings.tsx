@@ -371,8 +371,176 @@ export default function LandingPageSettings() {
   );
 }
 
-/* ─── Live Preview Component ─── */
-function LandingPreview({ data }: { data: LandingPageData }) {
+/* ─── Inline Editable Preview Component ─── */
+function LandingPreview({ data, onUpdate }: { data: LandingPageData; onUpdate: (field: keyof LandingPageData, value: string) => void }) {
+  const benefits = [
+    "Booking online terintegrasi WhatsApp",
+    "Dashboard real-time multi cabang",
+    "Sistem deposit & check-in/out digital",
+    "Cetak struk & laporan otomatis",
+    "Manajemen produk & inventori",
+    "Akses dari perangkat apapun",
+  ];
+
+  const EditableText = ({ field, children, className = "", as: Tag = "span" }: {
+    field: keyof LandingPageData;
+    children: React.ReactNode;
+    className?: string;
+    as?: keyof JSX.IntrinsicElements;
+  }) => {
+    const El = Tag as any;
+    return (
+      <El
+        contentEditable
+        suppressContentEditableWarning
+        className={`${className} outline-none cursor-text rounded px-0.5 -mx-0.5 transition-all hover:ring-2 hover:ring-primary/30 focus:ring-2 focus:ring-primary/50 focus:bg-primary/5`}
+        onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate(field, e.currentTarget.textContent || "")}
+      >
+        {children}
+      </El>
+    );
+  };
+
+  return (
+    <div className="border rounded-xl overflow-hidden bg-background shadow-lg">
+      {/* Navbar Preview */}
+      <div className="border-b bg-card/80 px-6 py-3 flex items-center justify-between">
+        <span className="text-lg font-bold text-primary">ANKA PMS</span>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span>Fitur</span>
+          <span>Keunggulan</span>
+          <span>Kontak</span>
+          <span className="px-3 py-1 rounded bg-primary text-primary-foreground text-xs">Coba Gratis</span>
+        </div>
+      </div>
+
+      {/* Hero Preview */}
+      <div className="px-6 py-10 md:py-14">
+        <div className="flex items-center gap-8">
+          <div className="flex-1">
+            <EditableText field="hero_tagline" as="p" className="text-primary font-semibold text-sm mb-2">
+              {data.hero_tagline}
+            </EditableText>
+            <EditableText field="hero_title" as="h2" className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight whitespace-pre-line mb-4">
+              {data.hero_title}
+            </EditableText>
+            <EditableText field="hero_description" as="p" className="text-sm text-muted-foreground mb-6 max-w-lg">
+              {data.hero_description}
+            </EditableText>
+            <div className="flex gap-3">
+              <span className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium">
+                Coba Gratis <ArrowRight className="h-3 w-3" />
+              </span>
+              <span className="inline-flex items-center px-4 py-2 border rounded-md text-xs font-medium text-muted-foreground">
+                Jadwalkan Demo
+              </span>
+            </div>
+          </div>
+          {data.hero_image_url && (
+            <div className="hidden md:block flex-shrink-0 w-1/3">
+              <img src={data.hero_image_url} alt="Hero" className="w-full h-auto object-contain rounded-lg" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Preview */}
+      <div className="px-6 py-8 bg-secondary/30">
+        <div className="grid grid-cols-3 gap-4 max-w-md mx-auto text-center">
+          <div>
+            <EditableText field="stats_properties" as="div" className="text-2xl font-extrabold text-primary">
+              {data.stats_properties}
+            </EditableText>
+            <p className="text-xs text-muted-foreground">Properti</p>
+          </div>
+          <div>
+            <EditableText field="stats_support" as="div" className="text-2xl font-bold text-foreground">
+              {data.stats_support}
+            </EditableText>
+            <p className="text-xs text-muted-foreground">Support</p>
+          </div>
+          <div>
+            <EditableText field="stats_uptime" as="div" className="text-2xl font-bold text-foreground">
+              {data.stats_uptime}
+            </EditableText>
+            <p className="text-xs text-muted-foreground">Uptime</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Benefits Preview */}
+      <div className="px-6 py-8">
+        <h3 className="text-lg font-bold text-foreground mb-4">Kenapa ANKA PMS?</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {benefits.map((b) => (
+            <div key={b} className="flex items-center gap-2 text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <span className="text-foreground">{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA Preview */}
+      <div className="px-6 py-8 bg-primary text-center">
+        <EditableText field="cta_title" as="h3" className="text-lg font-bold text-primary-foreground mb-2">
+          {data.cta_title}
+        </EditableText>
+        <EditableText field="cta_description" as="p" className="text-xs text-primary-foreground/80 mb-4 max-w-md mx-auto">
+          {data.cta_description}
+        </EditableText>
+        <div className="flex gap-3 justify-center">
+          <span className="inline-flex items-center gap-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-xs font-medium">
+            Daftar Gratis <ArrowRight className="h-3 w-3" />
+          </span>
+          <span className="inline-flex items-center px-4 py-2 border border-primary-foreground/30 text-primary-foreground rounded-md text-xs font-medium">
+            Hubungi Kami
+          </span>
+        </div>
+      </div>
+
+      {/* Footer Preview */}
+      <div className="px-6 py-6 bg-foreground">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <h4 className="text-sm font-bold text-background mb-2">ANKA PMS</h4>
+            <EditableText field="footer_description" as="p" className="text-xs text-background/60">
+              {data.footer_description}
+            </EditableText>
+          </div>
+          <div>
+            <h5 className="text-xs font-semibold text-background mb-2">Menu</h5>
+            <div className="space-y-1 text-xs text-background/60">
+              <p>Fitur</p>
+              <p>Keunggulan</p>
+              <p>Masuk</p>
+            </div>
+          </div>
+          <div>
+            <h5 className="text-xs font-semibold text-background mb-2">Kontak</h5>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-background/60">
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <EditableText field="contact_email">{data.contact_email}</EditableText>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-background/60">
+                <Phone className="h-3 w-3 flex-shrink-0" />
+                <EditableText field="contact_phone">{data.contact_phone}</EditableText>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-background/60">
+                <MapPin className="h-3 w-3 flex-shrink-0" />
+                <EditableText field="contact_address">{data.contact_address}</EditableText>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-background/10 mt-4 pt-3 text-center">
+          <p className="text-background/40 text-[10px]">© {new Date().getFullYear()} ANKA PMS. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
   const benefits = [
     "Booking online terintegrasi WhatsApp",
     "Dashboard real-time multi cabang",
