@@ -110,7 +110,17 @@ export default function Reports() {
   const { currentStore } = useStore();
   const { hasPermission, hasAnyPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
-  const [activeTab, setActiveTab] = useState<ReportTab>("overview");
+  const [activeTab, setActiveTabRaw] = useState<ReportTab>(() => {
+    const param = new URLSearchParams(window.location.search).get("reportTab");
+    return (param as ReportTab) || "overview";
+  });
+  const setActiveTab = (tab: ReportTab) => {
+    setActiveTabRaw(tab);
+    const params = new URLSearchParams(window.location.search);
+    params.set("reportTab", tab);
+    if (tab !== "accounting") params.delete("accountingTab");
+    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+  };
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
