@@ -97,25 +97,47 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // Set up auth state listener
+    let isMounted = true;
+
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
+        if (event === "SIGNED_OUT") {
+          navigate("/auth");
+          return;
+        }
+        
         if (session?.user) {
-          // Defer role fetch
+          // Defer role fetch to avoid deadlock with auth state
           setTimeout(() => {
-            fetchUserRole(session.user.id);
+            if (isMounted) fetchUserRole(session.user.id);
           }, 0);
         }
       }
     );
 
-    // Check for existing session
+    // Then check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
+      
       if (!session) {
-        navigate("/auth");
+        // Don't immediately redirect - wait a moment for onAuthStateChange 
+        // to potentially recover the session via token refresh
+        setTimeout(() => {
+          if (!isMounted) return;
+          // Re-check session after giving auth state change time to fire
+          supabase.auth.getSession().then(({ data: { session: retrySession } }) => {
+            if (!isMounted) return;
+            if (!retrySession) {
+              navigate("/auth");
+            }
+          });
+        }, 1500);
         return;
       }
 
@@ -143,6 +165,7 @@ export default function Dashboard() {
     window.addEventListener("display-size-changed", handleDisplaySizeChange);
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       window.removeEventListener("display-size-changed", handleDisplaySizeChange);
     };
