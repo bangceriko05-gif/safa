@@ -25,7 +25,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: DemoRequestDia
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fullName.trim() || !email.trim() || !whatsapp.trim() || !roomCount) {
+    if (!fullName.trim() || !email.trim() || !whatsapp.trim() || !roomCount || !hotelName.trim()) {
       toast({ title: "Lengkapi semua field", variant: "destructive" });
       return;
     }
