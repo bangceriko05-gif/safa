@@ -404,7 +404,7 @@ function LandingPreview({
   elementStyles: ElementStyles;
   onStyleUpdate: (field: string, style: Partial<ElementStyle>) => void;
 }) {
-  const [mode, setMode] = useState<"edit" | "drag">("edit");
+  const [mode, setMode] = useState<"edit" | "drag" | null>("edit");
   const [activeToolbar, setActiveToolbar] = useState<{ field: string; x: number; y: number } | null>(null);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
