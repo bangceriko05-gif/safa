@@ -808,6 +808,74 @@ function LandingPreview({
           </div>
         </div>
 
+        {/* Partners Preview */}
+        {data.partner_logos.length > 0 && (
+          <div className="px-6 py-6 border-y bg-muted/30">
+            <div className="text-center mb-4">
+              <p className="text-primary font-semibold text-xs mb-1">{data.partners_tagline}</p>
+              <p className="text-sm font-bold text-foreground">{data.partners_title}</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              {data.partner_logos.map((p, idx) => (
+                <div key={idx} className="grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
+                  {p.logo_url ? <img src={p.logo_url} alt={p.name} className="h-8 w-auto max-w-[100px] object-contain" /> : <span className="text-[10px] text-muted-foreground">{p.name}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gallery Preview */}
+        {data.gallery_items.length > 0 && (
+          <div className="px-6 py-6 bg-secondary/30">
+            <div className="text-center mb-4">
+              <p className="text-primary font-semibold text-xs mb-1">{data.gallery_tagline}</p>
+              <p className="text-sm font-bold text-foreground">{data.gallery_title}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{data.gallery_description}</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {data.gallery_items.map((g, idx) => (
+                <div key={idx} className="bg-card rounded-lg overflow-hidden shadow-sm">
+                  {g.image_url && <img src={g.image_url} alt={g.title} className="w-full h-20 object-cover" />}
+                  <div className="p-2">
+                    <p className="text-[10px] font-semibold text-foreground">{g.title}</p>
+                    <p className="text-[8px] text-muted-foreground">{g.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pricing Preview */}
+        {data.pricing_items.length > 0 && (
+          <div className="px-6 py-6">
+            <div className="text-center mb-4">
+              <p className="text-primary font-semibold text-xs mb-1">{data.pricing_tagline}</p>
+              <p className="text-sm font-bold text-foreground">{data.pricing_title}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{data.pricing_description}</p>
+            </div>
+            <div className={`grid gap-3 ${data.pricing_items.length === 1 ? '' : data.pricing_items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {data.pricing_items.map((p, idx) => (
+                <div key={idx} className={`bg-card rounded-lg border p-3 space-y-2 ${p.is_popular ? 'border-primary shadow-md' : ''}`}>
+                  {p.is_popular && <span className="text-[8px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded font-semibold">Populer</span>}
+                  <p className="text-xs font-bold text-foreground">{p.name}</p>
+                  <p className="text-lg font-extrabold text-foreground">{p.price}<span className="text-[10px] font-normal text-muted-foreground">/{p.period}</span></p>
+                  <div className="space-y-1">
+                    {p.features.map((f, fIdx) => (
+                      <div key={fIdx} className="flex items-center gap-1 text-[9px]">
+                        <CheckCircle2 className="h-2.5 w-2.5 text-primary flex-shrink-0" />
+                        <span className="text-foreground">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={`text-center py-1 rounded text-[10px] font-medium ${p.is_popular ? 'bg-primary text-primary-foreground' : 'border text-muted-foreground'}`}>{p.btn_text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Benefits Preview */}
         <div className="px-6 py-8">
           <div className="grid md:grid-cols-2 gap-8 items-center">
