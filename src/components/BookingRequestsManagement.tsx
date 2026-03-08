@@ -202,6 +202,7 @@ function StatusDropdown({ request, onStatusChange, isUpdating }: StatusDropdownP
 
 export default function BookingRequestsManagement() {
   const { currentStore } = useStore();
+  const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
