@@ -245,7 +245,7 @@ export default function Landing() {
             <Button variant="ghost" onClick={() => navigate("/auth")}>
               {settings.navbar_btn_login}
             </Button>
-            <Button onClick={() => navigate("/auth")}>
+            <Button onClick={() => setShowDemoDialog(true)}>
               {settings.btn_hero_primary}
             </Button>
           </div>
@@ -266,7 +266,7 @@ export default function Landing() {
               {settings.hero_description}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="text-base px-8 py-6" onClick={() => navigate("/auth")}>
+              <Button size="lg" className="text-base px-8 py-6" onClick={() => setShowDemoDialog(true)}>
                 {settings.btn_hero_primary}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -333,7 +333,7 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <Button size="lg" className="mt-8" onClick={() => navigate("/auth")}>
+              <Button size="lg" className="mt-8" onClick={() => setShowDemoDialog(true)}>
                 {settings.btn_benefits}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -368,7 +368,7 @@ export default function Landing() {
             {settings.cta_description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="text-base px-8 py-6" onClick={() => navigate("/auth")}>
+            <Button size="lg" variant="secondary" className="text-base px-8 py-6" onClick={() => setShowDemoDialog(true)}>
               {settings.btn_cta_primary}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
