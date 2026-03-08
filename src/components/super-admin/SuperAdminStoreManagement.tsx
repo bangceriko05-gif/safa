@@ -380,8 +380,8 @@ export default function SuperAdminStoreManagement() {
                 </TableRow>
               ) : (
                 stores.map((store) => (
-                  <>
-                    <TableRow key={store.id} className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
+                  <React.Fragment key={store.id}>
+                    <TableRow className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {expandedStoreId === store.id ? (
