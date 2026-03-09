@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Eye, BookOpen } from "lucide-react";
+import { Loader2, Plus, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import ReportDateFilter, { ReportTimeRange, getDateRange } from "../ReportDateFilter";
+import { DateRange } from "react-day-picker";
 
 interface JournalEntry {
   id: string;
@@ -26,20 +28,28 @@ export default function JournalEntries() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ entry_date: format(new Date(), "yyyy-MM-dd"), description: "", reference_no: "" });
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (!currentStore) return;
     fetchEntries();
-  }, [currentStore]);
+  }, [currentStore, timeRange, customDateRange]);
 
   const fetchEntries = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
+      const startStr = format(startDate, "yyyy-MM-dd");
+      const endStr = format(endDate, "yyyy-MM-dd");
+
       const { data, error } = await supabase
         .from("journal_entries")
         .select("*")
         .eq("store_id", currentStore.id)
+        .gte("entry_date", startStr)
+        .lte("entry_date", endStr)
         .order("entry_date", { ascending: false })
         .limit(100);
 
@@ -77,9 +87,6 @@ export default function JournalEntries() {
     }
   };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
-
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -90,13 +97,21 @@ export default function JournalEntries() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <BookOpen className="h-5 w-5" /> Jurnal Umum
         </h3>
-        <Button onClick={() => setShowForm(true)} size="sm">
-          <Plus className="mr-2 h-4 w-4" /> Tambah Jurnal
-        </Button>
+        <div className="flex items-center gap-2">
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+          <Button onClick={() => setShowForm(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" /> Tambah Jurnal
+          </Button>
+        </div>
       </div>
 
       <Card>

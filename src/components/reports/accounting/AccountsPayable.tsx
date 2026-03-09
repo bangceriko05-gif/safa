@@ -8,10 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Pencil, DollarSign } from "lucide-react";
+import { Loader2, Plus, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import ReportDateFilter, { ReportTimeRange, getDateRange } from "../ReportDateFilter";
+import { DateRange } from "react-day-picker";
 
 interface Payable {
   id: string;
@@ -35,20 +37,25 @@ export default function AccountsPayable() {
   const [form, setForm] = useState({
     supplier_name: "", description: "", amount: "", due_date: "",
   });
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [currentStore]);
+  }, [currentStore, timeRange, customDateRange]);
 
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const { data, error } = await supabase
         .from("accounts_payable")
         .select("*")
         .eq("store_id", currentStore.id)
+        .gte("created_at", format(startDate, "yyyy-MM-dd'T'00:00:00"))
+        .lte("created_at", format(endDate, "yyyy-MM-dd'T'23:59:59"))
         .order("created_at", { ascending: false });
       if (error) throw error;
       setItems((data as Payable[]) || []);
@@ -119,12 +126,20 @@ export default function AccountsPayable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Hutang</h3>
           <p className="text-sm text-muted-foreground">Total belum dibayar: <span className="font-semibold text-red-600">{formatCurrency(totalUnpaid)}</span></p>
         </div>
-        <Button onClick={() => setShowForm(true)} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Hutang</Button>
+        <div className="flex items-center gap-2">
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+          <Button onClick={() => setShowForm(true)} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Hutang</Button>
+        </div>
       </div>
 
       <Card>

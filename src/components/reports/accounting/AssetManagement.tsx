@@ -13,6 +13,8 @@ import { Loader2, Plus, Package } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import ReportDateFilter, { ReportTimeRange, getDateRange } from "../ReportDateFilter";
+import { DateRange } from "react-day-picker";
 
 interface Asset {
   id: string;
@@ -24,6 +26,7 @@ interface Asset {
   depreciation_rate: number;
   status: string;
   notes: string | null;
+  created_at: string;
 }
 
 export default function AssetManagement() {
@@ -34,20 +37,27 @@ export default function AssetManagement() {
   const [form, setForm] = useState({
     name: "", category: "", purchase_date: "", purchase_price: "", current_value: "", depreciation_rate: "0", notes: "",
   });
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [currentStore]);
+  }, [currentStore, timeRange, customDateRange]);
 
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
+      const startStr = format(startDate, "yyyy-MM-dd");
+      const endStr = format(endDate, "yyyy-MM-dd");
+
       const { data, error } = await supabase
         .from("assets")
         .select("*")
         .eq("store_id", currentStore.id)
+        .or(`purchase_date.is.null,and(purchase_date.gte.${startStr},purchase_date.lte.${endStr})`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       setItems((data as Asset[]) || []);
@@ -99,12 +109,20 @@ export default function AssetManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><Package className="h-5 w-5" /> Aset</h3>
           <p className="text-sm text-muted-foreground">Total nilai aset aktif: <span className="font-semibold text-blue-600">{formatCurrency(totalValue)}</span></p>
         </div>
-        <Button onClick={() => setShowForm(true)} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Aset</Button>
+        <div className="flex items-center gap-2">
+          <ReportDateFilter
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
+          <Button onClick={() => setShowForm(true)} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Aset</Button>
+        </div>
       </div>
 
       <Card>

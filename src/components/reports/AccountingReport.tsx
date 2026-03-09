@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package } from "lucide-react";
+import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark } from "lucide-react";
 
 import BalanceSheet from "./accounting/BalanceSheet";
 import ProfitLoss from "./accounting/ProfitLoss";
@@ -9,8 +9,9 @@ import JournalEntries from "./accounting/JournalEntries";
 import AccountsPayable from "./accounting/AccountsPayable";
 import AccountsReceivable from "./accounting/AccountsReceivable";
 import AssetManagement from "./accounting/AssetManagement";
+import BankList from "./accounting/BankList";
 
-type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets";
+type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank";
 
 export default function AccountingReport() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -34,6 +35,7 @@ export default function AccountingReport() {
     { key: "payable" as const, label: "Hutang", icon: CreditCard },
     { key: "receivable" as const, label: "Piutang", icon: HandCoins },
     { key: "assets" as const, label: "Aset", icon: Package },
+    { key: "bank" as const, label: "List Bank", icon: Landmark },
   ];
 
   return (
@@ -55,6 +57,7 @@ export default function AccountingReport() {
         <TabsContent value="payable" className="mt-4"><AccountsPayable /></TabsContent>
         <TabsContent value="receivable" className="mt-4"><AccountsReceivable /></TabsContent>
         <TabsContent value="assets" className="mt-4"><AssetManagement /></TabsContent>
+        <TabsContent value="bank" className="mt-4"><BankList /></TabsContent>
       </Tabs>
     </div>
   );
