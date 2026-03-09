@@ -217,6 +217,56 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          balance: number
+          bank_name: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          balance?: number
+          bank_name: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          balance?: number
+          bank_name?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_products: {
         Row: {
           booking_id: string
