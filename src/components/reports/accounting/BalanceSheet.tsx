@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStore } from "@/contexts/StoreContext";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../ReportDateFilter";
+import { DateRange } from "react-day-picker";
 
 interface BalanceData {
   totalAssets: number;
@@ -16,6 +18,8 @@ interface BalanceData {
 export default function BalanceSheet() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [data, setData] = useState<BalanceData>({
     totalAssets: 0,
     totalLiabilities: 0,
@@ -27,28 +31,33 @@ export default function BalanceSheet() {
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [currentStore]);
+  }, [currentStore, timeRange, customDateRange]);
 
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
-      // Fetch assets
+      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
+      const endStr = format(endDate, "yyyy-MM-dd");
+
+      // Fetch assets purchased up to end date
       const { data: assets } = await supabase
         .from("assets")
-        .select("name, current_value, status")
+        .select("name, current_value, status, purchase_date")
         .eq("store_id", currentStore.id)
-        .eq("status", "active");
+        .eq("status", "active")
+        .or(`purchase_date.is.null,purchase_date.lte.${endStr}`);
 
       const totalAssets = (assets || []).reduce((sum, a) => sum + Number(a.current_value || 0), 0);
       const assetDetails = (assets || []).map(a => ({ name: a.name, amount: Number(a.current_value || 0) }));
 
-      // Fetch payables (liabilities)
+      // Fetch payables created up to end date
       const { data: payables } = await supabase
         .from("accounts_payable")
         .select("supplier_name, amount, paid_amount, status")
         .eq("store_id", currentStore.id)
-        .neq("status", "paid");
+        .neq("status", "paid")
+        .lte("created_at", format(endDate, "yyyy-MM-dd'T'23:59:59"));
 
       const totalLiabilities = (payables || []).reduce((sum, p) => sum + (Number(p.amount) - Number(p.paid_amount || 0)), 0);
       const liabilityDetails = (payables || []).map(p => ({
@@ -79,7 +88,15 @@ export default function BalanceSheet() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Per {format(new Date(), "d MMMM yyyy")}</p>
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">Per {getDateRangeDisplay(timeRange, customDateRange)}</p>
+        <ReportDateFilter
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+        />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
