@@ -714,11 +714,6 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          {isFeatureEnabled("booking_requests") && (
-            <TabsContent value="booking-requests" forceMount className={`mt-6 ${activeTab !== "booking-requests" ? "hidden" : ""}`}>
-              <BookingRequestsManagement />
-            </TabsContent>
-          )}
 
           {(userRole === "admin" || userRole === "leader") && (
             <>
