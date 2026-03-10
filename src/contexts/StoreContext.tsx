@@ -42,24 +42,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
-    fetchUserStoresAndRole();
+    // First restore session from storage, then fetch stores
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchUserStoresAndRole(session.user);
+      } else {
+        // Wait a bit for session recovery before redirecting
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const { data: { session: retrySession } } = await supabase.auth.getSession();
+        if (retrySession?.user) {
+          await fetchUserStoresAndRole(retrySession.user);
+        } else {
+          setIsLoading(false);
+          const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
+          if (!isPublicRoute) {
+            navigate("/auth");
+          }
+        }
+      }
+    };
+    
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserStoresAndRole(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserStoresAndRole = async () => {
+  const fetchUserStoresAndRole = async (user: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Check if current route is public
-      const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
-      
-      if (!user) {
-        setIsLoading(false);
-        // Only redirect to auth if NOT on a public route
-        if (!isPublicRoute) {
-          navigate("/auth");
-        }
-        return;
-      }
 
       // Fetch user role
       const { data: roleData } = await supabase
