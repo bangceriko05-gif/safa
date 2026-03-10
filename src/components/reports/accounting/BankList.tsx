@@ -208,12 +208,27 @@ export default function BankList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><Landmark className="h-5 w-5" /> List Bank</h3>
           <p className="text-sm text-muted-foreground">Total saldo: <span className="font-semibold text-primary">{formatCurrency(totalBalance)}</span></p>
         </div>
-        <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Bank</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Bank</Button>
+        </div>
       </div>
 
       <Card>
