@@ -117,8 +117,7 @@ export default function BankList() {
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<BankAccount | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const monthOptions = getMonthOptions();
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [form, setForm] = useState({
     bank_name: "", account_name: "", account_number: "", balance: "", notes: "",
   });
