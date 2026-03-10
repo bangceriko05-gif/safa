@@ -179,7 +179,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       currentStore, 
       userStores, 
       setCurrentStore, 
-      refreshStores: fetchUserStoresAndRole,
+      refreshStores: async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) await fetchUserStoresAndRole(session.user);
+      },
       isLoading, 
       userRole,
       isStoreInactive,
