@@ -265,19 +265,7 @@ export default function BankList() {
           <p className="text-sm text-muted-foreground">Total saldo: <span className="font-semibold text-primary">{formatCurrency(totalBalance)}</span></p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <MonthPicker value={selectedDate} onChange={setSelectedDate} />
           <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Bank</Button>
         </div>
       </div>
