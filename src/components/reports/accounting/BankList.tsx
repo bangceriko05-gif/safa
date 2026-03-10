@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Landmark, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -24,10 +24,28 @@ interface BankAccount {
   created_at: string;
 }
 
+interface PaymentMethod {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+interface DisplayItem {
+  id: string;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  balance: number;
+  is_active: boolean;
+  notes: string | null;
+  source: "payment_method" | "bank_account";
+}
+
 export default function BankList() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<BankAccount[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<BankAccount | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -44,19 +62,53 @@ export default function BankList() {
     if (!currentStore) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("bank_accounts")
-        .select("*")
-        .eq("store_id", currentStore.id)
-        .order("bank_name", { ascending: true });
-      if (error) throw error;
-      setItems((data as BankAccount[]) || []);
+      const [bankRes, pmRes] = await Promise.all([
+        supabase
+          .from("bank_accounts")
+          .select("*")
+          .eq("store_id", currentStore.id)
+          .order("bank_name", { ascending: true }),
+        supabase
+          .from("payment_methods")
+          .select("*")
+          .eq("store_id", currentStore.id)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+      ]);
+      if (bankRes.error) throw bankRes.error;
+      if (pmRes.error) throw pmRes.error;
+      setBankAccounts((bankRes.data as BankAccount[]) || []);
+      setPaymentMethods((pmRes.data as PaymentMethod[]) || []);
     } catch (error) {
       console.error("Error:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Combine: payment methods first (read-only), then extra bank accounts
+  const displayItems: DisplayItem[] = [
+    ...paymentMethods.map((pm) => ({
+      id: pm.id,
+      bank_name: pm.name,
+      account_name: "-",
+      account_number: "-",
+      balance: 0,
+      is_active: pm.is_active,
+      notes: null,
+      source: "payment_method" as const,
+    })),
+    ...bankAccounts.map((ba) => ({
+      id: ba.id,
+      bank_name: ba.bank_name,
+      account_name: ba.account_name,
+      account_number: ba.account_number,
+      balance: ba.balance,
+      is_active: ba.is_active,
+      notes: ba.notes,
+      source: "bank_account" as const,
+    })),
+  ];
 
   const openEdit = (item: BankAccount) => {
     setEditItem(item);
@@ -134,14 +186,14 @@ export default function BankList() {
     return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const totalBalance = items.filter(i => i.is_active).reduce((s, i) => s + Number(i.balance || 0), 0);
+  const totalBalance = displayItems.filter(i => i.is_active).reduce((s, i) => s + Number(i.balance || 0), 0);
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><Landmark className="h-5 w-5" /> List Bank</h3>
-          <p className="text-sm text-muted-foreground">Total saldo: <span className="font-semibold text-blue-600">{formatCurrency(totalBalance)}</span></p>
+          <p className="text-sm text-muted-foreground">Total saldo: <span className="font-semibold text-primary">{formatCurrency(totalBalance)}</span></p>
         </div>
         <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Bank</Button>
       </div>
@@ -155,27 +207,37 @@ export default function BankList() {
                 <TableHead>Nama Rekening</TableHead>
                 <TableHead>No. Rekening</TableHead>
                 <TableHead className="text-right">Saldo</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Sumber</TableHead>
                 <TableHead>Catatan</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Belum ada data bank. Klik "Tambah Bank" untuk menambahkan.</TableCell></TableRow>
-              ) : items.map(item => (
-                <TableRow key={item.id}>
+              {displayItems.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Belum ada data bank.</TableCell></TableRow>
+              ) : displayItems.map(item => (
+                <TableRow key={`${item.source}-${item.id}`}>
                   <TableCell className="font-medium text-sm">{item.bank_name}</TableCell>
                   <TableCell className="text-sm">{item.account_name}</TableCell>
                   <TableCell className="text-sm font-mono">{item.account_number}</TableCell>
                   <TableCell className="text-right text-sm font-medium">{formatCurrency(Number(item.balance))}</TableCell>
-                  <TableCell><Badge variant={item.is_active ? "default" : "secondary"}>{item.is_active ? "Aktif" : "Nonaktif"}</Badge></TableCell>
+                  <TableCell>
+                    {item.source === "payment_method" ? (
+                      <Badge variant="outline" className="text-xs gap-1"><CreditCard className="h-3 w-3" /> Metode Bayar</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs gap-1"><Landmark className="h-3 w-3" /> Akuntansi</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{item.notes || "-"}</TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(item)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteId(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
+                    {item.source === "bank_account" ? (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(bankAccounts.find(b => b.id === item.id)!)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteId(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Auto</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
