@@ -1,32 +1,84 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar } from "lucide-react";
+import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, addMonths, subMonths } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
-function getMonthOptions() {
-  const options = [];
+const MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function MonthPicker({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(value.getFullYear());
+  const currentMonth = value.getMonth();
+  const currentYear = value.getFullYear();
   const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d = subMonths(now, i);
-    options.push({
-      value: format(d, "yyyy-MM"),
-      label: format(d, "MMMM yyyy", { locale: localeId }),
-    });
-  }
-  return options;
+
+  const handlePrev = () => onChange(subMonths(value, 1));
+  const handleNext = () => onChange(addMonths(value, 1));
+
+  const selectMonth = (monthIdx: number) => {
+    onChange(new Date(viewYear, monthIdx, 1));
+    setOpen(false);
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrev}>
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setViewYear(currentYear); }}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="min-w-[160px] justify-center gap-2 font-medium">
+            <Calendar className="h-4 w-4" />
+            {format(value, "MMMM yyyy", { locale: localeId })}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[260px] p-3" align="center">
+          <div className="flex items-center justify-between mb-3">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y - 1)}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <span className="font-semibold text-sm">{viewYear}</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y + 1)}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {MONTH_NAMES_SHORT.map((name, idx) => {
+              const isSelected = viewYear === currentYear && idx === currentMonth;
+              const isCurrent = viewYear === now.getFullYear() && idx === now.getMonth();
+              return (
+                <Button
+                  key={name}
+                  variant={isSelected ? "default" : "ghost"}
+                  size="sm"
+                  className={`text-xs h-8 ${isCurrent && !isSelected ? "text-primary font-bold" : ""}`}
+                  onClick={() => selectMonth(idx)}
+                >
+                  {name}
+                </Button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNext}>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 }
 
 interface BankAccount {
