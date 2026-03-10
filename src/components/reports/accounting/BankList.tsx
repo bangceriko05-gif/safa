@@ -4,14 +4,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard } from "lucide-react";
+import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+
+function getMonthOptions() {
+  const options = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = subMonths(now, i);
+    options.push({
+      value: format(d, "yyyy-MM"),
+      label: format(d, "MMMM yyyy", { locale: localeId }),
+    });
+  }
+  return options;
+}
 
 interface BankAccount {
   id: string;
