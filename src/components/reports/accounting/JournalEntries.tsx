@@ -458,7 +458,39 @@ export default function JournalEntries() {
                   </TableHead>
                   <TableHead className="text-primary-foreground">Tanggal</TableHead>
                   <TableHead className="text-primary-foreground">Keterangan</TableHead>
-                  <TableHead className="text-primary-foreground">Metode Bayar</TableHead>
+                  <TableHead className="text-primary-foreground">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center gap-1 hover:opacity-80">
+                          Metode Bayar
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[180px] p-1 pointer-events-auto" align="start">
+                        <button
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-sm rounded hover:bg-accent",
+                            paymentMethodFilter === "all" && "font-semibold bg-accent"
+                          )}
+                          onClick={() => setPaymentMethodFilter("all")}
+                        >
+                          Semua Metode
+                        </button>
+                        {uniquePaymentMethods.map((m) => (
+                          <button
+                            key={m}
+                            className={cn(
+                              "w-full text-left px-3 py-1.5 text-sm rounded hover:bg-accent",
+                              paymentMethodFilter === m && "font-semibold bg-accent"
+                            )}
+                            onClick={() => setPaymentMethodFilter(m)}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                   <TableHead className="text-primary-foreground text-right">Uang Masuk</TableHead>
                   <TableHead className="text-primary-foreground text-right">Uang Keluar</TableHead>
                   <TableHead className="text-primary-foreground text-right">Saldo</TableHead>
