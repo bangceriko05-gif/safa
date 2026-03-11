@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -411,28 +410,15 @@ export default function JournalEntries() {
             />
           </div>
 
-          {/* Search + Payment method filter */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative max-w-sm flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari BID, keterangan..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Metode Bayar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Metode</SelectItem>
-                {uniquePaymentMethods.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Search */}
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari BID, keterangan..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
           {/* Summary Cards */}
@@ -471,7 +457,39 @@ export default function JournalEntries() {
                   </TableHead>
                   <TableHead className="text-primary-foreground">Tanggal</TableHead>
                   <TableHead className="text-primary-foreground">Keterangan</TableHead>
-                  <TableHead className="text-primary-foreground">Metode Bayar</TableHead>
+                  <TableHead className="text-primary-foreground">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center gap-1 hover:opacity-80">
+                          Metode Bayar
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[180px] p-1 pointer-events-auto" align="start">
+                        <button
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-sm rounded hover:bg-accent",
+                            paymentMethodFilter === "all" && "font-semibold bg-accent"
+                          )}
+                          onClick={() => setPaymentMethodFilter("all")}
+                        >
+                          Semua Metode
+                        </button>
+                        {uniquePaymentMethods.map((m) => (
+                          <button
+                            key={m}
+                            className={cn(
+                              "w-full text-left px-3 py-1.5 text-sm rounded hover:bg-accent",
+                              paymentMethodFilter === m && "font-semibold bg-accent"
+                            )}
+                            onClick={() => setPaymentMethodFilter(m)}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                   <TableHead className="text-primary-foreground text-right">Uang Masuk</TableHead>
                   <TableHead className="text-primary-foreground text-right">Uang Keluar</TableHead>
                   <TableHead className="text-primary-foreground text-right">Saldo</TableHead>
