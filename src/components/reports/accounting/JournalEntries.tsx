@@ -4,18 +4,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, BookOpen, Search, FileSpreadsheet, ChevronDown, ArrowUpDown } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
+import { Loader2, BookOpen, Search, FileSpreadsheet, ChevronDown, ArrowUpDown, CalendarIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfDay, endOfDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { exportMultipleSheets } from "@/utils/reportExport";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { cn } from "@/lib/utils";
 
 type JournalType = "penjualan" | "pemasukan" | "pengeluaran";
 type SortDirection = "asc" | "desc";
+type DateFilterMode = "today" | "custom" | "month";
+
+const MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
 
 interface JournalRow {
   id: string;
@@ -43,25 +50,103 @@ const TYPE_COLORS: Record<JournalType, string> = {
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
+function MonthPickerButton({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(value.getFullYear());
+  const currentMonth = value.getMonth();
+  const currentYear = value.getFullYear();
+  const now = new Date();
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setViewYear(currentYear); }}>
+      <PopoverTrigger asChild>
+        <Button variant="default" size="sm" className="gap-2">
+          Bulan ({format(value, "MMM yyyy", { locale: localeId })})
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-3 pointer-events-auto" align="center">
+        <div className="flex items-center justify-between mb-3">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y - 1)}>
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <span className="font-semibold text-sm">{viewYear}</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y + 1)}>
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {MONTH_NAMES_SHORT.map((name, idx) => {
+            const isSelected = viewYear === currentYear && idx === currentMonth;
+            const isCurrent = viewYear === now.getFullYear() && idx === now.getMonth();
+            return (
+              <Button
+                key={name}
+                variant={isSelected ? "default" : "ghost"}
+                size="sm"
+                className={`text-xs h-8 ${isCurrent && !isSelected ? "text-primary font-bold" : ""}`}
+                onClick={() => {
+                  onChange(new Date(viewYear, idx, 1));
+                  setOpen(false);
+                }}
+              >
+                {name}
+              </Button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function JournalEntries() {
   const { currentStore } = useStore();
+  const { methods: paymentMethods } = usePaymentMethods();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<JournalRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [filterMode, setFilterMode] = useState<DateFilterMode>("month");
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
+
+  // Compute date range based on filter mode
+  const { startDate, endDate } = useMemo(() => {
+    if (filterMode === "today") {
+      const today = new Date();
+      return { startDate: today, endDate: today };
+    }
+    if (filterMode === "custom" && customDateRange?.from) {
+      return { startDate: customDateRange.from, endDate: customDateRange.to || customDateRange.from };
+    }
+    // month
+    return { startDate: startOfMonth(selectedMonth), endDate: endOfMonth(selectedMonth) };
+  }, [filterMode, selectedMonth, customDateRange]);
+
+  const dateDisplay = useMemo(() => {
+    if (filterMode === "today") return format(new Date(), "d MMMM yyyy", { locale: localeId });
+    if (filterMode === "custom" && customDateRange?.from) {
+      if (customDateRange.to) {
+        return `${format(customDateRange.from, "dd MMM", { locale: localeId })} - ${format(customDateRange.to, "dd MMM yyyy", { locale: localeId })}`;
+      }
+      return format(customDateRange.from, "d MMMM yyyy", { locale: localeId });
+    }
+    return `${format(startOfMonth(selectedMonth), "dd MMM", { locale: localeId })} - ${format(endOfMonth(selectedMonth), "dd MMM yyyy", { locale: localeId })}`;
+  }, [filterMode, selectedMonth, customDateRange]);
 
   useEffect(() => {
     if (!currentStore) return;
     fetchAll();
-  }, [currentStore, timeRange, customDateRange]);
+  }, [currentStore, startDate, endDate]);
 
   const fetchAll = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
-      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
 
@@ -89,7 +174,6 @@ export default function JournalEntries() {
 
       const journalRows: JournalRow[] = [];
 
-      // Bookings → Penjualan (uang masuk)
       (bookingsRes.data || []).forEach((b: any) => {
         const timeStr = b.start_time && b.end_time
           ? ` (${b.start_time?.substring(0, 5)} - ${b.end_time?.substring(0, 5)})`
@@ -106,7 +190,6 @@ export default function JournalEntries() {
         });
       });
 
-      // Incomes → Pemasukan (uang masuk)
       (incomesRes.data || []).forEach((i: any) => {
         journalRows.push({
           id: i.id,
@@ -120,7 +203,6 @@ export default function JournalEntries() {
         });
       });
 
-      // Expenses → Pengeluaran (uang keluar)
       (expensesRes.data || []).forEach((e: any) => {
         journalRows.push({
           id: e.id,
@@ -145,6 +227,13 @@ export default function JournalEntries() {
   // Filter + sort
   const filteredRows = useMemo(() => {
     let result = rows;
+
+    // Payment method filter
+    if (paymentMethodFilter !== "all") {
+      result = result.filter((r) => r.paymentMethod.toLowerCase() === paymentMethodFilter.toLowerCase());
+    }
+
+    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -154,12 +243,13 @@ export default function JournalEntries() {
           r.paymentMethod.toLowerCase().includes(q)
       );
     }
-    result.sort((a, b) => {
+
+    result = [...result].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date) || a.bid.localeCompare(b.bid);
       return sortDirection === "asc" ? cmp : -cmp;
     });
     return result;
-  }, [rows, searchQuery, sortDirection]);
+  }, [rows, searchQuery, sortDirection, paymentMethodFilter]);
 
   // Running balance
   const rowsWithBalance = useMemo(() => {
@@ -176,10 +266,15 @@ export default function JournalEntries() {
   const finalBalance = totalIn - totalOut;
   const totalTransactions = filteredRows.length;
 
+  // Unique payment methods from data
+  const uniquePaymentMethods = useMemo(() => {
+    const set = new Set(rows.map((r) => r.paymentMethod).filter((m) => m && m !== "-"));
+    return Array.from(set).sort();
+  }, [rows]);
+
   // Export
   const handleExport = (type: "all" | "penjualan" | "pemasukan" | "pengeluaran") => {
     const dataToExport = type === "all" ? rowsWithBalance : rowsWithBalance.filter((r) => r.type === type);
-    const { startDate, endDate } = getDateRange(timeRange, customDateRange);
     const periodLabel = `${format(startDate, "dd-MM-yyyy")} s/d ${format(endDate, "dd-MM-yyyy")}`;
 
     const summarySheet = [
@@ -219,13 +314,11 @@ export default function JournalEntries() {
     );
   }
 
-  const dateDisplay = getDateRangeDisplay(timeRange, customDateRange);
-
   return (
     <div className="space-y-4">
-      {/* Header */}
       <Card>
         <CardContent className="p-5 space-y-4">
+          {/* Header */}
           <div className="flex flex-wrap justify-between items-start gap-3">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <BookOpen className="h-5 w-5" /> Jurnal Umum
@@ -247,25 +340,99 @@ export default function JournalEntries() {
             </DropdownMenu>
           </div>
 
-          {/* Date filter */}
+          {/* Date filter row */}
           <div className="flex items-center gap-2 flex-wrap">
-            <ReportDateFilter
-              timeRange={timeRange}
-              onTimeRangeChange={setTimeRange}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
+            <div className="flex items-center gap-1 text-sm text-muted-foreground border rounded-md px-3 py-1.5">
+              <CalendarIcon className="h-4 w-4" />
+              <span>{dateDisplay}</span>
+            </div>
+
+            <Button
+              variant={filterMode === "today" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilterMode("today")}
+            >
+              Hari ini
+            </Button>
+
+            {/* Custom date range */}
+            <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={filterMode === "custom" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setFilterMode("custom");
+                    setPendingDateRange(customDateRange);
+                    setShowCustomPicker(true);
+                  }}
+                >
+                  Sesuaikan
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <div className="flex flex-col">
+                  <Calendar
+                    mode="range"
+                    selected={pendingDateRange}
+                    onSelect={setPendingDateRange}
+                    defaultMonth={pendingDateRange?.from || new Date()}
+                    initialFocus
+                    numberOfMonths={2}
+                    locale={localeId}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                  <div className="flex justify-end p-3 pt-0 border-t">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (pendingDateRange?.from) {
+                          setCustomDateRange(pendingDateRange);
+                          setFilterMode("custom");
+                          setShowCustomPicker(false);
+                        }
+                      }}
+                      disabled={!pendingDateRange?.from}
+                    >
+                      OK
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Month picker */}
+            <MonthPickerButton
+              value={selectedMonth}
+              onChange={(d) => {
+                setSelectedMonth(d);
+                setFilterMode("month");
+              }}
             />
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari BID, keterangan..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          {/* Search + Payment method filter */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative max-w-sm flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari BID, keterangan..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Metode Bayar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Metode</SelectItem>
+                {uniquePaymentMethods.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Summary Cards */}
