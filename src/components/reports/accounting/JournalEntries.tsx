@@ -1,42 +1,63 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, BookOpen } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, BookOpen, Search, FileSpreadsheet, ChevronDown, ArrowUpDown } from "lucide-react";
+import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { toast } from "sonner";
-import ReportDateFilter, { ReportTimeRange, getDateRange } from "../ReportDateFilter";
+import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import { exportMultipleSheets } from "@/utils/reportExport";
 
-interface JournalEntry {
+type JournalType = "penjualan" | "pemasukan" | "pengeluaran";
+type SortDirection = "asc" | "desc";
+
+interface JournalRow {
   id: string;
-  entry_date: string;
+  bid: string;
+  type: JournalType;
+  date: string;
   description: string;
-  reference_no: string | null;
-  created_at: string;
+  paymentMethod: string;
+  amountIn: number;
+  amountOut: number;
 }
+
+const TYPE_LABELS: Record<JournalType, string> = {
+  penjualan: "Penjualan",
+  pemasukan: "Pemasukan",
+  pengeluaran: "Pengeluaran",
+};
+
+const TYPE_COLORS: Record<JournalType, string> = {
+  penjualan: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  pemasukan: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  pengeluaran: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+};
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
 export default function JournalEntries() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ entry_date: format(new Date(), "yyyy-MM-dd"), description: "", reference_no: "" });
+  const [rows, setRows] = useState<JournalRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (!currentStore) return;
-    fetchEntries();
+    fetchAll();
   }, [currentStore, timeRange, customDateRange]);
 
-  const fetchEntries = async () => {
+  const fetchAll = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
@@ -44,47 +65,150 @@ export default function JournalEntries() {
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
 
-      const { data, error } = await supabase
-        .from("journal_entries")
-        .select("*")
-        .eq("store_id", currentStore.id)
-        .gte("entry_date", startStr)
-        .lte("entry_date", endStr)
-        .order("entry_date", { ascending: false })
-        .limit(100);
+      const [bookingsRes, incomesRes, expensesRes] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select("id, bid, date, customer_name, start_time, end_time, payment_method, price, reference_no, status")
+          .eq("store_id", currentStore.id)
+          .gte("date", startStr)
+          .lte("date", endStr)
+          .in("status", ["CI", "CO"]),
+        supabase
+          .from("incomes")
+          .select("id, bid, date, description, customer_name, payment_method, amount")
+          .eq("store_id", currentStore.id)
+          .gte("date", startStr)
+          .lte("date", endStr),
+        supabase
+          .from("expenses")
+          .select("id, bid, date, description, category, payment_method, amount")
+          .eq("store_id", currentStore.id)
+          .gte("date", startStr)
+          .lte("date", endStr),
+      ]);
 
-      if (error) throw error;
-      setEntries((data as JournalEntry[]) || []);
+      const journalRows: JournalRow[] = [];
+
+      // Bookings → Penjualan (uang masuk)
+      (bookingsRes.data || []).forEach((b: any) => {
+        const timeStr = b.start_time && b.end_time
+          ? ` (${b.start_time?.substring(0, 5)} - ${b.end_time?.substring(0, 5)})`
+          : "";
+        journalRows.push({
+          id: b.id,
+          bid: b.bid || b.reference_no || "-",
+          type: "penjualan",
+          date: b.date,
+          description: `Booking ${b.customer_name}${timeStr}`,
+          paymentMethod: b.payment_method || "-",
+          amountIn: Number(b.price) || 0,
+          amountOut: 0,
+        });
+      });
+
+      // Incomes → Pemasukan (uang masuk)
+      (incomesRes.data || []).forEach((i: any) => {
+        journalRows.push({
+          id: i.id,
+          bid: i.bid || "-",
+          type: "pemasukan",
+          date: i.date,
+          description: i.description || `Pemasukan ${i.customer_name || ""}`.trim(),
+          paymentMethod: i.payment_method || "-",
+          amountIn: Number(i.amount) || 0,
+          amountOut: 0,
+        });
+      });
+
+      // Expenses → Pengeluaran (uang keluar)
+      (expensesRes.data || []).forEach((e: any) => {
+        journalRows.push({
+          id: e.id,
+          bid: e.bid || "-",
+          type: "pengeluaran",
+          date: e.date,
+          description: e.description || `Pengeluaran ${e.category || ""}`.trim(),
+          paymentMethod: e.payment_method || "-",
+          amountIn: 0,
+          amountOut: Number(e.amount) || 0,
+        });
+      });
+
+      setRows(journalRows);
     } catch (error) {
-      console.error("Error fetching journal entries:", error);
+      console.error("Error fetching journal:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentStore) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from("journal_entries").insert({
-        store_id: currentStore.id,
-        entry_date: form.entry_date,
-        description: form.description,
-        reference_no: form.reference_no || null,
-        created_by: user.id,
-      });
-
-      if (error) throw error;
-      toast.success("Jurnal berhasil ditambahkan");
-      setShowForm(false);
-      setForm({ entry_date: format(new Date(), "yyyy-MM-dd"), description: "", reference_no: "" });
-      fetchEntries();
-    } catch (error: any) {
-      toast.error(error.message || "Gagal menambahkan jurnal");
+  // Filter + sort
+  const filteredRows = useMemo(() => {
+    let result = rows;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.bid.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.paymentMethod.toLowerCase().includes(q)
+      );
     }
+    result.sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date) || a.bid.localeCompare(b.bid);
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [rows, searchQuery, sortDirection]);
+
+  // Running balance
+  const rowsWithBalance = useMemo(() => {
+    let balance = 0;
+    return filteredRows.map((r) => {
+      balance += r.amountIn - r.amountOut;
+      return { ...r, balance };
+    });
+  }, [filteredRows]);
+
+  // Summary
+  const totalIn = filteredRows.reduce((s, r) => s + r.amountIn, 0);
+  const totalOut = filteredRows.reduce((s, r) => s + r.amountOut, 0);
+  const finalBalance = totalIn - totalOut;
+  const totalTransactions = filteredRows.length;
+
+  // Export
+  const handleExport = (type: "all" | "penjualan" | "pemasukan" | "pengeluaran") => {
+    const dataToExport = type === "all" ? rowsWithBalance : rowsWithBalance.filter((r) => r.type === type);
+    const { startDate, endDate } = getDateRange(timeRange, customDateRange);
+    const periodLabel = `${format(startDate, "dd-MM-yyyy")} s/d ${format(endDate, "dd-MM-yyyy")}`;
+
+    const summarySheet = [
+      { Keterangan: "Total Uang Masuk", Nilai: totalIn },
+      { Keterangan: "Total Uang Keluar", Nilai: totalOut },
+      { Keterangan: "Saldo Akhir", Nilai: finalBalance },
+      { Keterangan: "Jumlah Transaksi", Nilai: totalTransactions },
+      { Keterangan: "Periode", Nilai: periodLabel },
+    ];
+
+    const detailSheet = dataToExport.map((r, idx) => ({
+      No: idx + 1,
+      BID: r.bid,
+      Tipe: TYPE_LABELS[r.type],
+      Tanggal: format(new Date(r.date), "dd/MM/yyyy"),
+      Keterangan: r.description,
+      "Metode Bayar": r.paymentMethod,
+      "Uang Masuk": r.amountIn || "",
+      "Uang Keluar": r.amountOut || "",
+      Saldo: r.balance,
+    }));
+
+    const sheets = [
+      { name: "Ringkasan", data: summarySheet },
+      { name: type === "all" ? "Jurnal Umum" : TYPE_LABELS[type], data: detailSheet },
+    ];
+
+    const typeName = type === "all" ? "Jurnal-Umum" : TYPE_LABELS[type];
+    exportMultipleSheets(sheets, `${typeName}_${format(startDate, "yyyyMMdd")}-${format(endDate, "yyyyMMdd")}`);
   };
 
   if (loading) {
@@ -95,80 +219,140 @@ export default function JournalEntries() {
     );
   }
 
+  const dateDisplay = getDateRangeDisplay(timeRange, customDateRange);
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <BookOpen className="h-5 w-5" /> Jurnal Umum
-        </h3>
-        <div className="flex items-center gap-2">
-          <ReportDateFilter
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
-          <Button onClick={() => setShowForm(true)} size="sm">
-            <Plus className="mr-2 h-4 w-4" /> Tambah Jurnal
-          </Button>
-        </div>
-      </div>
-
+      {/* Header */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Referensi</TableHead>
-                <TableHead>Keterangan</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                    Belum ada jurnal. Klik "Tambah Jurnal" untuk membuat catatan baru.
-                  </TableCell>
+        <CardContent className="p-5 space-y-4">
+          <div className="flex flex-wrap justify-between items-start gap-3">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <BookOpen className="h-5 w-5" /> Jurnal Umum
+            </h3>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export Excel
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("all")}>Semua</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("penjualan")}>Penjualan</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("pemasukan")}>Pemasukan</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("pengeluaran")}>Pengeluaran</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Date filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <ReportDateFilter
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+            />
+          </div>
+
+          {/* Search */}
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari BID, keterangan..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="border rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Total Uang Masuk</p>
+              <p className="text-sm font-bold text-green-600">{formatCurrency(totalIn)}</p>
+            </div>
+            <div className="border rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Total Uang Keluar</p>
+              <p className="text-sm font-bold text-destructive">{formatCurrency(totalOut)}</p>
+            </div>
+            <div className="border rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Saldo Akhir</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(finalBalance)}</p>
+            </div>
+            <div className="border rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Jumlah Transaksi</p>
+              <p className="text-sm font-bold">{totalTransactions}</p>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <TableHead className="text-primary-foreground w-12">#</TableHead>
+                  <TableHead className="text-primary-foreground">
+                    <button
+                      className="flex items-center gap-1 hover:opacity-80"
+                      onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
+                    >
+                      BID <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-primary-foreground">Tanggal</TableHead>
+                  <TableHead className="text-primary-foreground">Keterangan</TableHead>
+                  <TableHead className="text-primary-foreground">Metode Bayar</TableHead>
+                  <TableHead className="text-primary-foreground text-right">Uang Masuk</TableHead>
+                  <TableHead className="text-primary-foreground text-right">Uang Keluar</TableHead>
+                  <TableHead className="text-primary-foreground text-right">Saldo</TableHead>
                 </TableRow>
-              ) : (
-                entries.map(entry => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="text-sm">
-                      {format(new Date(entry.entry_date), "d MMM yyyy", { locale: localeId })}
+              </TableHeader>
+              <TableBody>
+                {rowsWithBalance.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      Tidak ada transaksi pada periode ini.
                     </TableCell>
-                    <TableCell className="text-sm font-mono">{entry.reference_no || "-"}</TableCell>
-                    <TableCell className="text-sm">{entry.description}</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  rowsWithBalance.map((row, idx) => (
+                    <TableRow key={`${row.type}-${row.id}`}>
+                      <TableCell className="text-sm text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="text-xs font-mono leading-tight break-all">{row.bid}</p>
+                          <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${TYPE_COLORS[row.type]}`}>
+                            {TYPE_LABELS[row.type]}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {format(new Date(row.date), "dd/MM/yyyy")}
+                      </TableCell>
+                      <TableCell className="text-sm max-w-[300px]">
+                        <p className="truncate">{row.description}</p>
+                      </TableCell>
+                      <TableCell className="text-sm">{row.paymentMethod}</TableCell>
+                      <TableCell className="text-sm text-right font-medium text-green-600">
+                        {row.amountIn > 0 ? formatCurrency(row.amountIn) : "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-right font-medium text-destructive">
+                        {row.amountOut > 0 ? formatCurrency(row.amountOut) : "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-right font-medium whitespace-nowrap">
+                        {formatCurrency(row.balance)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
-
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Jurnal Baru</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input type="date" value={form.entry_date} onChange={e => setForm({ ...form, entry_date: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label>No. Referensi</Label>
-              <Input value={form.reference_no} onChange={e => setForm({ ...form, reference_no: e.target.value })} placeholder="Opsional" />
-            </div>
-            <div className="space-y-2">
-              <Label>Keterangan</Label>
-              <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required placeholder="Deskripsi transaksi" />
-            </div>
-            <Button type="submit" className="w-full">Simpan</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
