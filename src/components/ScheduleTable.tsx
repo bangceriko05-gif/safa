@@ -274,7 +274,7 @@ export default function ScheduleTable({
     fetchBookings().finally(() => setIsLoading(false));
 
     // **OPTIMIZED REALTIME: Debounced updates to prevent excessive fetching**
-    let debounceTimer: NodeJS.Timeout;
+    let debounceTimer: ReturnType<typeof setTimeout>;
     
     const channel = supabase
       .channel(`bookings-${currentStore.id}-${format(selectedDate, "yyyy-MM-dd")}`)

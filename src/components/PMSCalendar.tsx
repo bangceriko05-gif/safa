@@ -236,7 +236,7 @@ export default function PMSCalendar({
     fetchBookings().finally(() => setIsLoading(false));
 
     // Realtime subscription
-    let debounceTimer: NodeJS.Timeout;
+    let debounceTimer: ReturnType<typeof setTimeout>;
     
     const channel = supabase
       .channel(`pms-bookings-${currentStore.id}`)

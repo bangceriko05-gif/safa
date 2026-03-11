@@ -84,7 +84,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
     fetchData().finally(() => setIsLoading(false));
 
     // Realtime subscription
-    let debounceTimer: NodeJS.Timeout;
+    let debounceTimer: ReturnType<typeof setTimeout>;
     
     const bookingsChannel = supabase
       .channel(`room-summary-bookings-${currentStore.id}-${format(selectedDate, "yyyy-MM-dd")}`)
