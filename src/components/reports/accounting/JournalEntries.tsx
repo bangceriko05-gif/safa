@@ -411,28 +411,15 @@ export default function JournalEntries() {
             />
           </div>
 
-          {/* Search + Payment method filter */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative max-w-sm flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari BID, keterangan..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Metode Bayar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Metode</SelectItem>
-                {uniquePaymentMethods.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Search */}
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari BID, keterangan..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
           {/* Summary Cards */}
