@@ -840,8 +840,8 @@ function LandingPreview({
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6">
               {data.partner_logos.map((p, idx) => (
-                <div key={idx} className="grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
-                  {p.logo_url ? <img src={p.logo_url} alt={p.name} className="h-8 w-auto max-w-[100px] object-contain" /> : <span className="text-[10px] text-muted-foreground">{p.name}</span>}
+                <div key={idx} className="transition-all">
+                  {p.logo_url ? <img src={p.logo_url} alt={p.name} style={{ height: `${Math.min((p.logo_size || 56) * 0.6, 48)}px` }} className="w-auto object-contain" /> : <span className="text-[10px] text-muted-foreground">{p.name}</span>}
                 </div>
               ))}
             </div>
