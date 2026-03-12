@@ -1,6 +1,7 @@
 export interface PartnerLogo {
   name: string;
   logo_url: string;
+  logo_size?: number;
 }
 
 interface PartnersSectionProps {
@@ -21,11 +22,12 @@ export default function PartnersSection({ tagline, title, logos }: PartnersSecti
         </div>
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
           {logos.map((partner, idx) => (
-            <div key={idx} className="flex items-center justify-center grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300">
+            <div key={idx} className="flex items-center justify-center transition-all duration-300">
               <img
                 src={partner.logo_url}
                 alt={partner.name}
-                className="h-10 md:h-14 w-auto max-w-[140px] object-contain"
+                style={{ height: `${partner.logo_size || 56}px` }}
+                className="w-auto object-contain"
                 loading="lazy"
               />
             </div>

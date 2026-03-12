@@ -17,7 +17,7 @@ interface FeatureItem {
 
 interface GalleryItem { title: string; description: string; image_url: string; }
 interface PricingItem { name: string; price: string; period: string; features: string[]; is_popular: boolean; btn_text: string; }
-interface PartnerLogo { name: string; logo_url: string; }
+interface PartnerLogo { name: string; logo_url: string; logo_size?: number; }
 
 interface LandingPageData {
   id: string;
@@ -726,10 +726,14 @@ function LandingPreview({
                     </label>
                   </div>
                 </div>
-                {item.logo_url && <img src={item.logo_url} alt="" className="h-8 object-contain" />}
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">Ukuran Logo ({item.logo_size || 56}px)</label>
+                  <input type="range" min="24" max="120" step="4" value={item.logo_size || 56} className="w-full h-4 accent-primary" onChange={(e) => { const items = [...data.partner_logos]; items[idx] = { ...items[idx], logo_size: Number(e.target.value) }; onUpdate("partner_logos", items); }} />
+                </div>
+                {item.logo_url && <img src={item.logo_url} alt="" style={{ height: `${item.logo_size || 56}px` }} className="object-contain" />}
               </div>
             ))}
-            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("partner_logos", [...data.partner_logos, { name: "Brand Baru", logo_url: "" }])}><Plus className="h-3 w-3" /> Tambah Partner</Button>
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={() => onUpdate("partner_logos", [...data.partner_logos, { name: "Brand Baru", logo_url: "", logo_size: 56 }])}><Plus className="h-3 w-3" /> Tambah Partner</Button>
           </PopoverContent>
         </Popover>
 
@@ -836,8 +840,8 @@ function LandingPreview({
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6">
               {data.partner_logos.map((p, idx) => (
-                <div key={idx} className="grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
-                  {p.logo_url ? <img src={p.logo_url} alt={p.name} className="h-8 w-auto max-w-[100px] object-contain" /> : <span className="text-[10px] text-muted-foreground">{p.name}</span>}
+                <div key={idx} className="transition-all">
+                  {p.logo_url ? <img src={p.logo_url} alt={p.name} style={{ height: `${Math.min((p.logo_size || 56) * 0.6, 48)}px` }} className="w-auto object-contain" /> : <span className="text-[10px] text-muted-foreground">{p.name}</span>}
                 </div>
               ))}
             </div>
