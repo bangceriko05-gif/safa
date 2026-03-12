@@ -3,19 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, BookOpen, Search, FileSpreadsheet, ChevronDown, ArrowUpDown, CalendarIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfDay, endOfDay } from "date-fns";
+import { Loader2, BookOpen, Search, FileSpreadsheet, ChevronDown, ArrowUpDown, CalendarIcon, ChevronsLeft, ChevronsRight, Trash2 } from "lucide-react";
+import { format, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { exportMultipleSheets } from "@/utils/reportExport";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import BookingModal from "@/components/BookingModal";
 
 type JournalType = "penjualan" | "pemasukan" | "pengeluaran";
 type SortDirection = "asc" | "desc";
@@ -32,6 +37,7 @@ interface JournalRow {
   paymentMethod: string;
   amountIn: number;
   amountOut: number;
+  rawData?: any;
 }
 
 const TYPE_LABELS: Record<JournalType, string> = {
@@ -99,6 +105,34 @@ function MonthPickerButton({ value, onChange }: { value: Date; onChange: (d: Dat
   );
 }
 
+/** Determine if booking is nightly (daily) based on heuristics */
+function isNightlyBooking(b: any): boolean {
+  // Check variant booking_duration_type if available
+  if (b.variant?.booking_duration_type === 'days') return true;
+  // OTA bookings are typically nightly
+  if (b.ota_source) return true;
+  // Standard PMS pattern: 14:00 check-in, 12:00 check-out
+  const start = b.start_time?.substring(0, 5);
+  const end = b.end_time?.substring(0, 5);
+  if (start === '14:00' && end === '12:00') return true;
+  return false;
+}
+
+function buildBookingDescription(b: any): string {
+  if (isNightlyBooking(b)) {
+    const checkIn = format(new Date(b.date), "dd/MM/yyyy");
+    const duration = Number(b.duration) || 1;
+    const checkOutDate = addDays(new Date(b.date), duration);
+    const checkOut = format(checkOutDate, "dd/MM/yyyy");
+    return `Booking ${b.customer_name} (${checkIn} - ${checkOut}, ${duration} malam)`;
+  }
+  // Hourly booking - show time
+  const timeStr = b.start_time && b.end_time
+    ? ` (${b.start_time?.substring(0, 5)} - ${b.end_time?.substring(0, 5)}, ${b.duration} jam)`
+    : "";
+  return `Booking ${b.customer_name}${timeStr}`;
+}
+
 export default function JournalEntries() {
   const { currentStore } = useStore();
   const { methods: paymentMethods } = usePaymentMethods();
@@ -113,6 +147,34 @@ export default function JournalEntries() {
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
 
+  // Edit states
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [editingIncome, setEditingIncome] = useState<any>(null);
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "" });
+  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "" });
+  const [userId, setUserId] = useState<string>("");
+  const [expenseCategories, setExpenseCategories] = useState<{id: string; name: string}[]>([]);
+
+  // Get user ID
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+    });
+  }, []);
+
+  // Fetch expense categories
+  useEffect(() => {
+    if (!currentStore) return;
+    supabase.from("expense_categories").select("id, name").eq("store_id", currentStore.id)
+      .then(({ data }) => { if (data) setExpenseCategories(data); });
+  }, [currentStore]);
+
+  const paymentMethodOptions = useMemo(() => {
+    return paymentMethods.filter(m => m.is_active).map(m => m.name);
+  }, [paymentMethods]);
+
   // Compute date range based on filter mode
   const { startDate, endDate } = useMemo(() => {
     if (filterMode === "today") {
@@ -122,7 +184,6 @@ export default function JournalEntries() {
     if (filterMode === "custom" && customDateRange?.from) {
       return { startDate: customDateRange.from, endDate: customDateRange.to || customDateRange.from };
     }
-    // month
     return { startDate: startOfMonth(selectedMonth), endDate: endOfMonth(selectedMonth) };
   }, [filterMode, selectedMonth, customDateRange]);
 
@@ -152,7 +213,7 @@ export default function JournalEntries() {
       const [bookingsRes, incomesRes, expensesRes] = await Promise.all([
         supabase
           .from("bookings")
-          .select("id, bid, date, customer_name, start_time, end_time, payment_method, price, reference_no, status")
+          .select("id, bid, date, customer_name, phone, start_time, end_time, duration, variant_id, ota_source, payment_method, price, reference_no, status, room_id, store_id, note, payment_status, discount_type, discount_value, discount_applies_to, dual_payment, payment_method_2, price_2, reference_no_2, checked_in_at, checked_in_by, checked_out_at, checked_out_by, confirmed_at, confirmed_by, created_by, payment_proof_url, ota_booking_id")
           .eq("store_id", currentStore.id)
           .gte("date", startStr)
           .lte("date", endStr)
@@ -171,21 +232,33 @@ export default function JournalEntries() {
           .lte("date", endStr),
       ]);
 
+      // Fetch variant info for bookings to determine duration type
+      const variantIds = (bookingsRes.data || []).map((b: any) => b.variant_id).filter(Boolean);
+      let variantMap: Record<string, any> = {};
+      if (variantIds.length > 0) {
+        const { data: variants } = await supabase
+          .from("room_variants")
+          .select("id, booking_duration_type")
+          .in("id", variantIds);
+        if (variants) {
+          variants.forEach((v: any) => { variantMap[v.id] = v; });
+        }
+      }
+
       const journalRows: JournalRow[] = [];
 
       (bookingsRes.data || []).forEach((b: any) => {
-        const timeStr = b.start_time && b.end_time
-          ? ` (${b.start_time?.substring(0, 5)} - ${b.end_time?.substring(0, 5)})`
-          : "";
+        const enriched = { ...b, variant: b.variant_id ? variantMap[b.variant_id] : null };
         journalRows.push({
           id: b.id,
           bid: b.bid || b.reference_no || "-",
           type: "penjualan",
           date: b.date,
-          description: `Booking ${b.customer_name}${timeStr}`,
+          description: buildBookingDescription(enriched),
           paymentMethod: b.payment_method || "-",
           amountIn: Number(b.price) || 0,
           amountOut: 0,
+          rawData: b,
         });
       });
 
@@ -199,6 +272,7 @@ export default function JournalEntries() {
           paymentMethod: i.payment_method || "-",
           amountIn: Number(i.amount) || 0,
           amountOut: 0,
+          rawData: i,
         });
       });
 
@@ -212,6 +286,7 @@ export default function JournalEntries() {
           paymentMethod: e.payment_method || "-",
           amountIn: 0,
           amountOut: Number(e.amount) || 0,
+          rawData: e,
         });
       });
 
@@ -223,16 +298,112 @@ export default function JournalEntries() {
     }
   };
 
+  // Handle BID click
+  const handleBidClick = (row: JournalRow) => {
+    if (row.type === "penjualan" && row.rawData) {
+      setEditingBooking(row.rawData);
+      setBookingModalOpen(true);
+    } else if (row.type === "pengeluaran" && row.rawData) {
+      const e = row.rawData;
+      setEditingExpense(e);
+      setExpenseForm({
+        description: e.description || "",
+        amount: String(e.amount || ""),
+        category: e.category || "",
+        payment_method: e.payment_method || "",
+      });
+    } else if (row.type === "pemasukan" && row.rawData) {
+      const i = row.rawData;
+      setEditingIncome(i);
+      setIncomeForm({
+        description: i.description || "",
+        amount: String(i.amount || ""),
+        customer_name: i.customer_name || "",
+        payment_method: i.payment_method || "",
+      });
+    }
+  };
+
+  // Save expense
+  const handleSaveExpense = async () => {
+    if (!editingExpense) return;
+    try {
+      const amount = parseFloat(expenseForm.amount.replace(/[^0-9.-]/g, ""));
+      const { error } = await supabase.from("expenses").update({
+        description: expenseForm.description,
+        amount,
+        category: expenseForm.category,
+        payment_method: expenseForm.payment_method,
+      }).eq("id", editingExpense.id);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil diperbarui");
+      setEditingExpense(null);
+      fetchAll();
+    } catch (error) {
+      toast.error("Gagal menyimpan perubahan");
+    }
+  };
+
+  // Save income
+  const handleSaveIncome = async () => {
+    if (!editingIncome) return;
+    try {
+      const amount = parseFloat(incomeForm.amount.replace(/[^0-9.-]/g, ""));
+      const { error } = await supabase.from("incomes").update({
+        description: incomeForm.description,
+        amount,
+        customer_name: incomeForm.customer_name,
+        payment_method: incomeForm.payment_method,
+      }).eq("id", editingIncome.id);
+      if (error) throw error;
+      toast.success("Pemasukan berhasil diperbarui");
+      setEditingIncome(null);
+      fetchAll();
+    } catch (error) {
+      toast.error("Gagal menyimpan perubahan");
+    }
+  };
+
+  // Delete expense
+  const handleDeleteExpense = async () => {
+    if (!editingExpense) return;
+    if (!confirm("Yakin ingin menghapus pengeluaran ini?")) return;
+    try {
+      const { error } = await supabase.from("expenses").delete().eq("id", editingExpense.id);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil dihapus");
+      setEditingExpense(null);
+      fetchAll();
+    } catch (error) {
+      toast.error("Gagal menghapus");
+    }
+  };
+
+  // Delete income
+  const handleDeleteIncome = async () => {
+    if (!editingIncome) return;
+    if (!confirm("Yakin ingin menghapus pemasukan ini?")) return;
+    try {
+      const { error } = await supabase.from("incomes").delete().eq("id", editingIncome.id);
+      if (error) throw error;
+      toast.success("Pemasukan berhasil dihapus");
+      setEditingIncome(null);
+      fetchAll();
+    } catch (error) {
+      toast.error("Gagal menghapus");
+    }
+  };
+
+  const formatAmountInput = (val: string) => {
+    return val.replace(/[^0-9]/g, "");
+  };
+
   // Filter + sort
   const filteredRows = useMemo(() => {
     let result = rows;
-
-    // Payment method filter
     if (paymentMethodFilter !== "all") {
       result = result.filter((r) => r.paymentMethod.toLowerCase() === paymentMethodFilter.toLowerCase());
     }
-
-    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -242,7 +413,6 @@ export default function JournalEntries() {
           r.paymentMethod.toLowerCase().includes(q)
       );
     }
-
     result = [...result].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date) || a.bid.localeCompare(b.bid);
       return sortDirection === "asc" ? cmp : -cmp;
@@ -354,7 +524,6 @@ export default function JournalEntries() {
               Hari ini
             </Button>
 
-            {/* Custom date range */}
             <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
               <PopoverTrigger asChild>
                 <Button
@@ -400,7 +569,6 @@ export default function JournalEntries() {
               </PopoverContent>
             </Popover>
 
-            {/* Month picker */}
             <MonthPickerButton
               value={selectedMonth}
               onChange={(d) => {
@@ -508,7 +676,12 @@ export default function JournalEntries() {
                       <TableCell className="text-sm text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="text-xs font-mono leading-tight break-all">{row.bid}</p>
+                          <button
+                            className="text-xs font-mono leading-tight break-all text-primary hover:underline cursor-pointer text-left"
+                            onClick={() => handleBidClick(row)}
+                          >
+                            {row.bid}
+                          </button>
                           <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${TYPE_COLORS[row.type]}`}>
                             {TYPE_LABELS[row.type]}
                           </Badge>
@@ -538,6 +711,109 @@ export default function JournalEntries() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Booking Edit Modal */}
+      {userId && (
+        <BookingModal
+          isOpen={bookingModalOpen}
+          onClose={() => {
+            setBookingModalOpen(false);
+            setEditingBooking(null);
+            fetchAll();
+          }}
+          selectedDate={editingBooking ? new Date(editingBooking.date) : new Date()}
+          selectedSlot={null}
+          editingBooking={editingBooking}
+          userId={userId}
+        />
+      )}
+
+      {/* Edit Expense Dialog */}
+      <Dialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Pengeluaran {editingExpense?.bid}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Deskripsi</Label>
+              <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Kategori</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Pembayaran</Label>
+              <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleSaveExpense}>Simpan</Button>
+              <Button variant="destructive" onClick={handleDeleteExpense}>
+                <Trash2 className="h-4 w-4 mr-1" /> Hapus
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Income Dialog */}
+      <Dialog open={!!editingIncome} onOpenChange={(open) => !open && setEditingIncome(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Pemasukan {editingIncome?.bid}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nama Pelanggan</Label>
+              <Input value={incomeForm.customer_name} onChange={(e) => setIncomeForm({ ...incomeForm, customer_name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={incomeForm.amount} onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Bayar</Label>
+              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  {paymentMethodOptions.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi (opsional)</Label>
+              <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} />
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleSaveIncome}>Simpan</Button>
+              <Button variant="destructive" onClick={handleDeleteIncome}>
+                <Trash2 className="h-4 w-4 mr-1" /> Hapus
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
