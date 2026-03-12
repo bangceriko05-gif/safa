@@ -17,7 +17,7 @@ interface FeatureItem {
 
 interface GalleryItem { title: string; description: string; image_url: string; }
 interface PricingItem { name: string; price: string; period: string; features: string[]; is_popular: boolean; btn_text: string; }
-interface PartnerLogo { name: string; logo_url: string; }
+interface PartnerLogo { name: string; logo_url: string; logo_size?: number; }
 
 interface LandingPageData {
   id: string;
