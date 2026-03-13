@@ -161,6 +161,47 @@ export default function BankList() {
     }
   };
 
+  const fetchPaymentMethodBalances = async () => {
+    if (!currentStore) return;
+    const startStr = format(startOfMonth(selectedDate), "yyyy-MM-dd");
+    const endStr = format(endOfMonth(selectedDate), "yyyy-MM-dd");
+
+    try {
+      const [bookingsRes, incomesRes, expensesRes] = await Promise.all([
+        supabase.from("bookings").select("payment_method, price, dual_payment, payment_method_2, price_2")
+          .eq("store_id", currentStore.id).gte("date", startStr).lte("date", endStr).in("status", ["CI", "CO"]),
+        supabase.from("incomes").select("payment_method, amount")
+          .eq("store_id", currentStore.id).gte("date", startStr).lte("date", endStr),
+        supabase.from("expenses").select("payment_method, amount")
+          .eq("store_id", currentStore.id).gte("date", startStr).lte("date", endStr),
+      ]);
+
+      const balances: Record<string, { income: number; expense: number }> = {};
+      const ensure = (key: string) => { if (!balances[key]) balances[key] = { income: 0, expense: 0 }; };
+
+      (bookingsRes.data || []).forEach((b: any) => {
+        const pm = (b.payment_method || "").trim();
+        if (pm) { ensure(pm); balances[pm].income += Number(b.price) || 0; }
+        if (b.dual_payment && b.payment_method_2) {
+          const pm2 = b.payment_method_2.trim();
+          ensure(pm2); balances[pm2].income += Number(b.price_2) || 0;
+        }
+      });
+      (incomesRes.data || []).forEach((i: any) => {
+        const pm = (i.payment_method || "").trim();
+        if (pm) { ensure(pm); balances[pm].income += Number(i.amount) || 0; }
+      });
+      (expensesRes.data || []).forEach((e: any) => {
+        const pm = (e.payment_method || "").trim();
+        if (pm) { ensure(pm); balances[pm].expense += Number(e.amount) || 0; }
+      });
+
+      setPmBalances(balances);
+    } catch (error) {
+      console.error("Error fetching payment method balances:", error);
+    }
+  };
+
   // Combine: payment methods first (read-only), then extra bank accounts
   const displayItems: DisplayItem[] = [
     ...paymentMethods.map((pm) => ({
