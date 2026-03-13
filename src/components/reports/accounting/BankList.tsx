@@ -444,6 +444,48 @@ export default function BankList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Transfer Investor Dialog */}
+      <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5" /> Transfer ke Investor</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Tarik saldo dari akun Kas & Bank untuk ditransfer ke investor. Saldo akun akan berkurang.</p>
+          <form onSubmit={handleTransferInvestor} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Dari Akun</Label>
+              <Select value={transferForm.source_account} onValueChange={v => setTransferForm({ ...transferForm, source_account: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih akun sumber..." /></SelectTrigger>
+                <SelectContent>
+                  {accountOptions.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Investor</Label>
+              <Input value={transferForm.investor_name} onChange={e => setTransferForm({ ...transferForm, investor_name: e.target.value })} placeholder="Contoh: Pak Ahmad" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input type="number" value={transferForm.amount} onChange={e => setTransferForm({ ...transferForm, amount: e.target.value })} placeholder="0" required min="1" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tanggal</Label>
+              <Input type="date" value={transferForm.transfer_date} onChange={e => setTransferForm({ ...transferForm, transfer_date: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Keterangan (opsional)</Label>
+              <Input value={transferForm.description} onChange={e => setTransferForm({ ...transferForm, description: e.target.value })} placeholder="Contoh: Bagi hasil bulan Maret" />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setShowTransferDialog(false)}>Batal</Button>
+              <Button type="submit">Transfer ke Investor</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
