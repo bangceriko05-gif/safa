@@ -112,6 +112,7 @@ interface DisplayItem {
 
 export default function BankList() {
   const { currentStore } = useStore();
+  const [loading, setLoading] = useState(true);
   const [pmBalances, setPmBalances] = useState<Record<string, { income: number; expense: number }>>({});
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
