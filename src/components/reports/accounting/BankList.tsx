@@ -204,16 +204,19 @@ export default function BankList() {
 
   // Combine: payment methods first (read-only), then extra bank accounts
   const displayItems: DisplayItem[] = [
-    ...paymentMethods.map((pm) => ({
-      id: pm.id,
-      bank_name: pm.name,
-      account_name: "-",
-      account_number: "-",
-      balance: 0,
-      is_active: pm.is_active,
-      notes: null,
-      source: "payment_method" as const,
-    })),
+    ...paymentMethods.map((pm) => {
+      const bal = pmBalances[pm.name] || { income: 0, expense: 0 };
+      return {
+        id: pm.id,
+        bank_name: pm.name,
+        account_name: "-",
+        account_number: "-",
+        balance: bal.income - bal.expense,
+        is_active: pm.is_active,
+        notes: null,
+        source: "payment_method" as const,
+      };
+    }),
     ...bankAccounts.map((ba) => ({
       id: ba.id,
       bank_name: ba.bank_name,
