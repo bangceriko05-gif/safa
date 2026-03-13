@@ -146,6 +146,7 @@ export default function JournalEntries() {
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   // Edit states
   const [editingBooking, setEditingBooking] = useState<any>(null);
