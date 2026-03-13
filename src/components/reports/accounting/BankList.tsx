@@ -363,6 +363,9 @@ export default function BankList() {
         </div>
         <div className="flex items-center gap-2">
           <MonthPicker value={selectedDate} onChange={setSelectedDate} />
+          <Button variant="outline" size="sm" onClick={() => { setTransferForm({ ...transferForm, transfer_date: format(new Date(), "yyyy-MM-dd") }); setShowTransferDialog(true); }}>
+            <Send className="mr-2 h-4 w-4" /> Transfer Investor
+          </Button>
           <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Bank</Button>
         </div>
       </div>
