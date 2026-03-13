@@ -313,6 +313,38 @@ export default function BankList() {
     }
   };
 
+  const handleTransferInvestor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentStore) return;
+    const amount = parseFloat(transferForm.amount.replace(/[^0-9.-]/g, ""));
+    if (!amount || amount <= 0) { toast.error("Jumlah harus lebih dari 0"); return; }
+    if (!transferForm.source_account) { toast.error("Pilih akun sumber"); return; }
+    if (!transferForm.investor_name.trim()) { toast.error("Nama investor wajib diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from("investor_transfers" as any).insert({
+        store_id: currentStore.id,
+        source_account: transferForm.source_account,
+        investor_name: transferForm.investor_name.trim(),
+        amount,
+        transfer_date: transferForm.transfer_date,
+        description: transferForm.description.trim() || null,
+        created_by: user.id,
+      });
+      if (error) throw error;
+      toast.success("Transfer ke investor berhasil dicatat");
+      setShowTransferDialog(false);
+      setTransferForm({ source_account: "", investor_name: "", amount: "", transfer_date: format(new Date(), "yyyy-MM-dd"), description: "" });
+      fetchPaymentMethodBalances();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menyimpan transfer");
+    }
+  };
+
+  // Available account names for transfer source
+  const accountOptions = displayItems.filter(i => i.is_active).map(i => i.bank_name);
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
