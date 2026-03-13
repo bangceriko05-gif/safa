@@ -123,6 +123,11 @@ export default function BankList() {
   const [form, setForm] = useState({
     bank_name: "", account_name: "", account_number: "", balance: "", notes: "",
   });
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    source_account: "", investor_name: "", amount: "", transfer_date: format(new Date(), "yyyy-MM-dd"), description: "",
+  });
+  const [investorTransfers, setInvestorTransfers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!currentStore) return;
