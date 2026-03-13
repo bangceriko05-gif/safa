@@ -164,17 +164,17 @@ export default function BankList() {
 
   const fetchPaymentMethodBalances = async () => {
     if (!currentStore) return;
-    const startStr = format(startOfMonth(selectedDate), "yyyy-MM-dd");
+    // Cumulative: from the beginning of time up to the end of the selected month
     const endStr = format(endOfMonth(selectedDate), "yyyy-MM-dd");
 
     try {
       const [bookingsRes, incomesRes, expensesRes] = await Promise.all([
         supabase.from("bookings").select("payment_method, price, dual_payment, payment_method_2, price_2")
-          .eq("store_id", currentStore.id).gte("date", startStr).lte("date", endStr).in("status", ["CI", "CO"]),
+          .eq("store_id", currentStore.id).lte("date", endStr).in("status", ["CI", "CO"]),
         supabase.from("incomes").select("payment_method, amount")
-          .eq("store_id", currentStore.id).gte("date", startStr).lte("date", endStr),
+          .eq("store_id", currentStore.id).lte("date", endStr),
         supabase.from("expenses").select("payment_method, amount")
-          .eq("store_id", currentStore.id).gte("date", startStr).lte("date", endStr),
+          .eq("store_id", currentStore.id).lte("date", endStr),
       ]);
 
       const balances: Record<string, { income: number; expense: number }> = {};
