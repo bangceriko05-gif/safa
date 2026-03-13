@@ -620,12 +620,44 @@ export default function JournalEntries() {
                 <TableRow className="bg-primary text-primary-foreground hover:bg-primary/90">
                   <TableHead className="text-primary-foreground w-12">#</TableHead>
                   <TableHead className="text-primary-foreground">
-                    <button
-                      className="flex items-center gap-1 hover:opacity-80"
-                      onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
-                    >
-                      BID <ArrowUpDown className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="flex items-center gap-1 hover:opacity-80"
+                        onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
+                      >
+                        BID <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="flex items-center gap-0.5 hover:opacity-80 text-xs opacity-80">
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[180px] p-1 pointer-events-auto" align="start">
+                          <button
+                            className={cn(
+                              "w-full text-left px-3 py-1.5 text-sm rounded hover:bg-accent",
+                              typeFilter === "all" && "font-semibold bg-accent"
+                            )}
+                            onClick={() => setTypeFilter("all")}
+                          >
+                            Semua Tipe
+                          </button>
+                          {(Object.keys(TYPE_LABELS) as JournalType[]).map((key) => (
+                            <button
+                              key={key}
+                              className={cn(
+                                "w-full text-left px-3 py-1.5 text-sm rounded hover:bg-accent",
+                                typeFilter === key && "font-semibold bg-accent"
+                              )}
+                              onClick={() => setTypeFilter(key)}
+                            >
+                              {TYPE_LABELS[key]}
+                            </button>
+                          ))}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </TableHead>
                   <TableHead className="text-primary-foreground">Tanggal</TableHead>
                   <TableHead className="text-primary-foreground">Keterangan</TableHead>
