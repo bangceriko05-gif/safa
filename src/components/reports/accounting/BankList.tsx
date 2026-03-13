@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/contexts/StoreContext";
 import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Send } from "lucide-react";
 import { toast } from "sonner";
