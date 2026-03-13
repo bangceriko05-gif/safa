@@ -205,6 +205,11 @@ export default function BankList() {
         const pm = (e.payment_method || "").trim();
         if (pm) { ensure(pm); balances[pm].expense += Number(e.amount) || 0; }
       });
+      // Investor transfers reduce balance
+      (transfersRes.data || []).forEach((t: any) => {
+        const pm = (t.source_account || "").trim();
+        if (pm) { ensure(pm); balances[pm].expense += Number(t.amount) || 0; }
+      });
 
       setPmBalances(balances);
     } catch (error) {
