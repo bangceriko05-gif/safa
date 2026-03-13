@@ -889,6 +889,53 @@ export type Database = {
           },
         ]
       }
+      investor_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          investor_name: string
+          source_account: string
+          store_id: string
+          transfer_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          investor_name: string
+          source_account: string
+          store_id: string
+          transfer_date?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          investor_name?: string
+          source_account?: string
+          store_id?: string
+          transfer_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_transfers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journal_entries: {
         Row: {
           created_at: string

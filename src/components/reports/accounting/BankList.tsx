@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format, addMonths, subMonths } from "date-fns";
@@ -123,6 +124,11 @@ export default function BankList() {
   const [form, setForm] = useState({
     bank_name: "", account_name: "", account_number: "", balance: "", notes: "",
   });
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    source_account: "", investor_name: "", amount: "", transfer_date: format(new Date(), "yyyy-MM-dd"), description: "",
+  });
+  const [investorTransfers, setInvestorTransfers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -168,14 +174,18 @@ export default function BankList() {
     const endStr = format(endOfMonth(selectedDate), "yyyy-MM-dd");
 
     try {
-      const [bookingsRes, incomesRes, expensesRes] = await Promise.all([
+      const [bookingsRes, incomesRes, expensesRes, transfersRes] = await Promise.all([
         supabase.from("bookings").select("payment_method, price, dual_payment, payment_method_2, price_2")
           .eq("store_id", currentStore.id).lte("date", endStr).in("status", ["CI", "CO"]),
         supabase.from("incomes").select("payment_method, amount")
           .eq("store_id", currentStore.id).lte("date", endStr),
         supabase.from("expenses").select("payment_method, amount")
           .eq("store_id", currentStore.id).lte("date", endStr),
+        supabase.from("investor_transfers" as any).select("source_account, amount, transfer_date, investor_name, description, id, created_at")
+          .eq("store_id", currentStore.id).lte("transfer_date", endStr),
       ]);
+
+      setInvestorTransfers(transfersRes.data || []);
 
       const balances: Record<string, { income: number; expense: number }> = {};
       const ensure = (key: string) => { if (!balances[key]) balances[key] = { income: 0, expense: 0 }; };
@@ -195,6 +205,11 @@ export default function BankList() {
       (expensesRes.data || []).forEach((e: any) => {
         const pm = (e.payment_method || "").trim();
         if (pm) { ensure(pm); balances[pm].expense += Number(e.amount) || 0; }
+      });
+      // Investor transfers reduce balance
+      (transfersRes.data || []).forEach((t: any) => {
+        const pm = (t.source_account || "").trim();
+        if (pm) { ensure(pm); balances[pm].expense += Number(t.amount) || 0; }
       });
 
       setPmBalances(balances);
@@ -299,6 +314,38 @@ export default function BankList() {
     }
   };
 
+  const handleTransferInvestor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentStore) return;
+    const amount = parseFloat(transferForm.amount.replace(/[^0-9.-]/g, ""));
+    if (!amount || amount <= 0) { toast.error("Jumlah harus lebih dari 0"); return; }
+    if (!transferForm.source_account) { toast.error("Pilih akun sumber"); return; }
+    if (!transferForm.investor_name.trim()) { toast.error("Nama investor wajib diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from("investor_transfers" as any).insert({
+        store_id: currentStore.id,
+        source_account: transferForm.source_account,
+        investor_name: transferForm.investor_name.trim(),
+        amount,
+        transfer_date: transferForm.transfer_date,
+        description: transferForm.description.trim() || null,
+        created_by: user.id,
+      });
+      if (error) throw error;
+      toast.success("Transfer ke investor berhasil dicatat");
+      setShowTransferDialog(false);
+      setTransferForm({ source_account: "", investor_name: "", amount: "", transfer_date: format(new Date(), "yyyy-MM-dd"), description: "" });
+      fetchPaymentMethodBalances();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menyimpan transfer");
+    }
+  };
+
+  // Available account names for transfer source
+  const accountOptions = displayItems.filter(i => i.is_active).map(i => i.bank_name);
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
@@ -317,6 +364,9 @@ export default function BankList() {
         </div>
         <div className="flex items-center gap-2">
           <MonthPicker value={selectedDate} onChange={setSelectedDate} />
+          <Button variant="outline" size="sm" onClick={() => { setTransferForm({ ...transferForm, transfer_date: format(new Date(), "yyyy-MM-dd") }); setShowTransferDialog(true); }}>
+            <Send className="mr-2 h-4 w-4" /> Transfer Investor
+          </Button>
           <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Bank</Button>
         </div>
       </div>
@@ -395,6 +445,48 @@ export default function BankList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Transfer Investor Dialog */}
+      <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5" /> Transfer ke Investor</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Tarik saldo dari akun Kas & Bank untuk ditransfer ke investor. Saldo akun akan berkurang.</p>
+          <form onSubmit={handleTransferInvestor} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Dari Akun</Label>
+              <Select value={transferForm.source_account} onValueChange={v => setTransferForm({ ...transferForm, source_account: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih akun sumber..." /></SelectTrigger>
+                <SelectContent>
+                  {accountOptions.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Investor</Label>
+              <Input value={transferForm.investor_name} onChange={e => setTransferForm({ ...transferForm, investor_name: e.target.value })} placeholder="Contoh: Pak Ahmad" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input type="number" value={transferForm.amount} onChange={e => setTransferForm({ ...transferForm, amount: e.target.value })} placeholder="0" required min="1" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tanggal</Label>
+              <Input type="date" value={transferForm.transfer_date} onChange={e => setTransferForm({ ...transferForm, transfer_date: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Keterangan (opsional)</Label>
+              <Input value={transferForm.description} onChange={e => setTransferForm({ ...transferForm, description: e.target.value })} placeholder="Contoh: Bagi hasil bulan Maret" />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setShowTransferDialog(false)}>Batal</Button>
+              <Button type="submit">Transfer ke Investor</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
