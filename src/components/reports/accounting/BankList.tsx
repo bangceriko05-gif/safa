@@ -128,6 +128,11 @@ export default function BankList() {
     fetchData();
   }, [currentStore]);
 
+  useEffect(() => {
+    if (!currentStore) return;
+    fetchPaymentMethodBalances();
+  }, [currentStore, selectedDate]);
+
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
