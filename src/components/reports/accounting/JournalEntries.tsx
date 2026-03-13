@@ -402,6 +402,9 @@ export default function JournalEntries() {
   // Filter + sort
   const filteredRows = useMemo(() => {
     let result = rows;
+    if (typeFilter !== "all") {
+      result = result.filter((r) => r.type === typeFilter);
+    }
     if (paymentMethodFilter !== "all") {
       result = result.filter((r) => r.paymentMethod.toLowerCase() === paymentMethodFilter.toLowerCase());
     }
@@ -419,7 +422,7 @@ export default function JournalEntries() {
       return sortDirection === "asc" ? cmp : -cmp;
     });
     return result;
-  }, [rows, searchQuery, sortDirection, paymentMethodFilter]);
+  }, [rows, searchQuery, sortDirection, paymentMethodFilter, typeFilter]);
 
   // Running balance
   const rowsWithBalance = useMemo(() => {
