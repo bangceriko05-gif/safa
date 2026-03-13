@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format, addMonths, subMonths } from "date-fns";
