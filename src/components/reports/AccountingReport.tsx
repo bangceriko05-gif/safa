@@ -37,6 +37,7 @@ export default function AccountingReport() {
     { key: "receivable" as const, label: "Piutang", icon: HandCoins },
     { key: "assets" as const, label: "Aset", icon: Package },
     { key: "bank" as const, label: "List Bank", icon: Landmark },
+    { key: "coa" as const, label: "Daftar Akun", icon: ListTree },
   ];
 
   return (
