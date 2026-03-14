@@ -11,48 +11,40 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Search, Filter, MoreHorizontal, Pencil, Trash2, BookOpen } from "lucide-react";
+import { Loader2, Plus, Search, Filter, MoreHorizontal, Pencil, Trash2, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 
-const ACCOUNT_TYPES = [
-  { value: "kas_bank", label: "Kas & Bank" },
-  { value: "investasi", label: "Investasi" },
-  { value: "piutang", label: "Piutang" },
-  { value: "persediaan", label: "Persediaan" },
-  { value: "perlengkapan", label: "Perlengkapan" },
-  { value: "aset_tetap", label: "Aset Tetap" },
-  { value: "hutang", label: "Hutang" },
-  { value: "modal", label: "Modal" },
-  { value: "pendapatan", label: "Pendapatan" },
-  { value: "beban", label: "Beban" },
-  { value: "lainnya", label: "Lainnya" },
+const CLASSIFICATIONS = [
+  "Kas & Bank",
+  "Investasi",
+  "Piutang",
+  "Persediaan",
+  "Biaya dibayar dimuka",
+  "Perlengkapan",
+  "Akumulasi penyusutan perlengkapan",
+  "Aset tetap",
+  "Akumulasi penyusutan aset tetap",
+  "Aset lainnya",
+  "Kewajiban jangka pendek",
+  "Kewajiban jangka panjang",
+  "Ekuitas",
+  "Pendapatan",
+  "Beban",
+  "Pendapatan lain-lain",
+  "Beban lain-lain",
 ];
-
-const typeColors: Record<string, string> = {
-  kas_bank: "bg-blue-100 text-blue-700 border-blue-200",
-  investasi: "bg-indigo-100 text-indigo-700 border-indigo-200",
-  piutang: "bg-cyan-100 text-cyan-700 border-cyan-200",
-  persediaan: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  perlengkapan: "bg-teal-100 text-teal-700 border-teal-200",
-  aset_tetap: "bg-violet-100 text-violet-700 border-violet-200",
-  hutang: "bg-orange-100 text-orange-700 border-orange-200",
-  modal: "bg-pink-100 text-pink-700 border-pink-200",
-  pendapatan: "bg-green-100 text-green-700 border-green-200",
-  beban: "bg-red-100 text-red-700 border-red-200",
-  lainnya: "bg-gray-100 text-gray-700 border-gray-200",
-};
-
-function getTypeLabel(value: string) {
-  return ACCOUNT_TYPES.find(t => t.value === value)?.label || value;
-}
 
 interface Account {
   id: string;
-  code: string;
-  name: string;
-  account_type: string;
+  account_code: string;
+  account_name: string;
+  classification: string;
+  opening_balance: number;
+  opening_balance_date: string | null;
+  is_cash_account: boolean;
   is_active: boolean;
   parent_id: string | null;
+  created_by: string;
 }
 
 export default function ChartOfAccountsList() {
@@ -63,8 +55,14 @@ export default function ChartOfAccountsList() {
   const [filterType, setFilterType] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Account | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ code: "", name: "", account_type: "kas_bank" });
+  const [deleteItem, setDeleteItem] = useState<Account | null>(null);
+  const [form, setForm] = useState({
+    account_code: "",
+    account_name: "",
+    classification: "Kas & Bank",
+    opening_balance: 0,
+    opening_balance_date: "",
+  });
 
   useEffect(() => {
     if (currentStore) fetchAccounts();
@@ -78,9 +76,9 @@ export default function ChartOfAccountsList() {
         .from("chart_of_accounts")
         .select("*")
         .eq("store_id", currentStore.id)
-        .order("code", { ascending: true });
+        .order("account_code", { ascending: true });
       if (error) throw error;
-      setAccounts(data || []);
+      setAccounts((data as unknown as Account[]) || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -90,32 +88,65 @@ export default function ChartOfAccountsList() {
 
   const openAdd = () => {
     setEditItem(null);
-    setForm({ code: "", name: "", account_type: "kas_bank" });
+    setForm({ account_code: "", account_name: "", classification: "Kas & Bank", opening_balance: 0, opening_balance_date: "" });
     setShowForm(true);
   };
 
   const openEdit = (item: Account) => {
     setEditItem(item);
-    setForm({ code: item.code, name: item.name, account_type: item.account_type });
+    setForm({
+      account_code: item.account_code,
+      account_name: item.account_name,
+      classification: item.classification,
+      opening_balance: item.opening_balance,
+      opening_balance_date: item.opening_balance_date || "",
+    });
     setShowForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentStore) return;
+
+    // Check duplicate account_code
+    const duplicate = accounts.find(
+      (a) => a.account_code === form.account_code && a.id !== editItem?.id
+    );
+    if (duplicate) {
+      toast.error("Nomor akun sudah digunakan di store ini");
+      return;
+    }
+
+    const isCash = form.classification === "Kas & Bank";
+
     try {
       if (editItem) {
-        const { error } = await supabase.from("chart_of_accounts").update({
-          code: form.code, name: form.name, account_type: form.account_type,
-          updated_at: new Date().toISOString(),
-        }).eq("id", editItem.id);
+        const { error } = await supabase
+          .from("chart_of_accounts")
+          .update({
+            account_code: form.account_code,
+            account_name: form.account_name,
+            classification: form.classification,
+            opening_balance: form.opening_balance,
+            opening_balance_date: form.opening_balance_date || null,
+            is_cash_account: isCash,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq("id", editItem.id);
         if (error) throw error;
         toast.success("Akun berhasil diperbarui");
       } else {
+        const { data: userData } = await supabase.auth.getUser();
         const { error } = await supabase.from("chart_of_accounts").insert({
           store_id: currentStore.id,
-          code: form.code, name: form.name, account_type: form.account_type,
-        });
+          account_code: form.account_code,
+          account_name: form.account_name,
+          classification: form.classification,
+          opening_balance: form.opening_balance,
+          opening_balance_date: form.opening_balance_date || null,
+          is_cash_account: isCash,
+          created_by: userData.user?.id,
+        } as any);
         if (error) throw error;
         toast.success("Akun berhasil ditambahkan");
       }
@@ -127,38 +158,56 @@ export default function ChartOfAccountsList() {
   };
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteItem) return;
     try {
-      const { error } = await supabase.from("chart_of_accounts").delete().eq("id", deleteId);
+      const { error } = await supabase.from("chart_of_accounts").delete().eq("id", deleteItem.id);
       if (error) throw error;
       toast.success("Akun berhasil dihapus");
-      setDeleteId(null);
+      setDeleteItem(null);
       fetchAccounts();
     } catch (error: any) {
       toast.error(error.message || "Gagal menghapus akun");
     }
   };
 
-  const filtered = accounts.filter(a => {
-    const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.code.includes(search);
-    const matchType = filterType === "all" || a.account_type === filterType;
+  const filtered = accounts.filter((a) => {
+    const matchSearch =
+      !search ||
+      a.account_name.toLowerCase().includes(search.toLowerCase()) ||
+      a.account_code.includes(search);
+    const matchType = filterType === "all" || a.classification === filterType;
     return matchSearch && matchType;
   });
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("id-ID", { style: "decimal", minimumFractionDigits: 2 }).format(amount);
+  const isDepreciation = (classification: string) =>
+    classification.toLowerCase().includes("penyusutan");
+
+  const formatCurrency = (amount: number, classification: string) => {
+    const displayAmount = isDepreciation(classification) ? -Math.abs(amount) : amount;
+    return new Intl.NumberFormat("id-ID", {
+      style: "decimal",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(displayAmount);
+  };
 
   if (loading) {
-    return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-3">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <BookOpen className="h-5 w-5" /> Daftar Akun (Chart of Accounts)
+          <ClipboardList className="h-5 w-5" /> Daftar Akun (Chart of Accounts)
         </h3>
-        <Button onClick={openAdd} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Akun</Button>
+        <Button onClick={openAdd} size="sm">
+          <Plus className="mr-2 h-4 w-4" /> Tambah Akun
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -167,12 +216,12 @@ export default function ChartOfAccountsList() {
           <Input
             placeholder="Cari nama atau nomor akun..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[240px]">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4" />
               <SelectValue placeholder="Semua Klasifikasi" />
@@ -180,8 +229,10 @@ export default function ChartOfAccountsList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Klasifikasi</SelectItem>
-            {ACCOUNT_TYPES.map(t => (
-              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            {CLASSIFICATIONS.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -194,8 +245,8 @@ export default function ChartOfAccountsList() {
               <TableRow>
                 <TableHead className="w-[120px]">Nomor Akun</TableHead>
                 <TableHead>Nama Akun</TableHead>
-                <TableHead className="w-[160px]">Klasifikasi</TableHead>
-                <TableHead className="text-right w-[160px]">Saldo</TableHead>
+                <TableHead className="w-[220px]">Klasifikasi</TableHead>
+                <TableHead className="text-right w-[180px]">Saldo</TableHead>
                 <TableHead className="w-[60px]">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -206,40 +257,47 @@ export default function ChartOfAccountsList() {
                     Belum ada data akun.
                   </TableCell>
                 </TableRow>
-              ) : filtered.map(account => (
-                <TableRow key={account.id}>
-                  <TableCell className="font-medium text-primary text-sm">{account.code}</TableCell>
-                  <TableCell className="text-primary text-sm">{account.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`text-xs ${typeColors[account.account_type] || typeColors.lainnya}`}>
-                      {getTypeLabel(account.account_type)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-medium">{formatCurrency(0)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(account)}>
-                          <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDeleteId(account.id)} className="text-destructive">
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              ) : (
+                filtered.map((account) => (
+                  <TableRow key={account.id}>
+                    <TableCell className="font-medium text-primary text-sm cursor-pointer" onClick={() => openEdit(account)}>
+                      {account.account_code}
+                    </TableCell>
+                    <TableCell className="text-primary text-sm">{account.account_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        {account.classification}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={`text-right text-sm font-medium ${isDepreciation(account.classification) ? "text-destructive" : ""}`}>
+                      {formatCurrency(account.opening_balance, account.classification)}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(account)}>
+                            <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDeleteItem(account)} className="text-destructive">
+                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
+      {/* Add/Edit Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent>
           <DialogHeader>
@@ -248,33 +306,69 @@ export default function ChartOfAccountsList() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Nomor Akun</Label>
-              <Input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} required placeholder="contoh: 11101" />
+              <Input
+                value={form.account_code}
+                onChange={(e) => setForm({ ...form, account_code: e.target.value })}
+                required
+                placeholder="contoh: 11101"
+              />
             </div>
             <div className="space-y-2">
               <Label>Nama Akun</Label>
-              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="contoh: Kas" />
+              <Input
+                value={form.account_name}
+                onChange={(e) => setForm({ ...form, account_name: e.target.value })}
+                required
+                placeholder="contoh: Kas"
+              />
             </div>
             <div className="space-y-2">
               <Label>Klasifikasi</Label>
-              <Select value={form.account_type} onValueChange={v => setForm({ ...form, account_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={form.classification} onValueChange={(v) => setForm({ ...form, classification: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {ACCOUNT_TYPES.map(t => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  {CLASSIFICATIONS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" className="w-full">Simpan</Button>
+            <div className="space-y-2">
+              <Label>Saldo Awal</Label>
+              <Input
+                type="number"
+                value={form.opening_balance}
+                onChange={(e) => setForm({ ...form, opening_balance: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tanggal Saldo Awal</Label>
+              <Input
+                type="date"
+                value={form.opening_balance_date}
+                onChange={(e) => setForm({ ...form, opening_balance_date: e.target.value })}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              Simpan
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteItem} onOpenChange={() => setDeleteItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Akun?</AlertDialogTitle>
-            <AlertDialogDescription>Data akun ini akan dihapus permanen.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Akun <strong>{deleteItem?.account_name}</strong> ({deleteItem?.account_code}) akan dihapus permanen.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
