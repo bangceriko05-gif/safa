@@ -60,6 +60,7 @@ export default function AccountingReport() {
         <TabsContent value="receivable" className="mt-4"><AccountsReceivable /></TabsContent>
         <TabsContent value="assets" className="mt-4"><AssetManagement /></TabsContent>
         <TabsContent value="bank" className="mt-4"><BankList /></TabsContent>
+        <TabsContent value="coa" className="mt-4"><ChartOfAccountsList /></TabsContent>
       </Tabs>
     </div>
   );
