@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark } from "lucide-react";
+import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark, ListTree } from "lucide-react";
 
 import BalanceSheet from "./accounting/BalanceSheet";
 import ProfitLoss from "./accounting/ProfitLoss";
@@ -10,8 +10,9 @@ import AccountsPayable from "./accounting/AccountsPayable";
 import AccountsReceivable from "./accounting/AccountsReceivable";
 import AssetManagement from "./accounting/AssetManagement";
 import BankList from "./accounting/BankList";
+import ChartOfAccountsList from "./accounting/ChartOfAccountsList";
 
-type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank";
+type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa";
 
 export default function AccountingReport() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
