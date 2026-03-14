@@ -568,34 +568,46 @@ export type Database = {
       }
       chart_of_accounts: {
         Row: {
-          account_type: string
-          code: string
+          account_code: string
+          account_name: string
+          classification: string
           created_at: string
+          created_by: string
           id: string
           is_active: boolean
-          name: string
+          is_cash_account: boolean
+          opening_balance: number
+          opening_balance_date: string | null
           parent_id: string | null
           store_id: string
           updated_at: string
         }
         Insert: {
-          account_type: string
-          code: string
+          account_code: string
+          account_name: string
+          classification: string
           created_at?: string
+          created_by?: string
           id?: string
           is_active?: boolean
-          name: string
+          is_cash_account?: boolean
+          opening_balance?: number
+          opening_balance_date?: string | null
           parent_id?: string | null
           store_id: string
           updated_at?: string
         }
         Update: {
-          account_type?: string
-          code?: string
+          account_code?: string
+          account_name?: string
+          classification?: string
           created_at?: string
+          created_by?: string
           id?: string
           is_active?: boolean
-          name?: string
+          is_cash_account?: boolean
+          opening_balance?: number
+          opening_balance_date?: string | null
           parent_id?: string | null
           store_id?: string
           updated_at?: string
