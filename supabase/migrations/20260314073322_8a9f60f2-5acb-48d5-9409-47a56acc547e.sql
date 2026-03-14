@@ -1,0 +1,1 @@
+ALTER TABLE public.chart_of_accounts DROP CONSTRAINT chart_of_accounts_account_type_check;
