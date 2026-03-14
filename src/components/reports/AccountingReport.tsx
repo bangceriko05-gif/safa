@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark } from "lucide-react";
+import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark, ListTree } from "lucide-react";
 
 import BalanceSheet from "./accounting/BalanceSheet";
 import ProfitLoss from "./accounting/ProfitLoss";
@@ -10,8 +10,9 @@ import AccountsPayable from "./accounting/AccountsPayable";
 import AccountsReceivable from "./accounting/AccountsReceivable";
 import AssetManagement from "./accounting/AssetManagement";
 import BankList from "./accounting/BankList";
+import ChartOfAccountsList from "./accounting/ChartOfAccountsList";
 
-type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank";
+type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa";
 
 export default function AccountingReport() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -36,6 +37,7 @@ export default function AccountingReport() {
     { key: "receivable" as const, label: "Piutang", icon: HandCoins },
     { key: "assets" as const, label: "Aset", icon: Package },
     { key: "bank" as const, label: "List Bank", icon: Landmark },
+    { key: "coa" as const, label: "Daftar Akun", icon: ListTree },
   ];
 
   return (
@@ -58,6 +60,7 @@ export default function AccountingReport() {
         <TabsContent value="receivable" className="mt-4"><AccountsReceivable /></TabsContent>
         <TabsContent value="assets" className="mt-4"><AssetManagement /></TabsContent>
         <TabsContent value="bank" className="mt-4"><BankList /></TabsContent>
+        <TabsContent value="coa" className="mt-4"><ChartOfAccountsList /></TabsContent>
       </Tabs>
     </div>
   );
