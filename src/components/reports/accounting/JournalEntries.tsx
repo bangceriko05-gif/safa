@@ -424,14 +424,42 @@ export default function JournalEntries() {
     return result;
   }, [rows, searchQuery, sortDirection, paymentMethodFilter, typeFilter]);
 
-  // Running balance
+  // Pagination
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSearchInput, setPageSearchInput] = useState("");
+
+  // Reset page when filters change
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, typeFilter, paymentMethodFilter, sortDirection, rows]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const paginatedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Running balance (accounts for all rows before current page)
   const rowsWithBalance = useMemo(() => {
-    let balance = 0;
-    return filteredRows.map((r) => {
+    // Calculate balance from all rows before current page
+    let balanceBefore = 0;
+    const startIdx = (currentPage - 1) * pageSize;
+    for (let i = 0; i < startIdx && i < filteredRows.length; i++) {
+      balanceBefore += filteredRows[i].amountIn - filteredRows[i].amountOut;
+    }
+    let balance = balanceBefore;
+    return paginatedRows.map((r) => {
       balance += r.amountIn - r.amountOut;
       return { ...r, balance };
     });
-  }, [filteredRows]);
+  }, [filteredRows, paginatedRows, currentPage, pageSize]);
+
+  const handlePageSearch = () => {
+    const target = parseInt(pageSearchInput);
+    if (!isNaN(target) && target >= 1 && target <= totalPages) {
+      setCurrentPage(target);
+      setPageSearchInput("");
+    } else {
+      toast.error(`Halaman harus antara 1 - ${totalPages}`);
+    }
+  };
 
   // Summary
   const totalIn = filteredRows.reduce((s, r) => s + r.amountIn, 0);
@@ -709,7 +737,7 @@ export default function JournalEntries() {
                 ) : (
                   rowsWithBalance.map((row, idx) => (
                     <TableRow key={`${row.type}-${row.id}`}>
-                      <TableCell className="text-sm text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <button
@@ -744,6 +772,91 @@ export default function JournalEntries() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            {/* Left: page size & info */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Tampilkan</span>
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[80px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="150">150</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">data</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {filteredRows.length > 0 
+                  ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredRows.length)} dari ${filteredRows.length}`
+                  : "0 data"}
+              </span>
+            </div>
+
+            {/* Right: page navigation */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(1)}
+              >
+                <ChevronsLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+              >
+                Prev
+              </Button>
+
+              <span className="text-sm font-medium px-1">
+                {currentPage} / {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                <ChevronsRight className="h-3.5 w-3.5" />
+              </Button>
+
+              {/* Page search */}
+              <div className="flex items-center gap-1 ml-2">
+                <Input
+                  placeholder="Hal..."
+                  value={pageSearchInput}
+                  onChange={(e) => setPageSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePageSearch()}
+                  className="w-[70px] h-8 text-sm text-center"
+                />
+                <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={handlePageSearch}>
+                  Go
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
