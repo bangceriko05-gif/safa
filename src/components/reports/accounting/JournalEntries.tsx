@@ -773,7 +773,91 @@ export default function JournalEntries() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
+
+          {/* Pagination Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            {/* Left: page size & info */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Tampilkan</span>
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[80px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="150">150</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">data</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {filteredRows.length > 0 
+                  ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredRows.length)} dari ${filteredRows.length}`
+                  : "0 data"}
+              </span>
+            </div>
+
+            {/* Right: page navigation */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(1)}
+              >
+                <ChevronsLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+              >
+                Prev
+              </Button>
+
+              <span className="text-sm font-medium px-1">
+                {currentPage} / {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                <ChevronsRight className="h-3.5 w-3.5" />
+              </Button>
+
+              {/* Page search */}
+              <div className="flex items-center gap-1 ml-2">
+                <Input
+                  placeholder="Hal..."
+                  value={pageSearchInput}
+                  onChange={(e) => setPageSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePageSearch()}
+                  className="w-[70px] h-8 text-sm text-center"
+                />
+                <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={handlePageSearch}>
+                  Go
+                </Button>
+              </div>
+            </div>
+          </div>
       </Card>
 
       {/* Booking Edit Modal */}
