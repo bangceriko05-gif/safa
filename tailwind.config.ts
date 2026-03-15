@@ -18,6 +18,7 @@ export default {
         'poppins': ['Poppins', 'sans-serif'],
         'roboto': ['Roboto', 'sans-serif'],
         'lato': ['Lato', 'sans-serif'],
+        'jakarta': ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
