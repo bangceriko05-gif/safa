@@ -737,7 +737,7 @@ export default function JournalEntries() {
                 ) : (
                   rowsWithBalance.map((row, idx) => (
                     <TableRow key={`${row.type}-${row.id}`}>
-                      <TableCell className="text-sm text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <button
