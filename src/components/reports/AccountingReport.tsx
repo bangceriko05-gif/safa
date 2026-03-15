@@ -41,7 +41,7 @@ export default function AccountingReport() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-jakarta antialiased">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AccountingTab)}>
         <TabsList className="flex w-full overflow-x-auto">
           {tabs.map(tab => (
