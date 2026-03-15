@@ -430,6 +430,7 @@ export default function JournalEntries() {
   const [pageSearchInput, setPageSearchInput] = useState("");
 
   // Reset page when filters change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useMemo(() => { setCurrentPage(1); }, [searchQuery, typeFilter, paymentMethodFilter, sortDirection, rows]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
