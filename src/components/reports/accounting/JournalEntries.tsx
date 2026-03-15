@@ -858,6 +858,7 @@ export default function JournalEntries() {
               </div>
             </div>
           </div>
+        </CardContent>
       </Card>
 
       {/* Booking Edit Modal */}
