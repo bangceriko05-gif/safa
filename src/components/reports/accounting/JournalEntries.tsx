@@ -424,14 +424,41 @@ export default function JournalEntries() {
     return result;
   }, [rows, searchQuery, sortDirection, paymentMethodFilter, typeFilter]);
 
-  // Running balance
+  // Pagination
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSearchInput, setPageSearchInput] = useState("");
+
+  // Reset page when filters change
+  useMemo(() => { setCurrentPage(1); }, [searchQuery, typeFilter, paymentMethodFilter, sortDirection, rows]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const paginatedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Running balance (accounts for all rows before current page)
   const rowsWithBalance = useMemo(() => {
-    let balance = 0;
-    return filteredRows.map((r) => {
+    // Calculate balance from all rows before current page
+    let balanceBefore = 0;
+    const startIdx = (currentPage - 1) * pageSize;
+    for (let i = 0; i < startIdx && i < filteredRows.length; i++) {
+      balanceBefore += filteredRows[i].amountIn - filteredRows[i].amountOut;
+    }
+    let balance = balanceBefore;
+    return paginatedRows.map((r) => {
       balance += r.amountIn - r.amountOut;
       return { ...r, balance };
     });
-  }, [filteredRows]);
+  }, [filteredRows, paginatedRows, currentPage, pageSize]);
+
+  const handlePageSearch = () => {
+    const target = parseInt(pageSearchInput);
+    if (!isNaN(target) && target >= 1 && target <= totalPages) {
+      setCurrentPage(target);
+      setPageSearchInput("");
+    } else {
+      toast.error(`Halaman harus antara 1 - ${totalPages}`);
+    }
+  };
 
   // Summary
   const totalIn = filteredRows.reduce((s, r) => s + r.amountIn, 0);
