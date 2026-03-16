@@ -28,6 +28,7 @@ import { id as localeId } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import CashFlowDetailView, { type CashFlowDetailType } from "./CashFlowDetailView";
 
 type FilterMode = "custom" | "month" | "year";
 
@@ -161,6 +162,7 @@ export default function CashFlow() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
+  const [activeDetail, setActiveDetail] = useState<CashFlowDetailType | null>(null);
   const [data, setData] = useState<CashFlowData>({
     openingBalance: 0,
     penerimaanPelanggan: 0,
@@ -540,93 +542,46 @@ export default function CashFlow() {
 
       {/* Aktivitas Operasional */}
       <SubSectionTitle label="Aktivitas operasional" />
-      <Row label="Penerimaan dari pelanggan" amount={data.penerimaanPelanggan} indent />
-      <Row
-        label="Penerimaan/penjualan aset lancar lainnya"
-        amount={data.penerimaanAsetLancar}
-        indent
-      />
-      <Row
-        label="Pembayaran ke pemasok"
-        amount={-data.pembayaranPemasok}
-        indent
-        negative
-      />
-      <Row
-        label="Biaya operasional"
-        amount={-data.biayaOperasional}
-        indent
-        negative
-      />
-      <Row label="Pendapatan lain" amount={data.pendapatanLain} indent />
-      <Row
-        label="Pengeluaran lain"
-        amount={-data.pengeluaranLain}
-        indent
-        negative
-      />
-      <SubTotalRow
-        label="SubTotal Aktivitas operasional"
-        amount={subtotalOperasional}
-      />
+      <Row label="Penerimaan dari pelanggan" amount={data.penerimaanPelanggan} indent onClick={() => setActiveDetail("penerimaan_pelanggan")} />
+      <Row label="Penerimaan/penjualan aset lancar lainnya" amount={data.penerimaanAsetLancar} indent onClick={() => setActiveDetail("penerimaan_aset_lancar")} />
+      <Row label="Pembayaran ke pemasok" amount={-data.pembayaranPemasok} indent negative onClick={() => setActiveDetail("pembayaran_pemasok")} />
+      <Row label="Biaya operasional" amount={-data.biayaOperasional} indent negative onClick={() => setActiveDetail("biaya_operasional")} />
+      <Row label="Pendapatan lain" amount={data.pendapatanLain} indent onClick={() => setActiveDetail("pendapatan_lain")} />
+      <Row label="Pengeluaran lain" amount={-data.pengeluaranLain} indent negative onClick={() => setActiveDetail("pengeluaran_lain")} />
+      <SubTotalRow label="SubTotal Aktivitas operasional" amount={subtotalOperasional} />
 
       {/* Aktivitas Investasi */}
       <SubSectionTitle label="Aktivitas Investasi" />
-      <Row
-        label="Pendapatan/pembelian aset tetap"
-        amount={-data.pembelianAsetTetap}
-        indent
-      />
-      <Row
-        label="Pendapatan/pembelian aset tidak berwujud"
-        amount={-data.pembelianAsetTakBerwujud}
-        indent
-      />
-      <Row
-        label="Aktivitas investasi lain"
-        amount={data.aktivitasInvestasiLain}
-        indent
-      />
-      <SubTotalRow
-        label="SubTotal Aktivitas Investasi"
-        amount={subtotalInvestasi}
-      />
+      <Row label="Pendapatan/pembelian aset tetap" amount={-data.pembelianAsetTetap} indent onClick={() => setActiveDetail("pembelian_aset_tetap")} />
+      <Row label="Pendapatan/pembelian aset tidak berwujud" amount={-data.pembelianAsetTakBerwujud} indent onClick={() => setActiveDetail("pembelian_aset_tak_berwujud")} />
+      <Row label="Aktivitas investasi lain" amount={data.aktivitasInvestasiLain} indent onClick={() => setActiveDetail("aktivitas_investasi_lain")} />
+      <SubTotalRow label="SubTotal Aktivitas Investasi" amount={subtotalInvestasi} />
 
       {/* Aktivitas Pendanaan */}
       <SubSectionTitle label="Aktivitas Pendanaan" />
-      <Row
-        label="Pembayaran/penerimaan pinjaman"
-        amount={data.pembayaranPinjaman}
-        indent
-      />
-      <Row
-        label="Penambahan/pengambilan modal"
-        amount={-data.penambahanModal}
-        indent
-      />
-      <SubTotalRow
-        label="SubTotal Aktivitas Pendanaan"
-        amount={subtotalPendanaan}
-      />
+      <Row label="Pembayaran/penerimaan pinjaman" amount={data.pembayaranPinjaman} indent onClick={() => setActiveDetail("pembayaran_pinjaman")} />
+      <Row label="Penambahan/pengambilan modal" amount={-data.penambahanModal} indent onClick={() => setActiveDetail("penambahan_modal")} />
+      <SubTotalRow label="SubTotal Aktivitas Pendanaan" amount={subtotalPendanaan} />
 
       {/* Total Kenaikan / Penurunan */}
       <div className="border-t-2 border-dashed border-primary/40 mt-4" />
-      <Row
-        label="Total Kenaikan/penurunan kas"
-        amount={totalKenaikanPenurunan}
-        bold
-        className="bg-primary/10 text-primary font-bold"
-      />
+      <Row label="Total Kenaikan/penurunan kas" amount={totalKenaikanPenurunan} bold className="bg-primary/10 text-primary font-bold" />
 
       {/* === SALDO KAS AKHIR === */}
       <SectionHeader label="Saldo kas akhir" color="sky" className="mt-4" />
       <div className="border-t-2 border-dashed border-primary/40" />
-      <Row
-        label="Total Saldo kas akhir"
-        amount={saldoKasAkhir}
-        bold
-        className="bg-foreground/5 font-bold"
-      />
+      <Row label="Total Saldo kas akhir" amount={saldoKasAkhir} bold className="bg-foreground/5 font-bold" />
+
+      {/* Detail View */}
+      {activeDetail && currentStore && (
+        <CashFlowDetailView
+          detailType={activeDetail}
+          storeId={currentStore.id}
+          startDate={startDate}
+          endDate={endDate}
+          onClose={() => setActiveDetail(null)}
+        />
+      )}
     </div>
   );
 }
@@ -688,6 +643,7 @@ function Row({
   indent = false,
   negative = false,
   className,
+  onClick,
 }: {
   label: string;
   amount: number;
@@ -695,14 +651,17 @@ function Row({
   indent?: boolean;
   negative?: boolean;
   className?: string;
+  onClick?: () => void;
 }) {
   const isNeg = amount < 0;
   return (
     <div
       className={cn(
         "flex items-center justify-between py-2 px-4 border-b border-border/50",
+        onClick && "cursor-pointer hover:bg-muted/60 transition-colors",
         className
       )}
+      onClick={onClick}
     >
       <span
         className={cn(
