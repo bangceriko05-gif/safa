@@ -643,6 +643,7 @@ function Row({
   indent = false,
   negative = false,
   className,
+  onClick,
 }: {
   label: string;
   amount: number;
@@ -650,14 +651,17 @@ function Row({
   indent?: boolean;
   negative?: boolean;
   className?: string;
+  onClick?: () => void;
 }) {
   const isNeg = amount < 0;
   return (
     <div
       className={cn(
         "flex items-center justify-between py-2 px-4 border-b border-border/50",
+        onClick && "cursor-pointer hover:bg-muted/60 transition-colors",
         className
       )}
+      onClick={onClick}
     >
       <span
         className={cn(
