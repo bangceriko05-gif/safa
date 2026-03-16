@@ -163,9 +163,9 @@ export default function BankAccountDetailModal({ open, onClose, accountName, sto
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[900px] max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-full w-full h-full max-h-full rounded-none flex flex-col p-0 gap-0 [&>button]:hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
+        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b">
           <h2 className="text-lg font-bold tracking-tight">{accountName}</h2>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
