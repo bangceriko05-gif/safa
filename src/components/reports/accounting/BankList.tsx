@@ -15,6 +15,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { Loader2, Plus, Landmark, Pencil, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import BankAccountDetailModal from "./BankAccountDetailModal";
 import { format, addMonths, subMonths } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
