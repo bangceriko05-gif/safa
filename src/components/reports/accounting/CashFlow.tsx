@@ -28,6 +28,7 @@ import { id as localeId } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import CashFlowDetailView, { type CashFlowDetailType } from "./CashFlowDetailView";
 
 type FilterMode = "custom" | "month" | "year";
 
