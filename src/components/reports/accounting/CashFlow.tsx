@@ -162,6 +162,7 @@ export default function CashFlow() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>();
+  const [activeDetail, setActiveDetail] = useState<CashFlowDetailType | null>(null);
   const [data, setData] = useState<CashFlowData>({
     openingBalance: 0,
     penerimaanPelanggan: 0,
