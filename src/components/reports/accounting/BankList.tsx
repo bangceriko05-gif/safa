@@ -130,7 +130,7 @@ export default function BankList() {
     source_account: "", investor_name: "", amount: "", transfer_date: format(new Date(), "yyyy-MM-dd"), description: "",
   });
   const [investorTransfers, setInvestorTransfers] = useState<any[]>([]);
-
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
