@@ -390,7 +390,7 @@ export default function BankList() {
               {displayItems.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Belum ada data bank.</TableCell></TableRow>
               ) : displayItems.map(item => (
-                <TableRow key={`${item.source}-${item.id}`}>
+                <TableRow key={`${item.source}-${item.id}`} className={item.source === "payment_method" ? "cursor-pointer hover:bg-muted/60" : ""} onClick={() => { if (item.source === "payment_method") setSelectedAccount(item.bank_name); }}>
                   <TableCell className="font-medium text-sm">{item.bank_name}</TableCell>
                   <TableCell className="text-sm">{item.account_name}</TableCell>
                   <TableCell className="text-sm font-mono">{item.account_number}</TableCell>
@@ -406,8 +406,8 @@ export default function BankList() {
                   <TableCell>
                     {item.source === "bank_account" ? (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(bankAccounts.find(b => b.id === item.id)!)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteId(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); openEdit(bankAccounts.find(b => b.id === item.id)!); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">Auto</span>
