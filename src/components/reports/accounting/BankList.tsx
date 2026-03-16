@@ -488,6 +488,16 @@ export default function BankList() {
           </form>
         </DialogContent>
       </Dialog>
+      {/* Bank Account Detail Modal */}
+      {currentStore && (
+        <BankAccountDetailModal
+          open={!!selectedAccount}
+          onClose={() => setSelectedAccount(null)}
+          accountName={selectedAccount || ""}
+          storeId={currentStore.id}
+          selectedDate={selectedDate}
+        />
+      )}
     </div>
   );
 }
