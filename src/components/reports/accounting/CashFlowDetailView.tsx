@@ -9,9 +9,9 @@ import { id as localeId } from "date-fns/locale";
 
 export type CashFlowDetailType =
   | "penerimaan_pelanggan"
-  | "penerimaan_aset_lancar"
   | "pembayaran_pemasok"
   | "biaya_operasional"
+  | "biaya_perawatan"
   | "pendapatan_lain"
   | "pengeluaran_lain"
   | "pembelian_aset_tetap"
