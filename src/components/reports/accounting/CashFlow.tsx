@@ -559,8 +559,8 @@ export default function CashFlow() {
 
       {/* Aktivitas Investasi */}
       <SubSectionTitle label="Aktivitas Investasi" />
-      <Row label="Pendapatan/pembelian aset tetap" amount={-data.pembelianAsetTetap} indent onClick={() => setActiveDetail("pembelian_aset_tetap")} />
-      <Row label="Pendapatan/pembelian aset tidak berwujud" amount={-data.pembelianAsetTakBerwujud} indent onClick={() => setActiveDetail("pembelian_aset_tak_berwujud")} />
+      <Row label="Pendapatan/pengeluaran aset tetap" amount={-data.pembelianAsetTetap} indent onClick={() => setActiveDetail("pembelian_aset_tetap")} />
+      <Row label="Pendapatan/pengeluaran aset tidak berwujud" amount={-data.pembelianAsetTakBerwujud} indent onClick={() => setActiveDetail("pembelian_aset_tak_berwujud")} />
       <Row label="Aktivitas investasi lain" amount={data.aktivitasInvestasiLain} indent onClick={() => setActiveDetail("aktivitas_investasi_lain")} />
       <SubTotalRow label="SubTotal Aktivitas Investasi" amount={subtotalInvestasi} />
 
