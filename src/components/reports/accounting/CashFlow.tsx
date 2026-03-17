@@ -334,7 +334,14 @@ export default function CashFlow() {
       const biayaOperasional = allExpenses
         .filter((e) => {
           const cat = (e.category || "").toLowerCase();
-          return !cat.includes("lain");
+          return !cat.includes("lain") && !cat.includes("perawatan");
+        })
+        .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+      const biayaPerawatan = allExpenses
+        .filter((e) => {
+          const cat = (e.category || "").toLowerCase();
+          return cat.includes("perawatan");
         })
         .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
