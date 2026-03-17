@@ -166,9 +166,9 @@ export default function CashFlow() {
   const [data, setData] = useState<CashFlowData>({
     openingBalance: 0,
     penerimaanPelanggan: 0,
-    penerimaanAsetLancar: 0,
     pembayaranPemasok: 0,
     biayaOperasional: 0,
+    biayaPerawatan: 0,
     pendapatanLain: 0,
     pengeluaranLain: 0,
     pembelianAsetTetap: 0,
