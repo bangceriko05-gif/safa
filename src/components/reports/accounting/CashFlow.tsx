@@ -550,9 +550,9 @@ export default function CashFlow() {
       {/* Aktivitas Operasional */}
       <SubSectionTitle label="Aktivitas operasional" />
       <Row label="Penerimaan dari pelanggan" amount={data.penerimaanPelanggan} indent onClick={() => setActiveDetail("penerimaan_pelanggan")} />
-      <Row label="Penerimaan/penjualan aset lancar lainnya" amount={data.penerimaanAsetLancar} indent onClick={() => setActiveDetail("penerimaan_aset_lancar")} />
       <Row label="Pembayaran ke pemasok" amount={-data.pembayaranPemasok} indent negative onClick={() => setActiveDetail("pembayaran_pemasok")} />
       <Row label="Biaya operasional" amount={-data.biayaOperasional} indent negative onClick={() => setActiveDetail("biaya_operasional")} />
+      <Row label="Biaya perawatan" amount={-data.biayaPerawatan} indent negative onClick={() => setActiveDetail("biaya_perawatan")} />
       <Row label="Pendapatan lain" amount={data.pendapatanLain} indent onClick={() => setActiveDetail("pendapatan_lain")} />
       <Row label="Pengeluaran lain" amount={-data.pengeluaranLain} indent negative onClick={() => setActiveDetail("pengeluaran_lain")} />
       <SubTotalRow label="SubTotal Aktivitas operasional" amount={subtotalOperasional} />

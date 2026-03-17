@@ -22,9 +22,9 @@ export type CashFlowDetailType =
 
 const DETAIL_LABELS: Record<CashFlowDetailType, string> = {
   penerimaan_pelanggan: "Penerimaan dari pelanggan",
-  penerimaan_aset_lancar: "Penerimaan/penjualan aset lancar lainnya",
   pembayaran_pemasok: "Pembayaran ke pemasok",
   biaya_operasional: "Biaya operasional",
+  biaya_perawatan: "Biaya perawatan",
   pendapatan_lain: "Pendapatan lain",
   pengeluaran_lain: "Pengeluaran lain",
   pembelian_aset_tetap: "Pendapatan/pembelian aset tetap",
