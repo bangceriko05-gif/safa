@@ -393,10 +393,10 @@ export default function CashFlow() {
 
   // Calculations
   const subtotalOperasional =
-    data.penerimaanPelanggan +
-    data.penerimaanAsetLancar -
+    data.penerimaanPelanggan -
     data.pembayaranPemasok -
-    data.biayaOperasional +
+    data.biayaOperasional -
+    data.biayaPerawatan +
     data.pendapatanLain -
     data.pengeluaranLain;
 
