@@ -9,9 +9,9 @@ import { id as localeId } from "date-fns/locale";
 
 export type CashFlowDetailType =
   | "penerimaan_pelanggan"
-  | "penerimaan_aset_lancar"
   | "pembayaran_pemasok"
   | "biaya_operasional"
+  | "biaya_perawatan"
   | "pendapatan_lain"
   | "pengeluaran_lain"
   | "pembelian_aset_tetap"
@@ -22,9 +22,9 @@ export type CashFlowDetailType =
 
 const DETAIL_LABELS: Record<CashFlowDetailType, string> = {
   penerimaan_pelanggan: "Penerimaan dari pelanggan",
-  penerimaan_aset_lancar: "Penerimaan/penjualan aset lancar lainnya",
   pembayaran_pemasok: "Pembayaran ke pemasok",
   biaya_operasional: "Biaya operasional",
+  biaya_perawatan: "Biaya perawatan",
   pendapatan_lain: "Pendapatan lain",
   pengeluaran_lain: "Pengeluaran lain",
   pembelian_aset_tetap: "Pendapatan/pembelian aset tetap",
@@ -121,7 +121,28 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .lte("date", endStr);
           (data || []).forEach((e: any) => {
             const cat = (e.category || "").toLowerCase();
-            if (!cat.includes("lain")) {
+            if (!cat.includes("lain") && !cat.includes("perawatan")) {
+              rows.push({
+                date: e.date,
+                bid: e.bid || "-",
+                description: `${e.description}${e.category ? ` [${e.category}]` : ""}${e.payment_method ? ` (${e.payment_method})` : ""}`,
+                debit: 0,
+                credit: Number(e.amount) || 0,
+              });
+            }
+          });
+          break;
+        }
+        case "biaya_perawatan": {
+          const { data } = await supabase
+            .from("expenses")
+            .select("date, bid, description, category, amount, payment_method")
+            .eq("store_id", storeId)
+            .gte("date", startStr)
+            .lte("date", endStr);
+          (data || []).forEach((e: any) => {
+            const cat = (e.category || "").toLowerCase();
+            if (cat.includes("perawatan")) {
               rows.push({
                 date: e.date,
                 bid: e.bid || "-",

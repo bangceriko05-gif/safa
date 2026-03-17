@@ -139,9 +139,9 @@ interface CashFlowData {
   openingBalance: number;
   // Aktivitas Operasional
   penerimaanPelanggan: number;
-  penerimaanAsetLancar: number;
   pembayaranPemasok: number;
   biayaOperasional: number;
+  biayaPerawatan: number;
   pendapatanLain: number;
   pengeluaranLain: number;
   // Aktivitas Investasi
@@ -166,9 +166,9 @@ export default function CashFlow() {
   const [data, setData] = useState<CashFlowData>({
     openingBalance: 0,
     penerimaanPelanggan: 0,
-    penerimaanAsetLancar: 0,
     pembayaranPemasok: 0,
     biayaOperasional: 0,
+    biayaPerawatan: 0,
     pendapatanLain: 0,
     pengeluaranLain: 0,
     pembelianAsetTetap: 0,
@@ -334,7 +334,14 @@ export default function CashFlow() {
       const biayaOperasional = allExpenses
         .filter((e) => {
           const cat = (e.category || "").toLowerCase();
-          return !cat.includes("lain");
+          return !cat.includes("lain") && !cat.includes("perawatan");
+        })
+        .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+      const biayaPerawatan = allExpenses
+        .filter((e) => {
+          const cat = (e.category || "").toLowerCase();
+          return cat.includes("perawatan");
         })
         .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
@@ -365,9 +372,9 @@ export default function CashFlow() {
       setData({
         openingBalance,
         penerimaanPelanggan,
-        penerimaanAsetLancar: 0,
         pembayaranPemasok,
         biayaOperasional,
+        biayaPerawatan,
         pendapatanLain,
         pengeluaranLain,
         pembelianAsetTetap,
@@ -386,10 +393,10 @@ export default function CashFlow() {
 
   // Calculations
   const subtotalOperasional =
-    data.penerimaanPelanggan +
-    data.penerimaanAsetLancar -
+    data.penerimaanPelanggan -
     data.pembayaranPemasok -
-    data.biayaOperasional +
+    data.biayaOperasional -
+    data.biayaPerawatan +
     data.pendapatanLain -
     data.pengeluaranLain;
 
@@ -543,9 +550,9 @@ export default function CashFlow() {
       {/* Aktivitas Operasional */}
       <SubSectionTitle label="Aktivitas operasional" />
       <Row label="Penerimaan dari pelanggan" amount={data.penerimaanPelanggan} indent onClick={() => setActiveDetail("penerimaan_pelanggan")} />
-      <Row label="Penerimaan/penjualan aset lancar lainnya" amount={data.penerimaanAsetLancar} indent onClick={() => setActiveDetail("penerimaan_aset_lancar")} />
       <Row label="Pembayaran ke pemasok" amount={-data.pembayaranPemasok} indent negative onClick={() => setActiveDetail("pembayaran_pemasok")} />
       <Row label="Biaya operasional" amount={-data.biayaOperasional} indent negative onClick={() => setActiveDetail("biaya_operasional")} />
+      <Row label="Biaya perawatan" amount={-data.biayaPerawatan} indent negative onClick={() => setActiveDetail("biaya_perawatan")} />
       <Row label="Pendapatan lain" amount={data.pendapatanLain} indent onClick={() => setActiveDetail("pendapatan_lain")} />
       <Row label="Pengeluaran lain" amount={-data.pengeluaranLain} indent negative onClick={() => setActiveDetail("pengeluaran_lain")} />
       <SubTotalRow label="SubTotal Aktivitas operasional" amount={subtotalOperasional} />
