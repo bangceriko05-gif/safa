@@ -372,9 +372,9 @@ export default function CashFlow() {
       setData({
         openingBalance,
         penerimaanPelanggan,
-        penerimaanAsetLancar: 0,
         pembayaranPemasok,
         biayaOperasional,
+        biayaPerawatan,
         pendapatanLain,
         pengeluaranLain,
         pembelianAsetTetap,
