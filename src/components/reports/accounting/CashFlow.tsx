@@ -139,9 +139,9 @@ interface CashFlowData {
   openingBalance: number;
   // Aktivitas Operasional
   penerimaanPelanggan: number;
-  penerimaanAsetLancar: number;
   pembayaranPemasok: number;
   biayaOperasional: number;
+  biayaPerawatan: number;
   pendapatanLain: number;
   pengeluaranLain: number;
   // Aktivitas Investasi
