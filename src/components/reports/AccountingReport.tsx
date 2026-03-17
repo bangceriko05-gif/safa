@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark, ListTree } from "lucide-react";
+import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark, ListTree, ShoppingCart } from "lucide-react";
 
 import BalanceSheet from "./accounting/BalanceSheet";
 import ProfitLoss from "./accounting/ProfitLoss";
@@ -11,10 +11,12 @@ import AccountsReceivable from "./accounting/AccountsReceivable";
 import AssetManagement from "./accounting/AssetManagement";
 import BankList from "./accounting/BankList";
 import ChartOfAccountsList from "./accounting/ChartOfAccountsList";
+import AccountingTransactions from "./accounting/AccountingTransactions";
 
-type AccountingTab = "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa";
+type AccountingTab = "transaksi" | "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa";
 
 const tabs: { key: AccountingTab; label: string; icon: React.ElementType }[] = [
+  { key: "transaksi", label: "Transaksi", icon: ShoppingCart },
   { key: "balance", label: "Neraca", icon: Scale },
   { key: "pl", label: "Laba Rugi", icon: TrendingUp },
   { key: "cashflow", label: "Arus Kas", icon: Wallet },
@@ -27,6 +29,7 @@ const tabs: { key: AccountingTab; label: string; icon: React.ElementType }[] = [
 ];
 
 const COMPONENTS: Record<AccountingTab, React.ComponentType> = {
+  transaksi: AccountingTransactions,
   balance: BalanceSheet,
   pl: ProfitLoss,
   cashflow: CashFlow,
@@ -42,7 +45,7 @@ export default function AccountingReport() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const [activeTab, setActiveTabState] = useState<AccountingTab>(() => {
     const param = searchParams.get("accountingTab");
-    return (param as AccountingTab) || "balance";
+    return (param as AccountingTab) || "transaksi";
   });
 
   const setActiveTab = (tab: AccountingTab) => {
