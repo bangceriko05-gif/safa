@@ -564,6 +564,9 @@ export default function CashFlow() {
       <Row label="Aktivitas investasi lain" amount={data.aktivitasInvestasiLain} indent onClick={() => setActiveDetail("aktivitas_investasi_lain")} />
       <SubTotalRow label="SubTotal Aktivitas Investasi" amount={subtotalInvestasi} />
 
+      {/* Total Pendapatan = SubTotal Operasional + SubTotal Investasi */}
+      <Row label="Total Pendapatan" amount={subtotalOperasional + subtotalInvestasi} bold className="bg-primary/10 text-primary font-bold" />
+
       {/* Aktivitas Pendanaan */}
       <SubSectionTitle label="Aktivitas Pendanaan" />
       <Row label="Pembayaran/penerimaan pinjaman" amount={data.pembayaranPinjaman} indent onClick={() => setActiveDetail("pembayaran_pinjaman")} />
