@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_activity_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          store_id: string | null
+          user_id: string
+          user_name: string
+          user_role: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          description: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          store_id?: string | null
+          user_id: string
+          user_name: string
+          user_role: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          store_id?: string | null
+          user_id?: string
+          user_name?: string
+          user_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_activity_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts_payable: {
         Row: {
           amount: number
