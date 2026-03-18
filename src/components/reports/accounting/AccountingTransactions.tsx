@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAccountingActivity } from "@/utils/accountingActivityLogger";
 import { useStore } from "@/contexts/StoreContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -219,6 +220,14 @@ export default function AccountingTransactions() {
             : t
         )
       );
+
+      logAccountingActivity({
+        actionType: 'converted',
+        entityType: CONVERT_LABELS[convertTarget],
+        entityId: convertDialog.id,
+        description: `Konversi ${convertDialog.typeLabel} ${convertDialog.bid} (${fmtCurrency(convertDialog.amount)}) ke ${CONVERT_LABELS[convertTarget]}${convertNotes ? ` - ${convertNotes}` : ""}`,
+        storeId: currentStore.id,
+      });
 
       toast.success(`Berhasil dikonversi ke ${CONVERT_LABELS[convertTarget]}`);
       setConvertDialog(null);
