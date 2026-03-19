@@ -247,6 +247,7 @@ export default function AssetManagement() {
                 <span className="text-sm font-normal text-muted-foreground bg-muted/50 rounded px-2 py-0.5 font-mono">{editingAsset.bid || "-"}</span>
               )}
             </DialogTitle>
+          </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2"><Label>Nama Aset</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="contoh: AC Kamar 101" /></div>
             <div className="space-y-2"><Label>Kategori</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="contoh: Elektronik" /></div>
