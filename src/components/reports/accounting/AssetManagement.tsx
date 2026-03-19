@@ -10,12 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Package, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Package, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
-import ReportDateFilter, { ReportTimeRange, getDateRange } from "../ReportDateFilter";
-import { DateRange } from "react-day-picker";
 import { logAccountingActivity } from "@/utils/accountingActivityLogger";
 
 interface Asset {
@@ -41,28 +39,26 @@ export default function AssetManagement() {
   const [form, setForm] = useState({
     name: "", category: "", purchase_date: "", purchase_price: "", current_value: "", depreciation_rate: "0", notes: "", status: "active",
   });
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [confirmDelete, setConfirmDelete] = useState<Asset | null>(null);
+
+  // Pagination
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
 
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [currentStore, timeRange, customDateRange]);
+  }, [currentStore]);
 
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
-      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
-      const startStr = format(startDate, "yyyy-MM-dd");
-      const endStr = format(endDate, "yyyy-MM-dd");
-
       const { data, error } = await supabase
         .from("assets")
         .select("*")
         .eq("store_id", currentStore.id)
-        .or(`purchase_date.is.null,and(purchase_date.gte.${startStr},purchase_date.lte.${endStr})`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       setItems((data as Asset[]) || []);
@@ -73,27 +69,33 @@ export default function AssetManagement() {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const paginatedItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setPageInput("1");
+  }, [pageSize]);
+
+  const handlePageInputSubmit = () => {
+    const p = Math.max(1, Math.min(totalPages, Number(pageInput) || 1));
+    setCurrentPage(p);
+    setPageInput(String(p));
+  };
+
   const resetForm = () => {
     setForm({ name: "", category: "", purchase_date: "", purchase_price: "", current_value: "", depreciation_rate: "0", notes: "", status: "active" });
     setEditingAsset(null);
   };
 
-  const openCreateForm = () => {
-    resetForm();
-    setShowForm(true);
-  };
+  const openCreateForm = () => { resetForm(); setShowForm(true); };
 
   const openEditForm = (asset: Asset) => {
     setEditingAsset(asset);
     setForm({
-      name: asset.name,
-      category: asset.category || "",
-      purchase_date: asset.purchase_date || "",
-      purchase_price: String(asset.purchase_price),
-      current_value: String(asset.current_value),
-      depreciation_rate: String(asset.depreciation_rate || 0),
-      notes: asset.notes || "",
-      status: asset.status,
+      name: asset.name, category: asset.category || "", purchase_date: asset.purchase_date || "",
+      purchase_price: String(asset.purchase_price), current_value: String(asset.current_value),
+      depreciation_rate: String(asset.depreciation_rate || 0), notes: asset.notes || "", status: asset.status,
     });
     setShowForm(true);
   };
@@ -107,55 +109,26 @@ export default function AssetManagement() {
       const purchasePrice = Number(form.purchase_price);
 
       if (editingAsset) {
-        // Update existing asset
         const { error } = await supabase.from("assets").update({
-          name: form.name,
-          category: form.category || null,
-          purchase_date: form.purchase_date || null,
-          purchase_price: purchasePrice,
-          current_value: Number(form.current_value) || purchasePrice,
-          depreciation_rate: Number(form.depreciation_rate) || 0,
-          notes: form.notes || null,
-          status: form.status,
+          name: form.name, category: form.category || null, purchase_date: form.purchase_date || null,
+          purchase_price: purchasePrice, current_value: Number(form.current_value) || purchasePrice,
+          depreciation_rate: Number(form.depreciation_rate) || 0, notes: form.notes || null, status: form.status,
         }).eq("id", editingAsset.id);
         if (error) throw error;
         toast.success("Aset berhasil diperbarui");
-        await logAccountingActivity({
-          actionType: "updated",
-          entityType: "Aset",
-          entityId: editingAsset.id,
-          description: `Memperbarui aset: ${form.name}`,
-          storeId: currentStore.id,
-        });
+        await logAccountingActivity({ actionType: "updated", entityType: "Aset", entityId: editingAsset.id, description: `Memperbarui aset: ${form.name}`, storeId: currentStore.id });
       } else {
-        // Generate BID for accounting-sourced assets
         const { data: bidData } = await supabase.rpc("generate_asset_bid", { p_store_id: currentStore.id });
-
         const { error } = await supabase.from("assets").insert({
-          store_id: currentStore.id,
-          name: form.name,
-          category: form.category || null,
-          purchase_date: form.purchase_date || null,
-          purchase_price: purchasePrice,
-          current_value: Number(form.current_value) || purchasePrice,
-          depreciation_rate: Number(form.depreciation_rate) || 0,
-          notes: form.notes || null,
-          created_by: user.id,
-          bid: bidData || null,
+          store_id: currentStore.id, name: form.name, category: form.category || null, purchase_date: form.purchase_date || null,
+          purchase_price: purchasePrice, current_value: Number(form.current_value) || purchasePrice,
+          depreciation_rate: Number(form.depreciation_rate) || 0, notes: form.notes || null, created_by: user.id, bid: bidData || null,
         });
         if (error) throw error;
         toast.success("Aset berhasil ditambahkan");
-        await logAccountingActivity({
-          actionType: "created",
-          entityType: "Aset",
-          description: `Menambahkan aset baru: ${form.name} (BID: ${bidData || "-"})`,
-          storeId: currentStore.id,
-        });
+        await logAccountingActivity({ actionType: "created", entityType: "Aset", description: `Menambahkan aset baru: ${form.name} (BID: ${bidData || "-"})`, storeId: currentStore.id });
       }
-
-      setShowForm(false);
-      resetForm();
-      fetchData();
+      setShowForm(false); resetForm(); fetchData();
     } catch (error: any) {
       toast.error(error.message || "Gagal menyimpan aset");
     }
@@ -167,15 +140,8 @@ export default function AssetManagement() {
       const { error } = await supabase.from("assets").delete().eq("id", confirmDelete.id);
       if (error) throw error;
       toast.success("Aset berhasil dihapus");
-      await logAccountingActivity({
-        actionType: "deleted",
-        entityType: "Aset",
-        entityId: confirmDelete.id,
-        description: `Menghapus aset: ${confirmDelete.name}`,
-        storeId: currentStore.id,
-      });
-      setConfirmDelete(null);
-      fetchData();
+      await logAccountingActivity({ actionType: "deleted", entityType: "Aset", entityId: confirmDelete.id, description: `Menghapus aset: ${confirmDelete.name}`, storeId: currentStore.id });
+      setConfirmDelete(null); fetchData();
     } catch (error: any) {
       toast.error(error.message || "Gagal menghapus aset");
     }
@@ -198,17 +164,9 @@ export default function AssetManagement() {
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><Package className="h-5 w-5" /> Aset</h3>
-          <p className="text-sm text-muted-foreground">Total nilai aset aktif: <span className="font-semibold text-blue-600">{formatCurrency(totalValue)}</span></p>
+          <p className="text-sm text-muted-foreground">Total nilai aset aktif: <span className="font-semibold text-primary">{formatCurrency(totalValue)}</span> &middot; {items.length} data</p>
         </div>
-        <div className="flex items-center gap-2">
-          <ReportDateFilter
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
-          <Button onClick={openCreateForm} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Aset</Button>
-        </div>
+        <Button onClick={openCreateForm} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Aset</Button>
       </div>
 
       <Card>
@@ -226,9 +184,9 @@ export default function AssetManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.length === 0 ? (
+              {paginatedItems.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Belum ada data aset</TableCell></TableRow>
-              ) : items.map(item => (
+              ) : paginatedItems.map(item => (
                 <TableRow key={item.id} className="cursor-pointer hover:bg-muted/70" onClick={() => openEditForm(item)}>
                   <TableCell className="text-sm font-mono text-muted-foreground">{item.bid || "-"}</TableCell>
                   <TableCell className="font-medium text-sm">{item.name}</TableCell>
@@ -244,17 +202,48 @@ export default function AssetManagement() {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Tampilkan</span>
+          <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+            <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="150">150</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>per halaman</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage <= 1} onClick={() => { setCurrentPage(p => p - 1); setPageInput(String(currentPage - 1)); }}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-1 text-sm">
+            <span>Hal</span>
+            <Input
+              className="w-14 h-8 text-center"
+              value={pageInput}
+              onChange={e => setPageInput(e.target.value)}
+              onBlur={handlePageInputSubmit}
+              onKeyDown={e => { if (e.key === "Enter") handlePageInputSubmit(); }}
+            />
+            <span>/ {totalPages}</span>
+          </div>
+          <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage >= totalPages} onClick={() => { setCurrentPage(p => p + 1); setPageInput(String(currentPage + 1)); }}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
       {/* Create/Edit Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingAsset ? "Edit Aset" : "Tambah Aset"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editingAsset ? "Edit Aset" : "Tambah Aset"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             {editingAsset?.bid && (
-              <div className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                BID: <span className="font-mono font-medium">{editingAsset.bid}</span>
-              </div>
+              <div className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">BID: <span className="font-mono font-medium">{editingAsset.bid}</span></div>
             )}
             <div className="space-y-2"><Label>Nama Aset</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="contoh: AC Kamar 101" /></div>
             <div className="space-y-2"><Label>Kategori</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="contoh: Elektronik" /></div>
