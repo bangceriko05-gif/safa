@@ -240,11 +240,15 @@ export default function AssetManagement() {
       {/* Create/Edit Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingAsset ? "Edit Aset" : "Tambah Aset"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {editingAsset ? "Edit Aset" : "Tambah Aset"}
+              {editingAsset && (
+                <span className="text-sm font-normal text-muted-foreground bg-muted/50 rounded px-2 py-0.5 font-mono">{editingAsset.bid || "-"}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {editingAsset && (
-              <div className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">BID: <span className="font-mono font-medium">{editingAsset.bid || "-"}</span></div>
-            )}
             <div className="space-y-2"><Label>Nama Aset</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="contoh: AC Kamar 101" /></div>
             <div className="space-y-2"><Label>Kategori</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="contoh: Elektronik" /></div>
             <div className="grid grid-cols-2 gap-4">
