@@ -210,6 +210,7 @@ export type Database = {
       }
       assets: {
         Row: {
+          bid: string | null
           category: string | null
           created_at: string
           created_by: string
@@ -225,6 +226,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bid?: string | null
           category?: string | null
           created_at?: string
           created_by: string
@@ -240,6 +242,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bid?: string | null
           category?: string | null
           created_at?: string
           created_by?: string
@@ -2086,6 +2089,7 @@ export type Database = {
             Args: { p_request_id: string; p_status?: string; p_user_id: string }
             Returns: string
           }
+      generate_asset_bid: { Args: { p_store_id: string }; Returns: string }
       generate_booking_bid:
         | {
             Args: { booking_date: string; p_store_id: string }
