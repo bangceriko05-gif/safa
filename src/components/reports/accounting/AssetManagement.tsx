@@ -242,8 +242,8 @@ export default function AssetManagement() {
         <DialogContent>
           <DialogHeader><DialogTitle>{editingAsset ? "Edit Aset" : "Tambah Aset"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {editingAsset?.bid && (
-              <div className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">BID: <span className="font-mono font-medium">{editingAsset.bid}</span></div>
+            {editingAsset && (
+              <div className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">BID: <span className="font-mono font-medium">{editingAsset.bid || "-"}</span></div>
             )}
             <div className="space-y-2"><Label>Nama Aset</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="contoh: AC Kamar 101" /></div>
             <div className="space-y-2"><Label>Kategori</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="contoh: Elektronik" /></div>
