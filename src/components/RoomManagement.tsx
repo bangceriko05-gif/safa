@@ -549,7 +549,7 @@ export default function RoomManagement() {
     toast.success("Ukuran tampilan berhasil diubah");
   };
 
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
 
   return (
     <div className="space-y-6">
