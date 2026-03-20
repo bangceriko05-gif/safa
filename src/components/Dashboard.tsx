@@ -47,7 +47,7 @@ import { id as idLocale } from "date-fns/locale";
 
 export default function Dashboard() {
   const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName } = useStore();
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);

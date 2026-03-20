@@ -22,7 +22,7 @@ interface TransactionManagementProps {
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
   const { hasPermission, hasAnyPermission } = usePermissions();
   const { currentStore } = useStore();
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
   const isMobile = useIsMobile();
 
