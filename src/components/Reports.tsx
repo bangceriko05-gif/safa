@@ -1158,28 +1158,12 @@ export default function Reports() {
           {isFeatureEnabled("reports.accounting") ? (
             <AccountingReport />
           ) : (
-            (() => {
-              const info = getFeatureInfo("reports.accounting");
-              return (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Scale className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Fitur ini tidak aktif
-                  </h3>
-                  {info.price && (
-                    <p className="text-sm font-medium text-foreground mb-1">{info.price}</p>
-                  )}
-                  {info.description && (
-                    <p className="text-sm text-muted-foreground max-w-md mb-2 whitespace-pre-line">{info.description}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Lakukan pembayaran untuk mengaktifkan fitur Akuntansi.
-                  </p>
-                </div>
-              );
-            })()
+            <FeatureInactiveNotice
+              featureName="Akuntansi"
+              icon={Scale}
+              price={getFeatureInfo("reports.accounting").price}
+              description={getFeatureInfo("reports.accounting").description}
+            />
           )}
         </TabsContent>
       </Tabs>
