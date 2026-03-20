@@ -266,26 +266,40 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                     const ChildIcon = childConfig.icon;
 
                     return (
-                      <div
-                        key={childKey}
-                        className={`flex items-center justify-between p-2.5 rounded-md border transition-colors ${
-                          childFeature.is_enabled
-                            ? "bg-primary/5 border-primary/10"
-                            : "bg-muted/20 border-border opacity-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <ChildIcon className={`h-3.5 w-3.5 ${childFeature.is_enabled ? "text-primary" : "text-muted-foreground"}`} />
-                          <span className="text-sm">{childConfig.label}</span>
+                      <div key={childKey} className="space-y-1">
+                        <div
+                          className={`flex items-center justify-between p-2.5 rounded-md border transition-colors ${
+                            childFeature.is_enabled
+                              ? "bg-primary/5 border-primary/10"
+                              : "bg-muted/20 border-border opacity-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChildIcon className={`h-3.5 w-3.5 ${childFeature.is_enabled ? "text-primary" : "text-muted-foreground"}`} />
+                            <span className="text-sm">{childConfig.label}</span>
+                            {!childFeature.is_enabled && (
+                              <button
+                                onClick={() => setEditingMeta(editingMeta === childKey ? null : childKey)}
+                                className="ml-1 p-0.5 rounded hover:bg-muted"
+                                title="Edit info aktivasi"
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            )}
+                            {!childFeature.is_enabled && childFeature.activation_price && editingMeta !== childKey && (
+                              <span className="text-xs text-muted-foreground ml-1">— {childFeature.activation_price}</span>
+                            )}
+                          </div>
+                          <Switch
+                            checked={childFeature.is_enabled}
+                            onCheckedChange={() => handleToggle(childFeature)}
+                            disabled={updating === childFeature.id}
+                          />
                         </div>
-                        <Switch
-                          checked={childFeature.is_enabled}
-                          onCheckedChange={() => handleToggle(childFeature)}
-                          disabled={updating === childFeature.id}
-                        />
+                        {editingMeta === childKey && !childFeature.is_enabled && (
+                          <FeatureMetaEditor feature={childFeature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
+                        )}
                       </div>
-                    );
-                  })}
                 </div>
               )}
             </div>
