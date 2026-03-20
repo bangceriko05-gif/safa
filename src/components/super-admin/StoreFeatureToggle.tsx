@@ -11,6 +11,8 @@ interface StoreFeature {
   store_id: string;
   feature_key: string;
   is_enabled: boolean;
+  activation_price: string | null;
+  activation_description: string | null;
 }
 
 interface FeatureConfig {
