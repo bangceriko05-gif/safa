@@ -589,95 +589,121 @@ export default function Dashboard() {
           })()}
 
           <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
-            {/* Room Summary - shown for all store types */}
-            <RoomSummary selectedDate={selectedDate} />
-
-            {/* Conditional rendering based on store calendar type */}
-            {currentStore?.calendar_type === "pms" ? (
-              /* PMS Calendar for hotel/kost type stores */
+            {isFeatureEnabled("calendar") ? (
               <>
-                {depositMode && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-amber-600" />
-                    <span className="text-amber-800 font-medium">
-                      Mode Deposit: Klik pada baris kamar untuk menambahkan deposit
-                    </span>
-                  </div>
+                {/* Room Summary - shown for all store types */}
+                <RoomSummary selectedDate={selectedDate} />
+
+                {/* Conditional rendering based on store calendar type */}
+                {currentStore?.calendar_type === "pms" ? (
+                  /* PMS Calendar for hotel/kost type stores */
+                  <>
+                    {depositMode && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-amber-600" />
+                        <span className="text-amber-800 font-medium">
+                          Mode Deposit: Klik pada baris kamar untuk menambahkan deposit
+                        </span>
+                      </div>
+                    )}
+                    <PMSCalendar
+                      selectedDate={selectedDate}
+                      userRole={userRole}
+                      onAddBooking={handleAddBooking}
+                      onEditBooking={handleEditBooking}
+                      onDateChange={setSelectedDate}
+                      depositMode={depositMode}
+                      onDepositModeChange={setDepositMode}
+                      onDepositRoomSelect={async (roomId) => {
+                        const { data: room } = await supabase
+                          .from("rooms")
+                          .select("name")
+                          .eq("id", roomId)
+                          .single();
+                        
+                        setDepositRoomId(roomId);
+                        setDepositRoomName(room?.name || "Unknown");
+                        setShowDepositFormModal(true);
+                      }}
+                    />
+                  </>
+                ) : (
+                  /* Regular schedule table for hourly booking stores */
+                  <>
+                    {/* Date Navigation */}
+                    <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
+
+                    {/* Schedule Table */}
+                    <ScheduleTable
+                      selectedDate={selectedDate}
+                      userRole={userRole}
+                      onAddBooking={handleAddBooking}
+                      onEditBooking={handleEditBooking}
+                      displaySize={displaySize}
+                    />
+                  </>
                 )}
-                <PMSCalendar
-                  selectedDate={selectedDate}
-                  userRole={userRole}
-                  onAddBooking={handleAddBooking}
-                  onEditBooking={handleEditBooking}
-                  onDateChange={setSelectedDate}
-                  depositMode={depositMode}
-                  onDepositModeChange={setDepositMode}
-                  onDepositRoomSelect={async (roomId) => {
-                    const { data: room } = await supabase
-                      .from("rooms")
-                      .select("name")
-                      .eq("id", roomId)
-                      .single();
-                    
-                    setDepositRoomId(roomId);
-                    setDepositRoomName(room?.name || "Unknown");
-                    setShowDepositFormModal(true);
-                  }}
-                />
               </>
             ) : (
-              /* Regular schedule table for hourly booking stores */
-              <>
-                {/* Date Navigation */}
-                <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
-
-                {/* Schedule Table */}
-                <ScheduleTable
-                  selectedDate={selectedDate}
-                  userRole={userRole}
-                  onAddBooking={handleAddBooking}
-                  onEditBooking={handleEditBooking}
-                  displaySize={displaySize}
-                />
-              </>
+              <FeatureInactiveNotice featureName="Kalender" icon={Calendar} price={getFeatureInfo("calendar").price} description={getFeatureInfo("calendar").description} />
             )}
           </TabsContent>
 
           <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
-            <TransactionManagement 
-              userRole={userRole} 
-              onEditBooking={handleEditBooking} 
-              onAddBooking={() => {
-                setEditingBooking(null);
-                setSelectedSlot(null);
-                setIsModalOpen(true);
-              }}
-              onAddDeposit={() => {
-                setDepositRoomId(null);
-                setDepositRoomName("");
-                setShowDepositFormModal(true);
-              }}
-              depositRefreshTrigger={depositRefreshTrigger}
-            />
+            {isFeatureEnabled("transactions") ? (
+              <TransactionManagement 
+                userRole={userRole} 
+                onEditBooking={handleEditBooking} 
+                onAddBooking={() => {
+                  setEditingBooking(null);
+                  setSelectedSlot(null);
+                  setIsModalOpen(true);
+                }}
+                onAddDeposit={() => {
+                  setDepositRoomId(null);
+                  setDepositRoomName("");
+                  setShowDepositFormModal(true);
+                }}
+                depositRefreshTrigger={depositRefreshTrigger}
+              />
+            ) : (
+              <FeatureInactiveNotice featureName="Transaksi" icon={Receipt} price={getFeatureInfo("transactions").price} description={getFeatureInfo("transactions").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
-            <CustomerManagement />
+            {isFeatureEnabled("customers") ? (
+              <CustomerManagement />
+            ) : (
+              <FeatureInactiveNotice featureName="Pelanggan" icon={Users} price={getFeatureInfo("customers").price} description={getFeatureInfo("customers").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
-            <Reports />
+            {isFeatureEnabled("reports") ? (
+              <Reports />
+            ) : (
+              <FeatureInactiveNotice featureName="Laporan" icon={FileText} price={getFeatureInfo("reports").price} description={getFeatureInfo("reports").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="settings" forceMount className={`mt-6 ${activeTab !== "settings" ? "hidden" : ""}`}>
-            <SettingsPage userRole={userRole} />
+            {isFeatureEnabled("settings") ? (
+              <SettingsPage userRole={userRole} />
+            ) : (
+              <FeatureInactiveNotice featureName="Pengaturan" icon={Settings} price={getFeatureInfo("settings").price} description={getFeatureInfo("settings").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
-            {hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
-              <RoomManagement />
+            {isFeatureEnabled("products_inventory") ? (
+              hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
+                <RoomManagement />
+              ) : (
+                <NoAccessMessage featureName="Produk & Inventori" />
+              )
             ) : (
-              <NoAccessMessage featureName="Produk & Inventori" />
+              <FeatureInactiveNotice featureName="Produk & Inventori" icon={Package} price={getFeatureInfo("products_inventory").price} description={getFeatureInfo("products_inventory").description} />
             )}
           </TabsContent>
 
