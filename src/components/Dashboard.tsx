@@ -711,32 +711,40 @@ export default function Dashboard() {
           {(userRole === "admin" || userRole === "leader") && (
             <>
               <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
-                <ActivityLog />
+                {isFeatureEnabled("activity_log") ? (
+                  <ActivityLog />
+                ) : (
+                  <FeatureInactiveNotice featureName="Log Aktivitas" icon={History} price={getFeatureInfo("activity_log").price} description={getFeatureInfo("activity_log").description} />
+                )}
               </TabsContent>
 
               <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
-                <Tabs defaultValue="user-management" className="space-y-4">
-                  <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
-                    <TabsTrigger value="user-management" className="flex items-center gap-2">
-                      <UserCog className="h-4 w-4" />
-                      Manajemen Pengguna
-                    </TabsTrigger>
-                    {userRole === "admin" && (
-                      <TabsTrigger value="permission-management" className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Manajemen Permission
+                {isFeatureEnabled("user_management") ? (
+                  <Tabs defaultValue="user-management" className="space-y-4">
+                    <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
+                      <TabsTrigger value="user-management" className="flex items-center gap-2">
+                        <UserCog className="h-4 w-4" />
+                        Manajemen Pengguna
                       </TabsTrigger>
-                    )}
-                  </TabsList>
-                  <TabsContent value="user-management">
-                    <UserManagement />
-                  </TabsContent>
-                  {userRole === "admin" && (
-                    <TabsContent value="permission-management">
-                      <PermissionManagement />
+                      {userRole === "admin" && (
+                        <TabsTrigger value="permission-management" className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Manajemen Permission
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+                    <TabsContent value="user-management">
+                      <UserManagement />
                     </TabsContent>
-                  )}
-                </Tabs>
+                    {userRole === "admin" && (
+                      <TabsContent value="permission-management">
+                        <PermissionManagement />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                ) : (
+                  <FeatureInactiveNotice featureName="Manajemen Pengguna" icon={UserCog} price={getFeatureInfo("user_management").price} description={getFeatureInfo("user_management").description} />
+                )}
               </TabsContent>
             </>
           )}
