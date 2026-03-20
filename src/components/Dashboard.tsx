@@ -540,67 +540,49 @@ export default function Dashboard() {
 
           {/* Desktop: Tabs */}
           {(() => {
-            const tabs = [];
-            if (isFeatureEnabled("calendar")) tabs.push("calendar");
-            if (isFeatureEnabled("transactions")) tabs.push("transactions");
-            if (isFeatureEnabled("customers")) tabs.push("customers");
-            if (isFeatureEnabled("reports")) tabs.push("reports");
-            if (isFeatureEnabled("settings")) tabs.push("settings");
-            if (isFeatureEnabled("products_inventory")) tabs.push("products_inventory");
-            if (isFeatureEnabled("booking_requests")) tabs.push("booking_requests");
-            if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log")) tabs.push("activity_log");
-            if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management")) tabs.push("user_management");
+            const tabs = ["calendar", "transactions", "customers", "reports", "settings", "products_inventory"];
+            if (userRole === "admin" || userRole === "leader") {
+              tabs.push("activity_log", "user_management");
+            }
             const cols = tabs.length;
 
             return (
               <TabsList className="hidden lg:grid w-full max-w-7xl" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-                {isFeatureEnabled("calendar") && (
-                  <TabsTrigger value="bookings">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Kalender
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("transactions") && (
-                  <TabsTrigger value="transactions">
-                    <Receipt className="mr-2 h-4 w-4" />
-                    Transaksi
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("customers") && (
-                  <TabsTrigger value="customers">
-                    <Users className="mr-2 h-4 w-4" />
-                    Pelanggan
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("reports") && (
-                  <TabsTrigger value="reports">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Laporan
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("settings") && (
-                  <TabsTrigger value="settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Pengaturan
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("products_inventory") && (
-                  <TabsTrigger value="rooms">
-                    <Package className="mr-2 h-4 w-4" />
-                    Produk & Inventori
-                  </TabsTrigger>
-                )}
-                {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log") && (
-                  <TabsTrigger value="activity">
-                    <History className="mr-2 h-4 w-4" />
-                    Log
-                  </TabsTrigger>
-                )}
-                {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management") && (
-                  <TabsTrigger value="users">
-                    <UserCog className="mr-2 h-4 w-4" />
-                    Pengguna
-                  </TabsTrigger>
+                <TabsTrigger value="bookings">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Kalender
+                </TabsTrigger>
+                <TabsTrigger value="transactions">
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Transaksi
+                </TabsTrigger>
+                <TabsTrigger value="customers">
+                  <Users className="mr-2 h-4 w-4" />
+                  Pelanggan
+                </TabsTrigger>
+                <TabsTrigger value="reports">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Laporan
+                </TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Pengaturan
+                </TabsTrigger>
+                <TabsTrigger value="rooms">
+                  <Package className="mr-2 h-4 w-4" />
+                  Produk & Inventori
+                </TabsTrigger>
+                {(userRole === "admin" || userRole === "leader") && (
+                  <>
+                    <TabsTrigger value="activity">
+                      <History className="mr-2 h-4 w-4" />
+                      Log
+                    </TabsTrigger>
+                    <TabsTrigger value="users">
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Pengguna
+                    </TabsTrigger>
+                  </>
                 )}
               </TabsList>
             );
