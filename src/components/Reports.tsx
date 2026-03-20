@@ -1069,19 +1069,19 @@ export default function Reports() {
       ) : (
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
         <TabsList className="flex w-full">
-          {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
+          {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
             <TabsTrigger value="overview" className="flex items-center gap-1.5 flex-1">
               <LayoutGrid className="h-4 w-4" />
               <span className="hidden sm:inline">Keseluruhan</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && isFeatureEnabled("reports.sales") && (
+          {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
             <TabsTrigger value="sales" className="flex items-center gap-1.5 flex-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Penjualan</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && isFeatureEnabled("reports.income_expense") && (
+          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
             <TabsTrigger value="income-expense" className="flex items-center gap-1.5 flex-1">
               <Receipt className="h-4 w-4" />
               <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
@@ -1093,13 +1093,13 @@ export default function Reports() {
               <span className="hidden sm:inline">Metode Payment</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
+          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
             <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline">Pembelian</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && isFeatureEnabled("reports.employee") && (
+          {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
             <TabsTrigger value="employee" className="flex items-center gap-1.5 flex-1">
               <UserCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Kinerja</span>
