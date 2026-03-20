@@ -556,10 +556,12 @@ export default function RoomManagement() {
   return (
     <div className="space-y-6">
       {/* Product Management Section */}
-      {isFeatureEnabled("products_inventory.products") && <ProductManagement />}
+      {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
+        <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
+      )}
 
       {/* Room Management Section */}
-      {isFeatureEnabled("products_inventory.rooms") && (
+      {isFeatureEnabled("products_inventory.rooms") ? (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
