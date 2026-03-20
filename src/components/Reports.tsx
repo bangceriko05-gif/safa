@@ -33,6 +33,7 @@ import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AccountingReport from "./reports/AccountingReport";
 import PaymentMethodReport from "./reports/PaymentMethodReport";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
 
 interface ReportStats {
   totalTransactions: number;
@@ -1068,19 +1069,19 @@ export default function Reports() {
       ) : (
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
         <TabsList className="flex w-full">
-          {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
+          {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
             <TabsTrigger value="overview" className="flex items-center gap-1.5 flex-1">
               <LayoutGrid className="h-4 w-4" />
               <span className="hidden sm:inline">Keseluruhan</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && isFeatureEnabled("reports.sales") && (
+          {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
             <TabsTrigger value="sales" className="flex items-center gap-1.5 flex-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Penjualan</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && isFeatureEnabled("reports.income_expense") && (
+          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
             <TabsTrigger value="income-expense" className="flex items-center gap-1.5 flex-1">
               <Receipt className="h-4 w-4" />
               <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
@@ -1092,13 +1093,13 @@ export default function Reports() {
               <span className="hidden sm:inline">Metode Payment</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
+          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
             <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline">Pembelian</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && isFeatureEnabled("reports.employee") && (
+          {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
             <TabsTrigger value="employee" className="flex items-center gap-1.5 flex-1">
               <UserCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Kinerja</span>
@@ -1110,29 +1111,43 @@ export default function Reports() {
           </TabsTrigger>
         </TabsList>
 
-        {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
+        {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
           <TabsContent value="overview" className="mt-4">
-            <div className="flex justify-end mb-4">
-              <ReportDateFilter
-                timeRange={timeRange}
-                onTimeRangeChange={setTimeRange}
-                customDateRange={customDateRange}
-                onCustomDateRangeChange={setCustomDateRange}
-              />
-            </div>
-            {renderOverviewContent()}
+            {isFeatureEnabled("reports.overview") ? (
+              <>
+                <div className="flex justify-end mb-4">
+                  <ReportDateFilter
+                    timeRange={timeRange}
+                    onTimeRangeChange={setTimeRange}
+                    customDateRange={customDateRange}
+                    onCustomDateRangeChange={setCustomDateRange}
+                  />
+                </div>
+                {renderOverviewContent()}
+              </>
+            ) : (
+              <FeatureInactiveNotice featureName="Keseluruhan" icon={LayoutGrid} price={getFeatureInfo("reports.overview").price} description={getFeatureInfo("reports.overview").description} />
+            )}
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && isFeatureEnabled("reports.sales") && (
+        {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
           <TabsContent value="sales" className="mt-4">
-            <SalesReport />
+            {isFeatureEnabled("reports.sales") ? (
+              <SalesReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Penjualan" icon={DollarSign} price={getFeatureInfo("reports.sales").price} description={getFeatureInfo("reports.sales").description} />
+            )}
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && isFeatureEnabled("reports.income_expense") && (
+        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
           <TabsContent value="income-expense" className="mt-4">
-            <IncomeExpenseReport />
+            {isFeatureEnabled("reports.income_expense") ? (
+              <IncomeExpenseReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Pemasukan/Pengeluaran" icon={Receipt} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
+            )}
           </TabsContent>
         )}
 
@@ -1142,15 +1157,23 @@ export default function Reports() {
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
+        {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
           <TabsContent value="purchase" className="mt-4">
-            <PurchaseReport />
+            {isFeatureEnabled("reports.purchase") ? (
+              <PurchaseReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("reports.purchase").price} description={getFeatureInfo("reports.purchase").description} />
+            )}
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && isFeatureEnabled("reports.employee") && (
+        {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
           <TabsContent value="employee" className="mt-4">
-            <EmployeePerformanceReport />
+            {isFeatureEnabled("reports.employee") ? (
+              <EmployeePerformanceReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Kinerja Karyawan" icon={UserCheck} price={getFeatureInfo("reports.employee").price} description={getFeatureInfo("reports.employee").description} />
+            )}
           </TabsContent>
         )}
 
@@ -1158,28 +1181,12 @@ export default function Reports() {
           {isFeatureEnabled("reports.accounting") ? (
             <AccountingReport />
           ) : (
-            (() => {
-              const info = getFeatureInfo("reports.accounting");
-              return (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Scale className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Fitur ini tidak aktif
-                  </h3>
-                  {info.price && (
-                    <p className="text-sm font-medium text-foreground mb-1">{info.price}</p>
-                  )}
-                  {info.description && (
-                    <p className="text-sm text-muted-foreground max-w-md mb-2 whitespace-pre-line">{info.description}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Lakukan pembayaran untuk mengaktifkan fitur Akuntansi.
-                  </p>
-                </div>
-              );
-            })()
+            <FeatureInactiveNotice
+              featureName="Akuntansi"
+              icon={Scale}
+              price={getFeatureInfo("reports.accounting").price}
+              description={getFeatureInfo("reports.accounting").description}
+            />
           )}
         </TabsContent>
       </Tabs>

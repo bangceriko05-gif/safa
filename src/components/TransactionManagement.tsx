@@ -5,6 +5,7 @@ import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import DepositManagement from "./deposit/DepositManagement";
 import NoAccessMessage from "./NoAccessMessage";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import { useStore } from "@/contexts/StoreContext";
@@ -19,10 +20,17 @@ interface TransactionManagementProps {
   depositRefreshTrigger: number;
 }
 
+const ALL_TABS = [
+  { key: "list-booking", feature: "transactions.list_booking", label: "List Booking", icon: List },
+  { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
+  { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: TrendingUp },
+  { key: "deposits", feature: "transactions.deposits", label: "Deposit", icon: Shield },
+];
+
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
   const { hasPermission, hasAnyPermission } = usePermissions();
   const { currentStore } = useStore();
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
   const isMobile = useIsMobile();
 
@@ -35,15 +43,8 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
     return <NoAccessMessage featureName="Transaksi" />;
   }
 
-  const tabs = [
-    { key: "list-booking", feature: "transactions.list_booking", label: "List Booking", icon: List },
-    { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
-    { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: TrendingUp },
-    { key: "deposits", feature: "transactions.deposits", label: "Deposit", icon: Shield },
-  ].filter(t => isFeatureEnabled(t.feature));
-
-  const currentTab = tabs.some(t => t.key === activeSubTab) ? activeSubTab : tabs[0]?.key;
-  const currentTabData = tabs.find(t => t.key === currentTab);
+  const currentTab = ALL_TABS.some(t => t.key === activeSubTab) ? activeSubTab : ALL_TABS[0]?.key;
+  const currentTabData = ALL_TABS.find(t => t.key === currentTab);
 
   return (
     <div className="space-y-4">
@@ -57,7 +58,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
               </div>
             </SelectTrigger>
             <SelectContent>
-              {tabs.map(tab => (
+              {ALL_TABS.map(tab => (
                 <SelectItem key={tab.key} value={tab.key}>
                   <div className="flex items-center gap-2">
                     <tab.icon className="h-4 w-4" />
@@ -68,8 +69,8 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
             </SelectContent>
           </Select>
         ) : (
-          <TabsList className="grid w-full max-w-2xl" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
-            {tabs.map(tab => (
+          <TabsList className="grid w-full max-w-2xl" style={{ gridTemplateColumns: `repeat(${ALL_TABS.length}, 1fr)` }}>
+            {ALL_TABS.map(tab => (
               <TabsTrigger key={tab.key} value={tab.key}>
                 <tab.icon className="mr-2 h-4 w-4" />
                 {tab.label}
@@ -78,29 +79,37 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           </TabsList>
         )}
 
-        {isFeatureEnabled("transactions.list_booking") && (
-          <TabsContent value="list-booking" className="mt-4">
+        <TabsContent value="list-booking" className="mt-4">
+          {isFeatureEnabled("transactions.list_booking") ? (
             <ListBooking userRole={userRole} onEditBooking={onEditBooking} onAddBooking={onAddBooking} />
-          </TabsContent>
-        )}
+          ) : (
+            <FeatureInactiveNotice featureName="List Booking" icon={List} price={getFeatureInfo("transactions.list_booking").price} description={getFeatureInfo("transactions.list_booking").description} />
+          )}
+        </TabsContent>
 
-        {isFeatureEnabled("transactions.expenses") && (
-          <TabsContent value="expenses" className="mt-4">
+        <TabsContent value="expenses" className="mt-4">
+          {isFeatureEnabled("transactions.expenses") ? (
             <IncomeExpenseReport initialTab="expenses" showAddButton hideDateFilter />
-          </TabsContent>
-        )}
+          ) : (
+            <FeatureInactiveNotice featureName="Pengeluaran" icon={TrendingDown} price={getFeatureInfo("transactions.expenses").price} description={getFeatureInfo("transactions.expenses").description} />
+          )}
+        </TabsContent>
 
-        {isFeatureEnabled("transactions.incomes") && (
-          <TabsContent value="incomes" className="mt-4">
+        <TabsContent value="incomes" className="mt-4">
+          {isFeatureEnabled("transactions.incomes") ? (
             <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
-          </TabsContent>
-        )}
+          ) : (
+            <FeatureInactiveNotice featureName="Pemasukan" icon={TrendingUp} price={getFeatureInfo("transactions.incomes").price} description={getFeatureInfo("transactions.incomes").description} />
+          )}
+        </TabsContent>
 
-        {isFeatureEnabled("transactions.deposits") && (
-          <TabsContent value="deposits" className="mt-4">
+        <TabsContent value="deposits" className="mt-4">
+          {isFeatureEnabled("transactions.deposits") ? (
             <DepositManagement refreshTrigger={depositRefreshTrigger} onAddDeposit={onAddDeposit} />
-          </TabsContent>
-        )}
+          ) : (
+            <FeatureInactiveNotice featureName="Deposit" icon={Shield} price={getFeatureInfo("transactions.deposits").price} description={getFeatureInfo("transactions.deposits").description} />
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );

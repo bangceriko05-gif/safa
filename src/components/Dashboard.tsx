@@ -36,6 +36,7 @@ import BookingRequestsManagement from "./BookingRequestsManagement";
 import TransactionManagement from "./TransactionManagement";
 import DepositFormModal from "./deposit/DepositFormModal";
 import StoreInactiveNotice from "./StoreInactiveNotice";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 
@@ -47,7 +48,7 @@ import { id as idLocale } from "date-fns/locale";
 
 export default function Dashboard() {
   const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName } = useStore();
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -505,48 +506,32 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {isFeatureEnabled("calendar") && (
-                  <SelectItem value="bookings">
-                    <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("transactions") && (
-                  <SelectItem value="transactions">
-                    <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("customers") && (
-                  <SelectItem value="customers">
-                    <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("reports") && (
-                  <SelectItem value="reports">
-                    <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("settings") && (
-                  <SelectItem value="settings">
-                    <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("products_inventory") && (
-                  <SelectItem value="rooms">
-                    <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
-                  </SelectItem>
-                )}
+                <SelectItem value="bookings">
+                  <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
+                </SelectItem>
+                <SelectItem value="transactions">
+                  <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
+                </SelectItem>
+                <SelectItem value="customers">
+                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
+                </SelectItem>
+                <SelectItem value="reports">
+                  <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
+                </SelectItem>
+                <SelectItem value="settings">
+                  <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
+                </SelectItem>
+                <SelectItem value="rooms">
+                  <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
+                </SelectItem>
                 {(userRole === "admin" || userRole === "leader") && (
                   <>
-                    {isFeatureEnabled("activity_log") && (
-                      <SelectItem value="activity">
-                        <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
-                      </SelectItem>
-                    )}
-                    {isFeatureEnabled("user_management") && (
-                      <SelectItem value="users">
-                        <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
-                      </SelectItem>
-                    )}
+                    <SelectItem value="activity">
+                      <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
+                    </SelectItem>
+                    <SelectItem value="users">
+                      <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
+                    </SelectItem>
                   </>
                 )}
               </SelectContent>
@@ -555,162 +540,170 @@ export default function Dashboard() {
 
           {/* Desktop: Tabs */}
           {(() => {
-            const tabs = [];
-            if (isFeatureEnabled("calendar")) tabs.push("calendar");
-            if (isFeatureEnabled("transactions")) tabs.push("transactions");
-            if (isFeatureEnabled("customers")) tabs.push("customers");
-            if (isFeatureEnabled("reports")) tabs.push("reports");
-            if (isFeatureEnabled("settings")) tabs.push("settings");
-            if (isFeatureEnabled("products_inventory")) tabs.push("products_inventory");
-            if (isFeatureEnabled("booking_requests")) tabs.push("booking_requests");
-            if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log")) tabs.push("activity_log");
-            if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management")) tabs.push("user_management");
+            const tabs = ["calendar", "transactions", "customers", "reports", "settings", "products_inventory"];
+            if (userRole === "admin" || userRole === "leader") {
+              tabs.push("activity_log", "user_management");
+            }
             const cols = tabs.length;
 
             return (
               <TabsList className="hidden lg:grid w-full max-w-7xl" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-                {isFeatureEnabled("calendar") && (
-                  <TabsTrigger value="bookings">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Kalender
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("transactions") && (
-                  <TabsTrigger value="transactions">
-                    <Receipt className="mr-2 h-4 w-4" />
-                    Transaksi
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("customers") && (
-                  <TabsTrigger value="customers">
-                    <Users className="mr-2 h-4 w-4" />
-                    Pelanggan
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("reports") && (
-                  <TabsTrigger value="reports">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Laporan
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("settings") && (
-                  <TabsTrigger value="settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Pengaturan
-                  </TabsTrigger>
-                )}
-                {isFeatureEnabled("products_inventory") && (
-                  <TabsTrigger value="rooms">
-                    <Package className="mr-2 h-4 w-4" />
-                    Produk & Inventori
-                  </TabsTrigger>
-                )}
-                {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("activity_log") && (
-                  <TabsTrigger value="activity">
-                    <History className="mr-2 h-4 w-4" />
-                    Log
-                  </TabsTrigger>
-                )}
-                {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("user_management") && (
-                  <TabsTrigger value="users">
-                    <UserCog className="mr-2 h-4 w-4" />
-                    Pengguna
-                  </TabsTrigger>
+                <TabsTrigger value="bookings">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Kalender
+                </TabsTrigger>
+                <TabsTrigger value="transactions">
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Transaksi
+                </TabsTrigger>
+                <TabsTrigger value="customers">
+                  <Users className="mr-2 h-4 w-4" />
+                  Pelanggan
+                </TabsTrigger>
+                <TabsTrigger value="reports">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Laporan
+                </TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Pengaturan
+                </TabsTrigger>
+                <TabsTrigger value="rooms">
+                  <Package className="mr-2 h-4 w-4" />
+                  Produk & Inventori
+                </TabsTrigger>
+                {(userRole === "admin" || userRole === "leader") && (
+                  <>
+                    <TabsTrigger value="activity">
+                      <History className="mr-2 h-4 w-4" />
+                      Log
+                    </TabsTrigger>
+                    <TabsTrigger value="users">
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Pengguna
+                    </TabsTrigger>
+                  </>
                 )}
               </TabsList>
             );
           })()}
 
           <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
-            {/* Room Summary - shown for all store types */}
-            <RoomSummary selectedDate={selectedDate} />
-
-            {/* Conditional rendering based on store calendar type */}
-            {currentStore?.calendar_type === "pms" ? (
-              /* PMS Calendar for hotel/kost type stores */
+            {isFeatureEnabled("calendar") ? (
               <>
-                {depositMode && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-amber-600" />
-                    <span className="text-amber-800 font-medium">
-                      Mode Deposit: Klik pada baris kamar untuk menambahkan deposit
-                    </span>
-                  </div>
+                {/* Room Summary - shown for all store types */}
+                <RoomSummary selectedDate={selectedDate} />
+
+                {/* Conditional rendering based on store calendar type */}
+                {currentStore?.calendar_type === "pms" ? (
+                  /* PMS Calendar for hotel/kost type stores */
+                  <>
+                    {depositMode && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-amber-600" />
+                        <span className="text-amber-800 font-medium">
+                          Mode Deposit: Klik pada baris kamar untuk menambahkan deposit
+                        </span>
+                      </div>
+                    )}
+                    <PMSCalendar
+                      selectedDate={selectedDate}
+                      userRole={userRole}
+                      onAddBooking={handleAddBooking}
+                      onEditBooking={handleEditBooking}
+                      onDateChange={setSelectedDate}
+                      depositMode={depositMode}
+                      onDepositModeChange={setDepositMode}
+                      onDepositRoomSelect={async (roomId) => {
+                        const { data: room } = await supabase
+                          .from("rooms")
+                          .select("name")
+                          .eq("id", roomId)
+                          .single();
+                        
+                        setDepositRoomId(roomId);
+                        setDepositRoomName(room?.name || "Unknown");
+                        setShowDepositFormModal(true);
+                      }}
+                    />
+                  </>
+                ) : (
+                  /* Regular schedule table for hourly booking stores */
+                  <>
+                    {/* Date Navigation */}
+                    <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
+
+                    {/* Schedule Table */}
+                    <ScheduleTable
+                      selectedDate={selectedDate}
+                      userRole={userRole}
+                      onAddBooking={handleAddBooking}
+                      onEditBooking={handleEditBooking}
+                      displaySize={displaySize}
+                    />
+                  </>
                 )}
-                <PMSCalendar
-                  selectedDate={selectedDate}
-                  userRole={userRole}
-                  onAddBooking={handleAddBooking}
-                  onEditBooking={handleEditBooking}
-                  onDateChange={setSelectedDate}
-                  depositMode={depositMode}
-                  onDepositModeChange={setDepositMode}
-                  onDepositRoomSelect={async (roomId) => {
-                    const { data: room } = await supabase
-                      .from("rooms")
-                      .select("name")
-                      .eq("id", roomId)
-                      .single();
-                    
-                    setDepositRoomId(roomId);
-                    setDepositRoomName(room?.name || "Unknown");
-                    setShowDepositFormModal(true);
-                  }}
-                />
               </>
             ) : (
-              /* Regular schedule table for hourly booking stores */
-              <>
-                {/* Date Navigation */}
-                <DateNavigation selectedDate={selectedDate} onDateChange={setSelectedDate} />
-
-                {/* Schedule Table */}
-                <ScheduleTable
-                  selectedDate={selectedDate}
-                  userRole={userRole}
-                  onAddBooking={handleAddBooking}
-                  onEditBooking={handleEditBooking}
-                  displaySize={displaySize}
-                />
-              </>
+              <FeatureInactiveNotice featureName="Kalender" icon={Calendar} price={getFeatureInfo("calendar").price} description={getFeatureInfo("calendar").description} />
             )}
           </TabsContent>
 
           <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
-            <TransactionManagement 
-              userRole={userRole} 
-              onEditBooking={handleEditBooking} 
-              onAddBooking={() => {
-                setEditingBooking(null);
-                setSelectedSlot(null);
-                setIsModalOpen(true);
-              }}
-              onAddDeposit={() => {
-                setDepositRoomId(null);
-                setDepositRoomName("");
-                setShowDepositFormModal(true);
-              }}
-              depositRefreshTrigger={depositRefreshTrigger}
-            />
+            {isFeatureEnabled("transactions") ? (
+              <TransactionManagement 
+                userRole={userRole} 
+                onEditBooking={handleEditBooking} 
+                onAddBooking={() => {
+                  setEditingBooking(null);
+                  setSelectedSlot(null);
+                  setIsModalOpen(true);
+                }}
+                onAddDeposit={() => {
+                  setDepositRoomId(null);
+                  setDepositRoomName("");
+                  setShowDepositFormModal(true);
+                }}
+                depositRefreshTrigger={depositRefreshTrigger}
+              />
+            ) : (
+              <FeatureInactiveNotice featureName="Transaksi" icon={Receipt} price={getFeatureInfo("transactions").price} description={getFeatureInfo("transactions").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
-            <CustomerManagement />
+            {isFeatureEnabled("customers") ? (
+              <CustomerManagement />
+            ) : (
+              <FeatureInactiveNotice featureName="Pelanggan" icon={Users} price={getFeatureInfo("customers").price} description={getFeatureInfo("customers").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
-            <Reports />
+            {isFeatureEnabled("reports") ? (
+              <Reports />
+            ) : (
+              <FeatureInactiveNotice featureName="Laporan" icon={FileText} price={getFeatureInfo("reports").price} description={getFeatureInfo("reports").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="settings" forceMount className={`mt-6 ${activeTab !== "settings" ? "hidden" : ""}`}>
-            <SettingsPage userRole={userRole} />
+            {isFeatureEnabled("settings") ? (
+              <SettingsPage userRole={userRole} />
+            ) : (
+              <FeatureInactiveNotice featureName="Pengaturan" icon={Settings} price={getFeatureInfo("settings").price} description={getFeatureInfo("settings").description} />
+            )}
           </TabsContent>
 
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
-            {hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
-              <RoomManagement />
+            {isFeatureEnabled("products_inventory") ? (
+              hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
+                <RoomManagement />
+              ) : (
+                <NoAccessMessage featureName="Produk & Inventori" />
+              )
             ) : (
-              <NoAccessMessage featureName="Produk & Inventori" />
+              <FeatureInactiveNotice featureName="Produk & Inventori" icon={Package} price={getFeatureInfo("products_inventory").price} description={getFeatureInfo("products_inventory").description} />
             )}
           </TabsContent>
 
@@ -718,32 +711,40 @@ export default function Dashboard() {
           {(userRole === "admin" || userRole === "leader") && (
             <>
               <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
-                <ActivityLog />
+                {isFeatureEnabled("activity_log") ? (
+                  <ActivityLog />
+                ) : (
+                  <FeatureInactiveNotice featureName="Log Aktivitas" icon={History} price={getFeatureInfo("activity_log").price} description={getFeatureInfo("activity_log").description} />
+                )}
               </TabsContent>
 
               <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
-                <Tabs defaultValue="user-management" className="space-y-4">
-                  <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
-                    <TabsTrigger value="user-management" className="flex items-center gap-2">
-                      <UserCog className="h-4 w-4" />
-                      Manajemen Pengguna
-                    </TabsTrigger>
-                    {userRole === "admin" && (
-                      <TabsTrigger value="permission-management" className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Manajemen Permission
+                {isFeatureEnabled("user_management") ? (
+                  <Tabs defaultValue="user-management" className="space-y-4">
+                    <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
+                      <TabsTrigger value="user-management" className="flex items-center gap-2">
+                        <UserCog className="h-4 w-4" />
+                        Manajemen Pengguna
                       </TabsTrigger>
-                    )}
-                  </TabsList>
-                  <TabsContent value="user-management">
-                    <UserManagement />
-                  </TabsContent>
-                  {userRole === "admin" && (
-                    <TabsContent value="permission-management">
-                      <PermissionManagement />
+                      {userRole === "admin" && (
+                        <TabsTrigger value="permission-management" className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Manajemen Permission
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+                    <TabsContent value="user-management">
+                      <UserManagement />
                     </TabsContent>
-                  )}
-                </Tabs>
+                    {userRole === "admin" && (
+                      <TabsContent value="permission-management">
+                        <PermissionManagement />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                ) : (
+                  <FeatureInactiveNotice featureName="Manajemen Pengguna" icon={UserCog} price={getFeatureInfo("user_management").price} description={getFeatureInfo("user_management").description} />
+                )}
               </TabsContent>
             </>
           )}

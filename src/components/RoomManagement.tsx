@@ -34,6 +34,8 @@ import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
+import { ShoppingCart, Bed } from "lucide-react";
 
 interface Room {
   id: string;
@@ -549,15 +551,17 @@ export default function RoomManagement() {
     toast.success("Ukuran tampilan berhasil diubah");
   };
 
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
 
   return (
     <div className="space-y-6">
       {/* Product Management Section */}
-      {isFeatureEnabled("products_inventory.products") && <ProductManagement />}
+      {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
+        <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
+      )}
 
       {/* Room Management Section */}
-      {isFeatureEnabled("products_inventory.rooms") && (
+      {isFeatureEnabled("products_inventory.rooms") ? (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -740,6 +744,8 @@ export default function RoomManagement() {
         </CardContent>
         )}
       </Card>
+      ) : (
+        <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("products_inventory.rooms").price} description={getFeatureInfo("products_inventory.rooms").description} />
       )}
 
       {/* Add/Edit Room Dialog */}

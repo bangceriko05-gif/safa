@@ -248,6 +248,18 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                     <p className="text-sm font-medium">{config.label}</p>
                     <p className="text-xs text-muted-foreground">{config.description}</p>
                   </div>
+                  {!feature.is_enabled && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingMeta(editingMeta === key ? null : key); }}
+                      className="ml-1 p-0.5 rounded hover:bg-muted"
+                      title="Edit info aktivasi"
+                    >
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  )}
+                  {!feature.is_enabled && feature.activation_price && editingMeta !== key && (
+                    <span className="text-xs text-muted-foreground ml-1">— {feature.activation_price}</span>
+                  )}
                 </div>
                 <Switch
                   checked={feature.is_enabled}
@@ -255,6 +267,9 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                   disabled={updating === feature.id}
                 />
               </div>
+              {editingMeta === key && !feature.is_enabled && (
+                <FeatureMetaEditor feature={feature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
+              )}
 
               {/* Sub-features */}
               {hasChildren && isExpanded && feature.is_enabled && (

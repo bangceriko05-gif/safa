@@ -10,6 +10,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
@@ -31,7 +32,7 @@ interface SettingsPageProps {
 export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   
@@ -304,62 +305,48 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {(() => {
-          const settingsTabs = [];
-          if (isFeatureEnabled("settings.display")) settingsTabs.push("display");
-          if (isFeatureEnabled("settings.colors")) settingsTabs.push("colors");
-          if (isFeatureEnabled("settings.notifications")) settingsTabs.push("notifications");
-          if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print")) settingsTabs.push("print");
-          if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms")) settingsTabs.push("rooms");
-          if ((userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota")) settingsTabs.push("ota");
-          if ((userRole === "admin" || userRole === "leader")) settingsTabs.push("payment-methods");
-          if (userRole === "admin" && isFeatureEnabled("settings.outlet")) settingsTabs.push("outlet");
+          const settingsTabs = ["display", "colors", "notifications"];
+          if (userRole === "admin" || userRole === "leader") {
+            settingsTabs.push("print", "rooms", "ota", "payment-methods");
+          }
+          if (userRole === "admin") settingsTabs.push("outlet");
           const cols = settingsTabs.length;
 
           return (
             <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-              {isFeatureEnabled("settings.display") && (
-                <TabsTrigger value="display" className="text-xs sm:text-sm">
-                  <Monitor className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Tampilan</span>
-                </TabsTrigger>
-              )}
-              {isFeatureEnabled("settings.colors") && (
-                <TabsTrigger value="colors" className="text-xs sm:text-sm">
-                  <Palette className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Warna</span>
-                </TabsTrigger>
-              )}
-              {isFeatureEnabled("settings.notifications") && (
-                <TabsTrigger value="notifications" className="text-xs sm:text-sm">
-                  <Bell className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Notifikasi</span>
-                </TabsTrigger>
-              )}
-              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.print") && (
-                <TabsTrigger value="print" className="text-xs sm:text-sm">
-                  <Printer className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Nota</span>
-                </TabsTrigger>
-              )}
-              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.rooms") && (
-                <TabsTrigger value="rooms" className="text-xs sm:text-sm">
-                  <Bed className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Kamar</span>
-                </TabsTrigger>
-              )}
-              {(userRole === "admin" || userRole === "leader") && isFeatureEnabled("settings.ota") && (
-                <TabsTrigger value="ota" className="text-xs sm:text-sm">
-                  <Globe className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">OTA</span>
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="display" className="text-xs sm:text-sm">
+                <Monitor className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Tampilan</span>
+              </TabsTrigger>
+              <TabsTrigger value="colors" className="text-xs sm:text-sm">
+                <Palette className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Warna</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="text-xs sm:text-sm">
+                <Bell className="mr-1 sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Notifikasi</span>
+              </TabsTrigger>
               {(userRole === "admin" || userRole === "leader") && (
-                <TabsTrigger value="payment-methods" className="text-xs sm:text-sm">
-                  <CreditCard className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Metode Bayar</span>
-                </TabsTrigger>
+                <>
+                  <TabsTrigger value="print" className="text-xs sm:text-sm">
+                    <Printer className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Nota</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="rooms" className="text-xs sm:text-sm">
+                    <Bed className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Kamar</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="ota" className="text-xs sm:text-sm">
+                    <Globe className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">OTA</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="payment-methods" className="text-xs sm:text-sm">
+                    <CreditCard className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Metode Bayar</span>
+                  </TabsTrigger>
+                </>
               )}
-              {userRole === "admin" && isFeatureEnabled("settings.outlet") && (
+              {userRole === "admin" && (
                 <TabsTrigger value="outlet" className="text-xs sm:text-sm">
                   <Store className="mr-1 sm:mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Outlet</span>
@@ -371,259 +358,288 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
 
         {/* Display Settings */}
         <TabsContent value="display" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5" />
-                Pengaturan Tampilan Kalender
-              </CardTitle>
-              <CardDescription>
-                Atur ukuran tampilan kalender okupansi
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Ukuran Tampilan</label>
-                <Select value={displaySize} onValueChange={handleDisplaySizeChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectItem value="normal">Normal - Seimbang</SelectItem>
-                    <SelectItem value="compact">Compact - Muat lebih banyak kamar</SelectItem>
-                    <SelectItem value="large">Extra Compact - Semua kamar tanpa scroll</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          {isFeatureEnabled("settings.display") ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5" />
+                    Pengaturan Tampilan Kalender
+                  </CardTitle>
+                  <CardDescription>
+                    Atur ukuran tampilan kalender okupansi
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Ukuran Tampilan</label>
+                    <Select value={displaySize} onValueChange={handleDisplaySizeChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="normal">Normal - Seimbang</SelectItem>
+                        <SelectItem value="compact">Compact - Muat lebih banyak kamar</SelectItem>
+                        <SelectItem value="large">Extra Compact - Semua kamar tanpa scroll</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Type className="h-5 w-5" />
-                Pengaturan Font
-              </CardTitle>
-              <CardDescription>
-                Atur jenis dan ketebalan font
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Jenis Font</label>
-                  <Select value={fontFamily} onValueChange={handleFontFamilyChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      <SelectItem value="inter">Inter</SelectItem>
-                      <SelectItem value="poppins">Poppins</SelectItem>
-                      <SelectItem value="roboto">Roboto</SelectItem>
-                      <SelectItem value="lato">Lato</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Ketebalan Font</label>
-                  <Select value={fontWeight} onValueChange={handleFontWeightChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="semibold">Semibold</SelectItem>
-                      <SelectItem value="bold">Bold</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Type className="h-5 w-5" />
+                    Pengaturan Font
+                  </CardTitle>
+                  <CardDescription>
+                    Atur jenis dan ketebalan font
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Jenis Font</label>
+                      <Select value={fontFamily} onValueChange={handleFontFamilyChange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          <SelectItem value="inter">Inter</SelectItem>
+                          <SelectItem value="poppins">Poppins</SelectItem>
+                          <SelectItem value="roboto">Roboto</SelectItem>
+                          <SelectItem value="lato">Lato</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Ketebalan Font</label>
+                      <Select value={fontWeight} onValueChange={handleFontWeightChange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          <SelectItem value="light">Light</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="semibold">Semibold</SelectItem>
+                          <SelectItem value="bold">Bold</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <FeatureInactiveNotice featureName="Tampilan" icon={Monitor} price={getFeatureInfo("settings.display").price} description={getFeatureInfo("settings.display").description} />
+          )}
         </TabsContent>
 
         {/* Color Settings */}
         <TabsContent value="colors" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                Warna Tema Aplikasi
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Warna Utama</label>
-                <Select value={primaryColor} onValueChange={handlePrimaryColorChange}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: primaryColor }} />
-                      <span>{primaryColorOptions.find(c => c.value === primaryColor)?.label || primaryColor}</span>
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {primaryColorOptions.map(color => (
-                      <SelectItem key={color.value} value={color.value}>
+          {isFeatureEnabled("settings.colors") ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="h-5 w-5" />
+                    Warna Tema Aplikasi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Warna Utama</label>
+                    <Select value={primaryColor} onValueChange={handlePrimaryColorChange}>
+                      <SelectTrigger>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
-                          <span>{color.label}</span>
+                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: primaryColor }} />
+                          <span>{primaryColorOptions.find(c => c.value === primaryColor)?.label || primaryColor}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Warna Teks Booking</label>
-                <Select value={bookingTextColor} onValueChange={handleBookingTextColorChange}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: bookingTextColor }} />
-                      <span>{textColorOptions.find(c => c.value === bookingTextColor)?.label || bookingTextColor}</span>
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {textColorOptions.map(color => (
-                      <SelectItem key={color.value} value={color.value}>
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {primaryColorOptions.map(color => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
+                              <span>{color.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Warna Teks Booking</label>
+                    <Select value={bookingTextColor} onValueChange={handleBookingTextColorChange}>
+                      <SelectTrigger>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
-                          <span>{color.label}</span>
+                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: bookingTextColor }} />
+                          <span>{textColorOptions.find(c => c.value === bookingTextColor)?.label || bookingTextColor}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {textColorOptions.map(color => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
+                              <span>{color.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Warna Status Booking</CardTitle>
-              <CardDescription>
-                Atur warna untuk setiap status booking (BO, CI, CO, BATAL)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {statusColors.map((statusColor) => (
-                <div key={statusColor.id} className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Warna {statusColor.status}
-                    {statusColor.status === 'BO' && ' (Booking Only)'}
-                    {statusColor.status === 'CI' && ' (Check In)'}
-                    {statusColor.status === 'CO' && ' (Check Out)'}
-                    {statusColor.status === 'BATAL' && ' (Dibatalkan)'}
-                  </label>
-                  <Select 
-                    value={statusColor.color} 
-                    onValueChange={(value) => handleColorChange(statusColor.id, value)}
-                    disabled={!canEditColors}
-                  >
-                    <SelectTrigger>
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded border" style={{ backgroundColor: statusColor.color }} />
-                        <span>{statusColor.color}</span>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {colorOptions.map(color => (
-                        <SelectItem key={color.value} value={color.value}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Warna Status Booking</CardTitle>
+                  <CardDescription>
+                    Atur warna untuk setiap status booking (BO, CI, CO, BATAL)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {statusColors.map((statusColor) => (
+                    <div key={statusColor.id} className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Warna {statusColor.status}
+                        {statusColor.status === 'BO' && ' (Booking Only)'}
+                        {statusColor.status === 'CI' && ' (Check In)'}
+                        {statusColor.status === 'CO' && ' (Check Out)'}
+                        {statusColor.status === 'BATAL' && ' (Dibatalkan)'}
+                      </label>
+                      <Select 
+                        value={statusColor.color} 
+                        onValueChange={(value) => handleColorChange(statusColor.id, value)}
+                        disabled={!canEditColors}
+                      >
+                        <SelectTrigger>
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
-                            <span>{color.label}</span>
+                            <div className="w-6 h-6 rounded border" style={{ backgroundColor: statusColor.color }} />
+                            <span>{statusColor.color}</span>
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-              {/* Ready (Sudah Dipakai) color setting */}
-              <div className="space-y-2 pt-4 border-t border-border">
-                <label className="text-sm font-medium">
-                  Warna Ready (Sudah Dipakai)
-                </label>
-                <p className="text-xs text-muted-foreground">
-                  Warna cell kamar yang sudah pernah diisi dan sudah di-ready-kan
-                </p>
-                <Select 
-                  value={readyUsedColor} 
-                  onValueChange={handleReadyUsedColorChange}
-                >
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: readyUsedColor }} />
-                      <span>{readyUsedColorOptions.find(c => c.value === readyUsedColor)?.label || readyUsedColor}</span>
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          {colorOptions.map(color => (
+                            <SelectItem key={color.value} value={color.value}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
+                                <span>{color.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {readyUsedColorOptions.map(color => (
-                      <SelectItem key={color.value} value={color.value}>
+                  ))}
+                  {/* Ready (Sudah Dipakai) color setting */}
+                  <div className="space-y-2 pt-4 border-t border-border">
+                    <label className="text-sm font-medium">
+                      Warna Ready (Sudah Dipakai)
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Warna cell kamar yang sudah pernah diisi dan sudah di-ready-kan
+                    </p>
+                    <Select 
+                      value={readyUsedColor} 
+                      onValueChange={handleReadyUsedColorChange}
+                    >
+                      <SelectTrigger>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
-                          <span>{color.label}</span>
+                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: readyUsedColor }} />
+                          <span>{readyUsedColorOptions.find(c => c.value === readyUsedColor)?.label || readyUsedColor}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {!canEditColors && (
-                <p className="text-sm text-muted-foreground">
-                  Hanya admin dan leader yang dapat mengubah warna status
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {readyUsedColorOptions.map(color => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded border" style={{ backgroundColor: color.value }} />
+                              <span>{color.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {!canEditColors && (
+                    <p className="text-sm text-muted-foreground">
+                      Hanya admin dan leader yang dapat mengubah warna status
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <FeatureInactiveNotice featureName="Warna" icon={Palette} price={getFeatureInfo("settings.colors").price} description={getFeatureInfo("settings.colors").description} />
+          )}
         </TabsContent>
 
         {/* Notification Settings */}
         <TabsContent value="notifications" className="mt-4">
-          <NotificationSettings />
+          {isFeatureEnabled("settings.notifications") ? (
+            <NotificationSettings />
+          ) : (
+            <FeatureInactiveNotice featureName="Notifikasi" icon={Bell} price={getFeatureInfo("settings.notifications").price} description={getFeatureInfo("settings.notifications").description} />
+          )}
         </TabsContent>
 
         {/* Print Settings */}
         {(userRole === "admin" || userRole === "leader") && (
           <TabsContent value="print" className="mt-4">
-            <PrintSettingsComponent />
+            {isFeatureEnabled("settings.print") ? (
+              <PrintSettingsComponent />
+            ) : (
+              <FeatureInactiveNotice featureName="Nota" icon={Printer} price={getFeatureInfo("settings.print").price} description={getFeatureInfo("settings.print").description} />
+            )}
           </TabsContent>
         )}
 
         {/* Room Settings */}
         {(userRole === "admin" || userRole === "leader") && (
           <TabsContent value="rooms" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bed className="h-5 w-5" />
-                  Pengaturan Jadwal Varian Kamar
-                </CardTitle>
-                <CardDescription>
-                  Atur kapan varian muncul (weekdays/weekends) dan durasi blokir (jam/hari/minggu/bulan)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={() => setIsRoomSettingsOpen(true)}>
-                  Kelola Pengaturan Varian
-                </Button>
-              </CardContent>
-            </Card>
+            {isFeatureEnabled("settings.rooms") ? (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bed className="h-5 w-5" />
+                      Pengaturan Jadwal Varian Kamar
+                    </CardTitle>
+                    <CardDescription>
+                      Atur kapan varian muncul (weekdays/weekends) dan durasi blokir (jam/hari/minggu/bulan)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={() => setIsRoomSettingsOpen(true)}>
+                      Kelola Pengaturan Varian
+                    </Button>
+                  </CardContent>
+                </Card>
 
-            <VariantScheduleSettings 
-              isOpen={isRoomSettingsOpen}
-              onClose={() => setIsRoomSettingsOpen(false)}
-            />
-
+                <VariantScheduleSettings 
+                  isOpen={isRoomSettingsOpen}
+                  onClose={() => setIsRoomSettingsOpen(false)}
+                />
+              </>
+            ) : (
+              <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("settings.rooms").price} description={getFeatureInfo("settings.rooms").description} />
+            )}
           </TabsContent>
         )}
 
         {/* OTA Management */}
         {(userRole === "admin" || userRole === "leader") && (
           <TabsContent value="ota" className="mt-4">
-            <OtaSourceManagement />
+            {isFeatureEnabled("settings.ota") ? (
+              <OtaSourceManagement />
+            ) : (
+              <FeatureInactiveNotice featureName="OTA" icon={Globe} price={getFeatureInfo("settings.ota").price} description={getFeatureInfo("settings.ota").description} />
+            )}
           </TabsContent>
         )}
 
@@ -637,20 +653,24 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         {/* Outlet Management */}
         {userRole === "admin" && (
           <TabsContent value="outlet" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Store className="h-5 w-5" />
-                  Manajemen Outlet
-                </CardTitle>
-                <CardDescription>
-                  Kelola cabang/outlet yang tersedia dalam sistem
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <StoreManagement />
-              </CardContent>
-            </Card>
+            {isFeatureEnabled("settings.outlet") ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Store className="h-5 w-5" />
+                    Manajemen Outlet
+                  </CardTitle>
+                  <CardDescription>
+                    Kelola cabang/outlet yang tersedia dalam sistem
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StoreManagement />
+                </CardContent>
+              </Card>
+            ) : (
+              <FeatureInactiveNotice featureName="Outlet" icon={Store} price={getFeatureInfo("settings.outlet").price} description={getFeatureInfo("settings.outlet").description} />
+            )}
           </TabsContent>
         )}
       </Tabs>
