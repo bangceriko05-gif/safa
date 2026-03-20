@@ -172,6 +172,25 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
     }
   };
 
+  const handleMetaSave = async (feature: StoreFeature, price: string, description: string) => {
+    try {
+      const { error } = await supabase
+        .from("store_features")
+        .update({ 
+          activation_price: price || null, 
+          activation_description: description || null,
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", feature.id);
+      if (error) throw error;
+      setFeatures(prev => prev.map(f => f.id === feature.id ? { ...f, activation_price: price || null, activation_description: description || null } : f));
+      setEditingMeta(null);
+      toast.success("Info aktivasi berhasil disimpan");
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menyimpan");
+    }
+  };
+
   const toggleExpand = (key: string) => {
     setExpandedParents(prev => {
       const next = new Set(prev);
