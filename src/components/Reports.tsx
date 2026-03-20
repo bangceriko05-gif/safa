@@ -110,7 +110,7 @@ type ReportTab = "overview" | "sales" | "income-expense" | "payment-method" | "p
 export default function Reports() {
   const { currentStore } = useStore();
   const { hasPermission, hasAnyPermission } = usePermissions();
-  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTabRaw] = useState<ReportTab>(() => {
     const param = new URLSearchParams(window.location.search).get("reportTab");
     return (param as ReportTab) || "overview";
