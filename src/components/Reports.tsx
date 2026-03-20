@@ -1111,29 +1111,43 @@ export default function Reports() {
           </TabsTrigger>
         </TabsList>
 
-        {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && isFeatureEnabled("reports.overview") && (
+        {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
           <TabsContent value="overview" className="mt-4">
-            <div className="flex justify-end mb-4">
-              <ReportDateFilter
-                timeRange={timeRange}
-                onTimeRangeChange={setTimeRange}
-                customDateRange={customDateRange}
-                onCustomDateRangeChange={setCustomDateRange}
-              />
-            </div>
-            {renderOverviewContent()}
+            {isFeatureEnabled("reports.overview") ? (
+              <>
+                <div className="flex justify-end mb-4">
+                  <ReportDateFilter
+                    timeRange={timeRange}
+                    onTimeRangeChange={setTimeRange}
+                    customDateRange={customDateRange}
+                    onCustomDateRangeChange={setCustomDateRange}
+                  />
+                </div>
+                {renderOverviewContent()}
+              </>
+            ) : (
+              <FeatureInactiveNotice featureName="Keseluruhan" icon={LayoutGrid} price={getFeatureInfo("reports.overview").price} description={getFeatureInfo("reports.overview").description} />
+            )}
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && isFeatureEnabled("reports.sales") && (
+        {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
           <TabsContent value="sales" className="mt-4">
-            <SalesReport />
+            {isFeatureEnabled("reports.sales") ? (
+              <SalesReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Penjualan" icon={DollarSign} price={getFeatureInfo("reports.sales").price} description={getFeatureInfo("reports.sales").description} />
+            )}
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && isFeatureEnabled("reports.income_expense") && (
+        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
           <TabsContent value="income-expense" className="mt-4">
-            <IncomeExpenseReport />
+            {isFeatureEnabled("reports.income_expense") ? (
+              <IncomeExpenseReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Pemasukan/Pengeluaran" icon={Receipt} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
+            )}
           </TabsContent>
         )}
 
@@ -1143,15 +1157,23 @@ export default function Reports() {
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && isFeatureEnabled("reports.purchase") && (
+        {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
           <TabsContent value="purchase" className="mt-4">
-            <PurchaseReport />
+            {isFeatureEnabled("reports.purchase") ? (
+              <PurchaseReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("reports.purchase").price} description={getFeatureInfo("reports.purchase").description} />
+            )}
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && isFeatureEnabled("reports.employee") && (
+        {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
           <TabsContent value="employee" className="mt-4">
-            <EmployeePerformanceReport />
+            {isFeatureEnabled("reports.employee") ? (
+              <EmployeePerformanceReport />
+            ) : (
+              <FeatureInactiveNotice featureName="Kinerja Karyawan" icon={UserCheck} price={getFeatureInfo("reports.employee").price} description={getFeatureInfo("reports.employee").description} />
+            )}
           </TabsContent>
         )}
 
