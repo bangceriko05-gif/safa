@@ -10,6 +10,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
