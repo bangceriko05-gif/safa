@@ -34,6 +34,8 @@ import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
+import { ShoppingCart, Bed } from "lucide-react";
 
 interface Room {
   id: string;
