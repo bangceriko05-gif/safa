@@ -87,6 +87,7 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const [editingMeta, setEditingMeta] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFeatures();
