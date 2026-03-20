@@ -300,6 +300,8 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                           <FeatureMetaEditor feature={childFeature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
                         )}
                       </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
