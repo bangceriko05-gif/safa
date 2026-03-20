@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe, Pencil } from "lucide-react";
+import FeatureMetaEditor from "./FeatureMetaEditor";
 
 interface StoreFeature {
   id: string;
