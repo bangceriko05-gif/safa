@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe } from "lucide-react";
+import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe, Pencil } from "lucide-react";
+import FeatureMetaEditor from "./FeatureMetaEditor";
 
 interface StoreFeature {
   id: string;
   store_id: string;
   feature_key: string;
   is_enabled: boolean;
+  activation_price: string | null;
+  activation_description: string | null;
 }
 
 interface FeatureConfig {
@@ -83,6 +86,7 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const [editingMeta, setEditingMeta] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFeatures();
@@ -167,6 +171,25 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
     }
   };
 
+  const handleMetaSave = async (feature: StoreFeature, price: string, description: string) => {
+    try {
+      const { error } = await supabase
+        .from("store_features")
+        .update({ 
+          activation_price: price || null, 
+          activation_description: description || null,
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", feature.id);
+      if (error) throw error;
+      setFeatures(prev => prev.map(f => f.id === feature.id ? { ...f, activation_price: price || null, activation_description: description || null } : f));
+      setEditingMeta(null);
+      toast.success("Info aktivasi berhasil disimpan");
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menyimpan");
+    }
+  };
+
   const toggleExpand = (key: string) => {
     setExpandedParents(prev => {
       const next = new Set(prev);
@@ -242,23 +265,39 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                     const ChildIcon = childConfig.icon;
 
                     return (
-                      <div
-                        key={childKey}
-                        className={`flex items-center justify-between p-2.5 rounded-md border transition-colors ${
-                          childFeature.is_enabled
-                            ? "bg-primary/5 border-primary/10"
-                            : "bg-muted/20 border-border opacity-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <ChildIcon className={`h-3.5 w-3.5 ${childFeature.is_enabled ? "text-primary" : "text-muted-foreground"}`} />
-                          <span className="text-sm">{childConfig.label}</span>
+                      <div key={childKey} className="space-y-1">
+                        <div
+                          className={`flex items-center justify-between p-2.5 rounded-md border transition-colors ${
+                            childFeature.is_enabled
+                              ? "bg-primary/5 border-primary/10"
+                              : "bg-muted/20 border-border opacity-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChildIcon className={`h-3.5 w-3.5 ${childFeature.is_enabled ? "text-primary" : "text-muted-foreground"}`} />
+                            <span className="text-sm">{childConfig.label}</span>
+                            {!childFeature.is_enabled && (
+                              <button
+                                onClick={() => setEditingMeta(editingMeta === childKey ? null : childKey)}
+                                className="ml-1 p-0.5 rounded hover:bg-muted"
+                                title="Edit info aktivasi"
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            )}
+                            {!childFeature.is_enabled && childFeature.activation_price && editingMeta !== childKey && (
+                              <span className="text-xs text-muted-foreground ml-1">— {childFeature.activation_price}</span>
+                            )}
+                          </div>
+                          <Switch
+                            checked={childFeature.is_enabled}
+                            onCheckedChange={() => handleToggle(childFeature)}
+                            disabled={updating === childFeature.id}
+                          />
                         </div>
-                        <Switch
-                          checked={childFeature.is_enabled}
-                          onCheckedChange={() => handleToggle(childFeature)}
-                          disabled={updating === childFeature.id}
-                        />
+                        {editingMeta === childKey && !childFeature.is_enabled && (
+                          <FeatureMetaEditor feature={childFeature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
+                        )}
                       </div>
                     );
                   })}

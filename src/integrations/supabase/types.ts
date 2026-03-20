@@ -1863,6 +1863,8 @@ export type Database = {
       }
       store_features: {
         Row: {
+          activation_description: string | null
+          activation_price: string | null
           created_at: string
           feature_key: string
           id: string
@@ -1871,6 +1873,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activation_description?: string | null
+          activation_price?: string | null
           created_at?: string
           feature_key: string
           id?: string
@@ -1879,6 +1883,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activation_description?: string | null
+          activation_price?: string | null
           created_at?: string
           feature_key?: string
           id?: string
