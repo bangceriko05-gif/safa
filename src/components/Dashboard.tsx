@@ -506,48 +506,32 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {isFeatureEnabled("calendar") && (
-                  <SelectItem value="bookings">
-                    <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("transactions") && (
-                  <SelectItem value="transactions">
-                    <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("customers") && (
-                  <SelectItem value="customers">
-                    <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("reports") && (
-                  <SelectItem value="reports">
-                    <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("settings") && (
-                  <SelectItem value="settings">
-                    <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
-                  </SelectItem>
-                )}
-                {isFeatureEnabled("products_inventory") && (
-                  <SelectItem value="rooms">
-                    <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
-                  </SelectItem>
-                )}
+                <SelectItem value="bookings">
+                  <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
+                </SelectItem>
+                <SelectItem value="transactions">
+                  <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
+                </SelectItem>
+                <SelectItem value="customers">
+                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
+                </SelectItem>
+                <SelectItem value="reports">
+                  <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
+                </SelectItem>
+                <SelectItem value="settings">
+                  <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
+                </SelectItem>
+                <SelectItem value="rooms">
+                  <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
+                </SelectItem>
                 {(userRole === "admin" || userRole === "leader") && (
                   <>
-                    {isFeatureEnabled("activity_log") && (
-                      <SelectItem value="activity">
-                        <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
-                      </SelectItem>
-                    )}
-                    {isFeatureEnabled("user_management") && (
-                      <SelectItem value="users">
-                        <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
-                      </SelectItem>
-                    )}
+                    <SelectItem value="activity">
+                      <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
+                    </SelectItem>
+                    <SelectItem value="users">
+                      <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
+                    </SelectItem>
                   </>
                 )}
               </SelectContent>
