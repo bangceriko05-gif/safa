@@ -36,6 +36,7 @@ import BookingRequestsManagement from "./BookingRequestsManagement";
 import TransactionManagement from "./TransactionManagement";
 import DepositFormModal from "./deposit/DepositFormModal";
 import StoreInactiveNotice from "./StoreInactiveNotice";
+import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
 import * as XLSX from "xlsx";
 
