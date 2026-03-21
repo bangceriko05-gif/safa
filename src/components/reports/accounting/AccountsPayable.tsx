@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, DollarSign, Filter, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Filter, Search, ChevronLeft, ChevronRight, MoreHorizontal, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -25,6 +26,13 @@ interface Payable {
 }
 
 type StatusFilter = "all" | "unpaid" | "partial" | "paid";
+
+const statusLabel: Record<string, string> = { unpaid: "Belum dibayar", partial: "Sebagian", paid: "Lunas" };
+const statusColor: Record<string, string> = {
+  unpaid: "text-orange-600 bg-orange-50 border-orange-200",
+  partial: "text-blue-600 bg-blue-50 border-blue-200",
+  paid: "text-green-600 bg-green-50 border-green-200",
+};
 
 export default function AccountsPayable() {
   const { currentStore } = useStore();
@@ -66,26 +74,22 @@ export default function AccountsPayable() {
     }
   };
 
-  // Filter items
   const filteredItems = items.filter(item => {
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       item.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 
-  // Pagination
   const totalItems = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedItems = filteredItems.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
 
-  // Totals
   const totalUnpaid = filteredItems.filter(i => i.status !== "paid").reduce((s, i) => s + (Number(i.amount) - Number(i.paid_amount)), 0);
   const totalPaid = filteredItems.reduce((s, i) => s + Number(i.paid_amount), 0);
 
-  // Reset page on filter change
   useEffect(() => { setCurrentPage(1); setGoToPage("1"); }, [statusFilter, searchQuery, pageSize]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,7 +139,7 @@ export default function AccountsPayable() {
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
   const handleGoToPage = () => {
     const page = parseInt(goToPage);
@@ -144,6 +148,11 @@ export default function AccountsPayable() {
     } else {
       setGoToPage(String(safeCurrentPage));
     }
+  };
+
+  const isDueDateOverdue = (dueDate: string | null) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
   };
 
   if (loading) {
@@ -156,7 +165,7 @@ export default function AccountsPayable() {
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Semua Hutang</h3>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setShowForm(true)} size="sm">
+          <Button onClick={() => setShowForm(true)} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
             <Plus className="mr-2 h-4 w-4" /> Tambah Hutang
           </Button>
         </div>
@@ -207,12 +216,12 @@ export default function AccountsPayable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Transaksi</TableHead>
+                <TableHead className="w-[120px]">Tanggal</TableHead>
+                <TableHead className="w-[180px]">Transaksi</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
-                <TableHead>Jatuh Tempo</TableHead>
-                <TableHead>Aksi</TableHead>
+                <TableHead className="text-right w-[140px]">Jatuh Tempo</TableHead>
+                <TableHead className="w-[50px] text-center">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,31 +229,65 @@ export default function AccountsPayable() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No Data</TableCell>
                 </TableRow>
-              ) : paginatedItems.map(item => (
-                <TableRow key={item.id}>
-                  <TableCell className="text-sm">{format(new Date(item.created_at), "d MMM yyyy", { locale: localeId })}</TableCell>
-                  <TableCell className="text-sm">{item.description || "-"}</TableCell>
-                  <TableCell className="font-medium text-sm">{item.supplier_name}</TableCell>
-                  <TableCell className="text-right text-sm">{formatCurrency(Number(item.amount))}</TableCell>
-                  <TableCell className="text-sm">{item.due_date ? format(new Date(item.due_date), "d MMM yyyy", { locale: localeId }) : "-"}</TableCell>
-                  <TableCell>
-                    {item.status !== "paid" && (
-                      <Button size="sm" variant="outline" onClick={() => { setSelectedItem(item); setShowPayForm(true); }}>
-                        <DollarSign className="h-3.5 w-3.5 mr-1" /> Bayar
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              ) : paginatedItems.map(item => {
+                const sisa = Number(item.amount) - Number(item.paid_amount);
+                const overdue = isDueDateOverdue(item.due_date) && item.status !== "paid";
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-sm py-4">
+                      {format(new Date(item.created_at), "dd MMM yyyy", { locale: localeId })}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="text-sm font-medium text-blue-600">{item.id.slice(0, 8).toUpperCase()}</div>
+                      <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border ${statusColor[item.status]}`}>
+                        {statusLabel[item.status]}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="text-sm font-medium">{item.supplier_name}</div>
+                      {item.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right py-4">
+                      <div className="text-sm font-medium">{formatCurrency(Number(item.amount))}</div>
+                      {item.status !== "paid" && (
+                        <div className="text-xs text-orange-600 mt-0.5">Sisa : {formatCurrency(sisa)}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right py-4">
+                      <span className={`text-sm ${overdue ? "text-red-500 font-medium" : ""}`}>
+                        {item.due_date ? format(new Date(item.due_date), "dd MMM yyyy", { locale: localeId }) : "-"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center py-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {item.status !== "paid" && (
+                            <DropdownMenuItem onClick={() => { setSelectedItem(item); setShowPayForm(true); }}>
+                              <DollarSign className="h-4 w-4 mr-2" /> Bayar
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
 
           {/* Total Row */}
-          <div className="flex justify-between items-center px-4 py-2 border-t bg-muted/30 text-sm font-medium">
-            <span>Total</span>
-            <div className="flex gap-8">
-              <span>Belum dibayar : {formatCurrency(totalUnpaid)}</span>
-              <span>Dibayar : {formatCurrency(totalPaid)}</span>
+          <div className="flex justify-between items-center px-4 py-3 border-t bg-muted/30 text-sm">
+            <span className="font-medium">Total</span>
+            <div className="flex gap-12">
+              <span>Belum dibayar : <span className="font-semibold">{formatCurrency(totalUnpaid)}</span></span>
+              <span>Dibayar : <span className="font-semibold">{formatCurrency(totalPaid)}</span></span>
             </div>
           </div>
 
@@ -267,7 +310,7 @@ export default function AccountsPayable() {
               <Button variant="outline" size="icon" className="h-8 w-8" disabled={safeCurrentPage <= 1} onClick={() => { setCurrentPage(safeCurrentPage - 1); setGoToPage(String(safeCurrentPage - 1)); }}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="default" size="sm" className="h-8 min-w-[32px]">{safeCurrentPage}</Button>
+              <Button variant="default" size="sm" className="h-8 min-w-[32px] rounded-full">{safeCurrentPage}</Button>
               <Button variant="outline" size="icon" className="h-8 w-8" disabled={safeCurrentPage >= totalPages} onClick={() => { setCurrentPage(safeCurrentPage + 1); setGoToPage(String(safeCurrentPage + 1)); }}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -284,7 +327,7 @@ export default function AccountsPayable() {
         </CardContent>
       </Card>
 
-      {/* Add Form Dialog */}
+      {/* Add Form */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent>
           <DialogHeader><DialogTitle>Tambah Hutang</DialogTitle></DialogHeader>
@@ -303,7 +346,7 @@ export default function AccountsPayable() {
         <DialogContent>
           <DialogHeader><DialogTitle>Bayar Hutang - {selectedItem?.supplier_name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm">Sisa: <span className="font-bold text-red-600">{formatCurrency(Number(selectedItem?.amount || 0) - Number(selectedItem?.paid_amount || 0))}</span></p>
+            <p className="text-sm">Sisa: <span className="font-bold text-destructive">{formatCurrency(Number(selectedItem?.amount || 0) - Number(selectedItem?.paid_amount || 0))}</span></p>
             <div className="space-y-2"><Label>Jumlah Pembayaran</Label><Input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} required /></div>
             <Button onClick={handlePay} className="w-full">Konfirmasi Pembayaran</Button>
           </div>
