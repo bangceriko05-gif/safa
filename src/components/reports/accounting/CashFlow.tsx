@@ -352,10 +352,21 @@ export default function CashFlow() {
         })
         .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-      const pembayaranPemasok = (payablesRes.data || []).reduce(
-        (s, p) => s + (Number(p.paid_amount) || 0),
-        0
-      );
+      const allPayables = payablesRes.data || [];
+      const pembayaranPemasok = allPayables
+        .filter(p => !p.cashflow_category || p.cashflow_category === "pembayaran_pemasok")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
+
+      // Add payable payments to other categories
+      const payableBiayaOperasional = allPayables
+        .filter(p => p.cashflow_category === "biaya_operasional")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
+      const payableBiayaPerawatan = allPayables
+        .filter(p => p.cashflow_category === "biaya_perawatan")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
+      const payablePengeluaranLain = allPayables
+        .filter(p => p.cashflow_category === "pengeluaran_lain")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
 
       // Assets purchased this period
       const pembelianAsetTetap = (assetsRes.data || []).reduce(
