@@ -257,6 +257,9 @@ export default function AccountsPayable() {
                       {item.description && (
                         <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
                       )}
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Arus Kas: {CASHFLOW_CATEGORIES.find(c => c.value === item.cashflow_category)?.label || "Pembayaran ke pemasok"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right py-4">
                       <div className="text-sm font-medium">{formatCurrency(Number(item.amount))}</div>
