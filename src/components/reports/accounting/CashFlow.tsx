@@ -300,7 +300,7 @@ export default function CashFlow() {
             .lte("date", endStr),
           supabase
             .from("accounts_payable")
-            .select("paid_amount")
+            .select("paid_amount, cashflow_category")
             .eq("store_id", currentStore.id)
             .gte("created_at", `${startStr}T00:00:00`)
             .lte("created_at", `${endStr}T23:59:59`),
