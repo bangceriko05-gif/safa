@@ -51,7 +51,7 @@ export default function AccountsPayable() {
   const [selectedItem, setSelectedItem] = useState<Payable | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [form, setForm] = useState({
-    supplier_name: "", description: "", amount: "", due_date: "",
+    supplier_name: "", description: "", amount: "", due_date: "", cashflow_category: "pembayaran_pemasok",
   });
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
