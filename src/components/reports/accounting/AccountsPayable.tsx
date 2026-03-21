@@ -14,6 +14,13 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
 
+const CASHFLOW_CATEGORIES = [
+  { value: "pembayaran_pemasok", label: "Pembayaran ke pemasok" },
+  { value: "biaya_operasional", label: "Biaya operasional" },
+  { value: "biaya_perawatan", label: "Biaya perawatan" },
+  { value: "pengeluaran_lain", label: "Pengeluaran lain" },
+];
+
 interface Payable {
   id: string;
   supplier_name: string;
@@ -23,6 +30,7 @@ interface Payable {
   paid_amount: number;
   status: string;
   created_at: string;
+  cashflow_category: string;
 }
 
 type StatusFilter = "all" | "unpaid" | "partial" | "paid";
