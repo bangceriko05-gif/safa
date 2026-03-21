@@ -1,0 +1,1 @@
+ALTER TABLE public.accounts_payable ADD COLUMN cashflow_category text NOT NULL DEFAULT 'pembayaran_pemasok';

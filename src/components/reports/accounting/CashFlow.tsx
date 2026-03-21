@@ -300,7 +300,7 @@ export default function CashFlow() {
             .lte("date", endStr),
           supabase
             .from("accounts_payable")
-            .select("paid_amount")
+            .select("paid_amount, cashflow_category")
             .eq("store_id", currentStore.id)
             .gte("created_at", `${startStr}T00:00:00`)
             .lte("created_at", `${endStr}T23:59:59`),
@@ -352,10 +352,21 @@ export default function CashFlow() {
         })
         .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-      const pembayaranPemasok = (payablesRes.data || []).reduce(
-        (s, p) => s + (Number(p.paid_amount) || 0),
-        0
-      );
+      const allPayables = payablesRes.data || [];
+      const pembayaranPemasok = allPayables
+        .filter(p => !p.cashflow_category || p.cashflow_category === "pembayaran_pemasok")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
+
+      // Add payable payments to other categories
+      const payableBiayaOperasional = allPayables
+        .filter(p => p.cashflow_category === "biaya_operasional")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
+      const payableBiayaPerawatan = allPayables
+        .filter(p => p.cashflow_category === "biaya_perawatan")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
+      const payablePengeluaranLain = allPayables
+        .filter(p => p.cashflow_category === "pengeluaran_lain")
+        .reduce((s, p) => s + (Number(p.paid_amount) || 0), 0);
 
       // Assets purchased this period
       const pembelianAsetTetap = (assetsRes.data || []).reduce(
@@ -373,10 +384,10 @@ export default function CashFlow() {
         openingBalance,
         penerimaanPelanggan,
         pembayaranPemasok,
-        biayaOperasional,
-        biayaPerawatan,
+        biayaOperasional: biayaOperasional + payableBiayaOperasional,
+        biayaPerawatan: biayaPerawatan + payableBiayaPerawatan,
         pendapatanLain,
-        pengeluaranLain,
+        pengeluaranLain: pengeluaranLain + payablePengeluaranLain,
         pembelianAsetTetap,
         pembelianAsetTakBerwujud: 0,
         aktivitasInvestasiLain: 0,

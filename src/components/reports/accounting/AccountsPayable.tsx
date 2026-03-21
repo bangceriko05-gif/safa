@@ -14,6 +14,13 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
 
+const CASHFLOW_CATEGORIES = [
+  { value: "pembayaran_pemasok", label: "Pembayaran ke pemasok" },
+  { value: "biaya_operasional", label: "Biaya operasional" },
+  { value: "biaya_perawatan", label: "Biaya perawatan" },
+  { value: "pengeluaran_lain", label: "Pengeluaran lain" },
+];
+
 interface Payable {
   id: string;
   supplier_name: string;
@@ -23,6 +30,7 @@ interface Payable {
   paid_amount: number;
   status: string;
   created_at: string;
+  cashflow_category: string;
 }
 
 type StatusFilter = "all" | "unpaid" | "partial" | "paid";
@@ -43,7 +51,7 @@ export default function AccountsPayable() {
   const [selectedItem, setSelectedItem] = useState<Payable | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [form, setForm] = useState({
-    supplier_name: "", description: "", amount: "", due_date: "",
+    supplier_name: "", description: "", amount: "", due_date: "", cashflow_category: "pembayaran_pemasok",
   });
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,11 +113,12 @@ export default function AccountsPayable() {
         amount: Number(form.amount),
         due_date: form.due_date || null,
         created_by: user.id,
+        cashflow_category: form.cashflow_category,
       });
       if (error) throw error;
       toast.success("Hutang berhasil ditambahkan");
       setShowForm(false);
-      setForm({ supplier_name: "", description: "", amount: "", due_date: "" });
+      setForm({ supplier_name: "", description: "", amount: "", due_date: "", cashflow_category: "pembayaran_pemasok" });
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Gagal menambahkan hutang");
@@ -248,6 +257,9 @@ export default function AccountsPayable() {
                       {item.description && (
                         <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
                       )}
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Arus Kas: {CASHFLOW_CATEGORIES.find(c => c.value === item.cashflow_category)?.label || "Pembayaran ke pemasok"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right py-4">
                       <div className="text-sm font-medium">{formatCurrency(Number(item.amount))}</div>
@@ -336,6 +348,17 @@ export default function AccountsPayable() {
             <div className="space-y-2"><Label>Keterangan</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
             <div className="space-y-2"><Label>Jumlah</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Jatuh Tempo</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Kategori Arus Kas</Label>
+              <Select value={form.cashflow_category} onValueChange={v => setForm({ ...form, cashflow_category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CASHFLOW_CATEGORIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button type="submit" className="w-full">Simpan</Button>
           </form>
         </DialogContent>
