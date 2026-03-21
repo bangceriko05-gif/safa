@@ -64,6 +64,7 @@ export type Database = {
       accounts_payable: {
         Row: {
           amount: number
+          cashflow_category: string
           created_at: string
           created_by: string
           description: string | null
@@ -77,6 +78,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          cashflow_category?: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -90,6 +92,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          cashflow_category?: string
           created_at?: string
           created_by?: string
           description?: string | null
