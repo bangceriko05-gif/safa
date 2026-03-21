@@ -113,11 +113,12 @@ export default function AccountsPayable() {
         amount: Number(form.amount),
         due_date: form.due_date || null,
         created_by: user.id,
+        cashflow_category: form.cashflow_category,
       });
       if (error) throw error;
       toast.success("Hutang berhasil ditambahkan");
       setShowForm(false);
-      setForm({ supplier_name: "", description: "", amount: "", due_date: "" });
+      setForm({ supplier_name: "", description: "", amount: "", due_date: "", cashflow_category: "pembayaran_pemasok" });
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Gagal menambahkan hutang");
