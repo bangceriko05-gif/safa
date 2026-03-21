@@ -6,14 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, DollarSign } from "lucide-react";
+import { Loader2, Plus, DollarSign, Filter, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
-import ReportDateFilter, { ReportTimeRange, getDateRange } from "../ReportDateFilter";
-import { DateRange } from "react-day-picker";
 
 interface Payable {
   id: string;
@@ -26,6 +24,8 @@ interface Payable {
   created_at: string;
 }
 
+type StatusFilter = "all" | "unpaid" | "partial" | "paid";
+
 export default function AccountsPayable() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
@@ -37,25 +37,25 @@ export default function AccountsPayable() {
   const [form, setForm] = useState({
     supplier_name: "", description: "", amount: "", due_date: "",
   });
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pageSize, setPageSize] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [goToPage, setGoToPage] = useState("1");
 
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [currentStore, timeRange, customDateRange]);
+  }, [currentStore]);
 
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
     try {
-      const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const { data, error } = await supabase
         .from("accounts_payable")
         .select("*")
         .eq("store_id", currentStore.id)
-        .gte("created_at", format(startDate, "yyyy-MM-dd'T'00:00:00"))
-        .lte("created_at", format(endDate, "yyyy-MM-dd'T'23:59:59"))
         .order("created_at", { ascending: false });
       if (error) throw error;
       setItems((data as Payable[]) || []);
@@ -65,6 +65,28 @@ export default function AccountsPayable() {
       setLoading(false);
     }
   };
+
+  // Filter items
+  const filteredItems = items.filter(item => {
+    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
+    const matchesSearch = searchQuery === "" || 
+      item.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesStatus && matchesSearch;
+  });
+
+  // Pagination
+  const totalItems = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedItems = filteredItems.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+  // Totals
+  const totalUnpaid = filteredItems.filter(i => i.status !== "paid").reduce((s, i) => s + (Number(i.amount) - Number(i.paid_amount)), 0);
+  const totalPaid = filteredItems.reduce((s, i) => s + Number(i.paid_amount), 0);
+
+  // Reset page on filter change
+  useEffect(() => { setCurrentPage(1); setGoToPage("1"); }, [statusFilter, searchQuery, pageSize]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,60 +137,96 @@ export default function AccountsPayable() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
-  const statusLabel: Record<string, string> = { unpaid: "Belum Bayar", partial: "Sebagian", paid: "Lunas" };
-  const statusVariant = (s: string) => s === "paid" ? "default" : s === "partial" ? "secondary" : "destructive";
+  const handleGoToPage = () => {
+    const page = parseInt(goToPage);
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setGoToPage(String(safeCurrentPage));
+    }
+  };
 
   if (loading) {
     return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const totalUnpaid = items.filter(i => i.status !== "paid").reduce((s, i) => s + (Number(i.amount) - Number(i.paid_amount)), 0);
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <div>
-          <h3 className="text-lg font-semibold">Hutang</h3>
-          <p className="text-sm text-muted-foreground">Total belum dibayar: <span className="font-semibold text-red-600">{formatCurrency(totalUnpaid)}</span></p>
-        </div>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Semua Hutang</h3>
         <div className="flex items-center gap-2">
-          <ReportDateFilter
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
-          <Button onClick={() => setShowForm(true)} size="sm"><Plus className="mr-2 h-4 w-4" /> Tambah Hutang</Button>
+          <Button onClick={() => setShowForm(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" /> Tambah Hutang
+          </Button>
         </div>
       </div>
 
+      {/* Filter Row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button variant="outline" size="sm" className="gap-1.5">
+          <Filter className="h-3.5 w-3.5" /> Filter
+        </Button>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Transaksi/Supplier/Deskripsi"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-8 h-8 w-[220px] text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          {(["unpaid", "partial", "paid"] as const).map(status => (
+            <Button
+              key={status}
+              variant={statusFilter === status ? "default" : "outline"}
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setStatusFilter(statusFilter === status ? "all" : status)}
+            >
+              {status === "unpaid" ? "Belum Bayar" : status === "partial" ? "Sebagian" : "Lunas"}
+            </Button>
+          ))}
+        </div>
+        <div className="ml-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs h-8"
+            onClick={() => { setStatusFilter("all"); setSearchQuery(""); }}
+          >
+            <Filter className="h-3.5 w-3.5 mr-1" /> Semua
+          </Button>
+        </div>
+      </div>
+
+      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Transaksi</TableHead>
                 <TableHead>Supplier</TableHead>
-                <TableHead>Keterangan</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
-                <TableHead className="text-right">Dibayar</TableHead>
-                <TableHead className="text-right">Sisa</TableHead>
                 <TableHead>Jatuh Tempo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Belum ada data hutang</TableCell></TableRow>
-              ) : items.map(item => (
+              {paginatedItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No Data</TableCell>
+                </TableRow>
+              ) : paginatedItems.map(item => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium text-sm">{item.supplier_name}</TableCell>
+                  <TableCell className="text-sm">{format(new Date(item.created_at), "d MMM yyyy", { locale: localeId })}</TableCell>
                   <TableCell className="text-sm">{item.description || "-"}</TableCell>
+                  <TableCell className="font-medium text-sm">{item.supplier_name}</TableCell>
                   <TableCell className="text-right text-sm">{formatCurrency(Number(item.amount))}</TableCell>
-                  <TableCell className="text-right text-sm">{formatCurrency(Number(item.paid_amount))}</TableCell>
-                  <TableCell className="text-right text-sm font-medium text-red-600">{formatCurrency(Number(item.amount) - Number(item.paid_amount))}</TableCell>
                   <TableCell className="text-sm">{item.due_date ? format(new Date(item.due_date), "d MMM yyyy", { locale: localeId }) : "-"}</TableCell>
-                  <TableCell><Badge variant={statusVariant(item.status) as any}>{statusLabel[item.status]}</Badge></TableCell>
                   <TableCell>
                     {item.status !== "paid" && (
                       <Button size="sm" variant="outline" onClick={() => { setSelectedItem(item); setShowPayForm(true); }}>
@@ -180,9 +238,53 @@ export default function AccountsPayable() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Total Row */}
+          <div className="flex justify-between items-center px-4 py-2 border-t bg-muted/30 text-sm font-medium">
+            <span>Total</span>
+            <div className="flex gap-8">
+              <span>Belum dibayar : {formatCurrency(totalUnpaid)}</span>
+              <span>Dibayar : {formatCurrency(totalPaid)}</span>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-2 border-t text-sm">
+            <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+              <SelectTrigger className="w-[100px] h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 item</SelectItem>
+                <SelectItem value="30">30 item</SelectItem>
+                <SelectItem value="50">50 item</SelectItem>
+                <SelectItem value="100">100 item</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Total {totalItems}</span>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={safeCurrentPage <= 1} onClick={() => { setCurrentPage(safeCurrentPage - 1); setGoToPage(String(safeCurrentPage - 1)); }}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="default" size="sm" className="h-8 min-w-[32px]">{safeCurrentPage}</Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={safeCurrentPage >= totalPages} onClick={() => { setCurrentPage(safeCurrentPage + 1); setGoToPage(String(safeCurrentPage + 1)); }}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <span className="text-muted-foreground">Go to</span>
+              <Input
+                className="w-[50px] h-8 text-center text-sm"
+                value={goToPage}
+                onChange={e => setGoToPage(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleGoToPage()}
+                onBlur={handleGoToPage}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
+      {/* Add Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent>
           <DialogHeader><DialogTitle>Tambah Hutang</DialogTitle></DialogHeader>
@@ -196,6 +298,7 @@ export default function AccountsPayable() {
         </DialogContent>
       </Dialog>
 
+      {/* Pay Dialog */}
       <Dialog open={showPayForm} onOpenChange={setShowPayForm}>
         <DialogContent>
           <DialogHeader><DialogTitle>Bayar Hutang - {selectedItem?.supplier_name}</DialogTitle></DialogHeader>
