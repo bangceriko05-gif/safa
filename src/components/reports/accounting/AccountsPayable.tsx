@@ -345,6 +345,17 @@ export default function AccountsPayable() {
             <div className="space-y-2"><Label>Keterangan</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
             <div className="space-y-2"><Label>Jumlah</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Jatuh Tempo</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Kategori Arus Kas</Label>
+              <Select value={form.cashflow_category} onValueChange={v => setForm({ ...form, cashflow_category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CASHFLOW_CATEGORIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button type="submit" className="w-full">Simpan</Button>
           </form>
         </DialogContent>
