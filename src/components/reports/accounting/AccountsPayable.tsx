@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/contexts/StoreContext";
-import { Loader2, Plus, Filter, Search, ChevronLeft, ChevronRight, MoreHorizontal, DollarSign } from "lucide-react";
+import { Loader2, Plus, Filter, Search, ChevronLeft, ChevronRight, MoreHorizontal, DollarSign, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -144,6 +144,18 @@ export default function AccountsPayable() {
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Gagal mencatat pembayaran");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus hutang ini?")) return;
+    try {
+      const { error } = await supabase.from("accounts_payable").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Hutang berhasil dihapus");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menghapus hutang");
     }
   };
 
@@ -285,6 +297,9 @@ export default function AccountsPayable() {
                               <DollarSign className="h-4 w-4 mr-2" /> Bayar
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(item.id)}>
+                            <XCircle className="h-4 w-4 mr-2" /> Hapus
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
