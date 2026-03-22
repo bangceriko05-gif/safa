@@ -285,6 +285,9 @@ export default function AccountsPayable() {
                               <DollarSign className="h-4 w-4 mr-2" /> Bayar
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(item.id)}>
+                            <XCircle className="h-4 w-4 mr-2" /> Hapus
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
