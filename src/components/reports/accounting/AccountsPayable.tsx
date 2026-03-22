@@ -147,6 +147,18 @@ export default function AccountsPayable() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus hutang ini?")) return;
+    try {
+      const { error } = await supabase.from("accounts_payable").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Hutang berhasil dihapus");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menghapus hutang");
+    }
+  };
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
