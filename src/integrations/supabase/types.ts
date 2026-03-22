@@ -61,6 +61,71 @@ export type Database = {
           },
         ]
       }
+      accounting_transactions: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          converted_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          payment_method: string | null
+          source_bid: string
+          source_date: string
+          source_id: string
+          source_label: string
+          source_type: string
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          cancel_reason?: string | null
+          converted_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          source_bid: string
+          source_date: string
+          source_id: string
+          source_label: string
+          source_type: string
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          converted_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          source_bid?: string
+          source_date?: string
+          source_id?: string
+          source_label?: string
+          source_type?: string
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts_payable: {
         Row: {
           amount: number

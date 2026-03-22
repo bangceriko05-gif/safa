@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, ArrowRightLeft, Clock, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { Loader2, Search, ArrowRightLeft, Clock, CheckCircle2, XCircle, FileText, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ const STATUS_CONFIG: Record<ProcessStatus, { label: string; icon: React.ElementT
 
 interface UnifiedTransaction {
   id: string;
+  dbId?: string; // id in accounting_transactions table
   type: "booking" | "income" | "expense";
   typeLabel: string;
   date: string;
@@ -45,14 +46,13 @@ interface UnifiedTransaction {
   cancelReason?: string;
 }
 
-const STORAGE_KEY = "accounting_transactions_draft";
-
 const fmtCurrency = (n: number) =>
   `Rp ${new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(n)}`;
 
 export default function AccountingTransactions() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [statusFilter, setStatusFilter] = useState<ProcessStatus>("proses");
@@ -63,20 +63,75 @@ export default function AccountingTransactions() {
   const [cancelDialog, setCancelDialog] = useState<UnifiedTransaction | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
-  // Load drafts from localStorage on mount
+  // Load from database on mount
   useEffect(() => {
     if (!currentStore) return;
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_${currentStore.id}`);
-      if (saved) setTransactions(JSON.parse(saved));
-    } catch { /* ignore */ }
+    loadFromDb();
   }, [currentStore]);
 
-  // Persist to localStorage on change
-  useEffect(() => {
-    if (!currentStore || transactions.length === 0) return;
-    localStorage.setItem(`${STORAGE_KEY}_${currentStore.id}`, JSON.stringify(transactions));
-  }, [transactions, currentStore]);
+  const loadFromDb = async () => {
+    if (!currentStore) return;
+    setInitialLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("accounting_transactions")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .order("source_date", { ascending: false });
+      if (error) throw error;
+      const mapped: UnifiedTransaction[] = (data || []).map((r: any) => ({
+        id: r.source_id,
+        dbId: r.id,
+        type: r.source_type as any,
+        typeLabel: r.source_label,
+        date: r.source_date,
+        bid: r.source_bid,
+        description: r.description || "",
+        amount: Number(r.amount) || 0,
+        paymentMethod: r.payment_method || "-",
+        status: r.status as ProcessStatus,
+        convertedTo: r.converted_to || undefined,
+        cancelReason: r.cancel_reason || undefined,
+      }));
+      setTransactions(mapped);
+    } catch (error) {
+      console.error("Error loading accounting transactions:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  const upsertToDb = async (t: UnifiedTransaction) => {
+    if (!currentStore) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const payload = {
+      store_id: currentStore.id,
+      source_id: t.id,
+      source_type: t.type,
+      source_bid: t.bid,
+      source_label: t.typeLabel,
+      description: t.description,
+      amount: t.amount,
+      payment_method: t.paymentMethod,
+      source_date: t.date,
+      status: t.status,
+      converted_to: t.convertedTo || null,
+      cancel_reason: t.cancelReason || null,
+      created_by: user.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("accounting_transactions")
+      .upsert(payload, { onConflict: "store_id,source_id,source_type" })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data?.id;
+  };
 
   const handleSearch = useCallback(async () => {
     if (!currentStore || !searchQuery.trim()) return;
@@ -135,22 +190,29 @@ export default function AccountingTransactions() {
         });
       });
 
-      // Merge: keep existing status for already-tracked items, add new ones
-      setTransactions((prev) => {
-        const existingMap = new Map(prev.map((t) => [`${t.type}-${t.id}`, t]));
-        newRows.forEach((r) => {
-          const key = `${r.type}-${r.id}`;
-          if (!existingMap.has(key)) {
-            existingMap.set(key, r);
+      // Merge: keep existing status for already-tracked items, add new ones and save to DB
+      const existingMap = new Map(transactions.map((t) => [`${t.type}-${t.id}`, t]));
+      let addedCount = 0;
+
+      for (const r of newRows) {
+        const key = `${r.type}-${r.id}`;
+        if (!existingMap.has(key)) {
+          try {
+            const dbId = await upsertToDb(r);
+            existingMap.set(key, { ...r, dbId });
+            addedCount++;
+          } catch (err) {
+            console.error("Error saving transaction:", err);
           }
-        });
-        return Array.from(existingMap.values()).sort((a, b) => b.date.localeCompare(a.date));
-      });
+        }
+      }
+
+      setTransactions(Array.from(existingMap.values()).sort((a, b) => b.date.localeCompare(a.date)));
 
       if (newRows.length === 0) {
         toast.info("Tidak ditemukan transaksi dengan BID tersebut");
       } else {
-        toast.success(`${newRows.length} transaksi ditemukan`);
+        toast.success(`${newRows.length} transaksi ditemukan${addedCount > 0 ? `, ${addedCount} baru ditambahkan` : ""}`);
         setStatusFilter("proses");
       }
     } catch (error) {
@@ -159,7 +221,7 @@ export default function AccountingTransactions() {
     } finally {
       setLoading(false);
     }
-  }, [currentStore, searchQuery]);
+  }, [currentStore, searchQuery, transactions]);
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => t.status === statusFilter);
@@ -170,6 +232,23 @@ export default function AccountingTransactions() {
     selesai: transactions.filter((t) => t.status === "selesai").length,
     batal: transactions.filter((t) => t.status === "batal").length,
   }), [transactions]);
+
+  const updateTransactionStatus = async (t: UnifiedTransaction, newStatus: ProcessStatus, extra: Partial<UnifiedTransaction> = {}) => {
+    const updated = { ...t, status: newStatus, ...extra };
+    try {
+      await upsertToDb(updated);
+      setTransactions((prev) =>
+        prev.map((x) =>
+          x.id === t.id && x.type === t.type ? { ...x, ...updated } : x
+        )
+      );
+      return true;
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      toast.error("Gagal memperbarui transaksi");
+      return false;
+    }
+  };
 
   const handleConvert = async () => {
     if (!convertDialog || !currentStore) return;
@@ -219,13 +298,7 @@ export default function AccountingTransactions() {
           break;
       }
 
-      setTransactions((prev) =>
-        prev.map((t) =>
-          t.id === convertDialog.id && t.type === convertDialog.type
-            ? { ...t, status: "selesai" as ProcessStatus, convertedTo: CONVERT_LABELS[convertTarget] }
-            : t
-        )
-      );
+      await updateTransactionStatus(convertDialog, "selesai", { convertedTo: CONVERT_LABELS[convertTarget] });
 
       logAccountingActivity({
         actionType: 'converted', entityType: CONVERT_LABELS[convertTarget],
@@ -245,53 +318,54 @@ export default function AccountingTransactions() {
     }
   };
 
-  const handleCancel = () => {
-    if (!cancelDialog) return;
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.id === cancelDialog.id && t.type === cancelDialog.type
-          ? { ...t, status: "batal" as ProcessStatus, cancelReason: cancelReason || undefined }
-          : t
-      )
-    );
-    if (currentStore) {
+  const handleCancel = async () => {
+    if (!cancelDialog || !currentStore) return;
+    const ok = await updateTransactionStatus(cancelDialog, "batal", { cancelReason: cancelReason || undefined });
+    if (ok) {
       logAccountingActivity({
         actionType: 'deleted', entityType: 'Transaksi',
         entityId: cancelDialog.id,
         description: `Membatalkan proses ${cancelDialog.typeLabel} ${cancelDialog.bid}${cancelReason ? ` - ${cancelReason}` : ""}`,
         storeId: currentStore.id,
       });
+      toast.success("Transaksi dibatalkan");
     }
-    toast.success("Transaksi dibatalkan");
     setCancelDialog(null);
     setCancelReason("");
   };
 
-  const handleRemoveDraft = (t: UnifiedTransaction) => {
-    setTransactions((prev) => prev.filter((x) => !(x.id === t.id && x.type === t.type)));
-    toast.success("Draf dihapus");
+  const handleDelete = async (t: UnifiedTransaction) => {
+    if (!confirm("Yakin ingin menghapus transaksi ini?")) return;
+    try {
+      if (t.dbId) {
+        const { error } = await supabase.from("accounting_transactions").delete().eq("id", t.dbId);
+        if (error) throw error;
+      } else {
+        // fallback: delete by composite key
+        const { error } = await supabase
+          .from("accounting_transactions")
+          .delete()
+          .eq("store_id", currentStore?.id || "")
+          .eq("source_id", t.id)
+          .eq("source_type", t.type);
+        if (error) throw error;
+      }
+      setTransactions((prev) => prev.filter((x) => !(x.id === t.id && x.type === t.type)));
+      toast.success("Transaksi dihapus");
+    } catch (error) {
+      console.error("Error deleting:", error);
+      toast.error("Gagal menghapus transaksi");
+    }
   };
 
-  const handleRestoreToSelesai = (t: UnifiedTransaction) => {
-    setTransactions((prev) =>
-      prev.map((x) =>
-        x.id === t.id && x.type === t.type
-          ? { ...x, status: "selesai" as ProcessStatus, cancelReason: undefined }
-          : x
-      )
-    );
-    toast.success("Transaksi dikembalikan ke Selesai");
+  const handleRestoreToSelesai = async (t: UnifiedTransaction) => {
+    const ok = await updateTransactionStatus(t, "selesai", { cancelReason: undefined });
+    if (ok) toast.success("Transaksi dikembalikan ke Selesai");
   };
 
-  const handleRestoreToProses = (t: UnifiedTransaction) => {
-    setTransactions((prev) =>
-      prev.map((x) =>
-        x.id === t.id && x.type === t.type
-          ? { ...x, status: "proses" as ProcessStatus, cancelReason: undefined, convertedTo: undefined }
-          : x
-      )
-    );
-    toast.success("Transaksi dikembalikan ke Proses");
+  const handleRestoreToProses = async (t: UnifiedTransaction) => {
+    const ok = await updateTransactionStatus(t, "proses", { cancelReason: undefined, convertedTo: undefined });
+    if (ok) toast.success("Transaksi dikembalikan ke Proses");
   };
 
   const typeBadgeVariant = (type: string) => {
@@ -302,6 +376,10 @@ export default function AccountingTransactions() {
       default: return "outline";
     }
   };
+
+  if (initialLoading) {
+    return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -392,8 +470,8 @@ export default function AccountingTransactions() {
                           <XCircle className="h-3 w-3" />
                         </Button>
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground"
-                          onClick={() => handleRemoveDraft(t)} title="Hapus draf">
-                          <FileText className="h-3 w-3" />
+                          onClick={() => handleDelete(t)} title="Hapus">
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     ) : t.status === "selesai" ? (
@@ -407,8 +485,8 @@ export default function AccountingTransactions() {
                           <XCircle className="h-3 w-3" />
                         </Button>
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground"
-                          onClick={() => handleRemoveDraft(t)} title="Hapus">
-                          <FileText className="h-3 w-3" />
+                          onClick={() => handleDelete(t)} title="Hapus">
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     ) : (
@@ -423,6 +501,10 @@ export default function AccountingTransactions() {
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-amber-600 hover:text-amber-700"
                           onClick={() => handleRestoreToProses(t)} title="Proses kembali">
                           <Clock className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground"
+                          onClick={() => handleDelete(t)} title="Hapus">
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                         {t.cancelReason && <span className="text-[9px] text-muted-foreground max-w-[80px] truncate" title={t.cancelReason}>{t.cancelReason}</span>}
                       </div>
