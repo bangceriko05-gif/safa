@@ -272,6 +272,28 @@ export default function AccountingTransactions() {
     toast.success("Draf dihapus");
   };
 
+  const handleRestoreToSelesai = (t: UnifiedTransaction) => {
+    setTransactions((prev) =>
+      prev.map((x) =>
+        x.id === t.id && x.type === t.type
+          ? { ...x, status: "selesai" as ProcessStatus, cancelReason: undefined }
+          : x
+      )
+    );
+    toast.success("Transaksi dikembalikan ke Selesai");
+  };
+
+  const handleRestoreToProses = (t: UnifiedTransaction) => {
+    setTransactions((prev) =>
+      prev.map((x) =>
+        x.id === t.id && x.type === t.type
+          ? { ...x, status: "proses" as ProcessStatus, cancelReason: undefined, convertedTo: undefined }
+          : x
+      )
+    );
+    toast.success("Transaksi dikembalikan ke Proses");
+  };
+
   const typeBadgeVariant = (type: string) => {
     switch (type) {
       case "booking": return "default";
