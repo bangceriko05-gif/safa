@@ -375,15 +375,34 @@ export default function AccountingTransactions() {
                         </Button>
                       </div>
                     ) : t.status === "selesai" ? (
-                      <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300 bg-emerald-50">
-                        {t.convertedTo || "Selesai"}
-                      </Badge>
+                      <div className="flex items-center justify-center gap-1">
+                        <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300 bg-emerald-50">
+                          {t.convertedTo || "Selesai"}
+                        </Badge>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive"
+                          onClick={() => { setCancelDialog(t); setCancelReason(""); }}
+                          title="Batalkan">
+                          <XCircle className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground"
+                          onClick={() => handleRemoveDraft(t)} title="Hapus">
+                          <FileText className="h-3 w-3" />
+                        </Button>
+                      </div>
                     ) : (
-                      <div className="flex flex-col items-center">
+                      <div className="flex items-center justify-center gap-1">
                         <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 bg-destructive/5">
                           Dibatalkan
                         </Badge>
-                        {t.cancelReason && <span className="text-[9px] text-muted-foreground mt-0.5 max-w-[140px] truncate">{t.cancelReason}</span>}
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-emerald-600 hover:text-emerald-700"
+                          onClick={() => handleRestoreToSelesai(t)} title="Selesai">
+                          <CheckCircle2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-amber-600 hover:text-amber-700"
+                          onClick={() => handleRestoreToProses(t)} title="Proses kembali">
+                          <Clock className="h-3 w-3" />
+                        </Button>
+                        {t.cancelReason && <span className="text-[9px] text-muted-foreground max-w-[80px] truncate" title={t.cancelReason}>{t.cancelReason}</span>}
                       </div>
                     )}
                   </TableCell>
