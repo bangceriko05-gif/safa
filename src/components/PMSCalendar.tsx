@@ -654,13 +654,14 @@ export default function PMSCalendar({
         updateData.confirmed_at = new Date().toISOString();
       } else if (newStatus === "BATAL" && bookingData.room_id) {
         // BATAL: Set room to ready (Aktif) directly, not Kotor
+        // Don't set updated_by so the username won't appear (only show username for post-checkout cleaning)
         await supabase
           .from("room_daily_status")
           .upsert({
             room_id: bookingData.room_id,
             date: bookingData.date,
             status: "Aktif",
-            updated_by: user.id,
+            updated_by: null,
             updated_at: new Date().toISOString(),
           }, { onConflict: "room_id,date" });
         fetchRoomDailyStatus();
