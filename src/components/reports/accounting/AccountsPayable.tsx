@@ -259,13 +259,24 @@ export default function AccountsPayable() {
                       {format(new Date(item.created_at), "dd MMM yyyy", { locale: localeId })}
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="text-sm font-medium text-blue-600">{item.id.slice(0, 8).toUpperCase()}</div>
-                      <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border ${statusColor[item.status]}`}>
-                        {statusLabel[item.status]}
-                      </span>
-                      {item.description && (
-                        <div className="text-xs text-muted-foreground mt-1">{item.description}</div>
-                      )}
+                      {(() => {
+                        const bidMatch = item.description?.match(/([A-Z]{2,}-[A-Z]+-\d{8}-\d+)/);
+                        const bid = bidMatch ? bidMatch[1] : item.id.slice(0, 8).toUpperCase();
+                        const descWithoutBid = item.description
+                          ? item.description.replace(/\s*[A-Z]{2,}-[A-Z]+-\d{8}-\d+/, '').trim()
+                          : null;
+                        return (
+                          <>
+                            <div className="text-sm font-medium text-blue-600">{bid}</div>
+                            <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border ${statusColor[item.status]}`}>
+                              {statusLabel[item.status]}
+                            </span>
+                            {descWithoutBid && (
+                              <div className="text-xs text-muted-foreground mt-1">{descWithoutBid}</div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="py-4">
                       <div className="text-sm font-medium">{item.supplier_name}</div>
