@@ -153,15 +153,15 @@ export default function BookingModal({
   // Check if PMS mode based on store calendar_type
   const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
-  // Fetch data when modal opens or store changes
+  // Fetch data when modal opens or store changes - always refetch rooms to ensure latest data
   useEffect(() => {
     if (!currentStore || !isOpen) return;
     
-    // Refetch if store changed or no data yet
+    // Always refetch rooms when modal opens to ensure the selected room is available
+    fetchRooms();
+    
+    // Refetch other data if store changed or no data yet
     const storeChanged = lastFetchedStoreId !== currentStore.id;
-    if (storeChanged || rooms.length === 0) {
-      fetchRooms();
-    }
     if (storeChanged || customers.length === 0) {
       fetchCustomers();
     }
