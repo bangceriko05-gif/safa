@@ -263,12 +263,12 @@ export default function AccountsPayable() {
                       <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border ${statusColor[item.status]}`}>
                         {statusLabel[item.status]}
                       </span>
+                      {item.description && (
+                        <div className="text-xs text-muted-foreground mt-1">{item.description}</div>
+                      )}
                     </TableCell>
                     <TableCell className="py-4">
                       <div className="text-sm font-medium">{item.supplier_name}</div>
-                      {item.description && (
-                        <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
-                      )}
                       <div className="text-xs text-muted-foreground mt-0.5">
                         Arus Kas: {CASHFLOW_CATEGORIES.find(c => c.value === item.cashflow_category)?.label || "Pembayaran ke pemasok"}
                       </div>
