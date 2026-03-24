@@ -669,6 +669,72 @@ export default function SuperAdminStoreManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Subscription Edit Dialog */}
+      <Dialog open={!!subscriptionEditStore} onOpenChange={(open) => !open && setSubscriptionEditStore(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              Edit Langganan - {subscriptionEditStore?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="sub_start">Mulai Langganan</Label>
+              <Input
+                id="sub_start"
+                type="date"
+                value={subscriptionForm.start}
+                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, start: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sub_end">Akhir Langganan</Label>
+              <Input
+                id="sub_end"
+                type="date"
+                value={subscriptionForm.end}
+                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, end: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setSubscriptionEditStore(null)}>
+                Batal
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  if (!subscriptionEditStore) return;
+                  try {
+                    const { error } = await supabase
+                      .from("stores")
+                      .update({
+                        subscription_start_date: subscriptionForm.start || null,
+                        subscription_end_date: subscriptionForm.end || null,
+                      })
+                      .eq("id", subscriptionEditStore.id);
+                    if (error) throw error;
+                    await logActivity({
+                      actionType: 'updated',
+                      entityType: 'Outlet',
+                      entityId: subscriptionEditStore.id,
+                      description: `[Super Admin] Mengubah tanggal langganan outlet ${subscriptionEditStore.name}`,
+                    });
+                    toast.success("Tanggal langganan berhasil diupdate");
+                    setSubscriptionEditStore(null);
+                    fetchStores();
+                  } catch (error: any) {
+                    toast.error(error.message || "Gagal mengupdate langganan");
+                  }
+                }}
+              >
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
