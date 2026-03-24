@@ -334,12 +334,29 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
     }
     
     try {
-      const { error } = await supabase
+      const todayStr = format(selectedDate, "yyyy-MM-dd");
+      
+      // Get current user for updated_by
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Update room_daily_status to "Aktif" (this is the source of truth for dirty rooms)
+      const { error: dailyError } = await supabase
+        .from("room_daily_status")
+        .upsert({
+          room_id: roomId,
+          date: todayStr,
+          status: "Aktif",
+          updated_by: user?.id || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "room_id,date" });
+
+      if (dailyError) throw dailyError;
+
+      // Also ensure room base status is Aktif
+      await supabase
         .from("rooms")
         .update({ status: "Aktif" })
         .eq("id", roomId);
-
-      if (error) throw error;
 
       await logActivity({
         actionType: 'updated',
