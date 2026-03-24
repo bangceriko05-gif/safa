@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ChevronDown, ChevronRight, ToggleRight, LayoutDashboard } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ToggleRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -59,6 +59,8 @@ export default function SuperAdminStoreManagement() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
+  const [subscriptionEditStore, setSubscriptionEditStore] = useState<Store | null>(null);
+  const [subscriptionForm, setSubscriptionForm] = useState({ start: "", end: "" });
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -383,14 +385,9 @@ export default function SuperAdminStoreManagement() {
               ) : (
                 stores.map((store) => (
                   <React.Fragment key={store.id}>
-                    <TableRow className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
+                    <TableRow>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {expandedStoreId === store.id ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          )}
                           {store.image_url ? (
                             <img
                               src={store.image_url}
@@ -405,8 +402,14 @@ export default function SuperAdminStoreManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{store.name}</p>
+                        <div
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => {
+                            localStorage.setItem("current_store_id", store.id);
+                            navigate("/dashboard");
+                          }}
+                        >
+                          <p className="font-medium hover:underline underline-offset-2">{store.name}</p>
                           {store.description && (
                             <p className="text-sm text-muted-foreground truncate max-w-xs">
                               {store.description}
@@ -417,7 +420,17 @@ export default function SuperAdminStoreManagement() {
                       <TableCell>{store.location || "-"}</TableCell>
                       <TableCell>
                         {store.subscription_end_date ? (
-                          <div className="text-xs space-y-0.5">
+                          <div
+                            className="text-xs space-y-0.5 cursor-pointer hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
+                            onClick={() => {
+                              setSubscriptionEditStore(store);
+                              setSubscriptionForm({
+                                start: store.subscription_start_date || "",
+                                end: store.subscription_end_date || "",
+                              });
+                            }}
+                            title="Klik untuk edit tanggal langganan"
+                          >
                             <div className="flex items-center gap-1">
                               <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
                               <span>{format(parseISO(store.subscription_start_date!), "d MMM yyyy", { locale: localeId })}</span>
@@ -432,7 +445,15 @@ export default function SuperAdminStoreManagement() {
                             })()}
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Belum diatur</span>
+                          <span
+                            className="text-xs text-muted-foreground cursor-pointer hover:text-primary hover:underline"
+                            onClick={() => {
+                              setSubscriptionEditStore(store);
+                              setSubscriptionForm({ start: "", end: "" });
+                            }}
+                          >
+                            Belum diatur
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
@@ -462,24 +483,21 @@ export default function SuperAdminStoreManagement() {
                           <span>{storeStats[store.id]?.users || 0}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="text-center">
                         <Switch
                           checked={store.is_active}
                           onCheckedChange={() => handleToggleActive(store)}
                         />
                       </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              localStorage.setItem("current_store_id", store.id);
-                              navigate("/dashboard");
-                            }}
-                            title="Buka Dashboard PMS"
+                            onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}
+                            title="Kelola Fitur"
                           >
-                            <LayoutDashboard className="h-4 w-4" />
+                            <ToggleRight className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
@@ -649,6 +667,72 @@ export default function SuperAdminStoreManagement() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Subscription Edit Dialog */}
+      <Dialog open={!!subscriptionEditStore} onOpenChange={(open) => !open && setSubscriptionEditStore(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              Edit Langganan - {subscriptionEditStore?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="sub_start">Mulai Langganan</Label>
+              <Input
+                id="sub_start"
+                type="date"
+                value={subscriptionForm.start}
+                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, start: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sub_end">Akhir Langganan</Label>
+              <Input
+                id="sub_end"
+                type="date"
+                value={subscriptionForm.end}
+                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, end: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setSubscriptionEditStore(null)}>
+                Batal
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  if (!subscriptionEditStore) return;
+                  try {
+                    const { error } = await supabase
+                      .from("stores")
+                      .update({
+                        subscription_start_date: subscriptionForm.start || null,
+                        subscription_end_date: subscriptionForm.end || null,
+                      })
+                      .eq("id", subscriptionEditStore.id);
+                    if (error) throw error;
+                    await logActivity({
+                      actionType: 'updated',
+                      entityType: 'Outlet',
+                      entityId: subscriptionEditStore.id,
+                      description: `[Super Admin] Mengubah tanggal langganan outlet ${subscriptionEditStore.name}`,
+                    });
+                    toast.success("Tanggal langganan berhasil diupdate");
+                    setSubscriptionEditStore(null);
+                    fetchStores();
+                  } catch (error: any) {
+                    toast.error(error.message || "Gagal mengupdate langganan");
+                  }
+                }}
+              >
+                Simpan
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
