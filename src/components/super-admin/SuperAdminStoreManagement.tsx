@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ChevronDown, ChevronRight, ToggleRight, LayoutDashboard } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ToggleRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
