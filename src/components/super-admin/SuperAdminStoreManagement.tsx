@@ -59,6 +59,8 @@ export default function SuperAdminStoreManagement() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
+  const [subscriptionEditStore, setSubscriptionEditStore] = useState<Store | null>(null);
+  const [subscriptionForm, setSubscriptionForm] = useState({ start: "", end: "" });
   const [formData, setFormData] = useState({
     name: "",
     description: "",
