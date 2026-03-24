@@ -385,14 +385,9 @@ export default function SuperAdminStoreManagement() {
               ) : (
                 stores.map((store) => (
                   <React.Fragment key={store.id}>
-                    <TableRow className="cursor-pointer" onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}>
+                    <TableRow>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {expandedStoreId === store.id ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          )}
                           {store.image_url ? (
                             <img
                               src={store.image_url}
@@ -407,8 +402,14 @@ export default function SuperAdminStoreManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{store.name}</p>
+                        <div
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => {
+                            localStorage.setItem("current_store_id", store.id);
+                            navigate("/dashboard");
+                          }}
+                        >
+                          <p className="font-medium hover:underline underline-offset-2">{store.name}</p>
                           {store.description && (
                             <p className="text-sm text-muted-foreground truncate max-w-xs">
                               {store.description}
@@ -419,7 +420,17 @@ export default function SuperAdminStoreManagement() {
                       <TableCell>{store.location || "-"}</TableCell>
                       <TableCell>
                         {store.subscription_end_date ? (
-                          <div className="text-xs space-y-0.5">
+                          <div
+                            className="text-xs space-y-0.5 cursor-pointer hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
+                            onClick={() => {
+                              setSubscriptionEditStore(store);
+                              setSubscriptionForm({
+                                start: store.subscription_start_date || "",
+                                end: store.subscription_end_date || "",
+                              });
+                            }}
+                            title="Klik untuk edit tanggal langganan"
+                          >
                             <div className="flex items-center gap-1">
                               <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
                               <span>{format(parseISO(store.subscription_start_date!), "d MMM yyyy", { locale: localeId })}</span>
@@ -434,7 +445,15 @@ export default function SuperAdminStoreManagement() {
                             })()}
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Belum diatur</span>
+                          <span
+                            className="text-xs text-muted-foreground cursor-pointer hover:text-primary hover:underline"
+                            onClick={() => {
+                              setSubscriptionEditStore(store);
+                              setSubscriptionForm({ start: "", end: "" });
+                            }}
+                          >
+                            Belum diatur
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
@@ -464,24 +483,21 @@ export default function SuperAdminStoreManagement() {
                           <span>{storeStats[store.id]?.users || 0}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="text-center">
                         <Switch
                           checked={store.is_active}
                           onCheckedChange={() => handleToggleActive(store)}
                         />
                       </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              localStorage.setItem("current_store_id", store.id);
-                              navigate("/dashboard");
-                            }}
-                            title="Buka Dashboard PMS"
+                            onClick={() => setExpandedStoreId(expandedStoreId === store.id ? null : store.id)}
+                            title="Kelola Fitur"
                           >
-                            <LayoutDashboard className="h-4 w-4" />
+                            <ToggleRight className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
