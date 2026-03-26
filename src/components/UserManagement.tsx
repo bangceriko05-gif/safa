@@ -1185,7 +1185,7 @@ export default function UserManagement() {
                             </Button>
                             <Select
                               value={user.role}
-                              onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user")}
+                              onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user" | "owner" | "akuntan")}
                               disabled={updating === user.id}
                             >
                               <SelectTrigger className="w-32">
@@ -1197,6 +1197,8 @@ export default function UserManagement() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="owner">Owner</SelectItem>
+                                <SelectItem value="akuntan">Akuntan</SelectItem>
                                 <SelectItem value="leader">Leader</SelectItem>
                                 <SelectItem value="user">User</SelectItem>
                               </SelectContent>
