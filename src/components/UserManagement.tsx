@@ -364,7 +364,7 @@ export default function UserManagement() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: "admin" | "leader" | "user") => {
+  const updateUserRole = async (userId: string, newRole: "admin" | "leader" | "user" | "owner" | "akuntan") => {
     setUpdating(userId);
     try {
       // Get user name before updating
@@ -1185,7 +1185,7 @@ export default function UserManagement() {
                             </Button>
                             <Select
                               value={user.role}
-                              onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user")}
+                              onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user" | "owner" | "akuntan")}
                               disabled={updating === user.id}
                             >
                               <SelectTrigger className="w-32">
@@ -1197,6 +1197,8 @@ export default function UserManagement() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="owner">Owner</SelectItem>
+                                <SelectItem value="akuntan">Akuntan</SelectItem>
                                 <SelectItem value="leader">Leader</SelectItem>
                                 <SelectItem value="user">User</SelectItem>
                               </SelectContent>
@@ -1207,7 +1209,7 @@ export default function UserManagement() {
                         {currentUserRole === "leader" && user.role === "user" && (
                           <Select
                             value={user.role}
-                            onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user")}
+                            onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user" | "owner" | "akuntan")}
                             disabled={updating === user.id}
                           >
                             <SelectTrigger className="w-32">
@@ -1218,7 +1220,6 @@ export default function UserManagement() {
                               )}
                             </SelectTrigger>
                             <SelectContent>
-                              {/* Leader can only set user to user role - cannot promote to leader or admin */}
                               <SelectItem value="user">User</SelectItem>
                             </SelectContent>
                           </Select>
