@@ -364,7 +364,7 @@ export default function UserManagement() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: "admin" | "leader" | "user") => {
+  const updateUserRole = async (userId: string, newRole: "admin" | "leader" | "user" | "owner" | "akuntan") => {
     setUpdating(userId);
     try {
       // Get user name before updating
