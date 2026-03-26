@@ -1397,15 +1397,17 @@ export default function UserManagement() {
               <Label htmlFor="add-role">Role *</Label>
               <Select
                 value={addFormData.role}
-                onValueChange={(value) => setAddFormData({ ...addFormData, role: value as "admin" | "leader" | "user" })}
+                onValueChange={(value) => setAddFormData({ ...addFormData, role: value as "admin" | "leader" | "user" | "owner" | "akuntan" })}
               >
                 <SelectTrigger id="add-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {currentUserRole === "admin" && (
+                  {(currentUserRole === "admin" || currentUserRole === "owner") && (
                     <>
+                      <SelectItem value="owner">Owner</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="akuntan">Akuntan</SelectItem>
                       <SelectItem value="leader">Leader</SelectItem>
                     </>
                   )}
