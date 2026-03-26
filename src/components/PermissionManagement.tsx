@@ -31,7 +31,7 @@ interface UserPermission {
 
 interface RolePermission {
   id: string;
-  role: 'admin' | 'leader' | 'user';
+  role: 'admin' | 'leader' | 'user' | 'owner' | 'akuntan';
   permission_id: string;
 }
 
@@ -133,7 +133,7 @@ export default function PermissionManagement() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'leader' | 'user' | ''>("");
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'leader' | 'user' | 'owner' | 'akuntan' | ''>("");
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,7 +225,7 @@ export default function PermissionManagement() {
     }
   };
 
-  const fetchRolePermissions = async (role: 'admin' | 'leader' | 'user') => {
+  const fetchRolePermissions = async (role: 'admin' | 'leader' | 'user' | 'owner' | 'akuntan') => {
     try {
       const { data, error } = await supabase
         .from("role_permissions")
@@ -606,7 +606,9 @@ export default function PermissionManagement() {
                   <SelectValue placeholder="Pilih role..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="akuntan">Akuntan</SelectItem>
                   <SelectItem value="leader">Leader</SelectItem>
                   <SelectItem value="user">User</SelectItem>
                 </SelectContent>

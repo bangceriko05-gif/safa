@@ -90,11 +90,11 @@ Deno.serve(async (req) => {
       throw new Error('Failed to verify user permissions');
     }
 
-    const isAdmin = roleData.role === 'admin';
+    const isAdmin = roleData.role === 'admin' || roleData.role === 'owner' || roleData.role === 'akuntan';
     const isLeader = roleData.role === 'leader';
 
     if (!isAdmin && !isLeader) {
-      throw new Error('Only admins and leaders can manage users');
+      throw new Error('Only admins, owners, accountants, and leaders can manage users');
     }
 
     const body: RequestBody = await req.json();
@@ -336,8 +336,8 @@ Deno.serve(async (req) => {
       if (!storeId) throw new Error('Store ID is required');
 
       // Leader cannot create/administer admin users
-      if (isLeader && role === 'admin') {
-        throw new Error('Leaders cannot create admin users');
+      if (isLeader && (role === 'admin' || role === 'owner' || role === 'akuntan')) {
+        throw new Error('Leaders cannot create admin/owner/akuntan users');
       }
 
       // Search for user across all pages
@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
       }
 
       if (!existingStoreAccess) {
-        const storeRole = desiredRole === 'admin' ? 'admin' : 'staff';
+        const storeRole = (desiredRole === 'admin' || desiredRole === 'owner') ? 'admin' : 'staff';
         const { error: storeAccessError } = await supabaseAdmin
           .from('user_store_access')
           .insert({
@@ -458,8 +458,8 @@ Deno.serve(async (req) => {
       }
 
       // Leader cannot create admin users
-      if (isLeader && role === 'admin') {
-        throw new Error('Leaders cannot create admin users');
+      if (isLeader && (role === 'admin' || role === 'owner' || role === 'akuntan')) {
+        throw new Error('Leaders cannot create admin/owner/akuntan users');
       }
 
       // Search for existing user across all pages
@@ -553,7 +553,7 @@ Deno.serve(async (req) => {
 
         console.log(`User ${existingUser.id} exists, adding access to store ${storeId}`);
 
-        const storeRole = role === 'admin' ? 'admin' : 'staff';
+        const storeRole = (role === 'admin' || role === 'owner') ? 'admin' : 'staff';
         const { error: storeAccessError } = await supabaseAdmin
           .from('user_store_access')
           .insert({
@@ -630,7 +630,7 @@ Deno.serve(async (req) => {
       }
 
       // Automatically grant access to the store where user is being registered
-      const storeRole = role === 'admin' ? 'admin' : 'staff';
+      const storeRole = (role === 'admin' || role === 'owner') ? 'admin' : 'staff';
       const { error: storeAccessError } = await supabaseAdmin
         .from('user_store_access')
         .insert({
@@ -678,8 +678,8 @@ Deno.serve(async (req) => {
           .eq('user_id', userId)
           .single();
         
-        if (targetRoleData?.role === 'admin') {
-          throw new Error('Leaders cannot delete admin users');
+        if (targetRoleData?.role === 'admin' || targetRoleData?.role === 'owner' || targetRoleData?.role === 'akuntan') {
+          throw new Error('Leaders cannot delete admin/owner/akuntan users');
         }
       }
 

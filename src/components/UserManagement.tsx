@@ -20,7 +20,7 @@ interface User {
   name: string;
   email: string;
   created_at: string;
-  role: "admin" | "leader" | "user";
+  role: "admin" | "leader" | "user" | "owner" | "akuntan";
   stores?: string[];
 }
 
@@ -48,7 +48,7 @@ interface OrphanUser {
   name: string;
   email: string;
   created_at: string;
-  role: "admin" | "leader" | "user";
+  role: "admin" | "leader" | "user" | "owner" | "akuntan";
 }
 
 interface AuthOrphan {
@@ -88,7 +88,7 @@ export default function UserManagement() {
     name: "",
     email: "",
     password: "",
-    role: "user" as "admin" | "leader" | "user",
+    role: "user" as "admin" | "leader" | "user" | "owner" | "akuntan",
   });
   const [isStoreAccessDialogOpen, setIsStoreAccessDialogOpen] = useState(false);
   const [storeAccessUser, setStoreAccessUser] = useState<User | null>(null);
@@ -102,7 +102,7 @@ export default function UserManagement() {
 
   // Helper function to check permissions
   const hasPermission = (permissionName: string) => {
-    return userPermissions.includes(permissionName) || currentUserRole === "admin";
+    return userPermissions.includes(permissionName) || currentUserRole === "admin" || currentUserRole === "owner" || currentUserRole === "akuntan";
   };
 
   const fetchUsers = async () => {
@@ -879,7 +879,7 @@ export default function UserManagement() {
                 User Orphan {orphanUsers.length > 0 && `(${orphanUsers.length})`}
               </Button>
             )}
-            {(currentUserRole === "admin" || currentUserRole === "leader") && (
+            {(currentUserRole === "admin" || currentUserRole === "owner" || currentUserRole === "leader") && (
               <Button onClick={() => setIsAddDialogOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Tambah Pengguna
@@ -1044,11 +1044,13 @@ export default function UserManagement() {
                           <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <Badge variant={
-                              user.role === "admin" ? "default" : 
-                              user.role === "leader" ? "destructive" : 
+                              user.role === "admin" || user.role === "owner" ? "default" : 
+                              user.role === "leader" || user.role === "akuntan" ? "destructive" : 
                               "secondary"
                             }>
-                              {user.role === "admin" ? "Admin" : 
+                              {user.role === "owner" ? "Owner" :
+                               user.role === "admin" ? "Admin" : 
+                               user.role === "akuntan" ? "Akuntan" :
                                user.role === "leader" ? "Leader" : 
                                "User"}
                             </Badge>
@@ -1121,11 +1123,13 @@ export default function UserManagement() {
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Badge variant={
-                        user.role === "admin" ? "default" : 
-                        user.role === "leader" ? "destructive" : 
+                        user.role === "admin" || user.role === "owner" ? "default" : 
+                        user.role === "leader" || user.role === "akuntan" ? "destructive" : 
                         "secondary"
                       }>
-                        {user.role === "admin" ? "Admin" : 
+                        {user.role === "owner" ? "Owner" :
+                         user.role === "admin" ? "Admin" : 
+                         user.role === "akuntan" ? "Akuntan" :
                          user.role === "leader" ? "Leader" : 
                          "User"}
                       </Badge>
@@ -1153,7 +1157,7 @@ export default function UserManagement() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2 items-center">
                         {/* Admin can do everything */}
-                        {currentUserRole === "admin" && (
+                        {(currentUserRole === "admin" || currentUserRole === "owner") && (
                           <>
                             <Button
                               variant="ghost"
@@ -1220,7 +1224,7 @@ export default function UserManagement() {
                           </Select>
                         )}
                         {/* Admin can delete anyone. Leader can only delete "user" type users */}
-                        {(currentUserRole === "admin" || (currentUserRole === "leader" && user.role === "user")) && (
+                        {(currentUserRole === "admin" || currentUserRole === "owner" || (currentUserRole === "leader" && user.role === "user")) && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1397,15 +1401,17 @@ export default function UserManagement() {
               <Label htmlFor="add-role">Role *</Label>
               <Select
                 value={addFormData.role}
-                onValueChange={(value) => setAddFormData({ ...addFormData, role: value as "admin" | "leader" | "user" })}
+                onValueChange={(value) => setAddFormData({ ...addFormData, role: value as "admin" | "leader" | "user" | "owner" | "akuntan" })}
               >
                 <SelectTrigger id="add-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {currentUserRole === "admin" && (
+                  {(currentUserRole === "admin" || currentUserRole === "owner") && (
                     <>
+                      <SelectItem value="owner">Owner</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="akuntan">Akuntan</SelectItem>
                       <SelectItem value="leader">Leader</SelectItem>
                     </>
                   )}

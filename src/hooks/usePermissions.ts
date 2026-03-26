@@ -24,8 +24,8 @@ export function usePermissions() {
         .eq("user_id", user.id)
         .single();
 
-      if (roleData?.role === "admin") {
-        // Admin has all permissions - set a special flag
+      if (roleData?.role === "admin" || roleData?.role === "owner" || roleData?.role === "akuntan") {
+        // Admin, Owner, Akuntan have all permissions - set a special flag
         setUserPermissionNames(new Set(["__admin__"]));
         setLoading(false);
         return;
