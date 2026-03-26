@@ -630,7 +630,7 @@ Deno.serve(async (req) => {
       }
 
       // Automatically grant access to the store where user is being registered
-      const storeRole = role === 'admin' ? 'admin' : 'staff';
+      const storeRole = (role === 'admin' || role === 'owner') ? 'admin' : 'staff';
       const { error: storeAccessError } = await supabaseAdmin
         .from('user_store_access')
         .insert({
