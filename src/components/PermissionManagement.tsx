@@ -133,7 +133,7 @@ export default function PermissionManagement() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'leader' | 'user' | ''>("");
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'leader' | 'user' | 'owner' | 'akuntan' | ''>("");
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
