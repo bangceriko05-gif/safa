@@ -879,7 +879,7 @@ export default function UserManagement() {
                 User Orphan {orphanUsers.length > 0 && `(${orphanUsers.length})`}
               </Button>
             )}
-            {(currentUserRole === "admin" || currentUserRole === "leader") && (
+            {(currentUserRole === "admin" || currentUserRole === "owner" || currentUserRole === "leader") && (
               <Button onClick={() => setIsAddDialogOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Tambah Pengguna
