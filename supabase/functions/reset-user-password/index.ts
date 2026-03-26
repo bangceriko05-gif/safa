@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
         .eq('user_id', userId)
         .single();
       
-      if (targetRoleData?.role === 'admin') {
-        throw new Error('Leaders cannot reset admin passwords');
+      if (targetRoleData?.role === 'admin' || targetRoleData?.role === 'owner' || targetRoleData?.role === 'akuntan') {
+        throw new Error('Leaders cannot reset admin/owner/akuntan passwords');
       }
     }
 

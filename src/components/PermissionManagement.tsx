@@ -606,7 +606,9 @@ export default function PermissionManagement() {
                   <SelectValue placeholder="Pilih role..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="akuntan">Akuntan</SelectItem>
                   <SelectItem value="leader">Leader</SelectItem>
                   <SelectItem value="user">User</SelectItem>
                 </SelectContent>
