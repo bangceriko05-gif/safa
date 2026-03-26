@@ -57,11 +57,11 @@ Deno.serve(async (req) => {
       throw new Error('Failed to verify user permissions');
     }
 
-    const isAdmin = roleData.role === 'admin';
+    const isAdmin = roleData.role === 'admin' || roleData.role === 'owner' || roleData.role === 'akuntan';
     const isLeader = roleData.role === 'leader';
 
     if (!isAdmin && !isLeader) {
-      throw new Error('Only admins and leaders can reset passwords');
+      throw new Error('Only admins, owners, accountants, and leaders can reset passwords');
     }
 
     const body: ResetPasswordRequest = await req.json();
