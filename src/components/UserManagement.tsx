@@ -88,7 +88,7 @@ export default function UserManagement() {
     name: "",
     email: "",
     password: "",
-    role: "user" as "admin" | "leader" | "user",
+    role: "user" as "admin" | "leader" | "user" | "owner" | "akuntan",
   });
   const [isStoreAccessDialogOpen, setIsStoreAccessDialogOpen] = useState(false);
   const [storeAccessUser, setStoreAccessUser] = useState<User | null>(null);
