@@ -20,7 +20,7 @@ interface User {
   name: string;
   email: string;
   created_at: string;
-  role: "admin" | "leader" | "user";
+  role: "admin" | "leader" | "user" | "owner" | "akuntan";
   stores?: string[];
 }
 

@@ -31,7 +31,7 @@ interface UserPermission {
 
 interface RolePermission {
   id: string;
-  role: 'admin' | 'leader' | 'user';
+  role: 'admin' | 'leader' | 'user' | 'owner' | 'akuntan';
   permission_id: string;
 }
 
