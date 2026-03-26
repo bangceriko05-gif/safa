@@ -553,7 +553,7 @@ Deno.serve(async (req) => {
 
         console.log(`User ${existingUser.id} exists, adding access to store ${storeId}`);
 
-        const storeRole = role === 'admin' ? 'admin' : 'staff';
+        const storeRole = (role === 'admin' || role === 'owner') ? 'admin' : 'staff';
         const { error: storeAccessError } = await supabaseAdmin
           .from('user_store_access')
           .insert({
