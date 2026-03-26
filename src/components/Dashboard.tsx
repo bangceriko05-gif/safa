@@ -440,7 +440,9 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
             <p className="text-muted-foreground">
               Selamat datang, {user.email} ({
+                userRole === "owner" ? "Owner" :
                 userRole === "admin" ? "Admin" : 
+                userRole === "akuntan" ? "Akuntan" :
                 userRole === "leader" ? "Leader" : 
                 "User"
               })
