@@ -1157,7 +1157,7 @@ export default function UserManagement() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2 items-center">
                         {/* Admin can do everything */}
-                        {currentUserRole === "admin" && (
+                        {(currentUserRole === "admin" || currentUserRole === "owner") && (
                           <>
                             <Button
                               variant="ghost"
