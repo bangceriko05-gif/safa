@@ -102,7 +102,7 @@ export default function UserManagement() {
 
   // Helper function to check permissions
   const hasPermission = (permissionName: string) => {
-    return userPermissions.includes(permissionName) || currentUserRole === "admin";
+    return userPermissions.includes(permissionName) || currentUserRole === "admin" || currentUserRole === "owner" || currentUserRole === "akuntan";
   };
 
   const fetchUsers = async () => {
