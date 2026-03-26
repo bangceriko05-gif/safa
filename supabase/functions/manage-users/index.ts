@@ -458,8 +458,8 @@ Deno.serve(async (req) => {
       }
 
       // Leader cannot create admin users
-      if (isLeader && role === 'admin') {
-        throw new Error('Leaders cannot create admin users');
+      if (isLeader && (role === 'admin' || role === 'owner' || role === 'akuntan')) {
+        throw new Error('Leaders cannot create admin/owner/akuntan users');
       }
 
       // Search for existing user across all pages
