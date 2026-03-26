@@ -336,8 +336,8 @@ Deno.serve(async (req) => {
       if (!storeId) throw new Error('Store ID is required');
 
       // Leader cannot create/administer admin users
-      if (isLeader && role === 'admin') {
-        throw new Error('Leaders cannot create admin users');
+      if (isLeader && (role === 'admin' || role === 'owner' || role === 'akuntan')) {
+        throw new Error('Leaders cannot create admin/owner/akuntan users');
       }
 
       // Search for user across all pages
