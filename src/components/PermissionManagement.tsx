@@ -225,7 +225,7 @@ export default function PermissionManagement() {
     }
   };
 
-  const fetchRolePermissions = async (role: 'admin' | 'leader' | 'user') => {
+  const fetchRolePermissions = async (role: 'admin' | 'leader' | 'user' | 'owner' | 'akuntan') => {
     try {
       const { data, error } = await supabase
         .from("role_permissions")
