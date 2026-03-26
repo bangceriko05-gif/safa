@@ -1044,11 +1044,13 @@ export default function UserManagement() {
                           <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <Badge variant={
-                              user.role === "admin" ? "default" : 
-                              user.role === "leader" ? "destructive" : 
+                              user.role === "admin" || user.role === "owner" ? "default" : 
+                              user.role === "leader" || user.role === "akuntan" ? "destructive" : 
                               "secondary"
                             }>
-                              {user.role === "admin" ? "Admin" : 
+                              {user.role === "owner" ? "Owner" :
+                               user.role === "admin" ? "Admin" : 
+                               user.role === "akuntan" ? "Akuntan" :
                                user.role === "leader" ? "Leader" : 
                                "User"}
                             </Badge>
