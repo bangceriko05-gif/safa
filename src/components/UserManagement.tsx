@@ -1209,7 +1209,7 @@ export default function UserManagement() {
                         {currentUserRole === "leader" && user.role === "user" && (
                           <Select
                             value={user.role}
-                            onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user")}
+                            onValueChange={(value) => updateUserRole(user.id, value as "admin" | "leader" | "user" | "owner" | "akuntan")}
                             disabled={updating === user.id}
                           >
                             <SelectTrigger className="w-32">
@@ -1220,7 +1220,6 @@ export default function UserManagement() {
                               )}
                             </SelectTrigger>
                             <SelectContent>
-                              {/* Leader can only set user to user role - cannot promote to leader or admin */}
                               <SelectItem value="user">User</SelectItem>
                             </SelectContent>
                           </Select>
