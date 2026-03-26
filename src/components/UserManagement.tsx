@@ -1224,7 +1224,7 @@ export default function UserManagement() {
                           </Select>
                         )}
                         {/* Admin can delete anyone. Leader can only delete "user" type users */}
-                        {(currentUserRole === "admin" || (currentUserRole === "leader" && user.role === "user")) && (
+                        {(currentUserRole === "admin" || currentUserRole === "owner" || (currentUserRole === "leader" && user.role === "user")) && (
                           <Button
                             variant="ghost"
                             size="sm"
