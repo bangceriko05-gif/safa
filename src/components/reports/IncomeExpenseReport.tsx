@@ -75,6 +75,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const { hasPermission } = usePermissions();
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
+  const [processStatus, setProcessStatus] = useState("proses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>(hideDateFilter ? "today" : "thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
