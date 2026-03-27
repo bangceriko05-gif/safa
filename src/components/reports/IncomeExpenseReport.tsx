@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const { hasPermission } = usePermissions();
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [subView, setSubView] = useState<SubView>(initialTab || "expenses");
+  const [processStatus, setProcessStatus] = useState("proses");
   const [timeRange, setTimeRange] = useState<ReportTimeRange>(hideDateFilter ? "today" : "thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     fetchExpenseCategories();
     fetchProducts();
     fetchCustomers();
-  }, [timeRange, customDateRange, currentStore]);
+  }, [timeRange, customDateRange, currentStore, processStatus]);
 
   const fetchProducts = async () => {
     if (!currentStore) return;
@@ -181,21 +183,31 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
       const startDateStr = format(startDate, "yyyy-MM-dd");
       const endDateStr = format(endDate, "yyyy-MM-dd");
 
+      const expenseQuery = supabase
+        .from("expenses")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr)
+        .order("date", { ascending: false });
+      
+      const incomeQuery = supabase
+        .from("incomes")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr)
+        .order("date", { ascending: false });
+
+      // Apply process_status filter when used from TransactionManagement
+      if (showAddButton) {
+        (expenseQuery as any).eq("process_status", processStatus);
+        (incomeQuery as any).eq("process_status", processStatus);
+      }
+
       const [expensesResult, incomesResult] = await Promise.all([
-        supabase
-          .from("expenses")
-          .select("*")
-          .eq("store_id", currentStore.id)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr)
-          .order("date", { ascending: false }),
-        supabase
-          .from("incomes")
-          .select("*")
-          .eq("store_id", currentStore.id)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr)
-          .order("date", { ascending: false }),
+        expenseQuery,
+        incomeQuery,
       ]);
 
       if (expensesResult.error) throw expensesResult.error;
@@ -509,7 +521,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const handleDeleteExpense = async (expense: ExpenseData) => {
     if (!confirm(`Hapus pengeluaran "${expense.description}"?`)) return;
     try {
-      const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
+      const { error } = await supabase.from("expenses").update({ process_status: "dihapus" } as any).eq("id", expense.id);
       if (error) throw error;
       toast.success("Pengeluaran berhasil dihapus");
       setEditingExpense(null);
@@ -522,9 +534,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const handleDeleteIncome = async (income: IncomeData) => {
     if (!confirm(`Hapus pemasukan "${income.customer_name || income.description}"?`)) return;
     try {
-      // Delete income products first
-      await supabase.from("income_products").delete().eq("income_id", income.id);
-      const { error } = await supabase.from("incomes").delete().eq("id", income.id);
+      const { error } = await supabase.from("incomes").update({ process_status: "dihapus" } as any).eq("id", income.id);
       if (error) throw error;
       toast.success("Pemasukan berhasil dihapus");
       setEditingIncome(null);
@@ -677,6 +687,16 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
 
   return (
     <div className="space-y-6">
+      {showAddButton && (
+        <Tabs value={processStatus} onValueChange={setProcessStatus}>
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
+            <TabsTrigger value="proses">Proses</TabsTrigger>
+            <TabsTrigger value="selesai">Selesai</TabsTrigger>
+            <TabsTrigger value="batal">Batal</TabsTrigger>
+            <TabsTrigger value="dihapus">Dihapus</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           {!hideDateFilter && (

@@ -71,7 +71,7 @@ interface BookingWithRoom {
 export default function ListBooking({ userRole, onEditBooking, onAddBooking }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
-  const [activeSubTab, setActiveSubTab] = useState("active");
+  const [activeSubTab, setActiveSubTab] = useState("proses");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -404,33 +404,21 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
   const handleDeleteBooking = async (bookingId: string) => {
     try {
-      // Check permission first
       if (!hasPermission("delete_bookings")) {
         toast.error("Anda tidak memiliki izin untuk menghapus booking");
         return;
       }
 
-      // Get booking details for logging
       const { data: bookingData } = await supabase
         .from("bookings")
-        .select(`
-          customer_name,
-          bid,
-          rooms (name)
-        `)
+        .select(`customer_name, bid, rooms (name)`)
         .eq("id", bookingId)
         .single();
 
-      // Delete booking products first
-      await supabase
-        .from("booking_products")
-        .delete()
-        .eq("booking_id", bookingId);
-
-      // Delete the booking
+      // Soft delete - change status to DIHAPUS
       const { error } = await supabase
         .from("bookings")
-        .delete()
+        .update({ status: "DIHAPUS" })
         .eq("id", bookingId);
 
       if (error) throw error;
@@ -456,16 +444,12 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
   const getStatusLabel = (status: string | null) => {
     switch (status) {
-      case "BO":
-        return "Reservasi";
-      case "CI":
-        return "Check In";
-      case "CO":
-        return "Check Out";
-      case "BATAL":
-        return "BATAL";
-      default:
-        return "Reservasi";
+      case "BO": return "Reservasi";
+      case "CI": return "Check In";
+      case "CO": return "Check Out";
+      case "BATAL": return "BATAL";
+      case "DIHAPUS": return "DIHAPUS";
+      default: return "Reservasi";
     }
   };
 
@@ -494,8 +478,14 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
   const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
-  // Filter out BATAL status from active bookings list
-  const activeBookings = bookings.filter(b => b.status !== "BATAL");
+  // Filter bookings based on active process tab
+  const activeBookings = bookings.filter(b => {
+    if (activeSubTab === "proses") return b.status === "BO" || b.status === "CI";
+    if (activeSubTab === "selesai") return b.status === "CO";
+    if (activeSubTab === "batal") return b.status === "BATAL";
+    if (activeSubTab === "dihapus") return b.status === "DIHAPUS";
+    return b.status !== "BATAL" && b.status !== "DIHAPUS";
+  });
 
   // Search filter for active bookings
   const filteredActiveBookings = activeBookings.filter((booking) => {
@@ -525,23 +515,19 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="active" className="gap-2">
-            <List className="h-4 w-4" />
-            Aktif
-          </TabsTrigger>
-          <TabsTrigger value="cancelled" className="gap-2">
-            <XCircle className="h-4 w-4" />
-            Batal
-          </TabsTrigger>
+        <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsTrigger value="proses">Proses</TabsTrigger>
+          <TabsTrigger value="selesai">Selesai</TabsTrigger>
+          <TabsTrigger value="batal">Batal</TabsTrigger>
+          <TabsTrigger value="dihapus">Dihapus</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="mt-4">
+        <TabsContent value="proses" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5" />
-                List Booking Aktif
+                Penjualan - Proses
               </CardTitle>
               {onAddBooking && (
                 <Button onClick={onAddBooking} size="sm">
@@ -963,8 +949,44 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
         </Card>
       </TabsContent>
 
-      <TabsContent value="cancelled" className="mt-4">
+      <TabsContent value="selesai" className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Penjualan - Selesai
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeBookings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Tidak ada data</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{activeBookings.length} booking selesai</p>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="batal" className="mt-4">
         <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} />
+      </TabsContent>
+
+      <TabsContent value="dihapus" className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Penjualan - Dihapus
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeBookings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Tidak ada data</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{activeBookings.length} booking dihapus</p>
+            )}
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   </div>
