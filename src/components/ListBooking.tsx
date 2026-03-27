@@ -444,16 +444,12 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
   const getStatusLabel = (status: string | null) => {
     switch (status) {
-      case "BO":
-        return "Reservasi";
-      case "CI":
-        return "Check In";
-      case "CO":
-        return "Check Out";
-      case "BATAL":
-        return "BATAL";
-      default:
-        return "Reservasi";
+      case "BO": return "Reservasi";
+      case "CI": return "Check In";
+      case "CO": return "Check Out";
+      case "BATAL": return "BATAL";
+      case "DIHAPUS": return "DIHAPUS";
+      default: return "Reservasi";
     }
   };
 
