@@ -183,21 +183,31 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
       const startDateStr = format(startDate, "yyyy-MM-dd");
       const endDateStr = format(endDate, "yyyy-MM-dd");
 
+      const expenseQuery = supabase
+        .from("expenses")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr)
+        .order("date", { ascending: false });
+      
+      const incomeQuery = supabase
+        .from("incomes")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr)
+        .order("date", { ascending: false });
+
+      // Apply process_status filter when used from TransactionManagement
+      if (showAddButton) {
+        expenseQuery.eq("process_status" as any, processStatus);
+        incomeQuery.eq("process_status" as any, processStatus);
+      }
+
       const [expensesResult, incomesResult] = await Promise.all([
-        supabase
-          .from("expenses")
-          .select("*")
-          .eq("store_id", currentStore.id)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr)
-          .order("date", { ascending: false }),
-        supabase
-          .from("incomes")
-          .select("*")
-          .eq("store_id", currentStore.id)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr)
-          .order("date", { ascending: false }),
+        expenseQuery,
+        incomeQuery,
       ]);
 
       if (expensesResult.error) throw expensesResult.error;
