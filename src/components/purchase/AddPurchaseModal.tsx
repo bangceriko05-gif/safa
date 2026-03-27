@@ -25,7 +25,7 @@ interface AddPurchaseModalProps {
 
 export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurchaseModalProps) {
   const { currentStore } = useStore();
-  const { paymentMethods } = usePaymentMethods();
+  const { methods: paymentMethods } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
   const [supplierName, setSupplierName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
