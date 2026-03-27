@@ -115,7 +115,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     fetchExpenseCategories();
     fetchProducts();
     fetchCustomers();
-  }, [timeRange, customDateRange, currentStore]);
+  }, [timeRange, customDateRange, currentStore, processStatus]);
 
   const fetchProducts = async () => {
     if (!currentStore) return;
