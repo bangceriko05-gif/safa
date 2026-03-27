@@ -525,18 +525,14 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="active" className="gap-2">
-            <List className="h-4 w-4" />
-            Aktif
-          </TabsTrigger>
-          <TabsTrigger value="cancelled" className="gap-2">
-            <XCircle className="h-4 w-4" />
-            Batal
-          </TabsTrigger>
+        <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsTrigger value="proses">Proses</TabsTrigger>
+          <TabsTrigger value="selesai">Selesai</TabsTrigger>
+          <TabsTrigger value="batal">Batal</TabsTrigger>
+          <TabsTrigger value="dihapus">Dihapus</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="mt-4">
+        <TabsContent value="proses" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
