@@ -478,8 +478,14 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
   const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
-  // Filter out BATAL status from active bookings list
-  const activeBookings = bookings.filter(b => b.status !== "BATAL");
+  // Filter bookings based on active process tab
+  const activeBookings = bookings.filter(b => {
+    if (activeSubTab === "proses") return b.status === "BO" || b.status === "CI";
+    if (activeSubTab === "selesai") return b.status === "CO";
+    if (activeSubTab === "batal") return b.status === "BATAL";
+    if (activeSubTab === "dihapus") return b.status === "DIHAPUS";
+    return b.status !== "BATAL" && b.status !== "DIHAPUS";
+  });
 
   // Search filter for active bookings
   const filteredActiveBookings = activeBookings.filter((booking) => {
