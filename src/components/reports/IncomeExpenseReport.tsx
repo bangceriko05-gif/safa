@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
