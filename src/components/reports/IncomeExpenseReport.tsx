@@ -689,6 +689,16 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
 
   return (
     <div className="space-y-6">
+      {showAddButton && (
+        <Tabs value={processStatus} onValueChange={setProcessStatus}>
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
+            <TabsTrigger value="proses">Proses</TabsTrigger>
+            <TabsTrigger value="selesai">Selesai</TabsTrigger>
+            <TabsTrigger value="batal">Batal</TabsTrigger>
+            <TabsTrigger value="dihapus">Dihapus</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           {!hideDateFilter && (
