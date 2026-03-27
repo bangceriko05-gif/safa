@@ -874,6 +874,7 @@ export type Database = {
           id: string
           payment_method: string | null
           payment_proof_url: string | null
+          process_status: string
           store_id: string | null
           updated_at: string
         }
@@ -888,6 +889,7 @@ export type Database = {
           id?: string
           payment_method?: string | null
           payment_proof_url?: string | null
+          process_status?: string
           store_id?: string | null
           updated_at?: string
         }
@@ -902,6 +904,7 @@ export type Database = {
           id?: string
           payment_method?: string | null
           payment_proof_url?: string | null
+          process_status?: string
           store_id?: string | null
           updated_at?: string
         }
@@ -975,6 +978,7 @@ export type Database = {
           description: string | null
           id: string
           payment_method: string | null
+          process_status: string
           reference_no: string | null
           store_id: string | null
           updated_at: string
@@ -990,6 +994,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          process_status?: string
           reference_no?: string | null
           store_id?: string | null
           updated_at?: string
@@ -1005,6 +1010,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          process_status?: string
           reference_no?: string | null
           store_id?: string | null
           updated_at?: string
