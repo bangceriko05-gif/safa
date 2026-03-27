@@ -1609,6 +1609,109 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_name: string
+          purchase_id: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_name: string
+          purchase_id: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_name?: string
+          purchase_id?: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          amount: number
+          bid: string | null
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_proof_url: string | null
+          process_status: string
+          receipt_status: string
+          status: string
+          store_id: string
+          supplier_name: string
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          amount?: number
+          bid?: string | null
+          created_at?: string
+          created_by: string
+          date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_proof_url?: string | null
+          process_status?: string
+          receipt_status?: string
+          status?: string
+          store_id: string
+          supplier_name?: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Update: {
+          amount?: number
+          bid?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_proof_url?: string | null
+          process_status?: string
+          receipt_status?: string
+          status?: string
+          store_id?: string
+          supplier_name?: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string | null
@@ -2184,6 +2287,10 @@ export type Database = {
       }
       generate_income_bid: {
         Args: { income_date: string; p_store_id: string }
+        Returns: string
+      }
+      generate_purchase_bid: {
+        Args: { p_store_id: string; purchase_date: string }
         Returns: string
       }
       get_notification_preferences: {
