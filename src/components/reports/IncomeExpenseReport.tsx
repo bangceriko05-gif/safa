@@ -521,7 +521,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const handleDeleteExpense = async (expense: ExpenseData) => {
     if (!confirm(`Hapus pengeluaran "${expense.description}"?`)) return;
     try {
-      const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
+      const { error } = await supabase.from("expenses").update({ process_status: "dihapus" } as any).eq("id", expense.id);
       if (error) throw error;
       toast.success("Pengeluaran berhasil dihapus");
       setEditingExpense(null);
@@ -534,9 +534,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   const handleDeleteIncome = async (income: IncomeData) => {
     if (!confirm(`Hapus pemasukan "${income.customer_name || income.description}"?`)) return;
     try {
-      // Delete income products first
-      await supabase.from("income_products").delete().eq("income_id", income.id);
-      const { error } = await supabase.from("incomes").delete().eq("id", income.id);
+      const { error } = await supabase.from("incomes").update({ process_status: "dihapus" } as any).eq("id", income.id);
       if (error) throw error;
       toast.success("Pemasukan berhasil dihapus");
       setEditingIncome(null);
