@@ -404,33 +404,21 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
   const handleDeleteBooking = async (bookingId: string) => {
     try {
-      // Check permission first
       if (!hasPermission("delete_bookings")) {
         toast.error("Anda tidak memiliki izin untuk menghapus booking");
         return;
       }
 
-      // Get booking details for logging
       const { data: bookingData } = await supabase
         .from("bookings")
-        .select(`
-          customer_name,
-          bid,
-          rooms (name)
-        `)
+        .select(`customer_name, bid, rooms (name)`)
         .eq("id", bookingId)
         .single();
 
-      // Delete booking products first
-      await supabase
-        .from("booking_products")
-        .delete()
-        .eq("booking_id", bookingId);
-
-      // Delete the booking
+      // Soft delete - change status to DIHAPUS
       const { error } = await supabase
         .from("bookings")
-        .delete()
+        .update({ status: "DIHAPUS" })
         .eq("id", bookingId);
 
       if (error) throw error;
