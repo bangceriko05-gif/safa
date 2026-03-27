@@ -949,8 +949,44 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
         </Card>
       </TabsContent>
 
-      <TabsContent value="cancelled" className="mt-4">
+      <TabsContent value="selesai" className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Penjualan - Selesai
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeBookings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Tidak ada data</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{activeBookings.length} booking selesai</p>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="batal" className="mt-4">
         <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} />
+      </TabsContent>
+
+      <TabsContent value="dihapus" className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Penjualan - Dihapus
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeBookings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Tidak ada data</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{activeBookings.length} booking dihapus</p>
+            )}
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   </div>
