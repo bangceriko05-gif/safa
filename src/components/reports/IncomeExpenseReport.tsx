@@ -201,8 +201,8 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
 
       // Apply process_status filter when used from TransactionManagement
       if (showAddButton) {
-        expenseQuery.eq("process_status" as any, processStatus);
-        incomeQuery.eq("process_status" as any, processStatus);
+        (expenseQuery as any).eq("process_status", processStatus);
+        (incomeQuery as any).eq("process_status", processStatus);
       }
 
       const [expensesResult, incomesResult] = await Promise.all([
