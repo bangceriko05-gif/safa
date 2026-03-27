@@ -537,7 +537,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5" />
-                List Booking Aktif
+                Penjualan - Proses
               </CardTitle>
               {onAddBooking && (
                 <Button onClick={onAddBooking} size="sm">
