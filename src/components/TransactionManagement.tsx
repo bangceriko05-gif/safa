@@ -1,9 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { List, TrendingDown, TrendingUp, Shield } from "lucide-react";
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign } from "lucide-react";
 import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
-import DepositManagement from "./deposit/DepositManagement";
+import PurchaseManagement from "./purchase/PurchaseManagement";
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -21,10 +21,10 @@ interface TransactionManagementProps {
 }
 
 const ALL_TABS = [
-  { key: "list-booking", feature: "transactions.list_booking", label: "List Booking", icon: List },
+  { key: "list-booking", feature: "transactions.list_booking", label: "Penjualan", icon: TrendingUp },
+  { key: "purchases", feature: "transactions.purchases", label: "Pembelian", icon: ShoppingCart },
   { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
-  { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: TrendingUp },
-  { key: "deposits", feature: "transactions.deposits", label: "Deposit", icon: Shield },
+  { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: DollarSign },
 ];
 
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
@@ -83,7 +83,15 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           {isFeatureEnabled("transactions.list_booking") ? (
             <ListBooking userRole={userRole} onEditBooking={onEditBooking} onAddBooking={onAddBooking} />
           ) : (
-            <FeatureInactiveNotice featureName="List Booking" icon={List} price={getFeatureInfo("transactions.list_booking").price} description={getFeatureInfo("transactions.list_booking").description} />
+            <FeatureInactiveNotice featureName="Penjualan" icon={TrendingUp} price={getFeatureInfo("transactions.list_booking").price} description={getFeatureInfo("transactions.list_booking").description} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="purchases" className="mt-4">
+          {isFeatureEnabled("transactions.purchases") ? (
+            <PurchaseManagement />
+          ) : (
+            <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("transactions.purchases").price} description={getFeatureInfo("transactions.purchases").description} />
           )}
         </TabsContent>
 
@@ -99,15 +107,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           {isFeatureEnabled("transactions.incomes") ? (
             <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
           ) : (
-            <FeatureInactiveNotice featureName="Pemasukan" icon={TrendingUp} price={getFeatureInfo("transactions.incomes").price} description={getFeatureInfo("transactions.incomes").description} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="deposits" className="mt-4">
-          {isFeatureEnabled("transactions.deposits") ? (
-            <DepositManagement refreshTrigger={depositRefreshTrigger} onAddDeposit={onAddDeposit} />
-          ) : (
-            <FeatureInactiveNotice featureName="Deposit" icon={Shield} price={getFeatureInfo("transactions.deposits").price} description={getFeatureInfo("transactions.deposits").description} />
+            <FeatureInactiveNotice featureName="Pemasukan" icon={DollarSign} price={getFeatureInfo("transactions.incomes").price} description={getFeatureInfo("transactions.incomes").description} />
           )}
         </TabsContent>
       </Tabs>
