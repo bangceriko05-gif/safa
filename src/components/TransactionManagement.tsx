@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, ShoppingCart, DollarSign } from "lucide-react
 import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import PurchaseManagement from "./purchase/PurchaseManagement";
+import ExpenseTransactionView from "./expense/ExpenseTransactionView";
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
