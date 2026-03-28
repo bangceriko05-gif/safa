@@ -5,6 +5,7 @@ import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import PurchaseManagement from "./purchase/PurchaseManagement";
 import ExpenseTransactionView from "./expense/ExpenseTransactionView";
+import IncomeTransactionView from "./income/IncomeTransactionView";
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
