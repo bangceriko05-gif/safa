@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, ShoppingCart, DollarSign } from "lucide-react
 import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import PurchaseManagement from "./purchase/PurchaseManagement";
+import ExpenseTransactionView from "./expense/ExpenseTransactionView";
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -97,7 +98,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
 
         <TabsContent value="expenses" className="mt-4">
           {isFeatureEnabled("transactions.expenses") ? (
-            <IncomeExpenseReport initialTab="expenses" showAddButton hideDateFilter />
+            <ExpenseTransactionView />
           ) : (
             <FeatureInactiveNotice featureName="Pengeluaran" icon={TrendingDown} price={getFeatureInfo("transactions.expenses").price} description={getFeatureInfo("transactions.expenses").description} />
           )}
