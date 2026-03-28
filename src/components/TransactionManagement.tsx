@@ -107,7 +107,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
 
         <TabsContent value="incomes" className="mt-4">
           {isFeatureEnabled("transactions.incomes") ? (
-            <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
+            <IncomeTransactionView />
           ) : (
             <FeatureInactiveNotice featureName="Pemasukan" icon={DollarSign} price={getFeatureInfo("transactions.incomes").price} description={getFeatureInfo("transactions.incomes").description} />
           )}
