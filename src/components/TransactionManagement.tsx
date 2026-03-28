@@ -5,6 +5,7 @@ import ListBooking from "./ListBooking";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import PurchaseManagement from "./purchase/PurchaseManagement";
 import ExpenseTransactionView from "./expense/ExpenseTransactionView";
+import IncomeTransactionView from "./income/IncomeTransactionView";
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -106,7 +107,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
 
         <TabsContent value="incomes" className="mt-4">
           {isFeatureEnabled("transactions.incomes") ? (
-            <IncomeExpenseReport initialTab="incomes" showAddButton hideDateFilter />
+            <IncomeTransactionView />
           ) : (
             <FeatureInactiveNotice featureName="Pemasukan" icon={DollarSign} price={getFeatureInfo("transactions.incomes").price} description={getFeatureInfo("transactions.incomes").description} />
           )}
