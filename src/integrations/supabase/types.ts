@@ -984,10 +984,13 @@ export type Database = {
           description: string | null
           id: string
           payment_method: string | null
+          payment_proof_url: string | null
           process_status: string
           reference_no: string | null
+          status: string
           store_id: string | null
           updated_at: string
+          verification_status: string
         }
         Insert: {
           amount?: number | null
@@ -1000,10 +1003,13 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          payment_proof_url?: string | null
           process_status?: string
           reference_no?: string | null
+          status?: string
           store_id?: string | null
           updated_at?: string
+          verification_status?: string
         }
         Update: {
           amount?: number | null
@@ -1016,10 +1022,13 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          payment_proof_url?: string | null
           process_status?: string
           reference_no?: string | null
+          status?: string
           store_id?: string | null
           updated_at?: string
+          verification_status?: string
         }
         Relationships: [
           {
