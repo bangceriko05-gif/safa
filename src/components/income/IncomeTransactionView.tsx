@@ -119,12 +119,22 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
 
   const updateField = async (id: string, field: string, value: string) => {
     try {
+      const updateData: any = { [field]: value };
+      if (field === "status") {
+        if (value === "tunda") updateData.process_status = "proses";
+        else if (value === "selesai") updateData.process_status = "selesai";
+        else if (value === "batal") updateData.process_status = "batal";
+      }
       const { error } = await supabase
         .from("incomes")
-        .update({ [field]: value } as any)
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
-      setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
+      if (field === "status" && updateData.process_status && updateData.process_status !== processTab) {
+        setIncomes((prev) => prev.filter((i) => i.id !== id));
+      } else {
+        setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, ...updateData } : i)));
+      }
       toast.success("Data berhasil diperbarui");
     } catch (error) {
       console.error("Error updating income:", error);
@@ -325,19 +335,18 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                               className={
                                 income.status === "selesai"
                                   ? "bg-green-50 text-green-700 border-green-200"
-                                  : income.status === "ditolak"
+                                  : income.status === "batal"
                                   ? "bg-red-50 text-red-700 border-red-200"
                                   : "bg-yellow-50 text-yellow-700 border-yellow-200"
                               }
                             >
-                              {income.status === "selesai" ? "Selesai" : income.status === "ditolak" ? "Ditolak" : income.status === "disetujui" ? "Disetujui" : "Tunda"}
+                              {income.status === "selesai" ? "Selesai" : income.status === "batal" ? "Batal" : "Tunda"}
                             </Badge>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tunda">Tunda</SelectItem>
-                            <SelectItem value="disetujui">Disetujui</SelectItem>
                             <SelectItem value="selesai">Selesai</SelectItem>
-                            <SelectItem value="ditolak">Ditolak</SelectItem>
+                            <SelectItem value="batal">Batal</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
