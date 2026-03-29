@@ -119,12 +119,22 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
 
   const updateField = async (id: string, field: string, value: string) => {
     try {
+      const updateData: any = { [field]: value };
+      if (field === "status") {
+        if (value === "tunda") updateData.process_status = "proses";
+        else if (value === "selesai") updateData.process_status = "selesai";
+        else if (value === "batal") updateData.process_status = "batal";
+      }
       const { error } = await supabase
         .from("incomes")
-        .update({ [field]: value } as any)
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
-      setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
+      if (field === "status" && updateData.process_status && updateData.process_status !== processTab) {
+        setIncomes((prev) => prev.filter((i) => i.id !== id));
+      } else {
+        setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, ...updateData } : i)));
+      }
       toast.success("Data berhasil diperbarui");
     } catch (error) {
       console.error("Error updating income:", error);
