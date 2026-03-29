@@ -330,29 +330,31 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={expense.verification_status}
-                          onValueChange={(val) => updateField(expense.id, "verification_status", val)}
-                        >
-                          <SelectTrigger className="w-[150px] h-8">
-                            <Badge
-                              variant="outline"
-                              className={
-                                expense.verification_status === "Verified"
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : "bg-orange-50 text-orange-700 border-orange-200"
-                              }
-                            >
-                              {expense.verification_status === "Verified" ? "✓" : "⚠"} {expense.verification_status}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Unverified">Unverified</SelectItem>
-                            <SelectItem value="Verified">Verified</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      {showVerification && (
+                        <TableCell>
+                          <Select
+                            value={expense.verification_status}
+                            onValueChange={(val) => updateField(expense.id, "verification_status", val)}
+                          >
+                            <SelectTrigger className="w-[150px] h-8">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  expense.verification_status === "Verified"
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : "bg-orange-50 text-orange-700 border-orange-200"
+                                }
+                              >
+                                {expense.verification_status === "Verified" ? "✓" : "⚠"} {expense.verification_status}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Unverified">Unverified</SelectItem>
+                              <SelectItem value="Verified">Verified</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Select
                           value={expense.status}
