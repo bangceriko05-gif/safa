@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
