@@ -335,19 +335,18 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                               className={
                                 income.status === "selesai"
                                   ? "bg-green-50 text-green-700 border-green-200"
-                                  : income.status === "ditolak"
+                                  : income.status === "batal"
                                   ? "bg-red-50 text-red-700 border-red-200"
                                   : "bg-yellow-50 text-yellow-700 border-yellow-200"
                               }
                             >
-                              {income.status === "selesai" ? "Selesai" : income.status === "ditolak" ? "Ditolak" : income.status === "disetujui" ? "Disetujui" : "Tunda"}
+                              {income.status === "selesai" ? "Selesai" : income.status === "batal" ? "Batal" : "Tunda"}
                             </Badge>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tunda">Tunda</SelectItem>
-                            <SelectItem value="disetujui">Disetujui</SelectItem>
                             <SelectItem value="selesai">Selesai</SelectItem>
-                            <SelectItem value="ditolak">Ditolak</SelectItem>
+                            <SelectItem value="batal">Batal</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
