@@ -136,12 +136,24 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
 
   const updateField = async (id: string, field: string, value: string) => {
     try {
+      const updateData: any = { [field]: value };
+      // When status changes, also update process_status to move between tabs
+      if (field === "status") {
+        if (value === "tunda") updateData.process_status = "proses";
+        else if (value === "selesai") updateData.process_status = "selesai";
+        else if (value === "batal") updateData.process_status = "batal";
+      }
       const { error } = await supabase
         .from("expenses")
-        .update({ [field]: value } as any)
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
-      setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+      // If status changed, remove from current view since it moved tabs
+      if (field === "status" && updateData.process_status && updateData.process_status !== processTab) {
+        setExpenses((prev) => prev.filter((e) => e.id !== id));
+      } else {
+        setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...updateData } : e)));
+      }
       toast.success("Data berhasil diperbarui");
     } catch (error) {
       console.error("Error updating expense:", error);
