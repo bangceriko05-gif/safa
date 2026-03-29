@@ -210,16 +210,18 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                 ))}
               </SelectContent>
             </Select>
-            <Select value={verificationFilter} onValueChange={setVerificationFilter}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Semua Verifikasi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Verifikasi</SelectItem>
-                <SelectItem value="Verified">Verified</SelectItem>
-                <SelectItem value="Unverified">Unverified</SelectItem>
-              </SelectContent>
-            </Select>
+            {showVerification && (
+              <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+                <SelectTrigger className="w-[170px]">
+                  <SelectValue placeholder="Semua Verifikasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Verifikasi</SelectItem>
+                  <SelectItem value="Verified">Verified</SelectItem>
+                  <SelectItem value="Unverified">Unverified</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Table */}
