@@ -240,7 +240,7 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                     <TableHead>Nota</TableHead>
                     <TableHead>Pembayaran</TableHead>
                     <TableHead>Bukti Bayar</TableHead>
-                    <TableHead>Verifikasi</TableHead>
+                    {showVerification && <TableHead>Verifikasi</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
