@@ -24,7 +24,6 @@ interface TransactionManagementProps {
 
 const ALL_TABS = [
   { key: "list-booking", feature: "transactions.list_booking", label: "Penjualan", icon: TrendingUp },
-  { key: "purchases", feature: "transactions.purchases", label: "Pembelian", icon: ShoppingCart },
   { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
   { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: DollarSign },
 ];
