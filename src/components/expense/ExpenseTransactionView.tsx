@@ -222,42 +222,6 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
             </div>
           </div>
 
-          {/* Secondary filters */}
-          <div className="flex gap-2 flex-wrap">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Semua Kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kategori</SelectItem>
-                {uniqueCategories.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Semua Pembayaran" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Pembayaran</SelectItem>
-                {uniquePaymentMethods.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={verificationFilter} onValueChange={setVerificationFilter}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Semua Verifikasi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Verifikasi</SelectItem>
-                <SelectItem value="Verified">Verified</SelectItem>
-                <SelectItem value="Unverified">Unverified</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Table */}
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Memuat data...</div>
@@ -270,11 +234,46 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
                   <TableRow>
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
-                    <TableHead>Kategori</TableHead>
+                    <TableHead>
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
+                          <SelectValue placeholder="Kategori" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Kategori</SelectItem>
+                          {uniqueCategories.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
                     <TableHead>Nota</TableHead>
-                    <TableHead>Pembayaran</TableHead>
+                    <TableHead>
+                      <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                        <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
+                          <SelectValue placeholder="Pembayaran" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Pembayaran</SelectItem>
+                          {uniquePaymentMethods.map((m) => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
                     <TableHead>Bukti Bayar</TableHead>
-                    <TableHead>Verifikasi</TableHead>
+                    <TableHead>
+                      <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+                        <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
+                          <SelectValue placeholder="Verifikasi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Verifikasi</SelectItem>
+                          <SelectItem value="Verified">Verified</SelectItem>
+                          <SelectItem value="Unverified">Unverified</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
