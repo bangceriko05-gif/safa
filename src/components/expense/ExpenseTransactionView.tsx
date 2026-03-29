@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,8 @@ interface ExpenseTransactionViewProps {
 export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategoryManagement }: ExpenseTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const showVerification = isFeatureEnabled("reports.accounting");
   const { activeMethodNames } = usePaymentMethods();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -262,18 +265,20 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
                       </Select>
                     </TableHead>
                     <TableHead>Bukti Bayar</TableHead>
-                    <TableHead>
-                      <Select value={verificationFilter} onValueChange={setVerificationFilter}>
-                        <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
-                          <SelectValue placeholder="Verifikasi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Semua Verifikasi</SelectItem>
-                          <SelectItem value="Verified">Verified</SelectItem>
-                          <SelectItem value="Unverified">Unverified</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableHead>
+                    {showVerification && (
+                      <TableHead>
+                        <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+                          <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
+                            <SelectValue placeholder="Verifikasi" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Semua Verifikasi</SelectItem>
+                            <SelectItem value="Verified">Verified</SelectItem>
+                            <SelectItem value="Unverified">Unverified</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableHead>
+                    )}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
@@ -325,29 +330,31 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={expense.verification_status}
-                          onValueChange={(val) => updateField(expense.id, "verification_status", val)}
-                        >
-                          <SelectTrigger className="w-[150px] h-8">
-                            <Badge
-                              variant="outline"
-                              className={
-                                expense.verification_status === "Verified"
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : "bg-orange-50 text-orange-700 border-orange-200"
-                              }
-                            >
-                              {expense.verification_status === "Verified" ? "✓" : "⚠"} {expense.verification_status}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Unverified">Unverified</SelectItem>
-                            <SelectItem value="Verified">Verified</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      {showVerification && (
+                        <TableCell>
+                          <Select
+                            value={expense.verification_status}
+                            onValueChange={(val) => updateField(expense.id, "verification_status", val)}
+                          >
+                            <SelectTrigger className="w-[150px] h-8">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  expense.verification_status === "Verified"
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : "bg-orange-50 text-orange-700 border-orange-200"
+                                }
+                              >
+                                {expense.verification_status === "Verified" ? "✓" : "⚠"} {expense.verification_status}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Unverified">Unverified</SelectItem>
+                              <SelectItem value="Verified">Verified</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Select
                           value={expense.status}

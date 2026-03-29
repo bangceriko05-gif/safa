@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,8 @@ interface IncomeTransactionViewProps {
 export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const showVerification = isFeatureEnabled("reports.accounting");
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
@@ -207,16 +210,18 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                 ))}
               </SelectContent>
             </Select>
-            <Select value={verificationFilter} onValueChange={setVerificationFilter}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Semua Verifikasi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Verifikasi</SelectItem>
-                <SelectItem value="Verified">Verified</SelectItem>
-                <SelectItem value="Unverified">Unverified</SelectItem>
-              </SelectContent>
-            </Select>
+            {showVerification && (
+              <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+                <SelectTrigger className="w-[170px]">
+                  <SelectValue placeholder="Semua Verifikasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Verifikasi</SelectItem>
+                  <SelectItem value="Verified">Verified</SelectItem>
+                  <SelectItem value="Unverified">Unverified</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Table */}
@@ -235,7 +240,7 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                     <TableHead>Nota</TableHead>
                     <TableHead>Pembayaran</TableHead>
                     <TableHead>Bukti Bayar</TableHead>
-                    <TableHead>Verifikasi</TableHead>
+                    {showVerification && <TableHead>Verifikasi</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
@@ -284,29 +289,31 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={income.verification_status}
-                          onValueChange={(val) => updateField(income.id, "verification_status", val)}
-                        >
-                          <SelectTrigger className="w-[150px] h-8">
-                            <Badge
-                              variant="outline"
-                              className={
-                                income.verification_status === "Verified"
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : "bg-orange-50 text-orange-700 border-orange-200"
-                              }
-                            >
-                              {income.verification_status === "Verified" ? "✓" : "⚠"} {income.verification_status}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Unverified">Unverified</SelectItem>
-                            <SelectItem value="Verified">Verified</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      {showVerification && (
+                        <TableCell>
+                          <Select
+                            value={income.verification_status}
+                            onValueChange={(val) => updateField(income.id, "verification_status", val)}
+                          >
+                            <SelectTrigger className="w-[150px] h-8">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  income.verification_status === "Verified"
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : "bg-orange-50 text-orange-700 border-orange-200"
+                                }
+                              >
+                                {income.verification_status === "Verified" ? "✓" : "⚠"} {income.verification_status}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Unverified">Unverified</SelectItem>
+                              <SelectItem value="Verified">Verified</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Select
                           value={income.status}
