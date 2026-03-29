@@ -289,29 +289,31 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={income.verification_status}
-                          onValueChange={(val) => updateField(income.id, "verification_status", val)}
-                        >
-                          <SelectTrigger className="w-[150px] h-8">
-                            <Badge
-                              variant="outline"
-                              className={
-                                income.verification_status === "Verified"
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : "bg-orange-50 text-orange-700 border-orange-200"
-                              }
-                            >
-                              {income.verification_status === "Verified" ? "✓" : "⚠"} {income.verification_status}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Unverified">Unverified</SelectItem>
-                            <SelectItem value="Verified">Verified</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      {showVerification && (
+                        <TableCell>
+                          <Select
+                            value={income.verification_status}
+                            onValueChange={(val) => updateField(income.id, "verification_status", val)}
+                          >
+                            <SelectTrigger className="w-[150px] h-8">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  income.verification_status === "Verified"
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : "bg-orange-50 text-orange-700 border-orange-200"
+                                }
+                              >
+                                {income.verification_status === "Verified" ? "✓" : "⚠"} {income.verification_status}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Unverified">Unverified</SelectItem>
+                              <SelectItem value="Verified">Verified</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Select
                           value={income.status}
