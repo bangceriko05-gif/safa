@@ -50,6 +50,8 @@ interface IncomeTransactionViewProps {
 export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const showVerification = isFeatureEnabled("reports.accounting");
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
