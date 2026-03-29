@@ -24,7 +24,6 @@ interface TransactionManagementProps {
 
 const ALL_TABS = [
   { key: "list-booking", feature: "transactions.list_booking", label: "Penjualan", icon: TrendingUp },
-  { key: "purchases", feature: "transactions.purchases", label: "Pembelian", icon: ShoppingCart },
   { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
   { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: DollarSign },
 ];
@@ -89,13 +88,6 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           )}
         </TabsContent>
 
-        <TabsContent value="purchases" className="mt-4">
-          {isFeatureEnabled("transactions.purchases") ? (
-            <PurchaseManagement />
-          ) : (
-            <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("transactions.purchases").price} description={getFeatureInfo("transactions.purchases").description} />
-          )}
-        </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
           {isFeatureEnabled("transactions.expenses") ? (
