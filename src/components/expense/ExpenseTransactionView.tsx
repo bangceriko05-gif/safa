@@ -49,6 +49,8 @@ interface ExpenseTransactionViewProps {
 export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategoryManagement }: ExpenseTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const showVerification = isFeatureEnabled("reports.accounting");
   const { activeMethodNames } = usePaymentMethods();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
