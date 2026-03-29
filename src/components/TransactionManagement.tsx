@@ -88,13 +88,6 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           )}
         </TabsContent>
 
-        <TabsContent value="purchases" className="mt-4">
-          {isFeatureEnabled("transactions.purchases") ? (
-            <PurchaseManagement />
-          ) : (
-            <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("transactions.purchases").price} description={getFeatureInfo("transactions.purchases").description} />
-          )}
-        </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
           {isFeatureEnabled("transactions.expenses") ? (
