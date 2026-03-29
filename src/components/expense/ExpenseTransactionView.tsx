@@ -265,18 +265,20 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
                       </Select>
                     </TableHead>
                     <TableHead>Bukti Bayar</TableHead>
-                    <TableHead>
-                      <Select value={verificationFilter} onValueChange={setVerificationFilter}>
-                        <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
-                          <SelectValue placeholder="Verifikasi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Semua Verifikasi</SelectItem>
-                          <SelectItem value="Verified">Verified</SelectItem>
-                          <SelectItem value="Unverified">Unverified</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableHead>
+                    {showVerification && (
+                      <TableHead>
+                        <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+                          <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
+                            <SelectValue placeholder="Verifikasi" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Semua Verifikasi</SelectItem>
+                            <SelectItem value="Verified">Verified</SelectItem>
+                            <SelectItem value="Unverified">Unverified</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableHead>
+                    )}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
