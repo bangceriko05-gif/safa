@@ -7,11 +7,13 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -41,12 +43,7 @@ const PROCESS_TABS = [
   { key: "dihapus", label: "Dihapus" },
 ];
 
-interface ExpenseTransactionViewProps {
-  onOpenAddExpense?: () => void;
-  onOpenCategoryManagement?: () => void;
-}
-
-export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategoryManagement }: ExpenseTransactionViewProps) {
+export default function ExpenseTransactionView() {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
@@ -64,6 +61,70 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
+
+  // Add expense dialog state
+  const [addingExpense, setAddingExpense] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [managingCategories, setManagingCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const formatAmountInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  const handleAddExpense = async () => {
+    if (!currentStore) return;
+    if (!expenseForm.description.trim()) { toast.error("Deskripsi harus diisi"); return; }
+    if (!expenseForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Anda harus login"); return; }
+      const { error } = await supabase.from("expenses").insert([{
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
+        category: expenseForm.category || null,
+        payment_method: expenseForm.payment_method || null,
+        date: expenseForm.date,
+        created_by: user.id,
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil ditambahkan");
+      setAddingExpense(false);
+      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      fetchExpenses();
+    } catch (error) {
+      toast.error("Gagal menambahkan pengeluaran");
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!currentStore || !newCategoryName.trim()) return;
+    try {
+      const { error } = await supabase.from("expense_categories").insert([{
+        name: newCategoryName.trim(),
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Kategori berhasil ditambahkan");
+      setNewCategoryName("");
+      fetchCategories();
+    } catch (error) {
+      toast.error("Gagal menambahkan kategori");
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const { error } = await supabase.from("expense_categories").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Kategori berhasil dihapus");
+      fetchCategories();
+    } catch (error) {
+      toast.error("Gagal menghapus kategori");
+    }
+  };
 
   const fetchExpenses = async () => {
     if (!currentStore) return;
@@ -185,15 +246,13 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <CardTitle className="text-xl font-bold">Transaksi Pengeluaran</CardTitle>
             <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-red-500">Total: {formatCurrency(total)}</span>
-              {onOpenCategoryManagement && (
-                <Button variant="outline" onClick={onOpenCategoryManagement}>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Kategori Pengeluaran
-                </Button>
-              )}
-              {onOpenAddExpense && hasPermission("report_expense_add") && (
-                <Button onClick={onOpenAddExpense} className="bg-primary">
+              <span className="text-lg font-semibold text-destructive">Total: {formatCurrency(total)}</span>
+              <Button variant="outline" onClick={() => setManagingCategories(true)}>
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Kategori Pengeluaran
+              </Button>
+              {hasPermission("manage_expense") && (
+                <Button onClick={() => setAddingExpense(true)} className="bg-primary">
                   <Plus className="h-4 w-4 mr-2" />
                   Tambah Pengeluaran
                 </Button>
@@ -412,6 +471,92 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
           onClose={() => { setNoteDialogExpenseId(null); setNoteDialogData(null); }}
         />
       )}
+
+      {/* Add Expense Dialog */}
+      <Dialog open={addingExpense} onOpenChange={setAddingExpense}>
+        <DialogContent>
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>Tambah Pengeluaran</DialogTitle>
+            <Button variant="outline" size="sm" onClick={() => setManagingCategories(true)} className="mr-6">
+              <Settings className="h-4 w-4 mr-1" />
+              Kategori
+            </Button>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tanggal</Label>
+              <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi</Label>
+              <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Kategori</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Pembayaran</Label>
+              <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  {activeMethodNames.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleAddExpense}>Tambah Pengeluaran</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Management Dialog */}
+      <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kelola Kategori Pengeluaran</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Nama kategori baru"
+                onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+              />
+              <Button onClick={handleAddCategory}>
+                <Plus className="h-4 w-4 mr-1" />
+                Tambah
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {expenseCategories.map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
+                  <span className="text-sm">{cat.name}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCategory(cat.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {expenseCategories.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Belum ada kategori</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
