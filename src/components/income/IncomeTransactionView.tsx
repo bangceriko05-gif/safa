@@ -45,15 +45,12 @@ const PROCESS_TABS = [
   { key: "dihapus", label: "Dihapus" },
 ];
 
-interface IncomeTransactionViewProps {
-  onOpenAddIncome?: () => void;
-}
-
-export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransactionViewProps) {
+export default function IncomeTransactionView() {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
   const showVerification = isFeatureEnabled("reports.accounting");
+  const { activeMethodNames } = usePaymentMethods();
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
@@ -63,6 +60,114 @@ export default function IncomeTransactionView({ onOpenAddIncome }: IncomeTransac
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
+
+  // Add income dialog state
+  const [addingIncome, setAddingIncome] = useState(false);
+  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [incomeProducts, setIncomeProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number }[]>([]);
+  const [incomeDiscount, setIncomeDiscount] = useState({ type: "percentage" as "percentage" | "fixed", value: "" });
+  const [showDiscountPopover, setShowDiscountPopover] = useState(false);
+  const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  const formatAmountInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  const fetchProducts = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase.from("products").select("id, name, price").eq("store_id", currentStore.id).order("name");
+    setAvailableProducts(data || []);
+  };
+
+  const fetchCustomers = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase.from("customers").select("id, name, phone").eq("store_id", currentStore.id).order("name");
+    setCustomers(data || []);
+  };
+
+  const getIncomeTotal = () => {
+    const productsTotal = incomeProducts.reduce((sum, p) => sum + p.subtotal, 0);
+    const manualAmount = parseFloat(incomeForm.amount.replace(/\./g, "")) || 0;
+    const subtotal = incomeProducts.length > 0 ? productsTotal : manualAmount;
+    let discountAmount = 0;
+    const discountVal = parseFloat(incomeDiscount.value) || 0;
+    if (incomeDiscount.type === "percentage") {
+      discountAmount = subtotal * (discountVal / 100);
+    } else {
+      discountAmount = discountVal;
+    }
+    return Math.max(0, subtotal - discountAmount);
+  };
+
+  const handleAddProductToIncome = (product: { id: string; name: string; price: number }) => {
+    const existing = incomeProducts.find(p => p.product_id === product.id);
+    if (existing) {
+      setIncomeProducts(incomeProducts.map(p =>
+        p.product_id === product.id
+          ? { ...p, quantity: p.quantity + 1, subtotal: (p.quantity + 1) * p.product_price }
+          : p
+      ));
+    } else {
+      setIncomeProducts([...incomeProducts, {
+        product_id: product.id,
+        product_name: product.name,
+        product_price: product.price,
+        quantity: 1,
+        subtotal: product.price,
+      }]);
+    }
+    setProductSearch("");
+    setShowProductSearch(false);
+  };
+
+  const handleAddIncome = async () => {
+    if (!currentStore) return;
+    if (!incomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
+    if (!incomeForm.payment_method) { toast.error("Metode bayar harus diisi"); return; }
+    const totalAmount = getIncomeTotal();
+    if (totalAmount <= 0 && incomeProducts.length === 0 && !incomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Anda harus login"); return; }
+      const { data: incomeData, error } = await supabase.from("incomes").insert([{
+        description: incomeForm.description || null,
+        amount: totalAmount,
+        customer_name: incomeForm.customer_name,
+        payment_method: incomeForm.payment_method,
+        date: incomeForm.date,
+        created_by: user.id,
+        store_id: currentStore.id,
+      }]).select().single();
+      if (error) throw error;
+      if (incomeProducts.length > 0 && incomeData) {
+        const { error: prodError } = await supabase.from("income_products").insert(
+          incomeProducts.map(p => ({
+            income_id: incomeData.id,
+            product_id: p.product_id,
+            product_name: p.product_name,
+            product_price: p.product_price,
+            quantity: p.quantity,
+            subtotal: p.subtotal,
+          }))
+        );
+        if (prodError) console.error("Error inserting income products:", prodError);
+      }
+      toast.success("Pemasukan berhasil ditambahkan");
+      setAddingIncome(false);
+      setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      setIncomeProducts([]);
+      setIncomeDiscount({ type: "percentage", value: "" });
+      fetchIncomes();
+    } catch (error) {
+      toast.error("Gagal menambahkan pemasukan");
+    }
+  };
 
   const fetchIncomes = async () => {
     if (!currentStore) return;
