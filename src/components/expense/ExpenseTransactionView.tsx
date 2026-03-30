@@ -43,12 +43,7 @@ const PROCESS_TABS = [
   { key: "dihapus", label: "Dihapus" },
 ];
 
-interface ExpenseTransactionViewProps {
-  onOpenAddExpense?: () => void;
-  onOpenCategoryManagement?: () => void;
-}
-
-export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategoryManagement }: ExpenseTransactionViewProps) {
+export default function ExpenseTransactionView() {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
@@ -66,6 +61,70 @@ export default function ExpenseTransactionView({ onOpenAddExpense, onOpenCategor
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
+
+  // Add expense dialog state
+  const [addingExpense, setAddingExpense] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [managingCategories, setManagingCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const formatAmountInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  const handleAddExpense = async () => {
+    if (!currentStore) return;
+    if (!expenseForm.description.trim()) { toast.error("Deskripsi harus diisi"); return; }
+    if (!expenseForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Anda harus login"); return; }
+      const { error } = await supabase.from("expenses").insert([{
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
+        category: expenseForm.category || null,
+        payment_method: expenseForm.payment_method || null,
+        date: expenseForm.date,
+        created_by: user.id,
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil ditambahkan");
+      setAddingExpense(false);
+      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      fetchExpenses();
+    } catch (error) {
+      toast.error("Gagal menambahkan pengeluaran");
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!currentStore || !newCategoryName.trim()) return;
+    try {
+      const { error } = await supabase.from("expense_categories").insert([{
+        name: newCategoryName.trim(),
+        store_id: currentStore.id,
+      }]);
+      if (error) throw error;
+      toast.success("Kategori berhasil ditambahkan");
+      setNewCategoryName("");
+      fetchCategories();
+    } catch (error) {
+      toast.error("Gagal menambahkan kategori");
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const { error } = await supabase.from("expense_categories").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Kategori berhasil dihapus");
+      fetchCategories();
+    } catch (error) {
+      toast.error("Gagal menghapus kategori");
+    }
+  };
 
   const fetchExpenses = async () => {
     if (!currentStore) return;
