@@ -478,6 +478,215 @@ export default function IncomeTransactionView() {
           onClose={() => setNoteDialogData(null)}
         />
       )}
+
+      {/* Add Income Dialog */}
+      <Dialog open={addingIncome} onOpenChange={(open) => {
+        setAddingIncome(open);
+        if (!open) {
+          setIncomeProducts([]);
+          setIncomeDiscount({ type: "percentage", value: "" });
+          setProductSearch("");
+          setShowProductSearch(false);
+        }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Tambah Pemasukan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2 relative">
+                <Label>Nama Pelanggan <span className="text-destructive">*</span></Label>
+                <Input
+                  value={customerSearch || incomeForm.customer_name}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value);
+                    setShowCustomerDropdown(true);
+                  }}
+                  onFocus={() => { setCustomerSearch(""); setShowCustomerDropdown(true); }}
+                  placeholder="Cari pelanggan..."
+                />
+                {showCustomerDropdown && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-popover border rounded-md shadow-md">
+                    {customers
+                      .filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || ""))
+                      .map(c => (
+                        <div
+                          key={c.id}
+                          className="px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                          onClick={() => {
+                            setIncomeForm({ ...incomeForm, customer_name: c.name });
+                            setCustomerSearch("");
+                            setShowCustomerDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium">{c.name}</div>
+                          <div className="text-xs text-muted-foreground">{c.phone}</div>
+                        </div>
+                      ))}
+                    {customers.filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || "")).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal</Label>
+                <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Bayar <span className="text-destructive">*</span></Label>
+              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode bayar" /></SelectTrigger>
+                <SelectContent>
+                  {activeMethodNames.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi (opsional)</Label>
+              <Input value={incomeForm.description} onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
+            </div>
+
+            {/* Produk section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Produk (opsional)</Label>
+                <Button variant="outline" size="sm" onClick={() => setShowProductSearch(!showProductSearch)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Tambah Produk
+                </Button>
+              </div>
+              {showProductSearch && (
+                <div className="relative">
+                  <Input
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    placeholder="Cari produk..."
+                    autoFocus
+                  />
+                  {productSearch && (
+                    <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-y-auto">
+                      {availableProducts
+                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                        .map(product => (
+                          <div
+                            key={product.id}
+                            className="px-3 py-2 hover:bg-accent cursor-pointer text-sm flex justify-between"
+                            onClick={() => handleAddProductToIncome(product)}
+                          >
+                            <span>{product.name}</span>
+                            <span className="text-muted-foreground">{formatCurrency(product.price)}</span>
+                          </div>
+                        ))
+                      }
+                      {availableProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">Produk tidak ditemukan</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {incomeProducts.length > 0 && (
+                <div className="space-y-1">
+                  {incomeProducts.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                      <div className="flex-1">
+                        <span className="font-medium">{p.product_name}</span>
+                        <span className="text-muted-foreground ml-2">x{p.quantity} = {formatCurrency(p.subtotal)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                          if (p.quantity > 1) {
+                            setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity - 1, subtotal: (ip.quantity - 1) * ip.product_price } : ip));
+                          } else {
+                            setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i));
+                          }
+                        }}>
+                          <span className="text-xs">−</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                          setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity + 1, subtotal: (ip.quantity + 1) * ip.product_price } : ip));
+                        }}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Jumlah with Diskon */}
+            <div className="space-y-2">
+              <Label>Jumlah (jika tidak pakai produk)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
+                  placeholder="0"
+                  disabled={incomeProducts.length > 0}
+                  className="flex-1"
+                />
+                <Button variant="outline" onClick={() => setShowDiscountPopover(!showDiscountPopover)} type="button">
+                  Diskon
+                </Button>
+              </div>
+              {showDiscountPopover && (
+                <div className="flex gap-2 items-center p-3 border rounded-md bg-muted/30">
+                  <Select value={incomeDiscount.type} onValueChange={(v: "percentage" | "fixed") => setIncomeDiscount({ ...incomeDiscount, type: v })}>
+                    <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">Rp</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={incomeDiscount.value}
+                    onChange={(e) => setIncomeDiscount({ ...incomeDiscount, value: e.target.value.replace(/[^0-9.]/g, '') })}
+                    placeholder="0"
+                    className="flex-1"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Total summary */}
+            {(incomeProducts.length > 0 || (incomeDiscount.value && parseFloat(incomeDiscount.value) > 0)) && (
+              <div className="p-3 bg-muted/50 rounded space-y-1 text-sm">
+                {incomeProducts.length > 0 && (
+                  <div className="flex justify-between">
+                    <span>Subtotal Produk</span>
+                    <span className="font-medium">{formatCurrency(incomeProducts.reduce((s, p) => s + p.subtotal, 0))}</span>
+                  </div>
+                )}
+                {incomeDiscount.value && parseFloat(incomeDiscount.value) > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>Diskon {incomeDiscount.type === 'percentage' ? `${incomeDiscount.value}%` : ''}</span>
+                    <span>-{formatCurrency(
+                      incomeDiscount.type === 'percentage'
+                        ? (incomeProducts.length > 0 ? incomeProducts.reduce((s, p) => s + p.subtotal, 0) : parseFloat(incomeForm.amount.replace(/\./g, "")) || 0) * (parseFloat(incomeDiscount.value) / 100)
+                        : parseFloat(incomeDiscount.value) || 0
+                    )}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold border-t pt-1">
+                  <span>Total</span>
+                  <span>{formatCurrency(getIncomeTotal())}</span>
+                </div>
+              </div>
+            )}
+
+            <Button className="w-full" onClick={handleAddIncome}>Simpan</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
