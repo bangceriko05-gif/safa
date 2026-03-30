@@ -271,8 +271,8 @@ export default function IncomeTransactionView() {
             <CardTitle className="text-xl font-bold">Transaksi Pemasukan</CardTitle>
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold text-green-600">Total: {formatCurrency(total)}</span>
-              {onOpenAddIncome && hasPermission("report_income_add") && (
-                <Button onClick={onOpenAddIncome} className="bg-primary">
+              {hasPermission("manage_income") && (
+                <Button onClick={() => setAddingIncome(true)} className="bg-primary">
                   <Plus className="h-4 w-4 mr-2" />
                   Tambah Pemasukan
                 </Button>
