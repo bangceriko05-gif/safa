@@ -924,7 +924,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
 
                 {detailPopupOpen && selectedBookingId && (
                   <BookingDetailPopup
-                    open={detailPopupOpen}
+                    isOpen={detailPopupOpen}
                     onClose={() => {
                       setDetailPopupOpen(false);
                       setSelectedBookingId(null);
