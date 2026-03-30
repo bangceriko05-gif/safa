@@ -471,6 +471,92 @@ export default function ExpenseTransactionView() {
           onClose={() => { setNoteDialogExpenseId(null); setNoteDialogData(null); }}
         />
       )}
+
+      {/* Add Expense Dialog */}
+      <Dialog open={addingExpense} onOpenChange={setAddingExpense}>
+        <DialogContent>
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>Tambah Pengeluaran</DialogTitle>
+            <Button variant="outline" size="sm" onClick={() => setManagingCategories(true)} className="mr-6">
+              <Settings className="h-4 w-4 mr-1" />
+              Kategori
+            </Button>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tanggal</Label>
+              <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Deskripsi</Label>
+              <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Kategori</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Metode Pembayaran</Label>
+              <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  {activeMethodNames.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleAddExpense}>Tambah Pengeluaran</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Management Dialog */}
+      <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kelola Kategori Pengeluaran</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Nama kategori baru"
+                onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+              />
+              <Button onClick={handleAddCategory}>
+                <Plus className="h-4 w-4 mr-1" />
+                Tambah
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {expenseCategories.map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
+                  <span className="text-sm">{cat.name}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCategory(cat.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {expenseCategories.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Belum ada kategori</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
