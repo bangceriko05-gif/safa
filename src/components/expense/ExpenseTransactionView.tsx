@@ -246,15 +246,13 @@ export default function ExpenseTransactionView() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <CardTitle className="text-xl font-bold">Transaksi Pengeluaran</CardTitle>
             <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-red-500">Total: {formatCurrency(total)}</span>
-              {onOpenCategoryManagement && (
-                <Button variant="outline" onClick={onOpenCategoryManagement}>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Kategori Pengeluaran
-                </Button>
-              )}
-              {onOpenAddExpense && hasPermission("report_expense_add") && (
-                <Button onClick={onOpenAddExpense} className="bg-primary">
+              <span className="text-lg font-semibold text-destructive">Total: {formatCurrency(total)}</span>
+              <Button variant="outline" onClick={() => setManagingCategories(true)}>
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Kategori Pengeluaran
+              </Button>
+              {hasPermission("manage_expense") && (
+                <Button onClick={() => setAddingExpense(true)} className="bg-primary">
                   <Plus className="h-4 w-4 mr-2" />
                   Tambah Pengeluaran
                 </Button>
