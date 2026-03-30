@@ -197,6 +197,8 @@ export default function IncomeTransactionView() {
 
   useEffect(() => {
     fetchIncomes();
+    fetchProducts();
+    fetchCustomers();
   }, [currentStore, processTab, timeRange, customDateRange]);
 
   const filteredIncomes = useMemo(() => {
