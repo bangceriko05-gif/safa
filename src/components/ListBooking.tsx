@@ -522,472 +522,429 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
           <TabsTrigger value="dihapus">Dihapus</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="proses" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                Penjualan - Proses
-              </CardTitle>
-              {onAddBooking && (
-                <Button onClick={onAddBooking} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Tambah Booking
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-        {/* Date Filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          {isMobile ? (
-            <Select value={dateFilter} onValueChange={(v) => {
-              if (v === "custom") {
-                handleDateFilterChange("custom");
-              } else {
-                handleDateFilterChange(v as any);
-              }
-            }}>
-              <SelectTrigger className="w-[160px]">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Hari Ini</SelectItem>
-                <SelectItem value="yesterday">Kemarin</SelectItem>
-                <SelectItem value="thisMonth">Bulan Ini</SelectItem>
-                <SelectItem value="lastMonth">Bulan Lalu</SelectItem>
-                <SelectItem value="allTime">All Time</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="flex gap-1">
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("today")} className={cn(dateFilter === "today" && "bg-primary text-primary-foreground")}>Hari Ini</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")} className={cn(dateFilter === "yesterday" && "bg-primary text-primary-foreground")}>Kemarin</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")} className={cn(dateFilter === "thisMonth" && "bg-primary text-primary-foreground")}>Bulan Ini</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("lastMonth")} className={cn(dateFilter === "lastMonth" && "bg-primary text-primary-foreground")}>Bulan Lalu</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("allTime")} className={cn("gap-1", dateFilter === "allTime" && "bg-primary text-primary-foreground")}><Infinity className="h-3 w-3" />All Time</Button>
-            </div>
-          )}
-          
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className={cn(
-                  "gap-2",
-                  dateFilter === "custom" && "bg-primary text-primary-foreground"
+        {/* Shared Date Filter & Search - visible for all tabs except batal */}
+        {activeSubTab !== "batal" && (
+          <div className="mt-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  {activeSubTab === "dihapus" ? <Trash2 className="h-5 w-5" /> : <CalendarIcon className="h-5 w-5" />}
+                  Penjualan - {activeSubTab === "proses" ? "Proses" : activeSubTab === "selesai" ? "Selesai" : "Dihapus"}
+                </CardTitle>
+                {activeSubTab === "proses" && onAddBooking && (
+                  <Button onClick={onAddBooking} size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Tambah Booking
+                  </Button>
                 )}
-                onClick={() => handleDateFilterChange("custom")}
-              >
-                <CalendarIcon className="h-4 w-4" />
-                {dateFilter === "custom" && customDateRange?.from ? (
-                  customDateRange.to ? (
-                    <>
-                      {format(customDateRange.from, "d MMM", { locale: idLocale })} -{" "}
-                      {format(customDateRange.to, "d MMM yyyy", { locale: idLocale })}
-                    </>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Date Filter */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {isMobile ? (
+                    <Select value={dateFilter} onValueChange={(v) => {
+                      if (v === "custom") {
+                        handleDateFilterChange("custom");
+                      } else {
+                        handleDateFilterChange(v as any);
+                      }
+                    }}>
+                      <SelectTrigger className="w-[160px]">
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Hari Ini</SelectItem>
+                        <SelectItem value="yesterday">Kemarin</SelectItem>
+                        <SelectItem value="thisMonth">Bulan Ini</SelectItem>
+                        <SelectItem value="lastMonth">Bulan Lalu</SelectItem>
+                        <SelectItem value="allTime">All Time</SelectItem>
+                      </SelectContent>
+                    </Select>
                   ) : (
-                    format(customDateRange.from, "d MMMM yyyy", { locale: idLocale })
-                  )
-                ) : (
-                  "Custom Tanggal"
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="range"
-                selected={pendingDateRange}
-                onSelect={(range) => setPendingDateRange(range)}
-                defaultMonth={pendingDateRange?.from || new Date()}
-                initialFocus
-                numberOfMonths={isMobile ? 1 : 2}
-                locale={idLocale}
-                className="pointer-events-auto"
-              />
-              <div className="flex justify-end gap-2 p-3 border-t">
-                <Button variant="outline" size="sm" onClick={() => setCalendarOpen(false)}>
-                  Batal
-                </Button>
-                <Button size="sm" onClick={handleCustomDateConfirm} disabled={!pendingDateRange?.from}>
-                  OK
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari BID, nama, HP, kamar..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
-
-        {/* Booking Table */}
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredActiveBookings.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {searchQuery ? "Tidak ada booking yang cocok dengan pencarian" : "Tidak ada booking untuk tanggal ini"}
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10"></TableHead>
-                  <TableHead>BID</TableHead>
-                  <TableHead>Nama Customer</TableHead>
-                  <TableHead>Kamar</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>{isPMSMode ? "Durasi" : "Jam"}</TableHead>
-                  <TableHead>Bukti Bayar</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedBookings.map((booking) => (
-                  <TableRow 
-                    key={booking.id}
-                    className={cn(
-                      isStatusBatal(booking.status) && "opacity-60 bg-muted/30"
-                    )}
-                  >
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedBookingId(booking.id);
-                          setDetailPopupOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {booking.bid ? (
-                          <>
-                            <button
-                              onClick={() => {
-                                if (hasPermission("edit_bookings") && canEdit(booking)) {
-                                  onEditBooking(booking);
-                                }
-                              }}
-                              className={cn(
-                                "font-mono text-sm hover:underline",
-                                hasPermission("edit_bookings") && canEdit(booking)
-                                  ? "cursor-pointer text-primary"
-                                  : "cursor-default"
-                              )}
-                              title={hasPermission("edit_bookings") && canEdit(booking) ? "Klik untuk edit" : undefined}
-                            >
-                              {booking.bid}
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleCopyBid(booking.bid)}
-                              title="Salin BID"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("today")} className={cn(dateFilter === "today" && "bg-primary text-primary-foreground")}>Hari Ini</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")} className={cn(dateFilter === "yesterday" && "bg-primary text-primary-foreground")}>Kemarin</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")} className={cn(dateFilter === "thisMonth" && "bg-primary text-primary-foreground")}>Bulan Ini</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("lastMonth")} className={cn(dateFilter === "lastMonth" && "bg-primary text-primary-foreground")}>Bulan Lalu</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("allTime")} className={cn("gap-1", dateFilter === "allTime" && "bg-primary text-primary-foreground")}><Infinity className="h-3 w-3" />All Time</Button>
+                    </div>
+                  )}
+                  
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                          "gap-2",
+                          dateFilter === "custom" && "bg-primary text-primary-foreground"
                         )}
+                        onClick={() => handleDateFilterChange("custom")}
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                        {dateFilter === "custom" && customDateRange?.from ? (
+                          customDateRange.to ? (
+                            <>
+                              {format(customDateRange.from, "d MMM", { locale: idLocale })} -{" "}
+                              {format(customDateRange.to, "d MMM yyyy", { locale: idLocale })}
+                            </>
+                          ) : (
+                            format(customDateRange.from, "d MMMM yyyy", { locale: idLocale })
+                          )
+                        ) : (
+                          "Custom Tanggal"
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="range"
+                        selected={pendingDateRange}
+                        onSelect={(range) => setPendingDateRange(range)}
+                        defaultMonth={pendingDateRange?.from || new Date()}
+                        initialFocus
+                        numberOfMonths={isMobile ? 1 : 2}
+                        locale={idLocale}
+                        className="pointer-events-auto"
+                      />
+                      <div className="flex justify-end gap-2 p-3 border-t">
+                        <Button variant="outline" size="sm" onClick={() => setCalendarOpen(false)}>
+                          Batal
+                        </Button>
+                        <Button size="sm" onClick={handleCustomDateConfirm} disabled={!pendingDateRange?.from}>
+                          OK
+                        </Button>
                       </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {booking.customer_name}
-                    </TableCell>
-                    <TableCell>{booking.room_name}</TableCell>
-                    <TableCell>
-                      {format(new Date(booking.date), "d MMM yyyy", { locale: idLocale })}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        {isPMSMode 
-                          ? `${booking.duration} malam`
-                          : `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
-                        }
-                        {' '}
-                        <span className={`font-bold text-xs ${booking.payment_status === "lunas" ? "text-emerald-700" : "text-red-600"}`}>
-                          ({booking.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {booking.payment_proof_url ? (
-                        <a
-                          href={booking.payment_proof_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
-                          title="Lihat Bukti Bayar"
-                        >
-                          <img
-                            src={booking.payment_proof_url}
-                            alt="Bukti Bayar"
-                            className="w-6 h-6 rounded object-cover border"
-                          />
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="gap-1 h-7 px-2"
-                            disabled={!canChangeStatus(booking) && !hasPermission("edit_bookings")}
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Search Input */}
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari BID, nama, HP, kamar..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Booking Table */}
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : filteredActiveBookings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {searchQuery ? "Tidak ada booking yang cocok dengan pencarian" : "Tidak ada data"}
+                  </div>
+                ) : (
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead>BID</TableHead>
+                          <TableHead>Nama Customer</TableHead>
+                          <TableHead>Kamar</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>{isPMSMode ? "Durasi" : "Jam"}</TableHead>
+                          <TableHead>Bukti Bayar</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedBookings.map((booking) => (
+                          <TableRow 
+                            key={booking.id}
+                            className={cn(
+                              isStatusBatal(booking.status) && "opacity-60 bg-muted/30"
+                            )}
                           >
-                            <Badge 
-                              style={{ 
-                                backgroundColor: getStatusColor(booking.status),
-                                color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937"
-                              }}
-                            >
-                              {getStatusLabel(booking.status)}
-                            </Badge>
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          {/* Edit Button */}
-                          {hasPermission("edit_bookings") && (
-                            <DropdownMenuItem 
-                              onClick={() => onEditBooking(booking)}
-                              disabled={!canEdit(booking)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {/* Status Change Options - requires edit_bookings permission */}
-                          {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "BO" && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
-                              <Badge 
-                                className="mr-2"
-                                style={{ 
-                                  backgroundColor: statusColors.BO,
-                                  color: "#1F2937"
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBookingId(booking.id);
+                                  setDetailPopupOpen(true);
                                 }}
                               >
-                                BO
-                              </Badge>
-                              Reservasi
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CI" && !isStatusBatal(booking.status) && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CI", booking.status)}>
-                              <Badge 
-                                className="mr-2"
-                                style={{ 
-                                  backgroundColor: statusColors.CI,
-                                  color: "#1F2937"
-                                }}
-                              >
-                                CI
-                              </Badge>
-                              Check In
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CO" && !isStatusBatal(booking.status) && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CO", booking.status)}>
-                              <Badge 
-                                className="mr-2"
-                                style={{ 
-                                  backgroundColor: statusColors.CO,
-                                  color: "#fff"
-                                }}
-                              >
-                                CO
-                              </Badge>
-                              Check Out
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {/* BATAL option - for admin, users with cancel_bookings, or cancel_checkout_bookings for CO status */}
-                          {(userRole === "admin" || hasPermission("cancel_bookings") || (hasPermission("cancel_checkout_bookings") && booking.status === "CO")) && 
-                            booking.status !== "BATAL" && (
-                            <DropdownMenuItem 
-                              onClick={() => handleStatusChange(booking.id, "BATAL", booking.status)}
-                              className="text-destructive"
-                            >
-                              <XCircle className="mr-2 h-4 w-4" />
-                              Batalkan
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {/* Restore from BATAL - only for admin */}
-                          {userRole === "admin" && booking.status === "BATAL" && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
-                              <Undo className="mr-2 h-4 w-4" />
-                              Pulihkan ke Reservasi
-                            </DropdownMenuItem>
-                          )}
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {booking.bid ? (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (hasPermission("edit_bookings") && canEdit(booking)) {
+                                          onEditBooking(booking);
+                                        }
+                                      }}
+                                      className={cn(
+                                        "font-mono text-sm hover:underline",
+                                        hasPermission("edit_bookings") && canEdit(booking)
+                                          ? "cursor-pointer text-primary"
+                                          : "cursor-default"
+                                      )}
+                                      title={hasPermission("edit_bookings") && canEdit(booking) ? "Klik untuk edit" : undefined}
+                                    >
+                                      {booking.bid}
+                                    </button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => handleCopyBid(booking.bid)}
+                                      title="Salin BID"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {booking.customer_name}
+                            </TableCell>
+                            <TableCell>{booking.room_name}</TableCell>
+                            <TableCell>
+                              {format(new Date(booking.date), "d MMM yyyy", { locale: idLocale })}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                {isPMSMode 
+                                  ? `${booking.duration} malam`
+                                  : `${booking.start_time.slice(0, 5)} - ${booking.end_time.slice(0, 5)}`
+                                }
+                                {' '}
+                                <span className={`font-bold text-xs ${booking.payment_status === "lunas" ? "text-emerald-700" : "text-red-600"}`}>
+                                  ({booking.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {booking.payment_proof_url ? (
+                                <a
+                                  href={booking.payment_proof_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
+                                  title="Lihat Bukti Bayar"
+                                >
+                                  <img
+                                    src={booking.payment_proof_url}
+                                    alt="Bukti Bayar"
+                                    className="w-6 h-6 rounded object-cover border"
+                                  />
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="gap-1 h-7 px-2"
+                                    disabled={!canChangeStatus(booking) && !hasPermission("edit_bookings")}
+                                  >
+                                    <Badge 
+                                      style={{ 
+                                        backgroundColor: getStatusColor(booking.status),
+                                        color: booking.status === "CO" || booking.status === "BATAL" ? "#fff" : "#1F2937"
+                                      }}
+                                    >
+                                      {getStatusLabel(booking.status)}
+                                    </Badge>
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-popover">
+                                  {hasPermission("edit_bookings") && (
+                                    <DropdownMenuItem 
+                                      onClick={() => onEditBooking(booking)}
+                                      disabled={!canEdit(booking)}
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "BO" && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
+                                      <Badge 
+                                        className="mr-2"
+                                        style={{ backgroundColor: statusColors.BO, color: "#1F2937" }}
+                                      >
+                                        BO
+                                      </Badge>
+                                      Reservasi
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CI" && !isStatusBatal(booking.status) && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CI", booking.status)}>
+                                      <Badge 
+                                        className="mr-2"
+                                        style={{ backgroundColor: statusColors.CI, color: "#1F2937" }}
+                                      >
+                                        CI
+                                      </Badge>
+                                      Check In
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {hasPermission("edit_bookings") && canChangeStatus(booking) && booking.status !== "CO" && !isStatusBatal(booking.status) && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "CO", booking.status)}>
+                                      <Badge 
+                                        className="mr-2"
+                                        style={{ backgroundColor: statusColors.CO, color: "#fff" }}
+                                      >
+                                        CO
+                                      </Badge>
+                                      Check Out
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {(userRole === "admin" || hasPermission("cancel_bookings") || (hasPermission("cancel_checkout_bookings") && booking.status === "CO")) && 
+                                    booking.status !== "BATAL" && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleStatusChange(booking.id, "BATAL", booking.status)}
+                                      className="text-destructive"
+                                    >
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Batalkan
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {userRole === "admin" && booking.status === "BATAL" && (
+                                    <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
+                                      <Undo className="mr-2 h-4 w-4" />
+                                      Pulihkan ke Reservasi
+                                    </DropdownMenuItem>
+                                  )}
 
-                          {/* Delete option - for users with delete_bookings permission */}
-                          {hasPermission("delete_bookings") && (
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteBooking(booking.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Hapus
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
-                        title="Print Nota"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                                  {hasPermission("delete_bookings") && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDeleteBooking(booking.id)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Hapus
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
+                                title="Print Nota"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Pagination Controls */}
+                {filteredActiveBookings.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Tampilkan</span>
+                      <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                        <SelectTrigger className="w-[70px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span>dari {totalItems} data</span>
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                          .map((page, idx, arr) => (
+                            <span key={page} className="flex items-center">
+                              {idx > 0 && arr[idx - 1] !== page - 1 && (
+                                <span className="px-1 text-muted-foreground">...</span>
+                              )}
+                              <Button
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className="h-8 w-8 p-0"
+                              >
+                                {page}
+                              </Button>
+                            </span>
+                          ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailPopupOpen && selectedBookingId && (
+                  <BookingDetailPopup
+                    open={detailPopupOpen}
+                    onClose={() => {
+                      setDetailPopupOpen(false);
+                      setSelectedBookingId(null);
+                    }}
+                    bookingId={selectedBookingId}
+                    statusColors={statusColors}
+                    onStatusChange={() => fetchBookings()}
+                  />
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {filteredActiveBookings.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Tampilkan</span>
-              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-                <SelectTrigger className="w-[70px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-              <span>dari {totalItems} data</span>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                  .map((page, idx, arr) => (
-                    <span key={page} className="flex items-center">
-                      {idx > 0 && arr[idx - 1] !== page - 1 && (
-                        <span className="px-1 text-muted-foreground">...</span>
-                      )}
-                      <Button
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {page}
-                      </Button>
-                    </span>
-                  ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+        {/* Batal tab uses its own component */}
+        {activeSubTab === "batal" && (
+          <div className="mt-4">
+            <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} />
           </div>
         )}
-
-            {/* Booking Detail Popup */}
-            <BookingDetailPopup
-              isOpen={detailPopupOpen}
-              onClose={() => {
-                setDetailPopupOpen(false);
-                setSelectedBookingId(null);
-              }}
-              bookingId={selectedBookingId}
-              statusColors={statusColors}
-              onStatusChange={() => fetchBookings()}
-            />
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="selesai" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Penjualan - Selesai
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activeBookings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Tidak ada data</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{activeBookings.length} booking selesai</p>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="batal" className="mt-4">
-        <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} />
-      </TabsContent>
-
-      <TabsContent value="dihapus" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              Penjualan - Dihapus
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activeBookings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Tidak ada data</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{activeBookings.length} booking dihapus</p>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
     </Tabs>
   </div>
   );
