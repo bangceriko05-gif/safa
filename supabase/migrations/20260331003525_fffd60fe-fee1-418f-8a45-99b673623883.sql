@@ -1,0 +1,1 @@
+ALTER TABLE public.stores ADD COLUMN room_limit integer NOT NULL DEFAULT 25;

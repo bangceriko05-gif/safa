@@ -2104,6 +2104,7 @@ export type Database = {
           is_active: boolean
           location: string | null
           name: string
+          room_limit: number
           slug: string
           subscription_end_date: string | null
           subscription_start_date: string | null
@@ -2118,6 +2119,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name: string
+          room_limit?: number
           slug: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
@@ -2132,6 +2134,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name?: string
+          room_limit?: number
           slug?: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
