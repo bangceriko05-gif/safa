@@ -240,6 +240,7 @@ export default function SuperAdminStoreManagement() {
       is_active: store.is_active,
       subscription_start_date: store.subscription_start_date || "",
       subscription_end_date: store.subscription_end_date || "",
+      room_limit: String(store.room_limit || 25),
     });
     setPreviewUrl(store.image_url || null);
     setIsDialogOpen(true);
