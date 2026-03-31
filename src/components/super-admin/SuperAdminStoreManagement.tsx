@@ -41,6 +41,7 @@ interface Store {
   updated_at: string;
   subscription_start_date: string | null;
   subscription_end_date: string | null;
+  room_limit: number;
 }
 
 interface StoreStats {
