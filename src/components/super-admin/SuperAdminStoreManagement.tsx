@@ -41,6 +41,7 @@ interface Store {
   updated_at: string;
   subscription_start_date: string | null;
   subscription_end_date: string | null;
+  room_limit: number;
 }
 
 interface StoreStats {
@@ -69,6 +70,7 @@ export default function SuperAdminStoreManagement() {
     is_active: true,
     subscription_start_date: "",
     subscription_end_date: "",
+    room_limit: "25",
   });
 
   useEffect(() => {
@@ -182,6 +184,7 @@ export default function SuperAdminStoreManagement() {
         is_active: formData.is_active,
         subscription_start_date: formData.subscription_start_date || null,
         subscription_end_date: formData.subscription_end_date || null,
+        room_limit: parseInt(formData.room_limit) || 25,
         slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
@@ -238,6 +241,7 @@ export default function SuperAdminStoreManagement() {
       is_active: store.is_active,
       subscription_start_date: store.subscription_start_date || "",
       subscription_end_date: store.subscription_end_date || "",
+      room_limit: String(store.room_limit || 25),
     });
     setPreviewUrl(store.image_url || null);
     setIsDialogOpen(true);
@@ -322,6 +326,7 @@ export default function SuperAdminStoreManagement() {
       is_active: true,
       subscription_start_date: "",
       subscription_end_date: "",
+      room_limit: "25",
     });
   };
 
@@ -460,13 +465,14 @@ export default function SuperAdminStoreManagement() {
                         <div className="flex flex-col items-center gap-1">
                           <div className="flex items-center justify-center gap-1">
                             <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                            <span className={`${(storeStats[store.id]?.rooms || 0) > 25 ? 'text-destructive font-bold' : ''}`}>
+                            <span className={`${(storeStats[store.id]?.rooms || 0) >= store.room_limit ? 'text-destructive font-bold' : ''}`}>
                               {storeStats[store.id]?.rooms || 0}
                             </span>
+                            <span className="text-muted-foreground text-xs">/ {store.room_limit}</span>
                           </div>
-                          {(storeStats[store.id]?.rooms || 0) > 25 && (
+                          {(storeStats[store.id]?.rooms || 0) >= store.room_limit && (
                             <span className="text-[10px] text-destructive leading-tight text-center max-w-[120px]">
-                              Melebihi batas 25 kamar
+                              Melebihi batas
                             </span>
                           )}
                         </div>
@@ -647,6 +653,19 @@ export default function SuperAdminStoreManagement() {
                   onChange={(e) => setFormData({ ...formData, subscription_end_date: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="room_limit">Batas Maksimal Kamar</Label>
+              <Input
+                id="room_limit"
+                type="number"
+                min="1"
+                value={formData.room_limit}
+                onChange={(e) => setFormData({ ...formData, room_limit: e.target.value })}
+                placeholder="25"
+              />
+              <p className="text-xs text-muted-foreground">Jumlah maksimal kamar yang dapat dibuat di outlet ini</p>
             </div>
 
             <div className="flex items-center justify-between">
