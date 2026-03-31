@@ -62,6 +62,8 @@ export default function SuperAdminStoreManagement() {
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
   const [subscriptionEditStore, setSubscriptionEditStore] = useState<Store | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState({ start: "", end: "" });
+  const [roomLimitEditStore, setRoomLimitEditStore] = useState<Store | null>(null);
+  const [roomLimitValue, setRoomLimitValue] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
