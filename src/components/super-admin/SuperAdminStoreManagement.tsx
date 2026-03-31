@@ -763,6 +763,64 @@ export default function SuperAdminStoreManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Room Limit Edit Dialog */}
+      <Dialog open={!!roomLimitEditStore} onOpenChange={(open) => !open && setRoomLimitEditStore(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DoorOpen className="h-5 w-5" />
+              Batas Kamar - {roomLimitEditStore?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Kamar saat ini: <span className="font-bold">{storeStats[roomLimitEditStore?.id || ""]?.rooms || 0}</span></Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="room_limit_edit">Batas Maksimal Kamar</Label>
+              <Input
+                id="room_limit_edit"
+                type="number"
+                min="1"
+                value={roomLimitValue}
+                onChange={(e) => setRoomLimitValue(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setRoomLimitEditStore(null)}>
+                Batal
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  if (!roomLimitEditStore) return;
+                  try {
+                    const { error } = await supabase
+                      .from("stores")
+                      .update({ room_limit: parseInt(roomLimitValue) || 25 })
+                      .eq("id", roomLimitEditStore.id);
+                    if (error) throw error;
+                    await logActivity({
+                      actionType: 'updated',
+                      entityType: 'Outlet',
+                      entityId: roomLimitEditStore.id,
+                      description: `[Super Admin] Mengubah batas kamar outlet ${roomLimitEditStore.name} menjadi ${roomLimitValue}`,
+                    });
+                    toast.success("Batas kamar berhasil diupdate");
+                    setRoomLimitEditStore(null);
+                    fetchStores();
+                  } catch (error: any) {
+                    toast.error(error.message || "Gagal mengupdate batas kamar");
+                  }
+                }}
+              >
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
