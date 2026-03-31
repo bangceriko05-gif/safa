@@ -465,13 +465,14 @@ export default function SuperAdminStoreManagement() {
                         <div className="flex flex-col items-center gap-1">
                           <div className="flex items-center justify-center gap-1">
                             <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                            <span className={`${(storeStats[store.id]?.rooms || 0) > 25 ? 'text-destructive font-bold' : ''}`}>
+                            <span className={`${(storeStats[store.id]?.rooms || 0) >= store.room_limit ? 'text-destructive font-bold' : ''}`}>
                               {storeStats[store.id]?.rooms || 0}
                             </span>
+                            <span className="text-muted-foreground text-xs">/ {store.room_limit}</span>
                           </div>
-                          {(storeStats[store.id]?.rooms || 0) > 25 && (
+                          {(storeStats[store.id]?.rooms || 0) >= store.room_limit && (
                             <span className="text-[10px] text-destructive leading-tight text-center max-w-[120px]">
-                              Melebihi batas 25 kamar
+                              Melebihi batas
                             </span>
                           )}
                         </div>
