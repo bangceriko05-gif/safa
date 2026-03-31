@@ -68,6 +68,45 @@ export default function ExpenseTransactionView() {
   const [managingCategories, setManagingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
+  // Edit expense dialog state
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "" });
+
+  const openEditDialog = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditForm({
+      description: expense.description || "",
+      amount: formatAmountInput(String(expense.amount)),
+      category: expense.category || "",
+      payment_method: expense.payment_method || "",
+      date: expense.date,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingExpense) return;
+    if (!editForm.description.trim()) { toast.error("Deskripsi harus diisi"); return; }
+    if (!editForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    try {
+      const { error } = await supabase
+        .from("expenses")
+        .update({
+          description: editForm.description,
+          amount: parseFloat(editForm.amount.replace(/\./g, "")) || 0,
+          category: editForm.category || null,
+          payment_method: editForm.payment_method || null,
+          date: editForm.date,
+        })
+        .eq("id", editingExpense.id);
+      if (error) throw error;
+      toast.success("Pengeluaran berhasil diperbarui");
+      setEditingExpense(null);
+      fetchExpenses();
+    } catch (error) {
+      toast.error("Gagal memperbarui pengeluaran");
+    }
+  };
+
   const formatAmountInput = (value: string) => {
     const numericValue = value.replace(/\D/g, '');
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
