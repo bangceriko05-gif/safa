@@ -184,6 +184,7 @@ export default function SuperAdminStoreManagement() {
         is_active: formData.is_active,
         subscription_start_date: formData.subscription_start_date || null,
         subscription_end_date: formData.subscription_end_date || null,
+        room_limit: parseInt(formData.room_limit) || 25,
         slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
