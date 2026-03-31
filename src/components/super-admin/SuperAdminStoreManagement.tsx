@@ -655,6 +655,19 @@ export default function SuperAdminStoreManagement() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="room_limit">Batas Maksimal Kamar</Label>
+              <Input
+                id="room_limit"
+                type="number"
+                min="1"
+                value={formData.room_limit}
+                onChange={(e) => setFormData({ ...formData, room_limit: e.target.value })}
+                placeholder="25"
+              />
+              <p className="text-xs text-muted-foreground">Jumlah maksimal kamar yang dapat dibuat di outlet ini</p>
+            </div>
+
             <div className="flex items-center justify-between">
               <Label htmlFor="is_active">Status Aktif</Label>
               <Switch
