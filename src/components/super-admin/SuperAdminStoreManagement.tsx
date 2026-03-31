@@ -82,6 +82,8 @@ export default function SuperAdminStoreManagement() {
   const fetchStores = async () => {
     try {
       setIsLoading(true);
+      // Auto-deactivate expired stores before fetching
+      await supabase.rpc("check_expired_stores");
       const { data, error } = await supabase
         .from("stores")
         .select("*")

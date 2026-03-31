@@ -2271,6 +2271,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_expired_stores: { Args: never; Returns: number }
       checkout_booking_by_request_id: {
         Args: { p_request_id: string; p_user_id: string }
         Returns: undefined
