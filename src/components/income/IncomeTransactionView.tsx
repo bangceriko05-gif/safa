@@ -61,6 +61,45 @@ export default function IncomeTransactionView() {
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
 
+  // Edit income dialog state
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  const [editIncomeForm, setEditIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: "" });
+
+  const openEditIncomeDialog = (income: Income) => {
+    setEditingIncome(income);
+    setEditIncomeForm({
+      description: income.description || "",
+      amount: formatAmountInput(String(income.amount)),
+      customer_name: income.customer_name || "",
+      payment_method: income.payment_method || "",
+      date: income.date,
+    });
+  };
+
+  const handleSaveEditIncome = async () => {
+    if (!editingIncome) return;
+    if (!editIncomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
+    if (!editIncomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    try {
+      const { error } = await supabase
+        .from("incomes")
+        .update({
+          description: editIncomeForm.description || null,
+          amount: parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0,
+          customer_name: editIncomeForm.customer_name,
+          payment_method: editIncomeForm.payment_method || null,
+          date: editIncomeForm.date,
+        })
+        .eq("id", editingIncome.id);
+      if (error) throw error;
+      toast.success("Pemasukan berhasil diperbarui");
+      setEditingIncome(null);
+      fetchIncomes();
+    } catch (error) {
+      toast.error("Gagal memperbarui pemasukan");
+    }
+  };
+
   // Add income dialog state
   const [addingIncome, setAddingIncome] = useState(false);
   const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
