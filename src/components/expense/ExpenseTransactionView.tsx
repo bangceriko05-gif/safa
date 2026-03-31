@@ -401,7 +401,11 @@ export default function ExpenseTransactionView() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Badge variant="outline" className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                            onClick={() => openEditDialog(expense)}
+                          >
                             {expense.bid || '-'}
                           </Badge>
                           {expense.bid && (
