@@ -325,6 +325,7 @@ export default function SuperAdminStoreManagement() {
       is_active: true,
       subscription_start_date: "",
       subscription_end_date: "",
+      room_limit: "25",
     });
   };
 
