@@ -464,7 +464,14 @@ export default function SuperAdminStoreManagement() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
+                        <div
+                          className="flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
+                          onClick={() => {
+                            setRoomLimitEditStore(store);
+                            setRoomLimitValue(String(store.room_limit));
+                          }}
+                          title="Klik untuk edit batas kamar"
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <DoorOpen className="h-4 w-4 text-muted-foreground" />
                             <span className={`${(storeStats[store.id]?.rooms || 0) >= store.room_limit ? 'text-destructive font-bold' : ''}`}>
