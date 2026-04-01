@@ -401,6 +401,7 @@ export default function IncomeTransactionView() {
                     {showVerification && <TableHead>Verifikasi</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-center w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
