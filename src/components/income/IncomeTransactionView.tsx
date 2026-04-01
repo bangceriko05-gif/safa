@@ -505,6 +505,20 @@ export default function IncomeTransactionView() {
                       <TableCell className="text-right font-bold text-green-600 whitespace-nowrap">
                         {formatCurrency(Number(income.amount))}
                       </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const url = `/receipt/transaction?id=${income.id}&type=income`;
+                            window.open(url, '_blank');
+                          }}
+                          title="Print Nota"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
