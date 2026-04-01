@@ -152,7 +152,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
       supabase.removeChannel(channel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
-  }, [selectedDate, dateFilter, customDateRange, currentStore]);
+  }, [dateFilter, customDateRange, currentStore]);
 
   const fetchStatusColors = async () => {
     try {
