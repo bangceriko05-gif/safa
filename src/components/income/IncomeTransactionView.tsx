@@ -427,19 +427,18 @@ export default function IncomeTransactionView() {
                       </TableCell>
                       <TableCell>{income.customer_name || '-'}</TableCell>
                       <TableCell>
-                        {income.description ? (
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="p-0 h-auto text-blue-600"
-                            onClick={() => setNoteDialogData(income)}
-                          >
-                            <FileText className="h-3 w-3 mr-1" />
-                            Lihat
-                          </Button>
-                        ) : (
-                          "-"
-                        )}
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="p-0 h-auto text-blue-600"
+                          onClick={() => {
+                            const url = `/receipt/transaction?id=${income.id}&type=income`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          Lihat
+                        </Button>
                       </TableCell>
                       <TableCell>{income.payment_method || '-'}</TableCell>
                       <TableCell>
