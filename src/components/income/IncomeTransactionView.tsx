@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Copy, FileText, CalendarIcon, Trash2 } from "lucide-react";
+import { Plus, Search, Copy, FileText, CalendarIcon, Trash2, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -401,6 +401,7 @@ export default function IncomeTransactionView() {
                     {showVerification && <TableHead>Verifikasi</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-center w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -503,6 +504,20 @@ export default function IncomeTransactionView() {
                       </TableCell>
                       <TableCell className="text-right font-bold text-green-600 whitespace-nowrap">
                         {formatCurrency(Number(income.amount))}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const url = `/receipt/transaction?id=${income.id}&type=income`;
+                            window.open(url, '_blank');
+                          }}
+                          title="Print Nota"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
