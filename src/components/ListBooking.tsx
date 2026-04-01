@@ -203,28 +203,17 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         .eq("store_id", currentStore.id);
 
       // Apply date filter based on current filter type
-      if (dateFilter === "today" || dateFilter === "yesterday") {
-        const dateStr = format(selectedDate, "yyyy-MM-dd");
-        query = query.eq("date", dateStr);
-      } else if (dateFilter === "thisMonth") {
-        const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-        const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
-        query = query.gte("date", monthStart).lte("date", monthEnd);
-      } else if (dateFilter === "lastMonth") {
-        const lastMonth = subMonths(new Date(), 1);
-        const monthStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
-        const monthEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
-        query = query.gte("date", monthStart).lte("date", monthEnd);
-      } else if (dateFilter === "allTime") {
+      if (dateFilter === "allTime") {
         // No date filter - fetch all bookings
-      } else if (dateFilter === "custom" && customDateRange?.from) {
-        const startDate = format(customDateRange.from, "yyyy-MM-dd");
-        const endDate = format(customDateRange.to || customDateRange.from, "yyyy-MM-dd");
-        query = query.gte("date", startDate).lte("date", endDate);
       } else {
-        // Default to today if no filter
-        const dateStr = format(new Date(), "yyyy-MM-dd");
-        query = query.eq("date", dateStr);
+        const { startDate: sd, endDate: ed } = getDateRange(dateFilter, customDateRange);
+        const startStr = format(sd, "yyyy-MM-dd");
+        const endStr = format(ed, "yyyy-MM-dd");
+        if (startStr === endStr) {
+          query = query.eq("date", startStr);
+        } else {
+          query = query.gte("date", startStr).lte("date", endStr);
+        }
       }
 
       const { data, error } = await query.order("date", { ascending: false }).order("start_time");
