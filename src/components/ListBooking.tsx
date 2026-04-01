@@ -48,6 +48,9 @@ interface ListBookingProps {
   userRole: string | null;
   onEditBooking: (booking: any) => void;
   onAddBooking?: () => void;
+  timeRange?: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom";
+  customDateRange?: DateRange;
+  searchQuery?: string;
 }
 
 interface BookingWithRoom {
