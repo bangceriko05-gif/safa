@@ -43,7 +43,13 @@ const PROCESS_TABS = [
   { key: "dihapus", label: "Dihapus" },
 ];
 
-export default function ExpenseTransactionView() {
+interface ExpenseTransactionViewProps {
+  timeRange: ReportTimeRange;
+  customDateRange?: DateRange;
+  searchQuery: string;
+}
+
+export default function ExpenseTransactionView({ timeRange, customDateRange, searchQuery }: ExpenseTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
@@ -52,9 +58,12 @@ export default function ExpenseTransactionView() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [verificationFilter, setVerificationFilter] = useState("all");
+  const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
+  const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
+  const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");

@@ -71,17 +71,16 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
-export default function ListBooking({ userRole, onEditBooking, onAddBooking }: ListBookingProps) {
+export default function ListBooking({ userRole, onEditBooking, onAddBooking, timeRange: externalTimeRange, customDateRange: externalCustomDateRange, searchQuery: externalSearchQuery }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
   const [activeSubTab, setActiveSubTab] = useState("proses");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("today");
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
-  const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
+  const dateFilter = externalTimeRange || "today";
+  const customDateRange = externalCustomDateRange;
+  const searchQuery = externalSearchQuery || "";
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
@@ -91,7 +90,6 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
   });
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState(1);
 

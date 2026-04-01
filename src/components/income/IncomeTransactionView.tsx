@@ -45,7 +45,13 @@ const PROCESS_TABS = [
   { key: "dihapus", label: "Dihapus" },
 ];
 
-export default function IncomeTransactionView() {
+interface IncomeTransactionViewProps {
+  timeRange: ReportTimeRange;
+  customDateRange?: DateRange;
+  searchQuery: string;
+}
+
+export default function IncomeTransactionView({ timeRange, customDateRange, searchQuery }: IncomeTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
@@ -54,9 +60,9 @@ export default function IncomeTransactionView() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [verificationFilter, setVerificationFilter] = useState("all");
+  const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
