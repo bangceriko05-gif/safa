@@ -64,12 +64,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [paymentFilter, setPaymentFilter] = useState("all");
-  const [verificationFilter, setVerificationFilter] = useState("all");
-  const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
-  const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
-  const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
 
   // Add expense dialog state
   const [addingExpense, setAddingExpense] = useState(false);
