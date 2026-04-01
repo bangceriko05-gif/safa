@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getDateRange } from "./reports/ReportDateFilter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,9 @@ interface ListBookingProps {
   userRole: string | null;
   onEditBooking: (booking: any) => void;
   onAddBooking?: () => void;
+  timeRange?: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom";
+  customDateRange?: DateRange;
+  searchQuery?: string;
 }
 
 interface BookingWithRoom {
@@ -68,17 +72,16 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
-export default function ListBooking({ userRole, onEditBooking, onAddBooking }: ListBookingProps) {
+export default function ListBooking({ userRole, onEditBooking, onAddBooking, timeRange: externalTimeRange, customDateRange: externalCustomDateRange, searchQuery: externalSearchQuery }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
   const [activeSubTab, setActiveSubTab] = useState("proses");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("today");
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
-  const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
+  const dateFilter = externalTimeRange || "today";
+  const customDateRange = externalCustomDateRange;
+  const searchQuery = externalSearchQuery || "";
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
@@ -88,7 +91,6 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
   });
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -150,7 +152,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
       supabase.removeChannel(channel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
-  }, [selectedDate, dateFilter, customDateRange, currentStore]);
+  }, [dateFilter, customDateRange, currentStore]);
 
   const fetchStatusColors = async () => {
     try {
@@ -202,28 +204,17 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
         .eq("store_id", currentStore.id);
 
       // Apply date filter based on current filter type
-      if (dateFilter === "today" || dateFilter === "yesterday") {
-        const dateStr = format(selectedDate, "yyyy-MM-dd");
-        query = query.eq("date", dateStr);
-      } else if (dateFilter === "thisMonth") {
-        const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-        const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
-        query = query.gte("date", monthStart).lte("date", monthEnd);
-      } else if (dateFilter === "lastMonth") {
-        const lastMonth = subMonths(new Date(), 1);
-        const monthStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
-        const monthEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
-        query = query.gte("date", monthStart).lte("date", monthEnd);
-      } else if (dateFilter === "allTime") {
+      if (dateFilter === "allTime") {
         // No date filter - fetch all bookings
-      } else if (dateFilter === "custom" && customDateRange?.from) {
-        const startDate = format(customDateRange.from, "yyyy-MM-dd");
-        const endDate = format(customDateRange.to || customDateRange.from, "yyyy-MM-dd");
-        query = query.gte("date", startDate).lte("date", endDate);
       } else {
-        // Default to today if no filter
-        const dateStr = format(new Date(), "yyyy-MM-dd");
-        query = query.eq("date", dateStr);
+        const { startDate: sd, endDate: ed } = getDateRange(dateFilter, customDateRange);
+        const startStr = format(sd, "yyyy-MM-dd");
+        const endStr = format(ed, "yyyy-MM-dd");
+        if (startStr === endStr) {
+          query = query.eq("date", startStr);
+        } else {
+          query = query.gte("date", startStr).lte("date", endStr);
+        }
       }
 
       const { data, error } = await query.order("date", { ascending: false }).order("start_time");
@@ -257,38 +248,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
     }
   };
 
-  const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom") => {
-    setDateFilter(filter);
-    if (filter === "today") {
-      setSelectedDate(new Date());
-    } else if (filter === "yesterday") {
-      setSelectedDate(subDays(new Date(), 1));
-    } else if (filter === "thisMonth") {
-      setSelectedDate(new Date());
-    } else if (filter === "lastMonth") {
-      setSelectedDate(subMonths(new Date(), 1));
-    } else if (filter === "allTime") {
-      setSelectedDate(new Date());
-    } else if (filter === "custom") {
-      setPendingDateRange(customDateRange);
-      setCalendarOpen(true);
-    }
-  };
-
   const handleCopyBid = (bid: string | null) => {
     if (!bid) return;
     navigator.clipboard.writeText(bid);
     toast.success("BID berhasil disalin");
-  };
-
-  const handleCustomDateConfirm = () => {
-    if (pendingDateRange?.from) {
-      setCustomDateRange(pendingDateRange);
-      setSelectedDate(pendingDateRange.from);
-      setCalendarOpen(false);
-    } else {
-      toast.error("Pilih tanggal terlebih dahulu");
-    }
   };
 
   const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null) => {
@@ -539,97 +502,6 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking }: L
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Date Filter */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {isMobile ? (
-                    <Select value={dateFilter} onValueChange={(v) => {
-                      if (v === "custom") {
-                        handleDateFilterChange("custom");
-                      } else {
-                        handleDateFilterChange(v as any);
-                      }
-                    }}>
-                      <SelectTrigger className="w-[160px]">
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="today">Hari Ini</SelectItem>
-                        <SelectItem value="yesterday">Kemarin</SelectItem>
-                        <SelectItem value="thisMonth">Bulan Ini</SelectItem>
-                        <SelectItem value="lastMonth">Bulan Lalu</SelectItem>
-                        <SelectItem value="allTime">All Time</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("today")} className={cn(dateFilter === "today" && "bg-primary text-primary-foreground")}>Hari Ini</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")} className={cn(dateFilter === "yesterday" && "bg-primary text-primary-foreground")}>Kemarin</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")} className={cn(dateFilter === "thisMonth" && "bg-primary text-primary-foreground")}>Bulan Ini</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("lastMonth")} className={cn(dateFilter === "lastMonth" && "bg-primary text-primary-foreground")}>Bulan Lalu</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("allTime")} className={cn("gap-1", dateFilter === "allTime" && "bg-primary text-primary-foreground")}><Infinity className="h-3 w-3" />All Time</Button>
-                    </div>
-                  )}
-                  
-                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className={cn(
-                          "gap-2",
-                          dateFilter === "custom" && "bg-primary text-primary-foreground"
-                        )}
-                        onClick={() => handleDateFilterChange("custom")}
-                      >
-                        <CalendarIcon className="h-4 w-4" />
-                        {dateFilter === "custom" && customDateRange?.from ? (
-                          customDateRange.to ? (
-                            <>
-                              {format(customDateRange.from, "d MMM", { locale: idLocale })} -{" "}
-                              {format(customDateRange.to, "d MMM yyyy", { locale: idLocale })}
-                            </>
-                          ) : (
-                            format(customDateRange.from, "d MMMM yyyy", { locale: idLocale })
-                          )
-                        ) : (
-                          "Custom Tanggal"
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="range"
-                        selected={pendingDateRange}
-                        onSelect={(range) => setPendingDateRange(range)}
-                        defaultMonth={pendingDateRange?.from || new Date()}
-                        initialFocus
-                        numberOfMonths={isMobile ? 1 : 2}
-                        locale={idLocale}
-                        className="pointer-events-auto"
-                      />
-                      <div className="flex justify-end gap-2 p-3 border-t">
-                        <Button variant="outline" size="sm" onClick={() => setCalendarOpen(false)}>
-                          Batal
-                        </Button>
-                        <Button size="sm" onClick={handleCustomDateConfirm} disabled={!pendingDateRange?.from}>
-                          OK
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Search Input */}
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Cari BID, nama, HP, kamar..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
 
                 {/* Booking Table */}
                 {isLoading ? (

@@ -45,7 +45,13 @@ const PROCESS_TABS = [
   { key: "dihapus", label: "Dihapus" },
 ];
 
-export default function IncomeTransactionView() {
+interface IncomeTransactionViewProps {
+  timeRange: ReportTimeRange;
+  customDateRange?: DateRange;
+  searchQuery: string;
+}
+
+export default function IncomeTransactionView({ timeRange, customDateRange, searchQuery }: IncomeTransactionViewProps) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
@@ -54,9 +60,6 @@ export default function IncomeTransactionView() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
@@ -331,29 +334,8 @@ export default function IncomeTransactionView() {
             </TabsList>
           </Tabs>
 
-          {/* Search and filters */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari berdasarkan pelanggan, deskripsi, BID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <span className="text-sm font-semibold whitespace-nowrap">{formatCurrency(total)}</span>
-            <ReportDateFilter
-              timeRange={timeRange}
-              onTimeRangeChange={setTimeRange}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-            />
-            <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
-              <CalendarIcon className="h-4 w-4" />
-              {dateRangeLabel}
-            </div>
-          </div>
+
+
 
           {/* Secondary filters */}
           <div className="flex gap-2 flex-wrap">
