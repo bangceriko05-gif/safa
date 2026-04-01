@@ -258,38 +258,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     }
   };
 
-  const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom") => {
-    setDateFilter(filter);
-    if (filter === "today") {
-      setSelectedDate(new Date());
-    } else if (filter === "yesterday") {
-      setSelectedDate(subDays(new Date(), 1));
-    } else if (filter === "thisMonth") {
-      setSelectedDate(new Date());
-    } else if (filter === "lastMonth") {
-      setSelectedDate(subMonths(new Date(), 1));
-    } else if (filter === "allTime") {
-      setSelectedDate(new Date());
-    } else if (filter === "custom") {
-      setPendingDateRange(customDateRange);
-      setCalendarOpen(true);
-    }
-  };
-
   const handleCopyBid = (bid: string | null) => {
     if (!bid) return;
     navigator.clipboard.writeText(bid);
     toast.success("BID berhasil disalin");
-  };
-
-  const handleCustomDateConfirm = () => {
-    if (pendingDateRange?.from) {
-      setCustomDateRange(pendingDateRange);
-      setSelectedDate(pendingDateRange.from);
-      setCalendarOpen(false);
-    } else {
-      toast.error("Pilih tanggal terlebih dahulu");
-    }
   };
 
   const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null) => {
