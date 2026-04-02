@@ -14,6 +14,7 @@ interface PaymentMethod {
   name: string;
   is_active: boolean;
   sort_order: number;
+  is_default: boolean;
 }
 
 export default function PaymentMethodSettings() {
