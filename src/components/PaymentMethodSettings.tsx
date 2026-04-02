@@ -14,6 +14,7 @@ interface PaymentMethod {
   name: string;
   is_active: boolean;
   sort_order: number;
+  is_default: boolean;
 }
 
 export default function PaymentMethodSettings() {
@@ -42,9 +43,9 @@ export default function PaymentMethodSettings() {
       if (!data || data.length === 0) {
         // Seed default methods
         const defaults = [
-          { name: "Cash", store_id: currentStore.id, sort_order: 0 },
-          { name: "Transfer Bank", store_id: currentStore.id, sort_order: 1 },
-          { name: "QRIS", store_id: currentStore.id, sort_order: 2 },
+          { name: "Cash", store_id: currentStore.id, sort_order: 0, is_default: true },
+          { name: "Transfer Bank", store_id: currentStore.id, sort_order: 1, is_default: true },
+          { name: "Hutang", store_id: currentStore.id, sort_order: 2, is_default: true },
         ];
         const { data: seeded, error: seedErr } = await supabase
           .from("payment_methods")
@@ -115,7 +116,11 @@ export default function PaymentMethodSettings() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string, isDefault: boolean) => {
+    if (isDefault) {
+      toast.error("Metode pembayaran bawaan tidak bisa dihapus");
+      return;
+    }
     if (!confirm(`Hapus metode pembayaran "${name}"?`)) return;
     try {
       const { error } = await supabase
@@ -174,6 +179,9 @@ export default function PaymentMethodSettings() {
                 <div className="flex items-center gap-3">
                   <GripVertical className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm">{method.name}</span>
+                  {method.is_default && (
+                    <Badge variant="outline" className="text-xs">Bawaan</Badge>
+                  )}
                   {!method.is_active && (
                     <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
                   )}
@@ -183,14 +191,16 @@ export default function PaymentMethodSettings() {
                     checked={method.is_active}
                     onCheckedChange={(checked) => handleToggle(method.id, checked)}
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(method.id, method.name)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!method.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(method.id, method.name, method.is_default)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

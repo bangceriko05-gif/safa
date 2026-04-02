@@ -1452,6 +1452,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_default: boolean
           name: string
           sort_order: number
           store_id: string
@@ -1461,6 +1462,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_default?: boolean
           name: string
           sort_order?: number
           store_id: string
@@ -1470,6 +1472,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_default?: boolean
           name?: string
           sort_order?: number
           store_id?: string
