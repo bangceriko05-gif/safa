@@ -1387,6 +1387,30 @@ export default function BookingModal({
           storeId: currentStore?.id,
         });
         
+        // Auto-create hutang if payment method is Hutang
+        await createAutoHutang({
+          paymentMethod: formData.payment_method,
+          amount: parseFloat(parsePrice(formData.price)),
+          supplierName: formData.customer_name,
+          description: `Penjualan - ${formData.customer_name} di kamar ${roomName}`,
+          storeId: currentStore.id,
+          userId,
+          bid: newBooking.bid,
+        });
+
+        // Also check dual payment
+        if (formData.dual_payment && formData.payment_method_2) {
+          await createAutoHutang({
+            paymentMethod: formData.payment_method_2,
+            amount: parseFloat(parsePrice(formData.price_2)),
+            supplierName: formData.customer_name,
+            description: `Penjualan (pembayaran ke-2) - ${formData.customer_name} di kamar ${roomName}`,
+            storeId: currentStore.id,
+            userId,
+            bid: newBooking.bid,
+          });
+        }
+
         toast.success("Booking berhasil ditambahkan");
       }
 
