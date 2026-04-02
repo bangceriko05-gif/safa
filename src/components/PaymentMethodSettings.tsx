@@ -116,7 +116,11 @@ export default function PaymentMethodSettings() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string, isDefault: boolean) => {
+    if (isDefault) {
+      toast.error("Metode pembayaran bawaan tidak bisa dihapus");
+      return;
+    }
     if (!confirm(`Hapus metode pembayaran "${name}"?`)) return;
     try {
       const { error } = await supabase
