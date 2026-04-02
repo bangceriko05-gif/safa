@@ -188,14 +188,16 @@ export default function PaymentMethodSettings() {
                     checked={method.is_active}
                     onCheckedChange={(checked) => handleToggle(method.id, checked)}
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(method.id, method.name)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!method.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(method.id, method.name, method.is_default)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
