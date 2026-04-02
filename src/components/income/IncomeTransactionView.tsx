@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { createAutoHutang } from "@/utils/autoHutang";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
