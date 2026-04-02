@@ -43,9 +43,9 @@ export default function PaymentMethodSettings() {
       if (!data || data.length === 0) {
         // Seed default methods
         const defaults = [
-          { name: "Cash", store_id: currentStore.id, sort_order: 0 },
-          { name: "Transfer Bank", store_id: currentStore.id, sort_order: 1 },
-          { name: "QRIS", store_id: currentStore.id, sort_order: 2 },
+          { name: "Cash", store_id: currentStore.id, sort_order: 0, is_default: true },
+          { name: "Transfer Bank", store_id: currentStore.id, sort_order: 1, is_default: true },
+          { name: "Hutang", store_id: currentStore.id, sort_order: 2, is_default: true },
         ];
         const { data: seeded, error: seedErr } = await supabase
           .from("payment_methods")
