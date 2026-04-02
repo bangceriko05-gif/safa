@@ -133,6 +133,17 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         store_id: currentStore.id,
       }]);
       if (error) throw error;
+
+      // Auto-create hutang if payment method is Hutang
+      await createAutoHutang({
+        paymentMethod: expenseForm.payment_method,
+        amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
+        supplierName: expenseForm.description,
+        description: `Pengeluaran - ${expenseForm.description}`,
+        storeId: currentStore.id,
+        userId: user.id,
+      });
+
       toast.success("Pengeluaran berhasil ditambahkan");
       setAddingExpense(false);
       setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
