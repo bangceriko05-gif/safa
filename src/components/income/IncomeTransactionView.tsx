@@ -201,6 +201,17 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         );
         if (prodError) console.error("Error inserting income products:", prodError);
       }
+
+      // Auto-create hutang if payment method is Hutang
+      await createAutoHutang({
+        paymentMethod: incomeForm.payment_method,
+        amount: totalAmount,
+        supplierName: incomeForm.customer_name,
+        description: `Pemasukan - ${incomeForm.customer_name}${incomeForm.description ? ` - ${incomeForm.description}` : ''}`,
+        storeId: currentStore.id,
+        userId: user.id,
+      });
+
       toast.success("Pemasukan berhasil ditambahkan");
       setAddingIncome(false);
       setIncomeForm({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
