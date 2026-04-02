@@ -179,6 +179,9 @@ export default function PaymentMethodSettings() {
                 <div className="flex items-center gap-3">
                   <GripVertical className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm">{method.name}</span>
+                  {method.is_default && (
+                    <Badge variant="outline" className="text-xs">Bawaan</Badge>
+                  )}
                   {!method.is_active && (
                     <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
                   )}
