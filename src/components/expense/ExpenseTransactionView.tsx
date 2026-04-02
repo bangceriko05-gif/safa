@@ -103,6 +103,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         })
         .eq("id", editingExpense.id);
       if (error) throw error;
+
+      // Handle hutang changes on edit
+      await handleHutangOnEdit({
+        previousPaymentMethod: editingExpense.payment_method,
+        newPaymentMethod: editForm.payment_method,
+        amount: parseFloat(editForm.amount.replace(/\./g, "")) || 0,
+        supplierName: editForm.description,
+        description: `Pengeluaran - ${editForm.description}`,
+        storeId: currentStore!.id,
+        userId: (await supabase.auth.getUser()).data.user!.id,
+        bid: editingExpense.bid,
+      });
+
       toast.success("Pengeluaran berhasil diperbarui");
       setEditingExpense(null);
       fetchExpenses();
