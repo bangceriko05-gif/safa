@@ -30,6 +30,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
+import { createAutoHutang } from "@/utils/autoHutang";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
