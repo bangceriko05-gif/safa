@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { createAutoHutang } from "@/utils/autoHutang";
+import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
@@ -96,6 +96,19 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         })
         .eq("id", editingIncome.id);
       if (error) throw error;
+
+      // Handle hutang changes on edit
+      await handleHutangOnEdit({
+        previousPaymentMethod: editingIncome.payment_method,
+        newPaymentMethod: editIncomeForm.payment_method,
+        amount: parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0,
+        supplierName: editIncomeForm.customer_name,
+        description: `Pemasukan - ${editIncomeForm.customer_name}`,
+        storeId: currentStore!.id,
+        userId: (await supabase.auth.getUser()).data.user!.id,
+        bid: editingIncome.bid,
+      });
+
       toast.success("Pemasukan berhasil diperbarui");
       setEditingIncome(null);
       fetchIncomes();

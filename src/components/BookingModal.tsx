@@ -30,7 +30,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
-import { createAutoHutang } from "@/utils/autoHutang";
+import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
@@ -1317,6 +1317,32 @@ export default function BookingModal({
           storeId: currentStore?.id,
         });
         
+        // Handle hutang changes on edit
+        await handleHutangOnEdit({
+          previousPaymentMethod: editingBooking.payment_method,
+          newPaymentMethod: formData.payment_method,
+          amount: parseFloat(parsePrice(formData.price)),
+          supplierName: formData.customer_name,
+          description: `Penjualan - ${formData.customer_name} di kamar ${roomName}`,
+          storeId: currentStore.id,
+          userId,
+          bid: editingBooking.bid,
+        });
+
+        // Handle dual payment hutang changes
+        if (formData.dual_payment || editingBooking.dual_payment) {
+          await handleHutangOnEdit({
+            previousPaymentMethod: editingBooking.payment_method_2,
+            newPaymentMethod: formData.dual_payment ? formData.payment_method_2 : null,
+            amount: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : 0,
+            supplierName: formData.customer_name,
+            description: `Penjualan (pembayaran ke-2) - ${formData.customer_name} di kamar ${roomName}`,
+            storeId: currentStore.id,
+            userId,
+            bid: editingBooking.bid,
+          });
+        }
+
         toast.success("Booking berhasil diupdate");
       } else {
         const { data: newBooking, error } = await supabase

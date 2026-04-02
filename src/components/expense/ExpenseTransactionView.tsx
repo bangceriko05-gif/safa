@@ -4,7 +4,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
-import { createAutoHutang } from "@/utils/autoHutang";
+import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         })
         .eq("id", editingExpense.id);
       if (error) throw error;
+
+      // Handle hutang changes on edit
+      await handleHutangOnEdit({
+        previousPaymentMethod: editingExpense.payment_method,
+        newPaymentMethod: editForm.payment_method,
+        amount: parseFloat(editForm.amount.replace(/\./g, "")) || 0,
+        supplierName: editForm.description,
+        description: `Pengeluaran - ${editForm.description}`,
+        storeId: currentStore!.id,
+        userId: (await supabase.auth.getUser()).data.user!.id,
+        bid: editingExpense.bid,
+      });
+
       toast.success("Pengeluaran berhasil diperbarui");
       setEditingExpense(null);
       fetchExpenses();
