@@ -223,6 +223,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         description: `Pemasukan - ${incomeForm.customer_name}${incomeForm.description ? ` - ${incomeForm.description}` : ''}`,
         storeId: currentStore.id,
         userId: user.id,
+        bid: incomeData?.bid || null,
       });
 
       toast.success("Pemasukan berhasil ditambahkan");
