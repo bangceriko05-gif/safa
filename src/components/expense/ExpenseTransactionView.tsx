@@ -136,7 +136,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Anda harus login"); return; }
-      const { error } = await supabase.from("expenses").insert([{
+      const { data: newExpense, error } = await supabase.from("expenses").insert([{
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
         category: expenseForm.category || null,
@@ -144,7 +144,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         date: expenseForm.date,
         created_by: user.id,
         store_id: currentStore.id,
-      }]);
+      }]).select().single();
       if (error) throw error;
 
       // Auto-create hutang if payment method is Hutang
@@ -155,6 +155,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         description: `Pengeluaran - ${expenseForm.description}`,
         storeId: currentStore.id,
         userId: user.id,
+        bid: newExpense?.bid || null,
       });
 
       toast.success("Pengeluaran berhasil ditambahkan");
