@@ -651,6 +651,28 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
               </Select>
             </div>
             <Button className="w-full" onClick={handleSaveEdit}>Simpan Perubahan</Button>
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={async () => {
+                if (!editingExpense) return;
+                try {
+                  const { error } = await supabase
+                    .from("expenses")
+                    .update({ process_status: "dihapus", status: "dihapus" })
+                    .eq("id", editingExpense.id);
+                  if (error) throw error;
+                  toast.success("Pengeluaran berhasil dihapus");
+                  setEditingExpense(null);
+                  fetchExpenses();
+                } catch (error) {
+                  toast.error("Gagal menghapus pengeluaran");
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Hapus Pengeluaran
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
