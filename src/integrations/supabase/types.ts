@@ -875,6 +875,8 @@ export type Database = {
           payment_method: string | null
           payment_proof_url: string | null
           process_status: string
+          receipt_url: string | null
+          reference_no: string | null
           status: string
           store_id: string | null
           updated_at: string
@@ -892,6 +894,8 @@ export type Database = {
           payment_method?: string | null
           payment_proof_url?: string | null
           process_status?: string
+          receipt_url?: string | null
+          reference_no?: string | null
           status?: string
           store_id?: string | null
           updated_at?: string
@@ -909,6 +913,8 @@ export type Database = {
           payment_method?: string | null
           payment_proof_url?: string | null
           process_status?: string
+          receipt_url?: string | null
+          reference_no?: string | null
           status?: string
           store_id?: string | null
           updated_at?: string
