@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2 } from "lucide-react";
+import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2, ChevronLeft, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -35,6 +35,8 @@ interface Expense {
   date: string;
   created_by: string;
   store_id: string;
+  receipt_url?: string | null;
+  reference_no?: string | null;
 }
 
 const PROCESS_TABS = [
@@ -66,9 +68,17 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
 
-  // Add expense dialog state
+  // Add expense inline view state
   const [addingExpense, setAddingExpense] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "" });
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const paymentProofRef = useRef<HTMLInputElement>(null);
+  const receiptRef = useRef<HTMLInputElement>(null);
+
   const [managingCategories, setManagingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
@@ -104,7 +114,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         .eq("id", editingExpense.id);
       if (error) throw error;
 
-      // Handle hutang changes on edit
       await handleHutangOnEdit({
         previousPaymentMethod: editingExpense.payment_method,
         newPaymentMethod: editForm.payment_method,
@@ -129,13 +138,39 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const { error } = await supabase.storage.from("payment-proofs").upload(fileName, file);
+    if (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(fileName);
+    return urlData.publicUrl;
+  };
+
   const handleAddExpense = async () => {
     if (!currentStore) return;
     if (!expenseForm.description.trim()) { toast.error("Deskripsi harus diisi"); return; }
     if (!expenseForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    if (!expenseForm.payment_method) { toast.error("Metode pembayaran harus dipilih"); return; }
+
+    setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Anda harus login"); return; }
+
+      let paymentProofUrl: string | null = null;
+      let receiptUrl: string | null = null;
+
+      if (paymentProofFile) {
+        paymentProofUrl = await uploadFile(paymentProofFile, "expense-proof");
+      }
+      if (receiptFile) {
+        receiptUrl = await uploadFile(receiptFile, "expense-receipt");
+      }
+
       const { data: newExpense, error } = await supabase.from("expenses").insert([{
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
@@ -144,10 +179,12 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         date: expenseForm.date,
         created_by: user.id,
         store_id: currentStore.id,
+        payment_proof_url: paymentProofUrl,
+        receipt_url: receiptUrl,
+        reference_no: expenseForm.reference_no || null,
       }]).select().single();
       if (error) throw error;
 
-      // Auto-create hutang if payment method is Hutang
       await createAutoHutang({
         paymentMethod: expenseForm.payment_method,
         amount: parseFloat(expenseForm.amount.replace(/\./g, "")) || 0,
@@ -159,13 +196,53 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       });
 
       toast.success("Pengeluaran berhasil ditambahkan");
-      setAddingExpense(false);
-      setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+      resetAddForm();
       fetchExpenses();
     } catch (error) {
       toast.error("Gagal menambahkan pengeluaran");
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const resetAddForm = () => {
+    setAddingExpense(false);
+    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "" });
+    setPaymentProofFile(null);
+    setReceiptFile(null);
+    setPaymentProofPreview(null);
+    setReceiptPreview(null);
+  };
+
+  const handleFileSelect = (file: File, type: "proof" | "receipt") => {
+    const url = URL.createObjectURL(file);
+    if (type === "proof") {
+      setPaymentProofFile(file);
+      setPaymentProofPreview(url);
+    } else {
+      setReceiptFile(file);
+      setReceiptPreview(url);
+    }
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent, type: "proof" | "receipt") => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileSelect(file, type);
+    }
+  }, []);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent, type: "proof" | "receipt") => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) handleFileSelect(file, type);
+        break;
+      }
+    }
+  }, []);
 
   const handleAddCategory = async () => {
     if (!currentStore || !newCategoryName.trim()) return;
@@ -266,7 +343,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const updateField = async (id: string, field: string, value: string) => {
     try {
       const updateData: any = { [field]: value };
-      // When status changes, also update process_status to move between tabs
       if (field === "status") {
         if (value === "tunda") updateData.process_status = "proses";
         else if (value === "selesai") updateData.process_status = "selesai";
@@ -277,7 +353,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         .update(updateData)
         .eq("id", id);
       if (error) throw error;
-      // If status changed, remove from current view since it moved tabs
       if (field === "status" && updateData.process_status && updateData.process_status !== processTab) {
         setExpenses((prev) => prev.filter((e) => e.id !== id));
       } else {
@@ -306,6 +381,207 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   }, [expenses]);
 
   const dateRangeLabel = getDateRangeDisplay(timeRange, customDateRange);
+
+  // Inline Add Expense View
+  if (addingExpense) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="icon" onClick={resetAddForm}>
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <h2 className="text-xl font-bold">Tambah Pengeluaran</h2>
+            </div>
+
+            <div className="space-y-5">
+              {/* Row 1: Tanggal + Kategori */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tanggal *</Label>
+                  <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Kategori</Label>
+                    <Button variant="ghost" size="sm" onClick={() => setManagingCategories(true)} className="h-6 px-2 text-xs">
+                      <Settings className="h-3 w-3 mr-1" />
+                      Kelola
+                    </Button>
+                  </div>
+                  <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                    <SelectContent>
+                      {expenseCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Deskripsi */}
+              <div className="space-y-2">
+                <Label>Deskripsi *</Label>
+                <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
+              </div>
+
+              {/* Row 2: Jumlah + Metode Pembayaran */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Jumlah (Rp) *</Label>
+                  <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Metode Pembayaran *</Label>
+                  <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                    <SelectContent>
+                      {activeMethodNames.map(method => (
+                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* No. Referensi */}
+              <div className="space-y-2">
+                <Label>No. Referensi</Label>
+                <Input value={expenseForm.reference_no} onChange={(e) => setExpenseForm({ ...expenseForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
+              </div>
+
+              {/* Upload areas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Bukti Bayar */}
+                <div className="space-y-2">
+                  <Label>Bukti Bayar (opsional)</Label>
+                  <div
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => paymentProofRef.current?.click()}
+                    onDrop={(e) => handleDrop(e, "proof")}
+                    onDragOver={(e) => e.preventDefault()}
+                    onPaste={(e) => handlePaste(e, "proof")}
+                    tabIndex={0}
+                  >
+                    <input
+                      ref={paymentProofRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, "proof");
+                      }}
+                    />
+                    {paymentProofPreview ? (
+                      <div className="space-y-2">
+                        <img src={paymentProofPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                        <p className="text-xs text-muted-foreground">{paymentProofFile?.name}</p>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setPaymentProofFile(null); setPaymentProofPreview(null); }}>
+                          Hapus
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
+                        <p className="text-xs text-muted-foreground">Seret dari WhatsApp Web, Explorer, atau Ctrl+V untuk paste</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bukti Nota */}
+                <div className="space-y-2">
+                  <Label>Bukti Nota (opsional)</Label>
+                  <div
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => receiptRef.current?.click()}
+                    onDrop={(e) => handleDrop(e, "receipt")}
+                    onDragOver={(e) => e.preventDefault()}
+                    onPaste={(e) => handlePaste(e, "receipt")}
+                    tabIndex={0}
+                  >
+                    <input
+                      ref={receiptRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, "receipt");
+                      }}
+                    />
+                    {receiptPreview ? (
+                      <div className="space-y-2">
+                        <img src={receiptPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                        <p className="text-xs text-muted-foreground">{receiptFile?.name}</p>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReceiptFile(null); setReceiptPreview(null); }}>
+                          Hapus
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
+                        <p className="text-xs text-muted-foreground">Seret dari WhatsApp Web, Explorer, atau Ctrl+V untuk paste</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={resetAddForm}>Batal</Button>
+                <Button onClick={handleAddExpense} disabled={submitting}>
+                  {submitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Category Management Dialog */}
+        <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Kelola Kategori Pengeluaran</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Nama kategori baru"
+                  onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                />
+                <Button onClick={handleAddCategory}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Tambah
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {expenseCategories.map((cat) => (
+                  <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
+                    <span className="text-sm">{cat.name}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCategory(cat.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                {expenseCategories.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Belum ada kategori</p>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -339,9 +615,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
               ))}
             </TabsList>
           </Tabs>
-
-
-
 
           {/* Table */}
           {loading ? (
@@ -522,56 +795,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           onClose={() => { setNoteDialogExpenseId(null); setNoteDialogData(null); }}
         />
       )}
-
-      {/* Add Expense Dialog */}
-      <Dialog open={addingExpense} onOpenChange={setAddingExpense}>
-        <DialogContent>
-          <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle>Tambah Pengeluaran</DialogTitle>
-            <Button variant="outline" size="sm" onClick={() => setManagingCategories(true)} className="mr-6">
-              <Settings className="h-4 w-4 mr-1" />
-              Kategori
-            </Button>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Deskripsi</Label>
-              <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
-            </div>
-            <div className="space-y-2">
-              <Label>Jumlah</Label>
-              <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Kategori</Label>
-              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
-                <SelectContent>
-                  {expenseCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Metode Pembayaran</Label>
-              <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                <SelectContent>
-                  {activeMethodNames.map(method => (
-                    <SelectItem key={method} value={method}>{method}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button className="w-full" onClick={handleAddExpense}>Tambah Pengeluaran</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Category Management Dialog */}
       <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
