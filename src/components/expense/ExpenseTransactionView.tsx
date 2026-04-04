@@ -613,7 +613,31 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       <Dialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Pengeluaran - {editingExpense?.bid}</DialogTitle>
+            <div className="flex items-center justify-between pr-6">
+              <DialogTitle>Edit Pengeluaran - {editingExpense?.bid}</DialogTitle>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!editingExpense) return;
+                  try {
+                    const { error } = await supabase
+                      .from("expenses")
+                      .update({ process_status: "dihapus", status: "dihapus" })
+                      .eq("id", editingExpense.id);
+                    if (error) throw error;
+                    toast.success("Pengeluaran berhasil dihapus");
+                    setEditingExpense(null);
+                    fetchExpenses();
+                  } catch (error) {
+                    toast.error("Gagal menghapus pengeluaran");
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Hapus
+              </Button>
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
