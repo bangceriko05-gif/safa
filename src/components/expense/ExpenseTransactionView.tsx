@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2, ChevronLeft, Upload } from "lucide-react";
+import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2, ChevronLeft, Upload, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
