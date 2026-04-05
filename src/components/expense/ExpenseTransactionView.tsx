@@ -82,11 +82,21 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [managingCategories, setManagingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
-  // Edit expense dialog state
+  // Detail/Edit expense inline state
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "" });
+  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "" });
+  const [editPaymentProofFile, setEditPaymentProofFile] = useState<File | null>(null);
+  const [editReceiptFile, setEditReceiptFile] = useState<File | null>(null);
+  const [editPaymentProofPreview, setEditPaymentProofPreview] = useState<string | null>(null);
+  const [editReceiptPreview, setEditReceiptPreview] = useState<string | null>(null);
+  const editPaymentProofRef = useRef<HTMLInputElement>(null);
+  const editReceiptRef = useRef<HTMLInputElement>(null);
 
-  const openEditDialog = (expense: Expense) => {
+  const openDetailView = (expense: Expense) => {
+    setViewingExpense(expense);
+    setIsEditing(false);
     setEditingExpense(expense);
     setEditForm({
       description: expense.description || "",
@@ -94,8 +104,47 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       category: expense.category || "",
       payment_method: expense.payment_method || "",
       date: expense.date,
+      reference_no: (expense as any).reference_no || "",
     });
+    setEditPaymentProofFile(null);
+    setEditReceiptFile(null);
+    setEditPaymentProofPreview(null);
+    setEditReceiptPreview(null);
   };
+
+  const closeDetailView = () => {
+    setViewingExpense(null);
+    setIsEditing(false);
+    setEditingExpense(null);
+  };
+
+  const handleEditFileSelect = (file: File, type: "proof" | "receipt") => {
+    const url = URL.createObjectURL(file);
+    if (type === "proof") {
+      setEditPaymentProofFile(file);
+      setEditPaymentProofPreview(url);
+    } else {
+      setEditReceiptFile(file);
+      setEditReceiptPreview(url);
+    }
+  };
+
+  const handleEditDrop = useCallback((e: React.DragEvent, type: "proof" | "receipt") => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) handleEditFileSelect(file, type);
+  }, []);
+
+  const handleEditPaste = useCallback((e: React.ClipboardEvent, type: "proof" | "receipt") => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) handleEditFileSelect(file, type);
+        break;
+      }
+    }
+  }, []);
 
   const handleSaveEdit = async () => {
     if (!editingExpense) return;
