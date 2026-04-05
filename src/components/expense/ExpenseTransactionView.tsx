@@ -151,6 +151,16 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     if (!editForm.description.trim()) { toast.error("Deskripsi harus diisi"); return; }
     if (!editForm.amount) { toast.error("Jumlah harus diisi"); return; }
     try {
+      let paymentProofUrl = editingExpense.payment_proof_url;
+      let receiptUrl = (editingExpense as any).receipt_url;
+
+      if (editPaymentProofFile) {
+        paymentProofUrl = await uploadFile(editPaymentProofFile, "expense-proof");
+      }
+      if (editReceiptFile) {
+        receiptUrl = await uploadFile(editReceiptFile, "expense-receipt");
+      }
+
       const { error } = await supabase
         .from("expenses")
         .update({
@@ -159,6 +169,9 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           category: editForm.category || null,
           payment_method: editForm.payment_method || null,
           date: editForm.date,
+          reference_no: editForm.reference_no || null,
+          payment_proof_url: paymentProofUrl,
+          receipt_url: receiptUrl,
         })
         .eq("id", editingExpense.id);
       if (error) throw error;
@@ -175,7 +188,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       });
 
       toast.success("Pengeluaran berhasil diperbarui");
-      setEditingExpense(null);
+      closeDetailView();
       fetchExpenses();
     } catch (error) {
       toast.error("Gagal memperbarui pengeluaran");
