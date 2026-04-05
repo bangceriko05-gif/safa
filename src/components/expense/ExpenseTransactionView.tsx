@@ -734,7 +734,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => openEditDialog(expense)}
+                            onClick={() => openDetailView(expense)}
                           >
                             {expense.bid || '-'}
                           </Badge>
