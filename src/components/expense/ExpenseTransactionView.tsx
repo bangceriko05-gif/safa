@@ -1015,19 +1015,11 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                       </TableCell>
                       <TableCell>{expense.category || '-'}</TableCell>
                       <TableCell>
-                        {expense.description ? (
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="p-0 h-auto text-blue-600"
-                            onClick={() => {
-                              setNoteDialogExpenseId(expense.id);
-                              setNoteDialogData(expense);
-                            }}
-                          >
-                            <FileText className="h-3 w-3 mr-1" />
+                        {(expense as any).receipt_url ? (
+                          <a href={(expense as any).receipt_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
                             Lihat
-                          </Button>
+                          </a>
                         ) : (
                           "-"
                         )}
@@ -1035,7 +1027,8 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                       <TableCell>{expense.payment_method || '-'}</TableCell>
                       <TableCell>
                         {expense.payment_proof_url ? (
-                          <a href={expense.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
+                          <a href={expense.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
                             Lihat
                           </a>
                         ) : (
