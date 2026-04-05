@@ -444,6 +444,261 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   const dateRangeLabel = getDateRangeDisplay(timeRange, customDateRange);
 
+  // Inline Detail/Edit Expense View
+  if (viewingExpense) {
+    const handleDeleteExpense = async () => {
+      try {
+        const { error } = await supabase
+          .from("expenses")
+          .update({ process_status: "dihapus", status: "dihapus" })
+          .eq("id", viewingExpense.id);
+        if (error) throw error;
+        toast.success("Pengeluaran berhasil dihapus");
+        closeDetailView();
+        fetchExpenses();
+      } catch (error) {
+        toast.error("Gagal menghapus pengeluaran");
+      }
+    };
+
+    if (isEditing) {
+      return (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <h2 className="text-xl font-bold">Edit Pengeluaran - {viewingExpense.bid}</h2>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tanggal *</Label>
+                    <Input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Kategori</Label>
+                    <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                      <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                      <SelectContent>
+                        {expenseCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Deskripsi *</Label>
+                  <Input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Jumlah (Rp) *</Label>
+                    <Input value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Metode Pembayaran</Label>
+                    <Select value={editForm.payment_method} onValueChange={(v) => setEditForm({ ...editForm, payment_method: v })}>
+                      <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                      <SelectContent>
+                        {activeMethodNames.map(method => (
+                          <SelectItem key={method} value={method}>{method}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>No. Referensi</Label>
+                  <Input value={editForm.reference_no} onChange={(e) => setEditForm({ ...editForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
+                </div>
+
+                {/* Upload areas for edit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Bukti Bayar</Label>
+                    <div
+                      className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => editPaymentProofRef.current?.click()}
+                      onDrop={(e) => handleEditDrop(e, "proof")}
+                      onDragOver={(e) => e.preventDefault()}
+                      onPaste={(e) => handleEditPaste(e, "proof")}
+                      tabIndex={0}
+                    >
+                      <input ref={editPaymentProofRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleEditFileSelect(file, "proof"); }} />
+                      {editPaymentProofPreview ? (
+                        <div className="space-y-2">
+                          <img src={editPaymentProofPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditPaymentProofFile(null); setEditPaymentProofPreview(null); }}>Hapus</Button>
+                        </div>
+                      ) : viewingExpense.payment_proof_url ? (
+                        <div className="space-y-2">
+                          <img src={viewingExpense.payment_proof_url} alt="Bukti Bayar" className="max-h-32 mx-auto rounded" />
+                          <p className="text-xs text-muted-foreground">Klik untuk ganti</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bukti Nota</Label>
+                    <div
+                      className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => editReceiptRef.current?.click()}
+                      onDrop={(e) => handleEditDrop(e, "receipt")}
+                      onDragOver={(e) => e.preventDefault()}
+                      onPaste={(e) => handleEditPaste(e, "receipt")}
+                      tabIndex={0}
+                    >
+                      <input ref={editReceiptRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleEditFileSelect(file, "receipt"); }} />
+                      {editReceiptPreview ? (
+                        <div className="space-y-2">
+                          <img src={editReceiptPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditReceiptFile(null); setEditReceiptPreview(null); }}>Hapus</Button>
+                        </div>
+                      ) : (viewingExpense as any).receipt_url ? (
+                        <div className="space-y-2">
+                          <img src={(viewingExpense as any).receipt_url} alt="Bukti Nota" className="max-h-32 mx-auto rounded" />
+                          <p className="text-xs text-muted-foreground">Klik untuk ganti</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>Batal</Button>
+                  <Button onClick={handleSaveEdit}>Simpan Perubahan</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Detail View (read-only)
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={closeDetailView}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-xl font-bold">Detail Pengeluaran</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDeleteExpense}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Hapus
+                </Button>
+              </div>
+            </div>
+
+            {/* Detail fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Tanggal</p>
+                <p className="font-semibold">{format(new Date(viewingExpense.date), "dd MMMM yyyy", { locale: localeId })}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">BID</p>
+                <p className="font-mono font-semibold">{viewingExpense.bid || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Kategori</p>
+                <p className="font-semibold">{viewingExpense.category || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Metode Pembayaran</p>
+                <p className="font-semibold">{viewingExpense.payment_method || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">No. Referensi</p>
+                <p className="font-semibold">{(viewingExpense as any).reference_no || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge
+                  variant="outline"
+                  className={
+                    viewingExpense.status === "selesai"
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : viewingExpense.status === "batal"
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                  }
+                >
+                  {viewingExpense.status === "selesai" ? "Selesai" : viewingExpense.status === "batal" ? "Batal" : "Proses"}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Deskripsi */}
+            <div className="mt-4">
+              <p className="text-sm text-muted-foreground">Deskripsi</p>
+              <p className="font-semibold">{viewingExpense.description || "-"}</p>
+            </div>
+
+            {/* Bukti Bayar & Nota */}
+            {(viewingExpense.payment_proof_url || (viewingExpense as any).receipt_url) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Bukti Bayar</p>
+                  {viewingExpense.payment_proof_url ? (
+                    <a href={viewingExpense.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                      <FileText className="h-4 w-4" />
+                      Lihat Bukti Bayar
+                    </a>
+                  ) : <p className="text-sm">-</p>}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Bukti Nota</p>
+                  {(viewingExpense as any).receipt_url ? (
+                    <a href={(viewingExpense as any).receipt_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                      <FileText className="h-4 w-4" />
+                      Lihat Bukti Nota
+                    </a>
+                  ) : <p className="text-sm">-</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Jumlah */}
+            <div className="mt-6 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">Jumlah</p>
+              <p className="text-2xl font-bold text-destructive">{formatCurrency(viewingExpense.amount)}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Inline Add Expense View
   if (addingExpense) {
     return (
