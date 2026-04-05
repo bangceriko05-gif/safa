@@ -1041,17 +1041,17 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                             value={expense.verification_status}
                             onValueChange={(val) => updateField(expense.id, "verification_status", val)}
                           >
-                            <SelectTrigger className="w-[150px] h-8">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  expense.verification_status === "Verified"
-                                    ? "bg-green-50 text-green-700 border-green-200"
-                                    : "bg-orange-50 text-orange-700 border-orange-200"
-                                }
-                              >
-                                {expense.verification_status === "Verified" ? "✓" : "⚠"} {expense.verification_status}
-                              </Badge>
+                            <SelectTrigger className="w-auto h-9 rounded-full border-amber-400 bg-amber-50 px-3 gap-1">
+                              <div className="flex items-center gap-1.5">
+                                {expense.verification_status === "Verified" ? (
+                                  <svg className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                                ) : (
+                                  <svg className="h-4 w-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                                )}
+                                <span className={expense.verification_status === "Verified" ? "text-green-700 text-sm font-medium" : "text-amber-700 text-sm font-medium"}>
+                                  {expense.verification_status}
+                                </span>
+                              </div>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Unverified">Unverified</SelectItem>
@@ -1065,19 +1065,22 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           value={expense.status}
                           onValueChange={(val) => updateField(expense.id, "status", val)}
                         >
-                          <SelectTrigger className="w-[120px] h-8">
-                            <Badge
-                              variant="outline"
-                              className={
-                                expense.status === "selesai"
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : expense.status === "batal"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                              }
-                            >
-                              {expense.status === "selesai" ? "Selesai" : expense.status === "batal" ? "Batal" : "Tunda"}
-                            </Badge>
+                          <SelectTrigger className={`w-auto h-9 rounded-full px-3 gap-1 ${
+                            expense.status === "selesai"
+                              ? "border-green-400 bg-green-50"
+                              : expense.status === "batal"
+                              ? "border-red-400 bg-red-50"
+                              : "border-amber-400 bg-amber-50"
+                          }`}>
+                            <span className={`text-sm font-medium ${
+                              expense.status === "selesai"
+                                ? "text-green-700"
+                                : expense.status === "batal"
+                                ? "text-red-700"
+                                : "text-amber-700"
+                            }`}>
+                              {expense.status === "selesai" ? "Selesai" : expense.status === "batal" ? "Batal" : "Proses"}
+                            </span>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tunda">Tunda</SelectItem>
