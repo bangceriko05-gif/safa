@@ -389,6 +389,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
             </div>
 
+            {/* Nama Pelanggan & No. HP */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 relative">
                 <Label>Nama Pelanggan</Label>
@@ -433,27 +434,6 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                   placeholder="Ketik nomor HP..."
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Metode Pembayaran <span className="text-destructive">*</span></Label>
-              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                <SelectContent>
-                  {activeMethodNames.map(method => (
-                    <SelectItem key={method} value={method}>{method}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>No. Referensi</Label>
-              <Input
-                value={incomeForm.reference_no}
-                onChange={(e) => setIncomeForm({ ...incomeForm, reference_no: e.target.value })}
-                placeholder="No. referensi (opsional)"
-              />
             </div>
 
             {/* Produk section */}
@@ -554,32 +534,58 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               )}
             </div>
 
-            {/* Total summary */}
-            {(incomeProducts.length > 0 || (incomeDiscount.value && parseFloat(incomeDiscount.value) > 0)) && (
+            {/* Subtotal Produk */}
+            {incomeProducts.length > 0 && (
               <div className="p-3 bg-muted/50 rounded space-y-1 text-sm">
-                {incomeProducts.length > 0 && (
-                  <div className="flex justify-between">
-                    <span>Subtotal Produk</span>
-                    <span className="font-medium">{formatCurrency(incomeProducts.reduce((s, p) => s + p.subtotal, 0))}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span>Subtotal Produk</span>
+                  <span className="font-medium">{formatCurrency(incomeProducts.reduce((s, p) => s + p.subtotal, 0))}</span>
+                </div>
                 {incomeDiscount.value && parseFloat(incomeDiscount.value) > 0 && (
                   <div className="flex justify-between text-destructive">
                     <span>Diskon {incomeDiscount.type === 'percentage' ? `${incomeDiscount.value}%` : ''}</span>
                     <span>-{formatCurrency(
                       incomeDiscount.type === 'percentage'
-                        ? (incomeProducts.length > 0 ? incomeProducts.reduce((s, p) => s + p.subtotal, 0) : parseFloat(incomeForm.amount.replace(/\./g, "")) || 0) * (parseFloat(incomeDiscount.value) / 100)
+                        ? incomeProducts.reduce((s, p) => s + p.subtotal, 0) * (parseFloat(incomeDiscount.value) / 100)
                         : parseFloat(incomeDiscount.value) || 0
                     )}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold border-t pt-1">
-                  <span>Total</span>
-                  <span>{formatCurrency(getIncomeTotal())}</span>
-                </div>
               </div>
             )}
 
+            {/* Metode Pembayaran */}
+            <div className="space-y-2">
+              <Label>Metode Pembayaran <span className="text-destructive">*</span></Label>
+              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectContent>
+                  {activeMethodNames.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* No. Referensi */}
+            <div className="space-y-2">
+              <Label>No. Referensi</Label>
+              <Input
+                value={incomeForm.reference_no}
+                onChange={(e) => setIncomeForm({ ...incomeForm, reference_no: e.target.value })}
+                placeholder="No. referensi (opsional)"
+              />
+            </div>
+
+            {/* Total Bayar */}
+            <div className="p-3 bg-muted/50 rounded">
+              <div className="flex justify-between font-bold text-sm">
+                <span>Total Bayar</span>
+                <span>{formatCurrency(getIncomeTotal())}</span>
+              </div>
+            </div>
+
+            {/* Bukti Bayar */}
             <PaymentProofUpload
               value={incomePaymentProof}
               onChange={setIncomePaymentProof}
