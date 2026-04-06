@@ -121,7 +121,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
 
   // Add income dialog state
   const [addingIncome, setAddingIncome] = useState(false);
-  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
+  const [incomePaymentProof, setIncomePaymentProof] = useState<string | null>(null);
   const [incomeProducts, setIncomeProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number }[]>([]);
   const [incomeDiscount, setIncomeDiscount] = useState({ type: "percentage" as "percentage" | "fixed", value: "" });
   const [showDiscountPopover, setShowDiscountPopover] = useState(false);
