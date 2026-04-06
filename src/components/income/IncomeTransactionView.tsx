@@ -66,6 +66,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
+  const [printPreviewId, setPrintPreviewId] = useState<string | null>(null);
 
   // Edit income dialog state
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
@@ -232,6 +233,10 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
       });
 
       toast.success("Pemasukan berhasil ditambahkan");
+      // Show print preview
+      if (incomeData?.id) {
+        setPrintPreviewId(incomeData.id);
+      }
       setAddingIncome(false);
       setIncomeForm({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
       setIncomePaymentProof(null);
@@ -844,6 +849,42 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </Select>
             </div>
             <Button className="w-full" onClick={handleSaveEditIncome}>Simpan Perubahan</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print Preview Dialog */}
+      <Dialog open={!!printPreviewId} onOpenChange={(open) => !open && setPrintPreviewId(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="h-5 w-5" />
+              Preview Nota Pemasukan
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border rounded-md">
+            {printPreviewId && (
+              <iframe
+                src={`/receipt/transaction?id=${printPreviewId}&type=income`}
+                className="w-full h-[60vh] border-0"
+                title="Print Preview"
+              />
+            )}
+          </div>
+          <div className="flex justify-end gap-3 pt-3">
+            <Button variant="outline" onClick={() => setPrintPreviewId(null)}>
+              Tutup
+            </Button>
+            <Button onClick={() => {
+              if (printPreviewId) {
+                const url = `/receipt/transaction?id=${printPreviewId}&type=income`;
+                window.open(url, '_blank');
+                setPrintPreviewId(null);
+              }
+            }}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print Nota
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
