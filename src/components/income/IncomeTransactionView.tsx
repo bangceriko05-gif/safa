@@ -574,6 +574,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                 </div>
               </div>
             )}
+
+            <PaymentProofUpload
               value={incomePaymentProof}
               onChange={setIncomePaymentProof}
               required
