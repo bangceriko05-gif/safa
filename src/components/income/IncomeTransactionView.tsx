@@ -199,6 +199,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         amount: totalAmount,
         customer_name: incomeForm.customer_name,
         payment_method: incomeForm.payment_method,
+        payment_proof_url: incomePaymentProof,
+        reference_no: incomeForm.reference_no || null,
         date: incomeForm.date,
         created_by: user.id,
         store_id: currentStore.id,
