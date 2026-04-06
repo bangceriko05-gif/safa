@@ -233,6 +233,10 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
       });
 
       toast.success("Pemasukan berhasil ditambahkan");
+      // Show print preview
+      if (incomeData?.id) {
+        setPrintPreviewId(incomeData.id);
+      }
       setAddingIncome(false);
       setIncomeForm({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
       setIncomePaymentProof(null);
