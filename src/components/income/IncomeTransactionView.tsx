@@ -66,6 +66,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
+  const [printPreviewId, setPrintPreviewId] = useState<string | null>(null);
 
   // Edit income dialog state
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
