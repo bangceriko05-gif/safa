@@ -551,10 +551,11 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               <div className="space-y-2">
                 <Label>Jumlah Bayar <span className="text-destructive">*</span></Label>
                 <Input
+                  type="text"
+                  inputMode="numeric"
                   value={incomeForm.amount}
                   onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
                   placeholder="0"
-                  disabled={incomeProducts.length > 0}
                 />
               </div>
               <div className="space-y-2">
