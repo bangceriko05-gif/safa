@@ -363,32 +363,6 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label>Deskripsi <span className="text-destructive">*</span></Label>
-              <Textarea
-                value={incomeForm.description}
-                onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
-                placeholder="Deskripsi pemasukan..."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Jumlah <span className="text-destructive">*</span></Label>
-                <Input
-                  value={incomeForm.amount}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
-                  placeholder="0"
-                  disabled={incomeProducts.length > 0}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tanggal</Label>
-                <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
-              </div>
-            </div>
-
             {/* Nama Pelanggan & No. HP */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 relative">
@@ -433,6 +407,22 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                   onChange={(e) => setIncomeForm({ ...incomeForm, customer_phone: e.target.value })}
                   placeholder="Ketik nomor HP..."
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Jumlah <span className="text-destructive">*</span></Label>
+                <Input
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
+                  placeholder="0"
+                  disabled={incomeProducts.length > 0}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal</Label>
+                <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
               </div>
             </div>
 
@@ -583,6 +573,17 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                 <span>Total Bayar</span>
                 <span>{formatCurrency(getIncomeTotal())}</span>
               </div>
+            </div>
+
+            {/* Deskripsi - di bawah */}
+            <div className="space-y-2">
+              <Label>Deskripsi <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={incomeForm.description}
+                onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
+                placeholder="Deskripsi pemasukan..."
+                rows={3}
+              />
             </div>
 
             {/* Bukti Bayar */}
