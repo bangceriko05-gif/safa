@@ -348,18 +348,24 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
       <div className="space-y-4">
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => {
-                setAddingIncome(false);
-                setIncomeProducts([]);
-                setIncomeDiscount({ type: "percentage", value: "" });
-                setProductSearch("");
-                setShowProductSearch(false);
-                setIncomePaymentProof(null);
-              }}>
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <CardTitle className="text-xl font-bold">Tambah Pemasukan Manual</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => {
+                  setAddingIncome(false);
+                  setIncomeProducts([]);
+                  setIncomeDiscount({ type: "percentage", value: "" });
+                  setProductSearch("");
+                  setShowProductSearch(false);
+                  setIncomePaymentProof(null);
+                }}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <CardTitle className="text-xl font-bold">Tambah Pemasukan Manual</CardTitle>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Tanggal</Label>
+                <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} className="w-auto" />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -410,20 +416,14 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Jumlah <span className="text-destructive">*</span></Label>
-                <Input
-                  value={incomeForm.amount}
-                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
-                  placeholder="0"
-                  disabled={incomeProducts.length > 0}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tanggal</Label>
-                <Input type="date" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} />
-              </div>
+            <div className="space-y-2">
+              <Label>Jumlah <span className="text-destructive">*</span></Label>
+              <Input
+                value={incomeForm.amount}
+                onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
+                placeholder="0"
+                disabled={incomeProducts.length > 0}
+              />
             </div>
 
             {/* Produk section */}
