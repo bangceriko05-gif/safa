@@ -544,27 +544,27 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
             )}
 
-            {/* Metode Pembayaran */}
-            <div className="space-y-2">
-              <Label>Metode Pembayaran <span className="text-destructive">*</span></Label>
-              <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                <SelectContent>
-                  {activeMethodNames.map(method => (
-                    <SelectItem key={method} value={method}>{method}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* No. Referensi */}
-            <div className="space-y-2">
-              <Label>No. Referensi</Label>
-              <Input
-                value={incomeForm.reference_no}
-                onChange={(e) => setIncomeForm({ ...incomeForm, reference_no: e.target.value })}
-                placeholder="No. referensi (opsional)"
-              />
+            {/* Metode Pembayaran & No. Referensi */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Metode Pembayaran <span className="text-destructive">*</span></Label>
+                <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                  <SelectContent>
+                    {activeMethodNames.map(method => (
+                      <SelectItem key={method} value={method}>{method}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>No. Referensi</Label>
+                <Input
+                  value={incomeForm.reference_no}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, reference_no: e.target.value })}
+                  placeholder="No. referensi (opsional)"
+                />
+              </div>
             </div>
 
             {/* Total Bayar */}
