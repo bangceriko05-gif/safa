@@ -416,15 +416,6 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Jumlah <span className="text-destructive">*</span></Label>
-              <Input
-                value={incomeForm.amount}
-                onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
-                placeholder="0"
-                disabled={incomeProducts.length > 0}
-              />
-            </div>
 
             {/* Produk section */}
             <div className="space-y-2">
@@ -544,8 +535,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
             )}
 
-            {/* Metode Pembayaran & No. Referensi */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Metode Pembayaran, Jumlah Bayar & No. Referensi */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Metode Pembayaran <span className="text-destructive">*</span></Label>
                 <Select value={incomeForm.payment_method} onValueChange={(v) => setIncomeForm({ ...incomeForm, payment_method: v })}>
@@ -556,6 +547,15 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Jumlah Bayar <span className="text-destructive">*</span></Label>
+                <Input
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, amount: formatAmountInput(e.target.value) })}
+                  placeholder="0"
+                  disabled={incomeProducts.length > 0}
+                />
               </div>
               <div className="space-y-2">
                 <Label>No. Referensi</Label>
