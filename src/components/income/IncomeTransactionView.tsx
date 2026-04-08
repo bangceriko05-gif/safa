@@ -572,13 +572,37 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
             </div>
 
-            {/* Total Bayar */}
-            <div className="p-3 bg-muted/50 rounded">
-              <div className="flex justify-between font-bold text-sm">
-                <span>Total Bayar</span>
-                <span>{formatCurrency(getIncomeTotal())}</span>
-              </div>
-            </div>
+            {/* Keterangan Pembayaran */}
+            {(() => {
+              const totalBayar = getIncomeTotal();
+              const jumlahBayar = parseFloat(incomeForm.amount.replace(/\./g, "")) || 0;
+              if (jumlahBayar > 0 && totalBayar > 0) {
+                const selisih = jumlahBayar - totalBayar;
+                if (selisih < 0) {
+                  return (
+                    <div className="p-3 bg-destructive/10 rounded text-sm font-medium text-destructive flex justify-between">
+                      <span>Kurang Bayar</span>
+                      <span>{formatCurrency(Math.abs(selisih))}</span>
+                    </div>
+                  );
+                } else if (selisih === 0) {
+                  return (
+                    <div className="p-3 bg-emerald-500/10 rounded text-sm font-medium text-emerald-600 flex justify-between">
+                      <span>LUNAS</span>
+                      <span>{formatCurrency(jumlahBayar)}</span>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="p-3 bg-amber-500/10 rounded text-sm font-medium text-amber-600 flex justify-between">
+                      <span>Uang Lebih (Kembalian)</span>
+                      <span>{formatCurrency(selisih)}</span>
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
 
             {/* Deskripsi - di bawah */}
             <div className="space-y-2">
