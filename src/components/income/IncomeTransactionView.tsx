@@ -124,7 +124,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [addingIncome, setAddingIncome] = useState(false);
   const [incomeForm, setIncomeForm] = useState({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
   const [incomePaymentProof, setIncomePaymentProof] = useState<string | null>(null);
-  const [incomeProducts, setIncomeProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number }[]>([]);
+  const [incomeProducts, setIncomeProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number; discount_type: "percentage" | "fixed"; discount_value: string }[]>([]);
   const [incomeDiscount, setIncomeDiscount] = useState({ type: "percentage" as "percentage" | "fixed", value: "" });
   const [showDiscountPopover, setShowDiscountPopover] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; price: number }[]>([]);
