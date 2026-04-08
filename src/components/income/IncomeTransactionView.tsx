@@ -474,15 +474,15 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                   )}
                 </div>
               )}
-              {incomeProducts.length > 0 && (
+               {incomeProducts.length > 0 && (
                 <div className="space-y-1">
                   {incomeProducts.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
-                      <div className="flex-1 font-medium">{p.product_name}</div>
+                    <div key={i} className="flex items-center gap-1.5 p-2 bg-muted/50 rounded text-sm flex-wrap">
+                      <div className="font-medium min-w-[100px]">{p.product_name}</div>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
                           if (p.quantity > 1) {
-                            setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity - 1, subtotal: (ip.quantity - 1) * ip.product_price } : ip));
+                            updateProductField(i, { quantity: p.quantity - 1 });
                           } else {
                             setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i));
                           }
@@ -493,15 +493,10 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                           type="text"
                           inputMode="numeric"
                           value={p.quantity}
-                          onChange={(e) => {
-                            const qty = parseInt(e.target.value) || 1;
-                            setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: qty, subtotal: qty * ip.product_price } : ip));
-                          }}
-                          className="w-12 h-7 text-center text-xs px-1"
+                          onChange={(e) => updateProductField(i, { quantity: parseInt(e.target.value) || 1 })}
+                          className="w-10 h-7 text-center text-xs px-1"
                         />
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                          setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity + 1, subtotal: (ip.quantity + 1) * ip.product_price } : ip));
-                        }}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateProductField(i, { quantity: p.quantity + 1 })}>
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
@@ -510,13 +505,46 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                         type="text"
                         inputMode="numeric"
                         value={formatAmountInput(String(p.product_price))}
-                        onChange={(e) => {
-                          const price = parseFloat(e.target.value.replace(/\./g, "")) || 0;
-                          setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, product_price: price, subtotal: ip.quantity * price } : ip));
-                        }}
-                        className="w-24 h-7 text-xs px-2"
+                        onChange={(e) => updateProductField(i, { product_price: parseFloat(e.target.value.replace(/\./g, "")) || 0 })}
+                        className="w-20 h-7 text-xs px-2"
                       />
-                      <span className="text-muted-foreground text-xs min-w-[80px] text-right">= {formatCurrency(p.subtotal)}</span>
+                      {/* Per-item discount */}
+                      <div className="flex items-center gap-0.5">
+                        <div className="flex rounded border overflow-hidden shrink-0 h-7">
+                          <button
+                            type="button"
+                            className={`px-1.5 text-[10px] font-medium transition-colors ${p.discount_type === "percentage" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+                            onClick={() => updateProductField(i, { discount_type: "percentage", discount_value: "" })}
+                          >
+                            %
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-1.5 text-[10px] font-medium transition-colors border-l ${p.discount_type === "fixed" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+                            onClick={() => updateProductField(i, { discount_type: "fixed", discount_value: "" })}
+                          >
+                            Rp
+                          </button>
+                        </div>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={p.discount_type === "fixed" ? formatAmountInput(p.discount_value) : p.discount_value}
+                          onChange={(e) => {
+                            if (p.discount_type === "percentage") {
+                              const raw = e.target.value.replace(/[^0-9]/g, '');
+                              const num = parseInt(raw) || 0;
+                              updateProductField(i, { discount_value: num > 100 ? "100" : raw });
+                            } else {
+                              const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+                              updateProductField(i, { discount_value: raw });
+                            }
+                          }}
+                          placeholder="0"
+                          className="w-16 h-7 text-xs px-1"
+                        />
+                      </div>
+                      <span className="text-muted-foreground text-xs min-w-[70px] text-right">= {formatCurrency(p.subtotal)}</span>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
