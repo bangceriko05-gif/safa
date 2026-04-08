@@ -151,6 +151,13 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     setCustomers(data || []);
   };
 
+  const calcItemSubtotal = (qty: number, price: number, discType: "percentage" | "fixed", discVal: string) => {
+    const gross = qty * price;
+    const dv = parseFloat(discVal) || 0;
+    const discAmount = discType === "percentage" ? gross * (dv / 100) : dv;
+    return Math.max(0, gross - discAmount);
+  };
+
   const getIncomeTotal = () => {
     const productsTotal = incomeProducts.reduce((sum, p) => sum + p.subtotal, 0);
     const manualAmount = parseFloat(incomeForm.amount.replace(/\./g, "")) || 0;
@@ -165,12 +172,21 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     return Math.max(0, subtotal - discountAmount);
   };
 
+  const updateProductField = (index: number, updates: Partial<typeof incomeProducts[0]>) => {
+    setIncomeProducts(prev => prev.map((ip, idx) => {
+      if (idx !== index) return ip;
+      const updated = { ...ip, ...updates };
+      updated.subtotal = calcItemSubtotal(updated.quantity, updated.product_price, updated.discount_type, updated.discount_value);
+      return updated;
+    }));
+  };
+
   const handleAddProductToIncome = (product: { id: string; name: string; price: number }) => {
     const existing = incomeProducts.find(p => p.product_id === product.id);
     if (existing) {
       setIncomeProducts(incomeProducts.map(p =>
         p.product_id === product.id
-          ? { ...p, quantity: p.quantity + 1, subtotal: (p.quantity + 1) * p.product_price }
+          ? { ...p, quantity: p.quantity + 1, subtotal: calcItemSubtotal(p.quantity + 1, p.product_price, p.discount_type, p.discount_value) }
           : p
       ));
     } else {
@@ -180,6 +196,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         product_price: product.price,
         quantity: 1,
         subtotal: product.price,
+        discount_type: "percentage",
+        discount_value: "",
       }]);
     }
     setProductSearch("");
