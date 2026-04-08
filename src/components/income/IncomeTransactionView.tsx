@@ -515,7 +515,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               )}
             </div>
 
-            {/* Subtotal Produk */}
+            {/* Subtotal Produk & Total Bayar */}
             {incomeProducts.length > 0 && (
               <div className="p-3 bg-muted/50 rounded space-y-1 text-sm">
                 <div className="flex justify-between">
@@ -532,6 +532,10 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                     )}</span>
                   </div>
                 )}
+                <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                  <span>Total Bayar</span>
+                  <span>{formatCurrency(getIncomeTotal())}</span>
+                </div>
               </div>
             )}
 
