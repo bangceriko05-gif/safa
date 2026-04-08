@@ -459,11 +459,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               {incomeProducts.length > 0 && (
                 <div className="space-y-1">
                   {incomeProducts.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
-                      <div className="flex-1">
-                        <span className="font-medium">{p.product_name}</span>
-                        <span className="text-muted-foreground ml-2">x{p.quantity} = {formatCurrency(p.subtotal)}</span>
-                      </div>
+                    <div key={i} className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
+                      <div className="flex-1 font-medium">{p.product_name}</div>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
                           if (p.quantity > 1) {
@@ -474,15 +471,37 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                         }}>
                           <span className="text-xs">−</span>
                         </Button>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={p.quantity}
+                          onChange={(e) => {
+                            const qty = parseInt(e.target.value) || 1;
+                            setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: qty, subtotal: qty * ip.product_price } : ip));
+                          }}
+                          className="w-12 h-7 text-center text-xs px-1"
+                        />
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
                           setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, quantity: ip.quantity + 1, subtotal: (ip.quantity + 1) * ip.product_price } : ip));
                         }}>
                           <Plus className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
                       </div>
+                      <span className="text-muted-foreground text-xs">@</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={formatAmountInput(String(p.product_price))}
+                        onChange={(e) => {
+                          const price = parseFloat(e.target.value.replace(/\./g, "")) || 0;
+                          setIncomeProducts(incomeProducts.map((ip, idx) => idx === i ? { ...ip, product_price: price, subtotal: ip.quantity * price } : ip));
+                        }}
+                        className="w-24 h-7 text-xs px-2"
+                      />
+                      <span className="text-muted-foreground text-xs min-w-[80px] text-right">= {formatCurrency(p.subtotal)}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -606,7 +625,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
 
             {/* Deskripsi - di bawah */}
             <div className="space-y-2">
-              <Label>Deskripsi <span className="text-destructive">*</span></Label>
+              <Label>Deskripsi</Label>
               <Textarea
                 value={incomeForm.description}
                 onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
