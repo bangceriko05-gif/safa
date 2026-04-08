@@ -517,17 +517,37 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
               {showDiscountPopover && (
                 <div className="flex gap-2 items-center p-3 border rounded-md bg-muted/30">
-                  <Select value={incomeDiscount.type} onValueChange={(v: "percentage" | "fixed") => setIncomeDiscount({ ...incomeDiscount, type: v })}>
-                    <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percentage">%</SelectItem>
-                      <SelectItem value="fixed">Rp</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex rounded-md border overflow-hidden shrink-0">
+                    <button
+                      type="button"
+                      className={`px-3 py-1.5 text-sm font-medium transition-colors ${incomeDiscount.type === "percentage" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+                      onClick={() => setIncomeDiscount({ ...incomeDiscount, type: "percentage", value: "" })}
+                    >
+                      %
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-3 py-1.5 text-sm font-medium transition-colors border-l ${incomeDiscount.type === "fixed" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+                      onClick={() => setIncomeDiscount({ ...incomeDiscount, type: "fixed", value: "" })}
+                    >
+                      Rp
+                    </button>
+                  </div>
                   <Input
-                    value={incomeDiscount.value}
-                    onChange={(e) => setIncomeDiscount({ ...incomeDiscount, value: e.target.value.replace(/[^0-9.]/g, '') })}
-                    placeholder="0"
+                    type="text"
+                    inputMode="numeric"
+                    value={incomeDiscount.type === "fixed" ? formatAmountInput(incomeDiscount.value) : incomeDiscount.value}
+                    onChange={(e) => {
+                      if (incomeDiscount.type === "percentage") {
+                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                        const num = parseInt(raw) || 0;
+                        setIncomeDiscount({ ...incomeDiscount, value: num > 100 ? "100" : raw });
+                      } else {
+                        const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+                        setIncomeDiscount({ ...incomeDiscount, value: raw });
+                      }
+                    }}
+                    placeholder={incomeDiscount.type === "percentage" ? "0 - 100" : "0"}
                     className="flex-1"
                   />
                 </div>
