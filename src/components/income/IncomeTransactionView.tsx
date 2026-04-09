@@ -213,9 +213,11 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Anda harus login"); return; }
+      const paidAmount = parseFloat(incomeForm.amount.replace(/\./g, "")) || 0;
       const { data: incomeData, error } = await supabase.from("incomes").insert([{
         description: incomeForm.description || null,
         amount: totalAmount,
+        paid_amount: paidAmount,
         customer_name: incomeForm.customer_name,
         payment_method: incomeForm.payment_method,
         payment_proof_url: incomePaymentProof,

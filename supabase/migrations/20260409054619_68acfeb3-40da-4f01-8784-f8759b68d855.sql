@@ -1,0 +1,1 @@
+ALTER TABLE public.incomes ADD COLUMN paid_amount numeric DEFAULT 0;

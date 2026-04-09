@@ -989,6 +989,7 @@ export type Database = {
           date: string
           description: string | null
           id: string
+          paid_amount: number | null
           payment_method: string | null
           payment_proof_url: string | null
           process_status: string
@@ -1008,6 +1009,7 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
+          paid_amount?: number | null
           payment_method?: string | null
           payment_proof_url?: string | null
           process_status?: string
@@ -1027,6 +1029,7 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
+          paid_amount?: number | null
           payment_method?: string | null
           payment_proof_url?: string | null
           process_status?: string
