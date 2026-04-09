@@ -477,50 +477,50 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                {incomeProducts.length > 0 && (
                 <div className="space-y-1">
                   {incomeProducts.map((p, i) => (
-                    <div key={i} className="flex items-center gap-1.5 p-2 bg-muted/50 rounded text-sm flex-wrap">
-                      <div className="font-medium min-w-[100px]">{p.product_name}</div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                    <div key={i} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm w-full">
+                      <div className="font-medium min-w-[120px] shrink-0">{p.product_name}</div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
                           if (p.quantity > 1) {
                             updateProductField(i, { quantity: p.quantity - 1 });
                           } else {
                             setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i));
                           }
                         }}>
-                          <span className="text-xs">−</span>
+                          <span className="text-sm">−</span>
                         </Button>
                         <Input
                           type="text"
                           inputMode="numeric"
                           value={p.quantity}
                           onChange={(e) => updateProductField(i, { quantity: parseInt(e.target.value) || 1 })}
-                          className="w-10 h-7 text-center text-xs px-1"
+                          className="w-14 h-8 text-center text-sm px-1"
                         />
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateProductField(i, { quantity: p.quantity + 1 })}>
-                          <Plus className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateProductField(i, { quantity: p.quantity + 1 })}>
+                          <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                      <span className="text-muted-foreground text-xs">@</span>
+                      <span className="text-muted-foreground shrink-0">@</span>
                       <Input
                         type="text"
                         inputMode="numeric"
                         value={formatAmountInput(String(p.product_price))}
                         onChange={(e) => updateProductField(i, { product_price: parseFloat(e.target.value.replace(/\./g, "")) || 0 })}
-                        className="w-20 h-7 text-xs px-2"
+                        className="w-28 h-8 text-sm px-2"
                       />
                       {/* Per-item discount */}
-                      <div className="flex items-center gap-0.5">
-                        <div className="flex rounded border overflow-hidden shrink-0 h-7">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex rounded-md border overflow-hidden shrink-0 h-8">
                           <button
                             type="button"
-                            className={`px-1.5 text-[10px] font-medium transition-colors ${p.discount_type === "percentage" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+                            className={`px-2.5 text-xs font-semibold transition-colors ${p.discount_type === "percentage" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
                             onClick={() => updateProductField(i, { discount_type: "percentage", discount_value: "" })}
                           >
                             %
                           </button>
                           <button
                             type="button"
-                            className={`px-1.5 text-[10px] font-medium transition-colors border-l ${p.discount_type === "fixed" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+                            className={`px-2.5 text-xs font-semibold transition-colors border-l ${p.discount_type === "fixed" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
                             onClick={() => updateProductField(i, { discount_type: "fixed", discount_value: "" })}
                           >
                             Rp
@@ -541,12 +541,12 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                             }
                           }}
                           placeholder="0"
-                          className="w-16 h-7 text-xs px-1"
+                          className="w-24 h-8 text-sm px-2"
                         />
                       </div>
-                      <span className="text-muted-foreground text-xs min-w-[70px] text-right">= {formatCurrency(p.subtotal)}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
-                        <Trash2 className="h-3 w-3" />
+                      <span className="text-muted-foreground text-sm min-w-[90px] text-right flex-1">= {formatCurrency(p.subtotal)}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
