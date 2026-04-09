@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Copy, FileText, CalendarIcon, Trash2, Printer, ChevronLeft, Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { Plus, Search, Copy, FileText, CalendarIcon, Trash2, Printer, ChevronLeft, Upload, Loader2, X, Image as ImageIcon, Pencil } from "lucide-react";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -68,12 +68,14 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
   const [printPreviewId, setPrintPreviewId] = useState<string | null>(null);
 
-  // Edit income dialog state
-  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  // Detail/Edit income inline state
+  const [viewingIncome, setViewingIncome] = useState<Income | null>(null);
+  const [isEditingIncome, setIsEditingIncome] = useState(false);
   const [editIncomeForm, setEditIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: "" });
 
-  const openEditIncomeDialog = (income: Income) => {
-    setEditingIncome(income);
+  const openDetailView = (income: Income) => {
+    setViewingIncome(income);
+    setIsEditingIncome(false);
     setEditIncomeForm({
       description: income.description || "",
       amount: formatAmountInput(String(income.amount)),
@@ -83,8 +85,13 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     });
   };
 
+  const closeDetailView = () => {
+    setViewingIncome(null);
+    setIsEditingIncome(false);
+  };
+
   const handleSaveEditIncome = async () => {
-    if (!editingIncome) return;
+    if (!viewingIncome) return;
     if (!editIncomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
     if (!editIncomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
     try {
@@ -97,23 +104,22 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           payment_method: editIncomeForm.payment_method || null,
           date: editIncomeForm.date,
         })
-        .eq("id", editingIncome.id);
+        .eq("id", viewingIncome.id);
       if (error) throw error;
 
-      // Handle hutang changes on edit
       await handleHutangOnEdit({
-        previousPaymentMethod: editingIncome.payment_method,
+        previousPaymentMethod: viewingIncome.payment_method,
         newPaymentMethod: editIncomeForm.payment_method,
         amount: parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0,
         supplierName: editIncomeForm.customer_name,
         description: `Pemasukan - ${editIncomeForm.customer_name}`,
         storeId: currentStore!.id,
         userId: (await supabase.auth.getUser()).data.user!.id,
-        bid: editingIncome.bid,
+        bid: viewingIncome.bid,
       });
 
       toast.success("Pemasukan berhasil diperbarui");
-      setEditingIncome(null);
+      closeDetailView();
       fetchIncomes();
     } catch (error) {
       toast.error("Gagal memperbarui pemasukan");
@@ -361,6 +367,177 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   }, [incomes]);
 
   const dateRangeLabel = getDateRangeDisplay(timeRange, customDateRange);
+
+  // Inline Detail/Edit Income View
+  if (viewingIncome) {
+    const handleDeleteIncome = async () => {
+      try {
+        const { error } = await supabase
+          .from("incomes")
+          .update({ process_status: "dihapus", status: "dihapus" })
+          .eq("id", viewingIncome.id);
+        if (error) throw error;
+        toast.success("Pemasukan berhasil dihapus");
+        closeDetailView();
+        fetchIncomes();
+      } catch (error) {
+        toast.error("Gagal menghapus pemasukan");
+      }
+    };
+
+    if (isEditingIncome) {
+      return (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="icon" onClick={() => setIsEditingIncome(false)}>
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <h2 className="text-xl font-bold">Edit Pemasukan - {viewingIncome.bid}</h2>
+                </div>
+              </div>
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tanggal *</Label>
+                    <Input type="date" value={editIncomeForm.date} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Metode Pembayaran</Label>
+                    <Select value={editIncomeForm.payment_method} onValueChange={(v) => setEditIncomeForm({ ...editIncomeForm, payment_method: v })}>
+                      <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                      <SelectContent>
+                        {activeMethodNames.map(method => (
+                          <SelectItem key={method} value={method}>{method}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nama Pelanggan</Label>
+                  <Input value={editIncomeForm.customer_name} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Deskripsi</Label>
+                  <Input value={editIncomeForm.description} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Jumlah (Rp)</Label>
+                  <Input value={editIncomeForm.amount} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={() => setIsEditingIncome(false)}>Batal</Button>
+                  <Button onClick={handleSaveEditIncome}>Simpan Perubahan</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Detail View (read-only)
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={closeDetailView}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-xl font-bold">Detail Pemasukan</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => {
+                  const url = `/receipt/transaction?id=${viewingIncome.id}&type=income`;
+                  window.open(url, '_blank');
+                }}>
+                  <Printer className="h-4 w-4 mr-1" />
+                  Print
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setIsEditingIncome(true)}>
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDeleteIncome}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Hapus
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Tanggal</p>
+                <p className="font-semibold">{format(new Date(viewingIncome.date), "dd MMMM yyyy", { locale: localeId })}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">BID</p>
+                <p className="font-mono font-semibold">{viewingIncome.bid || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pelanggan</p>
+                <p className="font-semibold">{viewingIncome.customer_name || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Metode Pembayaran</p>
+                <p className="font-semibold">{viewingIncome.payment_method || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">No. Referensi</p>
+                <p className="font-semibold">{viewingIncome.reference_no || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge
+                  variant="outline"
+                  className={
+                    viewingIncome.status === "selesai"
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : viewingIncome.status === "batal"
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                  }
+                >
+                  {viewingIncome.status === "selesai" ? "Selesai" : viewingIncome.status === "batal" ? "Batal" : "Proses"}
+                </Badge>
+              </div>
+            </div>
+
+            {viewingIncome.description && (
+              <div className="mt-4">
+                <p className="text-sm text-muted-foreground">Deskripsi</p>
+                <p className="font-semibold">{viewingIncome.description}</p>
+              </div>
+            )}
+
+            {viewingIncome.payment_proof_url && (
+              <div className="mt-4">
+                <p className="text-sm text-muted-foreground">Bukti Bayar</p>
+                <a href={viewingIncome.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  Lihat Bukti Bayar
+                </a>
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <p className="text-lg font-bold">Total</p>
+                <p className="text-lg font-bold text-green-600">
+                  {formatCurrency(viewingIncome.amount || 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // If adding income, show inline form
   if (addingIncome) {
@@ -826,7 +1003,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => openEditIncomeDialog(income)}
+                            onClick={() => openDetailView(income)}
                           >
                             {income.bid || '-'}
                           </Badge>
@@ -946,44 +1123,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         />
       )}
 
-      {/* Edit Income Dialog */}
-      <Dialog open={!!editingIncome} onOpenChange={(open) => !open && setEditingIncome(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Pemasukan - {editingIncome?.bid}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input type="date" value={editIncomeForm.date} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, date: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Nama Pelanggan</Label>
-              <Input value={editIncomeForm.customer_name} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
-            </div>
-            <div className="space-y-2">
-              <Label>Deskripsi</Label>
-              <Input value={editIncomeForm.description} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
-            </div>
-            <div className="space-y-2">
-              <Label>Jumlah</Label>
-              <Input value={editIncomeForm.amount} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Metode Pembayaran</Label>
-              <Select value={editIncomeForm.payment_method} onValueChange={(v) => setEditIncomeForm({ ...editIncomeForm, payment_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                <SelectContent>
-                  {activeMethodNames.map(method => (
-                    <SelectItem key={method} value={method}>{method}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button className="w-full" onClick={handleSaveEditIncome}>Simpan Perubahan</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit dialog removed - using inline detail/edit view */}
 
       {/* Print Preview Dialog */}
       <Dialog open={!!printPreviewId} onOpenChange={(open) => !open && setPrintPreviewId(null)}>
