@@ -277,11 +277,38 @@ export default function TransactionReceipt() {
         )}
 
         {/* Total */}
-        <div className="mb-2 font-bold" style={{ fontSize: isSmall ? "11px" : "13px" }}>
-          <div className="flex justify-between">
+        <div className="mb-2" style={{ fontSize: isSmall ? "11px" : "13px" }}>
+          <div className="flex justify-between font-bold">
             <span>TOTAL</span>
             <span>{formatCurrency(totalAmount)}</span>
           </div>
+          {!isExpense && (transaction as any).paid_amount > 0 && (
+            <>
+              <div className="flex justify-between" style={{ fontSize: isSmall ? "9px" : "11px" }}>
+                <span>Jumlah Bayar</span>
+                <span>{formatCurrency((transaction as any).paid_amount)}</span>
+              </div>
+              {(() => {
+                const change = (transaction as any).paid_amount - totalAmount;
+                if (change > 0) {
+                  return (
+                    <div className="flex justify-between font-semibold" style={{ fontSize: isSmall ? "9px" : "11px" }}>
+                      <span>Kembalian</span>
+                      <span>{formatCurrency(change)}</span>
+                    </div>
+                  );
+                } else if (change < 0) {
+                  return (
+                    <div className="flex justify-between font-semibold" style={{ fontSize: isSmall ? "9px" : "11px", color: "red" }}>
+                      <span>Kurang Bayar</span>
+                      <span>{formatCurrency(Math.abs(change))}</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </>
+          )}
         </div>
 
         <div className="border-t border-dashed border-gray-400 my-2" style={{ borderTopWidth: "1px" }} />
