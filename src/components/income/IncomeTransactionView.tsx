@@ -832,7 +832,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => openEditIncomeDialog(income)}
+                            onClick={() => openDetailView(income)}
                           >
                             {income.bid || '-'}
                           </Badge>
