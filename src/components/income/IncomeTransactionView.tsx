@@ -68,12 +68,14 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
   const [printPreviewId, setPrintPreviewId] = useState<string | null>(null);
 
-  // Edit income dialog state
-  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  // Detail/Edit income inline state
+  const [viewingIncome, setViewingIncome] = useState<Income | null>(null);
+  const [isEditingIncome, setIsEditingIncome] = useState(false);
   const [editIncomeForm, setEditIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: "" });
 
-  const openEditIncomeDialog = (income: Income) => {
-    setEditingIncome(income);
+  const openDetailView = (income: Income) => {
+    setViewingIncome(income);
+    setIsEditingIncome(false);
     setEditIncomeForm({
       description: income.description || "",
       amount: formatAmountInput(String(income.amount)),
@@ -81,6 +83,11 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
       payment_method: income.payment_method || "",
       date: income.date,
     });
+  };
+
+  const closeDetailView = () => {
+    setViewingIncome(null);
+    setIsEditingIncome(false);
   };
 
   const handleSaveEditIncome = async () => {
