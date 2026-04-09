@@ -952,44 +952,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
         />
       )}
 
-      {/* Edit Income Dialog */}
-      <Dialog open={!!editingIncome} onOpenChange={(open) => !open && setEditingIncome(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Pemasukan - {editingIncome?.bid}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input type="date" value={editIncomeForm.date} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, date: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Nama Pelanggan</Label>
-              <Input value={editIncomeForm.customer_name} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
-            </div>
-            <div className="space-y-2">
-              <Label>Deskripsi</Label>
-              <Input value={editIncomeForm.description} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
-            </div>
-            <div className="space-y-2">
-              <Label>Jumlah</Label>
-              <Input value={editIncomeForm.amount} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Metode Pembayaran</Label>
-              <Select value={editIncomeForm.payment_method} onValueChange={(v) => setEditIncomeForm({ ...editIncomeForm, payment_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                <SelectContent>
-                  {activeMethodNames.map(method => (
-                    <SelectItem key={method} value={method}>{method}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button className="w-full" onClick={handleSaveEditIncome}>Simpan Perubahan</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit dialog removed - using inline detail/edit view */}
 
       {/* Print Preview Dialog */}
       <Dialog open={!!printPreviewId} onOpenChange={(open) => !open && setPrintPreviewId(null)}>
