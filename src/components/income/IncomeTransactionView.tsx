@@ -544,7 +544,16 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                           className="w-24 h-8 text-sm px-2"
                         />
                       </div>
-                      <span className="text-muted-foreground text-sm min-w-[90px] text-right flex-1">= {formatCurrency(p.subtotal)}</span>
+                      <div className="text-right flex-1 min-w-[90px] shrink-0">
+                        {(parseFloat(p.discount_value) || 0) > 0 ? (
+                          <div className="flex flex-col items-end leading-tight">
+                            <span className="text-xs text-muted-foreground line-through">{formatCurrency(p.quantity * p.product_price)}</span>
+                            <span className="text-sm font-medium text-destructive">= {formatCurrency(p.subtotal)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">= {formatCurrency(p.subtotal)}</span>
+                        )}
+                      </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIncomeProducts(incomeProducts.filter((_, idx) => idx !== i))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
