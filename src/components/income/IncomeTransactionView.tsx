@@ -91,7 +91,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   };
 
   const handleSaveEditIncome = async () => {
-    if (!editingIncome) return;
+    if (!viewingIncome) return;
     if (!editIncomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
     if (!editIncomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
     try {
@@ -104,23 +104,22 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           payment_method: editIncomeForm.payment_method || null,
           date: editIncomeForm.date,
         })
-        .eq("id", editingIncome.id);
+        .eq("id", viewingIncome.id);
       if (error) throw error;
 
-      // Handle hutang changes on edit
       await handleHutangOnEdit({
-        previousPaymentMethod: editingIncome.payment_method,
+        previousPaymentMethod: viewingIncome.payment_method,
         newPaymentMethod: editIncomeForm.payment_method,
         amount: parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0,
         supplierName: editIncomeForm.customer_name,
         description: `Pemasukan - ${editIncomeForm.customer_name}`,
         storeId: currentStore!.id,
         userId: (await supabase.auth.getUser()).data.user!.id,
-        bid: editingIncome.bid,
+        bid: viewingIncome.bid,
       });
 
       toast.success("Pemasukan berhasil diperbarui");
-      setEditingIncome(null);
+      closeDetailView();
       fetchIncomes();
     } catch (error) {
       toast.error("Gagal memperbarui pemasukan");
