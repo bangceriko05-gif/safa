@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Copy, FileText, CalendarIcon, Trash2, Printer, ChevronLeft, Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { Plus, Search, Copy, FileText, CalendarIcon, Trash2, Printer, ChevronLeft, Upload, Loader2, X, Image as ImageIcon, Pencil } from "lucide-react";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
