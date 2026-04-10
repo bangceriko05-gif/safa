@@ -103,27 +103,83 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     setIsEditingIncome(false);
   };
 
+  const updateEditProductField = (index: number, updates: Partial<typeof editProducts[0]>) => {
+    setEditProducts(prev => prev.map((ip, idx) => {
+      if (idx !== index) return ip;
+      const updated = { ...ip, ...updates };
+      updated.subtotal = calcItemSubtotal(updated.quantity, updated.product_price, updated.discount_type, updated.discount_value);
+      return updated;
+    }));
+  };
+
+  const handleAddProductToEdit = (product: { id: string; name: string; price: number }) => {
+    const existing = editProducts.find(p => p.product_id === product.id);
+    if (existing) {
+      setEditProducts(editProducts.map(p =>
+        p.product_id === product.id
+          ? { ...p, quantity: p.quantity + 1, subtotal: calcItemSubtotal(p.quantity + 1, p.product_price, p.discount_type, p.discount_value) }
+          : p
+      ));
+    } else {
+      setEditProducts([...editProducts, {
+        product_id: product.id, product_name: product.name, product_price: product.price,
+        quantity: 1, subtotal: product.price, discount_type: "percentage", discount_value: "",
+      }]);
+    }
+    setEditProductSearch("");
+    setEditShowProductSearch(false);
+  };
+
+  const getEditTotal = () => {
+    const productsTotal = editProducts.reduce((sum, p) => sum + p.subtotal, 0);
+    const manualAmount = parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0;
+    const subtotal = editProducts.length > 0 ? productsTotal : manualAmount;
+    const discVal = parseFloat(editDiscount.value) || 0;
+    const discAmount = editDiscount.type === "percentage" ? subtotal * (discVal / 100) : discVal;
+    return Math.max(0, subtotal - discAmount);
+  };
+
   const handleSaveEditIncome = async () => {
     if (!viewingIncome) return;
     if (!editIncomeForm.customer_name.trim()) { toast.error("Nama pelanggan harus diisi"); return; }
-    if (!editIncomeForm.amount) { toast.error("Jumlah harus diisi"); return; }
+    if (!editIncomeForm.payment_method) { toast.error("Metode bayar harus diisi"); return; }
+    const totalAmount = getEditTotal();
+    const paidAmount = parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0;
     try {
       const { error } = await supabase
         .from("incomes")
         .update({
           description: editIncomeForm.description || null,
-          amount: parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0,
+          amount: totalAmount,
+          paid_amount: paidAmount,
           customer_name: editIncomeForm.customer_name,
           payment_method: editIncomeForm.payment_method || null,
+          payment_proof_url: editPaymentProof,
+          reference_no: editIncomeForm.reference_no || null,
           date: editIncomeForm.date,
         })
         .eq("id", viewingIncome.id);
       if (error) throw error;
 
+      // Update products: delete old, insert new
+      await supabase.from("income_products").delete().eq("income_id", viewingIncome.id);
+      if (editProducts.length > 0) {
+        await supabase.from("income_products").insert(
+          editProducts.map(p => ({
+            income_id: viewingIncome.id,
+            product_id: p.product_id,
+            product_name: p.product_name,
+            product_price: p.product_price,
+            quantity: p.quantity,
+            subtotal: p.subtotal,
+          }))
+        );
+      }
+
       await handleHutangOnEdit({
         previousPaymentMethod: viewingIncome.payment_method,
         newPaymentMethod: editIncomeForm.payment_method,
-        amount: parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0,
+        amount: totalAmount,
         supplierName: editIncomeForm.customer_name,
         description: `Pemasukan - ${editIncomeForm.customer_name}`,
         storeId: currentStore!.id,
