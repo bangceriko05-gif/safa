@@ -139,6 +139,90 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [cancelledExplicitly, setCancelledExplicitly] = useState(false);
+
+  // Refs to track form state for auto-draft on unmount
+  const addingIncomeRef = useRef(addingIncome);
+  const incomeFormRef = useRef(incomeForm);
+  const incomeProductsRef = useRef(incomeProducts);
+  const incomeDiscountRef = useRef(incomeDiscount);
+  const incomePaymentProofRef = useRef(incomePaymentProof);
+  const cancelledRef = useRef(cancelledExplicitly);
+  const currentStoreRef = useRef(currentStore);
+
+  useEffect(() => { addingIncomeRef.current = addingIncome; }, [addingIncome]);
+  useEffect(() => { incomeFormRef.current = incomeForm; }, [incomeForm]);
+  useEffect(() => { incomeProductsRef.current = incomeProducts; }, [incomeProducts]);
+  useEffect(() => { incomeDiscountRef.current = incomeDiscount; }, [incomeDiscount]);
+  useEffect(() => { incomePaymentProofRef.current = incomePaymentProof; }, [incomePaymentProof]);
+  useEffect(() => { cancelledRef.current = cancelledExplicitly; }, [cancelledExplicitly]);
+  useEffect(() => { currentStoreRef.current = currentStore; }, [currentStore]);
+
+  // Auto-save as draft when component unmounts while form is open
+  useEffect(() => {
+    return () => {
+      if (!addingIncomeRef.current || cancelledRef.current) return;
+      const form = incomeFormRef.current;
+      const products = incomeProductsRef.current;
+      const store = currentStoreRef.current;
+      // Only save if there's meaningful data
+      const hasData = form.customer_name.trim() || products.length > 0 || form.description.trim();
+      if (!hasData || !store) return;
+
+      // Calculate total
+      const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
+      const manualAmount = parseFloat(form.amount.replace(/\./g, "")) || 0;
+      const subtotal = products.length > 0 ? productsTotal : manualAmount;
+      const disc = incomeDiscountRef.current;
+      const discVal = parseFloat(disc.value) || 0;
+      const discAmount = disc.type === "percentage" ? subtotal * (discVal / 100) : discVal;
+      const totalAmount = Math.max(0, subtotal - discAmount);
+      const paidAmount = parseFloat(form.amount.replace(/\./g, "")) || 0;
+
+      // Fire-and-forget draft save
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        supabase.from("incomes").insert([{
+          description: form.description || "Draft - belum selesai",
+          amount: totalAmount,
+          paid_amount: paidAmount,
+          customer_name: form.customer_name || "Draft",
+          payment_method: form.payment_method || null,
+          payment_proof_url: incomePaymentProofRef.current,
+          reference_no: form.reference_no || null,
+          date: form.date,
+          created_by: user.id,
+          store_id: store.id,
+          status: "tunda",
+          process_status: "proses",
+        }]).select().single().then(({ data: incomeData, error }) => {
+          if (error || !incomeData) return;
+          if (products.length > 0) {
+            supabase.from("income_products").insert(
+              products.map(p => ({
+                income_id: incomeData.id,
+                product_id: p.product_id,
+                product_name: p.product_name,
+                product_price: p.product_price,
+                quantity: p.quantity,
+                subtotal: p.subtotal,
+              }))
+            );
+          }
+        });
+      });
+    };
+  }, []);
+
+  const handleExplicitCancel = useCallback(() => {
+    setCancelledExplicitly(true);
+    setAddingIncome(false);
+    setIncomeProducts([]);
+    setIncomeDiscount({ type: "percentage", value: "" });
+    setProductSearch("");
+    setShowProductSearch(false);
+    setIncomePaymentProof(null);
+  }, []);
 
   const formatAmountInput = (value: string) => {
     const numericValue = value.replace(/\D/g, '');
