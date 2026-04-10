@@ -543,49 +543,187 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
       return (
         <div className="space-y-4">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Button variant="ghost" size="icon" onClick={() => setIsEditingIncome(false)}>
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <h2 className="text-xl font-bold">Edit Pemasukan - {viewingIncome.bid}</h2>
+                  <CardTitle className="text-xl font-bold">Edit Pemasukan - {viewingIncome.bid}</CardTitle>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Tanggal</Label>
+                  <Input type="date" value={editIncomeForm.date} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, date: e.target.value })} className="w-auto" />
                 </div>
               </div>
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tanggal *</Label>
-                    <Input type="date" value={editIncomeForm.date} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, date: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Metode Pembayaran</Label>
-                    <Select value={editIncomeForm.payment_method} onValueChange={(v) => setEditIncomeForm({ ...editIncomeForm, payment_method: v })}>
-                      <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                      <SelectContent>
-                        {activeMethodNames.map(method => (
-                          <SelectItem key={method} value={method}>{method}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Nama Pelanggan & No. HP */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nama Pelanggan</Label>
                   <Input value={editIncomeForm.customer_name} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Deskripsi</Label>
-                  <Input value={editIncomeForm.description} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan" />
+                  <Label>No. HP</Label>
+                  <Input value={editIncomeForm.customer_phone} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_phone: e.target.value })} placeholder="Nomor HP" />
+                </div>
+              </div>
+
+              {/* Produk section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Produk (opsional)</Label>
+                  <Button variant="outline" size="sm" onClick={() => setEditShowProductSearch(!editShowProductSearch)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Tambah Produk
+                  </Button>
+                </div>
+                {editShowProductSearch && (
+                  <div className="relative">
+                    <Input value={editProductSearch} onChange={(e) => setEditProductSearch(e.target.value)} placeholder="Cari produk..." autoFocus />
+                    {editProductSearch && (
+                      <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-y-auto">
+                        {availableProducts.filter(p => p.name.toLowerCase().includes(editProductSearch.toLowerCase())).map(product => (
+                          <div key={product.id} className="px-3 py-2 hover:bg-accent cursor-pointer text-sm flex justify-between" onClick={() => handleAddProductToEdit(product)}>
+                            <span>{product.name}</span>
+                            <span className="text-muted-foreground">{formatCurrency(product.price)}</span>
+                          </div>
+                        ))}
+                        {availableProducts.filter(p => p.name.toLowerCase().includes(editProductSearch.toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Produk tidak ditemukan</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {editProducts.length > 0 && (
+                  <div className="space-y-1">
+                    {editProducts.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm w-full">
+                        <div className="font-medium min-w-[120px] shrink-0">{p.product_name}</div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            if (p.quantity > 1) { updateEditProductField(i, { quantity: p.quantity - 1 }); }
+                            else { setEditProducts(editProducts.filter((_, idx) => idx !== i)); }
+                          }}><span className="text-sm">−</span></Button>
+                          <Input type="text" inputMode="numeric" value={p.quantity} onChange={(e) => updateEditProductField(i, { quantity: parseInt(e.target.value) || 1 })} className="w-14 h-8 text-center text-sm px-1" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateEditProductField(i, { quantity: p.quantity + 1 })}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                        <span className="text-muted-foreground shrink-0">@</span>
+                        <Input type="text" inputMode="numeric" value={formatAmountInput(String(p.product_price))} onChange={(e) => updateEditProductField(i, { product_price: parseFloat(e.target.value.replace(/\./g, "")) || 0 })} className="w-28 h-8 text-sm px-2" />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex rounded-md border overflow-hidden shrink-0 h-8">
+                            <button type="button" className={`px-2.5 text-xs font-semibold transition-colors ${p.discount_type === "percentage" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`} onClick={() => updateEditProductField(i, { discount_type: "percentage", discount_value: "" })}>%</button>
+                            <button type="button" className={`px-2.5 text-xs font-semibold transition-colors border-l ${p.discount_type === "fixed" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`} onClick={() => updateEditProductField(i, { discount_type: "fixed", discount_value: "" })}>Rp</button>
+                          </div>
+                          <Input type="text" inputMode="numeric" value={p.discount_type === "fixed" ? formatAmountInput(p.discount_value) : p.discount_value} onChange={(e) => {
+                            if (p.discount_type === "percentage") { const raw = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(raw) || 0; updateEditProductField(i, { discount_value: num > 100 ? "100" : raw }); }
+                            else { const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, ''); updateEditProductField(i, { discount_value: raw }); }
+                          }} placeholder="0" className="w-24 h-8 text-sm px-2" />
+                        </div>
+                        <div className="text-right flex-1 min-w-[90px] shrink-0">
+                          {(parseFloat(p.discount_value) || 0) > 0 ? (
+                            <div className="flex flex-col items-end leading-tight">
+                              <span className="text-xs text-muted-foreground line-through">{formatCurrency(p.quantity * p.product_price)}</span>
+                              <span className="text-sm font-medium text-destructive">= {formatCurrency(p.subtotal)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">= {formatCurrency(p.subtotal)}</span>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setEditProducts(editProducts.filter((_, idx) => idx !== i))}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Diskon */}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditShowDiscountPopover(!editShowDiscountPopover)} type="button">Diskon</Button>
+                </div>
+                {editShowDiscountPopover && (
+                  <div className="flex gap-2 items-center p-3 border rounded-md bg-muted/30">
+                    <div className="flex rounded-md border overflow-hidden shrink-0">
+                      <button type="button" className={`px-3 py-1.5 text-sm font-medium transition-colors ${editDiscount.type === "percentage" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`} onClick={() => setEditDiscount({ ...editDiscount, type: "percentage", value: "" })}>%</button>
+                      <button type="button" className={`px-3 py-1.5 text-sm font-medium transition-colors border-l ${editDiscount.type === "fixed" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`} onClick={() => setEditDiscount({ ...editDiscount, type: "fixed", value: "" })}>Rp</button>
+                    </div>
+                    <Input type="text" inputMode="numeric" value={editDiscount.type === "fixed" ? formatAmountInput(editDiscount.value) : editDiscount.value} onChange={(e) => {
+                      if (editDiscount.type === "percentage") { const raw = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(raw) || 0; setEditDiscount({ ...editDiscount, value: num > 100 ? "100" : raw }); }
+                      else { const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, ''); setEditDiscount({ ...editDiscount, value: raw }); }
+                    }} placeholder={editDiscount.type === "percentage" ? "0 - 100" : "0"} className="flex-1" />
+                  </div>
+                )}
+              </div>
+
+              {/* Subtotal & Total */}
+              {editProducts.length > 0 && (
+                <div className="p-3 bg-muted/50 rounded space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Subtotal Produk</span>
+                    <span className="font-medium">{formatCurrency(editProducts.reduce((s, p) => s + p.subtotal, 0))}</span>
+                  </div>
+                  {editDiscount.value && parseFloat(editDiscount.value) > 0 && (
+                    <div className="flex justify-between text-destructive">
+                      <span>Diskon {editDiscount.type === 'percentage' ? `${editDiscount.value}%` : ''}</span>
+                      <span>-{formatCurrency(editDiscount.type === 'percentage' ? editProducts.reduce((s, p) => s + p.subtotal, 0) * (parseFloat(editDiscount.value) / 100) : parseFloat(editDiscount.value) || 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                    <span>Total Bayar</span>
+                    <span>{formatCurrency(getEditTotal())}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Metode Pembayaran, Jumlah Bayar & No. Referensi */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Metode Pembayaran <span className="text-destructive">*</span></Label>
+                  <Select value={editIncomeForm.payment_method} onValueChange={(v) => setEditIncomeForm({ ...editIncomeForm, payment_method: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                    <SelectContent>
+                      {activeMethodNames.map(method => (<SelectItem key={method} value={method}>{method}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Jumlah (Rp)</Label>
-                  <Input value={editIncomeForm.amount} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+                  <Label>Jumlah Bayar <span className="text-destructive">*</span></Label>
+                  <Input type="text" inputMode="numeric" value={editIncomeForm.amount} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
                 </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setIsEditingIncome(false)}>Batal</Button>
-                  <Button onClick={handleSaveEditIncome}>Simpan Perubahan</Button>
+                <div className="space-y-2">
+                  <Label>No. Referensi</Label>
+                  <Input value={editIncomeForm.reference_no} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, reference_no: e.target.value })} placeholder="No. referensi (opsional)" />
                 </div>
+              </div>
+
+              {/* Keterangan Pembayaran */}
+              {(() => {
+                const totalBayar = getEditTotal();
+                const jumlahBayar = parseFloat(editIncomeForm.amount.replace(/\./g, "")) || 0;
+                if (jumlahBayar > 0 && totalBayar > 0) {
+                  const selisih = jumlahBayar - totalBayar;
+                  if (selisih < 0) return (<div className="p-3 bg-destructive/10 rounded text-sm font-medium text-destructive flex justify-between"><span>Kurang Bayar</span><span>{formatCurrency(Math.abs(selisih))}</span></div>);
+                  else if (selisih === 0) return (<div className="p-3 bg-emerald-500/10 rounded text-sm font-medium text-emerald-600 flex justify-between"><span>LUNAS</span><span>{formatCurrency(jumlahBayar)}</span></div>);
+                  else return (<div className="p-3 bg-amber-500/10 rounded text-sm font-medium text-amber-600 flex justify-between"><span>Uang Lebih (Kembalian)</span><span>{formatCurrency(selisih)}</span></div>);
+                }
+                return null;
+              })()}
+
+              {/* Deskripsi */}
+              <div className="space-y-2">
+                <Label>Deskripsi</Label>
+                <Textarea value={editIncomeForm.description} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, description: e.target.value })} placeholder="Deskripsi pemasukan..." rows={3} />
+              </div>
+
+              {/* Bukti Bayar */}
+              <PaymentProofUpload value={editPaymentProof} onChange={setEditPaymentProof} required />
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setIsEditingIncome(false)}>Batal</Button>
+                <Button onClick={handleSaveEditIncome}>Simpan Perubahan</Button>
               </div>
             </CardContent>
           </Card>
