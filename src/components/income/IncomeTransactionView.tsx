@@ -631,14 +631,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => {
-                  setAddingIncome(false);
-                  setIncomeProducts([]);
-                  setIncomeDiscount({ type: "percentage", value: "" });
-                  setProductSearch("");
-                  setShowProductSearch(false);
-                  setIncomePaymentProof(null);
-                }}>
+                <Button variant="ghost" size="icon" onClick={handleExplicitCancel}>
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <CardTitle className="text-xl font-bold">Tambah Pemasukan Manual</CardTitle>
@@ -1008,12 +1001,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
             )}
 
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => {
-                setAddingIncome(false);
-                setIncomeProducts([]);
-                setIncomeDiscount({ type: "percentage", value: "" });
-                setIncomePaymentProof(null);
-              }}>
+              <Button variant="outline" onClick={handleExplicitCancel}>
                 Batal
               </Button>
               <Button onClick={handleAddIncome}>
