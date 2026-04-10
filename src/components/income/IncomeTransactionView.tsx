@@ -347,6 +347,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
       if (incomeData?.id) {
         setPrintPreviewId(incomeData.id);
       }
+      setCancelledExplicitly(true);
       setAddingIncome(false);
       setIncomeForm({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: format(new Date(), "yyyy-MM-dd") });
       setIncomePaymentProof(null);
