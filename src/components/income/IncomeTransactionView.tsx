@@ -1035,7 +1035,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold text-green-600">Total: {formatCurrency(total)}</span>
               {hasPermission("manage_income") && (
-                <Button onClick={() => setAddingIncome(true)} className="bg-primary">
+                <Button onClick={() => { setCancelledExplicitly(false); setAddingIncome(true); }} className="bg-primary">
                   <Plus className="h-4 w-4 mr-2" />
                   Tambah Pemasukan
                 </Button>
