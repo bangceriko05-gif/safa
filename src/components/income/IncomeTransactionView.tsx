@@ -71,18 +71,31 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   // Detail/Edit income inline state
   const [viewingIncome, setViewingIncome] = useState<Income | null>(null);
   const [isEditingIncome, setIsEditingIncome] = useState(false);
-  const [editIncomeForm, setEditIncomeForm] = useState({ description: "", amount: "", customer_name: "", payment_method: "", date: "" });
+  const [editIncomeForm, setEditIncomeForm] = useState({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: "" });
+  const [editProducts, setEditProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number; discount_type: "percentage" | "fixed"; discount_value: string }[]>([]);
+  const [editDiscount, setEditDiscount] = useState({ type: "percentage" as "percentage" | "fixed", value: "" });
+  const [editPaymentProof, setEditPaymentProof] = useState<string | null>(null);
+  const [editShowDiscountPopover, setEditShowDiscountPopover] = useState(false);
+  const [editShowProductSearch, setEditShowProductSearch] = useState(false);
+  const [editProductSearch, setEditProductSearch] = useState("");
 
-  const openDetailView = (income: Income) => {
+  const openDetailView = async (income: Income) => {
     setViewingIncome(income);
     setIsEditingIncome(false);
     setEditIncomeForm({
       description: income.description || "",
       amount: formatAmountInput(String(income.amount)),
       customer_name: income.customer_name || "",
+      customer_phone: "",
       payment_method: income.payment_method || "",
+      reference_no: (income as any).reference_no || "",
       date: income.date,
     });
+    setEditPaymentProof((income as any).payment_proof_url || null);
+    // Load existing products
+    const { data: prods } = await supabase.from("income_products").select("product_id, product_name, product_price, quantity, subtotal").eq("income_id", income.id);
+    setEditProducts((prods || []).map(p => ({ ...p, discount_type: "percentage" as const, discount_value: "" })));
+    setEditDiscount({ type: "percentage", value: "" });
   };
 
   const closeDetailView = () => {
