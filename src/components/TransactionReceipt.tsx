@@ -36,22 +36,23 @@ export default function TransactionReceipt() {
   const [storeName, setStoreName] = useState("");
   const [creatorName, setCreatorName] = useState("");
   const receiptRef = useRef<HTMLDivElement>(null);
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
     if (!transactionId || !type) return;
-    // Wait for auth session to be ready before fetching
+    fetchedRef.current = false;
+    
+    const doFetch = () => {
+      if (fetchedRef.current) return;
+      fetchedRef.current = true;
+      fetchData();
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        fetchData();
-        subscription.unsubscribe();
-      }
+      if (session) doFetch();
     });
-    // Also try immediately in case session is already available
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        fetchData();
-        subscription.unsubscribe();
-      }
+      if (session) doFetch();
     });
     return () => subscription.unsubscribe();
   }, [transactionId, type]);
