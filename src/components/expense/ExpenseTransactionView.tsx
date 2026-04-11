@@ -333,9 +333,9 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     }
   };
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
@@ -372,6 +372,28 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   useEffect(() => {
     fetchExpenses();
     fetchCategories();
+
+    if (!currentStore) return;
+    // Realtime subscription - silent refresh
+    const channel = supabase
+      .channel(`expenses-${currentStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expenses',
+          filter: `store_id=eq.${currentStore.id}`,
+        },
+        () => {
+          fetchExpenses(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentStore, processTab, timeRange, customDateRange]);
 
   const filteredExpenses = useMemo(() => {
