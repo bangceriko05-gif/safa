@@ -988,6 +988,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                       </TableHead>
                     )}
                     <TableHead>Status</TableHead>
+                    <TableHead>Nota</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1088,6 +1089,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                             <SelectItem value="batal">Batal</SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const url = `/receipt/transaction?id=${expense.id}&type=expense`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          <Printer className="h-4 w-4 text-primary" />
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right font-bold text-red-500 whitespace-nowrap">
                         {formatCurrency(Number(expense.amount))}
