@@ -38,7 +38,22 @@ export default function TransactionReceipt() {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (transactionId && type) fetchData();
+    if (!transactionId || !type) return;
+    // Wait for auth session to be ready before fetching
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        fetchData();
+        subscription.unsubscribe();
+      }
+    });
+    // Also try immediately in case session is already available
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchData();
+        subscription.unsubscribe();
+      }
+    });
+    return () => subscription.unsubscribe();
   }, [transactionId, type]);
 
   const fetchData = async () => {
