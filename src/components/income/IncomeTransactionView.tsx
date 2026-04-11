@@ -428,9 +428,9 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     }
   };
 
-  const fetchIncomes = async () => {
+  const fetchIncomes = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
@@ -458,6 +458,28 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     fetchIncomes();
     fetchProducts();
     fetchCustomers();
+
+    if (!currentStore) return;
+    // Realtime subscription - silent refresh
+    const channel = supabase
+      .channel(`incomes-${currentStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'incomes',
+          filter: `store_id=eq.${currentStore.id}`,
+        },
+        () => {
+          fetchIncomes(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentStore, processTab, timeRange, customDateRange]);
 
   const filteredIncomes = useMemo(() => {

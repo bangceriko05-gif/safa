@@ -127,7 +127,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     if (!currentStore) return;
     fetchBookings();
 
-    // Realtime subscription
+    // Realtime subscription - silent refresh (no loading spinner)
     const channel = supabase
       .channel(`list-bookings-${currentStore.id}`)
       .on(
@@ -139,13 +139,13 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchBookings();
+          fetchBookings(true);
         }
       )
       .subscribe();
 
-    // Listen for booking changes
-    const handleBookingChange = () => fetchBookings();
+    // Listen for booking changes - silent refresh
+    const handleBookingChange = () => fetchBookings(true);
     window.addEventListener("booking-changed", handleBookingChange);
 
     return () => {
@@ -177,10 +177,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     }
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (silent = false) => {
     try {
       if (!currentStore) return;
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
 
       let query = supabase
         .from("bookings")
