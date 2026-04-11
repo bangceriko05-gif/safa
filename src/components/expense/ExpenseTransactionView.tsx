@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2, ChevronLeft, Upload, Pencil } from "lucide-react";
+import { Plus, Search, Copy, FileText, CalendarIcon, ClipboardList, Settings, Trash2, ChevronLeft, Upload, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -988,6 +988,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                       </TableHead>
                     )}
                     <TableHead>Status</TableHead>
+                    <TableHead>Nota</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1088,6 +1089,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                             <SelectItem value="batal">Batal</SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const url = `/receipt/transaction?id=${expense.id}&type=expense`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          <Printer className="h-4 w-4 text-primary" />
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right font-bold text-red-500 whitespace-nowrap">
                         {formatCurrency(Number(expense.amount))}
