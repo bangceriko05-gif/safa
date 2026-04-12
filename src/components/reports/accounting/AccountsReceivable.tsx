@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/contexts/StoreContext";
 import { Loader2, Plus, DollarSign } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
@@ -34,6 +35,8 @@ export default function AccountsReceivable() {
   const [showReceiveForm, setShowReceiveForm] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Receivable | null>(null);
   const [receiveAmount, setReceiveAmount] = useState("");
+  const [receiveBank, setReceiveBank] = useState("");
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; bank_name: string; account_name: string }[]>([]);
   const [form, setForm] = useState({
     customer_name: "", description: "", amount: "", due_date: "",
   });
@@ -43,7 +46,19 @@ export default function AccountsReceivable() {
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
+    fetchBankAccounts();
   }, [currentStore, timeRange, customDateRange]);
+
+  const fetchBankAccounts = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("bank_accounts")
+      .select("id, bank_name, account_name")
+      .eq("store_id", currentStore.id)
+      .eq("is_active", true)
+      .order("bank_name");
+    setBankAccounts(data || []);
+  };
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -94,6 +109,10 @@ export default function AccountsReceivable() {
     if (!selectedItem) return;
     const amount = Number(receiveAmount);
     if (amount <= 0) return;
+    if (!receiveBank) {
+      toast.error("Pilih sumber rekening terlebih dahulu");
+      return;
+    }
     try {
       const newReceived = Number(selectedItem.received_amount) + amount;
       const newStatus = newReceived >= Number(selectedItem.amount) ? "paid" : "partial";
@@ -105,6 +124,7 @@ export default function AccountsReceivable() {
       toast.success("Penerimaan berhasil dicatat");
       setShowReceiveForm(false);
       setReceiveAmount("");
+      setReceiveBank("");
       setSelectedItem(null);
       fetchData();
     } catch (error: any) {
@@ -202,6 +222,22 @@ export default function AccountsReceivable() {
           <div className="space-y-4">
             <p className="text-sm">Sisa: <span className="font-bold text-amber-600">{formatCurrency(Number(selectedItem?.amount || 0) - Number(selectedItem?.received_amount || 0))}</span></p>
             <div className="space-y-2"><Label>Jumlah Penerimaan</Label><Input value={receiveAmount ? Number(receiveAmount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setReceiveAmount(raw); }} required /></div>
+            <div className="space-y-2">
+              <Label>Masuk ke Rekening</Label>
+              <Select value={receiveBank} onValueChange={setReceiveBank}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih rekening tujuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Kas (Cash)</SelectItem>
+                  {bankAccounts.map(bank => (
+                    <SelectItem key={bank.id} value={bank.id}>
+                      {bank.bank_name} - {bank.account_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handleReceive} className="w-full">Konfirmasi Penerimaan</Button>
           </div>
         </DialogContent>
