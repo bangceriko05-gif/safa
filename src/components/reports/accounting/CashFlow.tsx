@@ -553,6 +553,7 @@ export default function CashFlow() {
         amount={data.openingBalance}
         bold
         className="bg-muted/40"
+        onClick={() => setActiveDetail("saldo_awal")}
       />
 
       {/* === ARUS KAS === */}
