@@ -474,7 +474,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
                   <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">Tidak ada transaksi untuk kategori ini.</TableCell></TableRow>
                 ) : rowsWithBalance.map((r, idx) => (
                   <TableRow key={idx} className="hover:bg-muted/40">
-                    <TableCell className="text-xs py-3">{format(new Date(r.date), "dd MMM yyyy", { locale: localeId })}</TableCell>
+                    <TableCell className="text-xs py-3">{r.date && r.date !== "-" ? format(new Date(r.date + "T00:00:00"), "dd MMM yyyy", { locale: localeId }) : "-"}</TableCell>
                     <TableCell className="text-xs py-3 font-medium text-primary">{r.bid}</TableCell>
                     <TableCell className="text-xs py-3">{r.description}</TableCell>
                     <TableCell className="text-xs py-3 text-right tabular-nums">{r.debit > 0 ? fmt(r.debit) : "-"}</TableCell>
