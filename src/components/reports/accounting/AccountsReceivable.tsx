@@ -46,7 +46,19 @@ export default function AccountsReceivable() {
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
+    fetchBankAccounts();
   }, [currentStore, timeRange, customDateRange]);
+
+  const fetchBankAccounts = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("bank_accounts")
+      .select("id, bank_name, account_name")
+      .eq("store_id", currentStore.id)
+      .eq("is_active", true)
+      .order("bank_name");
+    setBankAccounts(data || []);
+  };
 
   const fetchData = async () => {
     if (!currentStore) return;
