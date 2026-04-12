@@ -222,6 +222,22 @@ export default function AccountsReceivable() {
           <div className="space-y-4">
             <p className="text-sm">Sisa: <span className="font-bold text-amber-600">{formatCurrency(Number(selectedItem?.amount || 0) - Number(selectedItem?.received_amount || 0))}</span></p>
             <div className="space-y-2"><Label>Jumlah Penerimaan</Label><Input value={receiveAmount ? Number(receiveAmount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setReceiveAmount(raw); }} required /></div>
+            <div className="space-y-2">
+              <Label>Masuk ke Rekening</Label>
+              <Select value={receiveBank} onValueChange={setReceiveBank}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih rekening tujuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Kas (Cash)</SelectItem>
+                  {bankAccounts.map(bank => (
+                    <SelectItem key={bank.id} value={bank.id}>
+                      {bank.bank_name} - {bank.account_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handleReceive} className="w-full">Konfirmasi Penerimaan</Button>
           </div>
         </DialogContent>
