@@ -51,6 +51,7 @@ export default function ChartOfAccountsList() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [dynamicBalances, setDynamicBalances] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [showForm, setShowForm] = useState(false);
@@ -72,13 +73,53 @@ export default function ChartOfAccountsList() {
     if (!currentStore) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("chart_of_accounts")
-        .select("*")
-        .eq("store_id", currentStore.id)
-        .order("account_code", { ascending: true });
-      if (error) throw error;
-      setAccounts((data as unknown as Account[]) || []);
+      const [accountsRes, assetsRes, payablesRes, receivablesRes] = await Promise.all([
+        supabase
+          .from("chart_of_accounts")
+          .select("*")
+          .eq("store_id", currentStore.id)
+          .order("account_code", { ascending: true }),
+        supabase
+          .from("assets")
+          .select("current_value, status, category")
+          .eq("store_id", currentStore.id)
+          .eq("status", "active"),
+        supabase
+          .from("accounts_payable")
+          .select("amount, paid_amount, status")
+          .eq("store_id", currentStore.id)
+          .neq("status", "paid"),
+        supabase
+          .from("accounts_receivable")
+          .select("amount, received_amount, status")
+          .eq("store_id", currentStore.id)
+          .neq("status", "paid"),
+      ]);
+
+      if (accountsRes.error) throw accountsRes.error;
+      setAccounts((accountsRes.data as unknown as Account[]) || []);
+
+      // Calculate dynamic balances by classification
+      const balances: Record<string, number> = {};
+
+      // Assets → Aset tetap & Perlengkapan
+      const totalAsetTetap = (assetsRes.data || []).reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+      balances["Aset tetap"] = totalAsetTetap;
+      balances["Perlengkapan"] = totalAsetTetap;
+
+      // Payables → Kewajiban jangka pendek
+      const totalPayable = (payablesRes.data || []).reduce(
+        (s, p) => s + (Number(p.amount) - Number(p.paid_amount || 0)), 0
+      );
+      balances["Kewajiban jangka pendek"] = totalPayable;
+
+      // Receivables → Piutang
+      const totalReceivable = (receivablesRes.data || []).reduce(
+        (s, r) => s + (Number(r.amount) - Number(r.received_amount || 0)), 0
+      );
+      balances["Piutang"] = totalReceivable;
+
+      setDynamicBalances(balances);
     } catch (error) {
       console.error(error);
     } finally {
@@ -179,6 +220,15 @@ export default function ChartOfAccountsList() {
     return matchSearch && matchType;
   });
 
+  const getAccountBalance = (account: Account): number => {
+    // For classifications with dynamic data, show opening_balance + dynamic total
+    const dynamicClassifications = ["Aset tetap", "Perlengkapan", "Kewajiban jangka pendek", "Piutang"];
+    if (dynamicClassifications.includes(account.classification)) {
+      return account.opening_balance + (dynamicBalances[account.classification] || 0);
+    }
+    return account.opening_balance;
+  };
+
   const isDepreciation = (classification: string) =>
     classification.toLowerCase().includes("penyusutan");
 
@@ -270,7 +320,7 @@ export default function ChartOfAccountsList() {
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right text-sm font-medium ${isDepreciation(account.classification) ? "text-destructive" : ""}`}>
-                      {formatCurrency(account.opening_balance, account.classification)}
+                      {formatCurrency(getAccountBalance(account), account.classification)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
