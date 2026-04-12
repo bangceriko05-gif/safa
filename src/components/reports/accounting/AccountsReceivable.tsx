@@ -189,7 +189,7 @@ export default function AccountsReceivable() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2"><Label>Nama Pelanggan</Label><Input value={form.customer_name} onChange={e => setForm({ ...form, customer_name: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Keterangan</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Jumlah</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required /></div>
+            <div className="space-y-2"><Label>Jumlah</Label><Input value={form.amount ? Number(form.amount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setForm({ ...form, amount: raw }); }} required placeholder="0" /></div>
             <div className="space-y-2"><Label>Jatuh Tempo</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} /></div>
             <Button type="submit" className="w-full">Simpan</Button>
           </form>
@@ -201,7 +201,7 @@ export default function AccountsReceivable() {
           <DialogHeader><DialogTitle>Terima Piutang - {selectedItem?.customer_name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <p className="text-sm">Sisa: <span className="font-bold text-amber-600">{formatCurrency(Number(selectedItem?.amount || 0) - Number(selectedItem?.received_amount || 0))}</span></p>
-            <div className="space-y-2"><Label>Jumlah Penerimaan</Label><Input type="number" value={receiveAmount} onChange={e => setReceiveAmount(e.target.value)} required /></div>
+            <div className="space-y-2"><Label>Jumlah Penerimaan</Label><Input value={receiveAmount ? Number(receiveAmount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setReceiveAmount(raw); }} required /></div>
             <Button onClick={handleReceive} className="w-full">Konfirmasi Penerimaan</Button>
           </div>
         </DialogContent>
