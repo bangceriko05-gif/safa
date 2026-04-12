@@ -372,7 +372,7 @@ export default function AccountsPayable() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2"><Label>Nama Supplier</Label><Input value={form.supplier_name} onChange={e => setForm({ ...form, supplier_name: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Keterangan</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Jumlah</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required /></div>
+            <div className="space-y-2"><Label>Jumlah</Label><Input value={form.amount ? Number(form.amount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setForm({ ...form, amount: raw }); }} required placeholder="0" /></div>
             <div className="space-y-2"><Label>Jatuh Tempo</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} /></div>
             <div className="space-y-2">
               <Label>Kategori Arus Kas</Label>
@@ -396,7 +396,7 @@ export default function AccountsPayable() {
           <DialogHeader><DialogTitle>Bayar Hutang - {selectedItem?.supplier_name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <p className="text-sm">Sisa: <span className="font-bold text-destructive">{formatCurrency(Number(selectedItem?.amount || 0) - Number(selectedItem?.paid_amount || 0))}</span></p>
-            <div className="space-y-2"><Label>Jumlah Pembayaran</Label><Input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} required /></div>
+            <div className="space-y-2"><Label>Jumlah Pembayaran</Label><Input value={payAmount ? Number(payAmount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setPayAmount(raw); }} required /></div>
             <Button onClick={handlePay} className="w-full">Konfirmasi Pembayaran</Button>
           </div>
         </DialogContent>
