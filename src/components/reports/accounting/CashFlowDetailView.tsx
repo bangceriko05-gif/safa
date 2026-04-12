@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
 export type CashFlowDetailType =
+  | "saldo_awal"
   | "penerimaan_pelanggan"
   | "pembayaran_pemasok"
   | "biaya_operasional"
@@ -21,6 +22,7 @@ export type CashFlowDetailType =
   | "penambahan_modal";
 
 const DETAIL_LABELS: Record<CashFlowDetailType, string> = {
+  saldo_awal: "Detail Saldo Kas Awal",
   penerimaan_pelanggan: "Penerimaan dari pelanggan",
   pembayaran_pemasok: "Pembayaran ke pemasok",
   biaya_operasional: "Biaya operasional",
