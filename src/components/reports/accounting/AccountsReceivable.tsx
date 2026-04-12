@@ -109,6 +109,10 @@ export default function AccountsReceivable() {
     if (!selectedItem) return;
     const amount = Number(receiveAmount);
     if (amount <= 0) return;
+    if (!receiveBank) {
+      toast.error("Pilih sumber rekening terlebih dahulu");
+      return;
+    }
     try {
       const newReceived = Number(selectedItem.received_amount) + amount;
       const newStatus = newReceived >= Number(selectedItem.amount) ? "paid" : "partial";
@@ -120,6 +124,7 @@ export default function AccountsReceivable() {
       toast.success("Penerimaan berhasil dicatat");
       setShowReceiveForm(false);
       setReceiveAmount("");
+      setReceiveBank("");
       setSelectedItem(null);
       fetchData();
     } catch (error: any) {
