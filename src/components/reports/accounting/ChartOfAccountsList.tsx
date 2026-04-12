@@ -220,6 +220,15 @@ export default function ChartOfAccountsList() {
     return matchSearch && matchType;
   });
 
+  const getAccountBalance = (account: Account): number => {
+    // For classifications with dynamic data, show opening_balance + dynamic total
+    const dynamicClassifications = ["Aset tetap", "Perlengkapan", "Kewajiban jangka pendek", "Piutang"];
+    if (dynamicClassifications.includes(account.classification)) {
+      return account.opening_balance + (dynamicBalances[account.classification] || 0);
+    }
+    return account.opening_balance;
+  };
+
   const isDepreciation = (classification: string) =>
     classification.toLowerCase().includes("penyusutan");
 
