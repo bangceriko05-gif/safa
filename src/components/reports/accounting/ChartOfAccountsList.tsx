@@ -311,7 +311,7 @@ export default function ChartOfAccountsList() {
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right text-sm font-medium ${isDepreciation(account.classification) ? "text-destructive" : ""}`}>
-                      {formatCurrency(account.opening_balance, account.classification)}
+                      {formatCurrency(getAccountBalance(account), account.classification)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
