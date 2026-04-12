@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
 export type CashFlowDetailType =
+  | "saldo_awal"
   | "penerimaan_pelanggan"
   | "pembayaran_pemasok"
   | "biaya_operasional"
@@ -21,6 +22,7 @@ export type CashFlowDetailType =
   | "penambahan_modal";
 
 const DETAIL_LABELS: Record<CashFlowDetailType, string> = {
+  saldo_awal: "Detail Saldo Kas Awal",
   penerimaan_pelanggan: "Penerimaan dari pelanggan",
   pembayaran_pemasok: "Pembayaran ke pemasok",
   biaya_operasional: "Biaya operasional",
@@ -72,6 +74,107 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
 
     try {
       switch (detailType) {
+        case "saldo_awal": {
+          // Fetch COA opening balances
+          const { data: coaData } = await supabase
+            .from("chart_of_accounts")
+            .select("account_name, account_code, opening_balance, opening_balance_date")
+            .eq("store_id", storeId)
+            .eq("classification", "Kas & Bank")
+            .eq("is_active", true);
+          (coaData || []).forEach((a: any) => {
+            const amount = Number(a.opening_balance) || 0;
+            if (amount !== 0) {
+              rows.push({
+                date: a.opening_balance_date || "-",
+                bid: a.account_code || "-",
+                description: `Saldo awal akun: ${a.account_name}`,
+                debit: amount > 0 ? amount : 0,
+                credit: amount < 0 ? Math.abs(amount) : 0,
+              });
+            }
+          });
+
+          const beforeStartStr = format(new Date(startDate.getTime() - 86400000), "yyyy-MM-dd");
+
+          // Prior bookings
+          const { data: bookings } = await supabase
+            .from("bookings")
+            .select("date, bid, customer_name, price, price_2, payment_method")
+            .eq("store_id", storeId)
+            .lte("date", beforeStartStr)
+            .in("status", ["CI", "CO"]);
+          (bookings || []).forEach((b: any) => {
+            const total = (Number(b.price) || 0) + (Number(b.price_2) || 0);
+            if (total > 0) {
+              rows.push({
+                date: b.date,
+                bid: b.bid || "-",
+                description: `Penjualan: ${b.customer_name}${b.payment_method ? ` (${b.payment_method})` : ""}`,
+                debit: total,
+                credit: 0,
+              });
+            }
+          });
+
+          // Prior incomes
+          const { data: incomes } = await supabase
+            .from("incomes")
+            .select("date, bid, description, customer_name, amount, category")
+            .eq("store_id", storeId)
+            .lte("date", beforeStartStr);
+          (incomes || []).forEach((i: any) => {
+            const amount = Number(i.amount) || 0;
+            if (amount > 0) {
+              rows.push({
+                date: i.date,
+                bid: i.bid || "-",
+                description: `Pemasukan: ${i.description || i.customer_name || "Lainnya"}${i.category ? ` [${i.category}]` : ""}`,
+                debit: amount,
+                credit: 0,
+              });
+            }
+          });
+
+          // Prior expenses
+          const { data: expenses } = await supabase
+            .from("expenses")
+            .select("date, bid, description, category, amount")
+            .eq("store_id", storeId)
+            .lte("date", beforeStartStr);
+          (expenses || []).forEach((e: any) => {
+            const amount = Number(e.amount) || 0;
+            if (amount > 0) {
+              rows.push({
+                date: e.date,
+                bid: e.bid || "-",
+                description: `Pengeluaran: ${e.description}${e.category ? ` [${e.category}]` : ""}`,
+                debit: 0,
+                credit: amount,
+              });
+            }
+          });
+
+          // Prior payable payments
+          const { data: payables } = await supabase
+            .from("accounts_payable")
+            .select("created_at, supplier_name, description, paid_amount")
+            .eq("store_id", storeId)
+            .lte("created_at", format(new Date(startDate.getTime() - 86400000), "yyyy-MM-dd'T'23:59:59"));
+          (payables || []).forEach((p: any) => {
+            const amount = Number(p.paid_amount) || 0;
+            if (amount > 0) {
+              rows.push({
+                date: p.created_at.split("T")[0],
+                bid: "-",
+                description: `Pembayaran hutang: ${p.supplier_name}${p.description ? ` - ${p.description}` : ""}`,
+                debit: 0,
+                credit: amount,
+              });
+            }
+          });
+          break;
+        }
         case "penerimaan_pelanggan": {
           const { data } = await supabase
             .from("bookings")
