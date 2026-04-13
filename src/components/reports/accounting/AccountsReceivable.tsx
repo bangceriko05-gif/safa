@@ -342,7 +342,7 @@ export default function AccountsReceivable() {
                         {item.due_date ? format(new Date(item.due_date), "dd MMM yyyy", { locale: localeId }) : "-"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center py-4">
+                    <TableCell className="text-center py-4" onClick={e => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
