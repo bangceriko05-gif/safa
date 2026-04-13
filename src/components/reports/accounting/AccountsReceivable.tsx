@@ -453,6 +453,22 @@ export default function AccountsReceivable() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Edit Form */}
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Piutang</DialogTitle></DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2"><Label>Nama Pelanggan</Label><Input value={editForm.customer_name} onChange={e => setEditForm({ ...editForm, customer_name: e.target.value })} required /></div>
+            <div className="space-y-2"><Label>Keterangan</Label><Input value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Jumlah</Label><Input value={editForm.amount ? Number(editForm.amount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setEditForm({ ...editForm, amount: raw }); }} required placeholder="0" /></div>
+            <div className="space-y-2"><Label>Jatuh Tempo</Label><Input type="date" value={editForm.due_date} onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} /></div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditForm(false)}>Batal</Button>
+              <Button type="submit" className="flex-1">Simpan Perubahan</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
