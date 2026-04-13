@@ -97,7 +97,31 @@ export default function ChartOfAccountsList() {
       ]);
 
       if (accountsRes.error) throw accountsRes.error;
-      setAccounts((accountsRes.data as unknown as Account[]) || []);
+      let accountsList = (accountsRes.data as unknown as Account[]) || [];
+
+      // Auto-seed "Hutang Usaha" account if no Kewajiban jangka pendek account exists
+      const hasLiabilityAccount = accountsList.some(a => a.classification === "Kewajiban jangka pendek");
+      if (!hasLiabilityAccount) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: newAccount } = await supabase
+            .from("chart_of_accounts")
+            .insert({
+              store_id: currentStore.id,
+              account_code: "21000",
+              account_name: "Hutang Usaha",
+              classification: "Kewajiban jangka pendek",
+              created_by: user.id,
+            })
+            .select()
+            .single();
+          if (newAccount) {
+            accountsList = [...accountsList, newAccount as unknown as Account];
+          }
+        }
+      }
+
+      setAccounts(accountsList);
 
       // Calculate dynamic balances by classification
       const balances: Record<string, number> = {};
