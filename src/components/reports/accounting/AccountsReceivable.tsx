@@ -304,7 +304,7 @@ export default function AccountsReceivable() {
                 const sisa = Number(item.amount) - Number(item.received_amount);
                 const overdue = isDueDateOverdue(item.due_date) && item.status !== "paid";
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEditForm(item)}>
                     <TableCell className="text-sm py-4">
                       {format(new Date(item.created_at), "dd MMM yyyy", { locale: localeId })}
                     </TableCell>
