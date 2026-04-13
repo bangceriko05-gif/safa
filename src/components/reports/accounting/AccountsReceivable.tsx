@@ -174,6 +174,41 @@ export default function AccountsReceivable() {
     }
   };
 
+  const openEditForm = (item: Receivable) => {
+    setEditItem(item);
+    setEditForm({
+      customer_name: item.customer_name,
+      description: item.description || "",
+      amount: String(item.amount),
+      due_date: item.due_date || "",
+    });
+    setShowEditForm(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
+    try {
+      const { error } = await supabase
+        .from("accounts_receivable")
+        .update({
+          customer_name: editForm.customer_name,
+          description: editForm.description || null,
+          amount: Number(editForm.amount),
+          due_date: editForm.due_date || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editItem.id);
+      if (error) throw error;
+      toast.success("Piutang berhasil diperbarui");
+      setShowEditForm(false);
+      setEditItem(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal memperbarui piutang");
+    }
+  };
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
