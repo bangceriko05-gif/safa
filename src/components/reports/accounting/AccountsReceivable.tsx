@@ -63,6 +63,7 @@ export default function AccountsReceivable() {
     if (!currentStore) return;
     fetchData();
     fetchBankAccounts();
+    fetchPaymentMethods();
   }, [currentStore]);
 
   const fetchBankAccounts = async () => {
