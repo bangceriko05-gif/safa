@@ -44,6 +44,11 @@ export default function AccountsReceivable() {
   const [receiveAmount, setReceiveAmount] = useState("");
   const [receiveBank, setReceiveBank] = useState("");
   const [bankAccounts, setBankAccounts] = useState<{ id: string; bank_name: string; account_name: string }[]>([]);
+  const [editItem, setEditItem] = useState<Receivable | null>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editForm, setEditForm] = useState({
+    customer_name: "", description: "", amount: "", due_date: "",
+  });
   const [form, setForm] = useState({
     customer_name: "", description: "", amount: "", due_date: "",
   });
@@ -169,6 +174,41 @@ export default function AccountsReceivable() {
     }
   };
 
+  const openEditForm = (item: Receivable) => {
+    setEditItem(item);
+    setEditForm({
+      customer_name: item.customer_name,
+      description: item.description || "",
+      amount: String(item.amount),
+      due_date: item.due_date || "",
+    });
+    setShowEditForm(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
+    try {
+      const { error } = await supabase
+        .from("accounts_receivable")
+        .update({
+          customer_name: editForm.customer_name,
+          description: editForm.description || null,
+          amount: Number(editForm.amount),
+          due_date: editForm.due_date || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editItem.id);
+      if (error) throw error;
+      toast.success("Piutang berhasil diperbarui");
+      setShowEditForm(false);
+      setEditItem(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal memperbarui piutang");
+    }
+  };
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
@@ -264,7 +304,7 @@ export default function AccountsReceivable() {
                 const sisa = Number(item.amount) - Number(item.received_amount);
                 const overdue = isDueDateOverdue(item.due_date) && item.status !== "paid";
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEditForm(item)}>
                     <TableCell className="text-sm py-4">
                       {format(new Date(item.created_at), "dd MMM yyyy", { locale: localeId })}
                     </TableCell>
@@ -302,7 +342,7 @@ export default function AccountsReceivable() {
                         {item.due_date ? format(new Date(item.due_date), "dd MMM yyyy", { locale: localeId }) : "-"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center py-4">
+                    <TableCell className="text-center py-4" onClick={e => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -411,6 +451,22 @@ export default function AccountsReceivable() {
             </div>
             <Button onClick={handleReceive} className="w-full">Konfirmasi Penerimaan</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Form */}
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Piutang</DialogTitle></DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2"><Label>Nama Pelanggan</Label><Input value={editForm.customer_name} onChange={e => setEditForm({ ...editForm, customer_name: e.target.value })} required /></div>
+            <div className="space-y-2"><Label>Keterangan</Label><Input value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Jumlah</Label><Input value={editForm.amount ? Number(editForm.amount).toLocaleString("id-ID") : ""} onChange={e => { const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, ""); setEditForm({ ...editForm, amount: raw }); }} required placeholder="0" /></div>
+            <div className="space-y-2"><Label>Jatuh Tempo</Label><Input type="date" value={editForm.due_date} onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} /></div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditForm(false)}>Batal</Button>
+              <Button type="submit" className="flex-1">Simpan Perubahan</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
