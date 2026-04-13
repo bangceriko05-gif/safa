@@ -454,7 +454,11 @@ export default function AccountsReceivable() {
                   <SelectValue placeholder="Pilih rekening tujuan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Kas (Cash)</SelectItem>
+                  {paymentMethods.map(pm => (
+                    <SelectItem key={pm.id} value={pm.id}>
+                      {pm.name}
+                    </SelectItem>
+                  ))}
                   {bankAccounts.map(bank => (
                     <SelectItem key={bank.id} value={bank.id}>
                       {bank.bank_name} - {bank.account_name}
