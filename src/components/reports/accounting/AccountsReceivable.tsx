@@ -44,6 +44,7 @@ export default function AccountsReceivable() {
   const [receiveAmount, setReceiveAmount] = useState("");
   const [receiveBank, setReceiveBank] = useState("");
   const [bankAccounts, setBankAccounts] = useState<{ id: string; bank_name: string; account_name: string }[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; name: string }[]>([]);
   const [editItem, setEditItem] = useState<Receivable | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editForm, setEditForm] = useState({
