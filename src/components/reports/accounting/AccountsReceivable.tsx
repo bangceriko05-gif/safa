@@ -77,6 +77,18 @@ export default function AccountsReceivable() {
     setBankAccounts(data || []);
   };
 
+  const fetchPaymentMethods = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("payment_methods")
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .eq("is_active", true)
+      .neq("name", "HUTANG")
+      .order("name");
+    setPaymentMethods(data || []);
+  };
+
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
