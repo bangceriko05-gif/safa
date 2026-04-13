@@ -44,6 +44,7 @@ export default function AccountsReceivable() {
   const [receiveAmount, setReceiveAmount] = useState("");
   const [receiveBank, setReceiveBank] = useState("");
   const [bankAccounts, setBankAccounts] = useState<{ id: string; bank_name: string; account_name: string }[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; name: string }[]>([]);
   const [editItem, setEditItem] = useState<Receivable | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -62,6 +63,7 @@ export default function AccountsReceivable() {
     if (!currentStore) return;
     fetchData();
     fetchBankAccounts();
+    fetchPaymentMethods();
   }, [currentStore]);
 
   const fetchBankAccounts = async () => {
@@ -73,6 +75,18 @@ export default function AccountsReceivable() {
       .eq("is_active", true)
       .order("bank_name");
     setBankAccounts(data || []);
+  };
+
+  const fetchPaymentMethods = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("payment_methods")
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .eq("is_active", true)
+      .neq("name", "HUTANG")
+      .order("name");
+    setPaymentMethods(data || []);
   };
 
   const fetchData = async () => {
@@ -440,7 +454,11 @@ export default function AccountsReceivable() {
                   <SelectValue placeholder="Pilih rekening tujuan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Kas (Cash)</SelectItem>
+                  {paymentMethods.map(pm => (
+                    <SelectItem key={pm.id} value={pm.id}>
+                      {pm.name}
+                    </SelectItem>
+                  ))}
                   {bankAccounts.map(bank => (
                     <SelectItem key={bank.id} value={bank.id}>
                       {bank.bank_name} - {bank.account_name}
