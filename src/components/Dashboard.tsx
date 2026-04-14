@@ -811,7 +811,10 @@ export default function Dashboard() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
