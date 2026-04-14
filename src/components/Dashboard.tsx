@@ -94,6 +94,10 @@ export default function Dashboard() {
   const [depositRoomName, setDepositRoomName] = useState("");
   const [showDepositFormModal, setShowDepositFormModal] = useState(false);
   const [depositRefreshTrigger, setDepositRefreshTrigger] = useState(0);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [profileData, setProfileData] = useState({ name: "", email: "", phone: "" });
+  const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [profileSaving, setProfileSaving] = useState(false);
   const navigate = useNavigate();
   const { hasPermission: checkPerm, hasAnyPermission } = usePermissions();
 
