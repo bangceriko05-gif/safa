@@ -246,8 +246,65 @@ export default function Dashboard() {
       navigate("/auth");
     }
   };
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("name, email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data) {
+      setProfileData({ name: data.name || "", email: data.email || "", phone: "" });
+    }
+  };
 
-  const handleAddBooking = (roomId: string, timeOrDate: string) => {
+  const openProfileDialog = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+      setProfileForm({
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        password: "",
+      });
+      setShowProfileDialog(true);
+    }
+  };
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setProfileSaving(true);
+    try {
+      // Update profile table
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ name: profileForm.name })
+        .eq("id", user.id);
+      if (profileError) throw profileError;
+
+      // Update email if changed
+      if (profileForm.email && profileForm.email !== profileData.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: profileForm.email });
+        if (emailError) throw emailError;
+      }
+
+      // Update password if provided
+      if (profileForm.password) {
+        const { error: pwError } = await supabase.auth.updateUser({ password: profileForm.password });
+        if (pwError) throw pwError;
+      }
+
+      setProfileData({ name: profileForm.name, email: profileForm.email, phone: profileForm.phone });
+      toast.success("Profil berhasil diperbarui");
+      setShowProfileDialog(false);
+    } catch (error: any) {
+      toast.error(error.message || "Gagal memperbarui profil");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+
     // Check if this is a PMS calendar call (date format) or time-based call
     const isPMSMode = currentStore?.calendar_type === "pms";
     
