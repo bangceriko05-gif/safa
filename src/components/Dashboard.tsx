@@ -304,7 +304,7 @@ export default function Dashboard() {
     }
   };
 
-
+  const handleAddBooking = (roomId: string, timeOrDate: string) => {
     // Check if this is a PMS calendar call (date format) or time-based call
     const isPMSMode = currentStore?.calendar_type === "pms";
     
