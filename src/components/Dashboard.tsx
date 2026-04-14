@@ -442,164 +442,162 @@ export default function Dashboard() {
     );
   }
 
+  const sidebarMenuItems = [
+    { key: "bookings", label: "Kalender", icon: Calendar },
+    { key: "transactions", label: "Transaksi", icon: Receipt },
+    { key: "customers", label: "Pelanggan", icon: Users },
+    { key: "reports", label: "Laporan", icon: FileText },
+    { key: "settings", label: "Pengaturan", icon: Settings },
+    { key: "rooms", label: "Produk & Inventori", icon: Package },
+    ...(userRole === "admin" || userRole === "leader"
+      ? [
+          { key: "activity", label: "Log", icon: History },
+          { key: "users", label: "Pengguna", icon: UserCog },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="min-h-screen p-4 md:p-6" style={{ background: "var(--gradient-main)" }}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
-            <p className="text-muted-foreground">
-              Selamat datang, {user.email} ({
-                userRole === "owner" ? "Owner" :
-                userRole === "admin" ? "Admin" : 
-                userRole === "akuntan" ? "Akuntan" :
-                userRole === "leader" ? "Leader" : 
-                "User"
-              })
-            </p>
-            {currentStore.subscription_end_date && (() => {
-              const endDate = new Date(currentStore.subscription_end_date);
-              const daysLeft = differenceInDays(endDate, new Date());
-              const endFormatted = format(endDate, "d MMMM yyyy", { locale: idLocale });
-              if (daysLeft < 0) {
-                return (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
-                    ⚠️ Langganan expired sejak {endFormatted}
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full" style={{ background: "var(--gradient-main)" }}>
+        {/* Left Sidebar - Desktop only */}
+        <Sidebar collapsible="icon" className="hidden lg:flex border-r bg-background">
+          <SidebarContent className="pt-4">
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {sidebarMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        isActive={activeTab === item.key}
+                        onClick={() => setActiveTab(item.key)}
+                        tooltip={item.label}
+                        className="gap-3"
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="p-4 md:p-6">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Header */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-start gap-3">
+                  {/* Sidebar toggle - Desktop */}
+                  <SidebarTrigger className="hidden lg:flex mt-1.5" />
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
+                    <p className="text-muted-foreground">
+                      Selamat datang, {user.email} ({
+                        userRole === "owner" ? "Owner" :
+                        userRole === "admin" ? "Admin" : 
+                        userRole === "akuntan" ? "Akuntan" :
+                        userRole === "leader" ? "Leader" : 
+                        "User"
+                      })
+                    </p>
+                    {currentStore.subscription_end_date && (() => {
+                      const endDate = new Date(currentStore.subscription_end_date);
+                      const daysLeft = differenceInDays(endDate, new Date());
+                      const endFormatted = format(endDate, "d MMMM yyyy", { locale: idLocale });
+                      if (daysLeft < 0) {
+                        return (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
+                            ⚠️ Langganan expired sejak {endFormatted}
+                          </div>
+                        );
+                      }
+                      if (daysLeft <= 7) {
+                        return (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
+                            ⏰ Langganan berakhir {endFormatted} ({daysLeft} hari lagi)
+                          </div>
+                        );
+                      }
+                      if (daysLeft <= 30) {
+                        return (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-700 text-xs font-medium">
+                            📅 Langganan berakhir {endFormatted} ({daysLeft} hari lagi)
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                          ✅ Aktif hingga {endFormatted} ({daysLeft} hari lagi)
+                        </div>
+                      );
+                    })()}
+                    <StoreSelector />
                   </div>
-                );
-              }
-              if (daysLeft <= 7) {
-                return (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
-                    ⏰ Langganan berakhir {endFormatted} ({daysLeft} hari lagi)
-                  </div>
-                );
-              }
-              if (daysLeft <= 30) {
-                return (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-700 text-xs font-medium">
-                    📅 Langganan berakhir {endFormatted} ({daysLeft} hari lagi)
-                  </div>
-                );
-              }
-              return (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                  ✅ Aktif hingga {endFormatted} ({daysLeft} hari lagi)
                 </div>
-              );
-            })()}
-            <StoreSelector />
-          </div>
-          <div className="flex gap-2">
-            {isFeatureEnabled("deposit") && activeTab === "bookings" && (
-              <Button 
-                onClick={() => setDepositMode(!depositMode)} 
-                variant={depositMode ? "default" : "outline"}
-                className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
-                size="default"
-              >
-                <Shield className="lg:mr-2 h-4 w-4" />
-                <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
-              </Button>
-            )}
-            <Button onClick={handleLogout} variant="outline">
-              <LogOut className="lg:mr-2 h-4 w-4" />
-              <span className="hidden lg:inline">Logout</span>
-            </Button>
-          </div>
-        </div>
+                <div className="flex gap-2">
+                  {isFeatureEnabled("deposit") && activeTab === "bookings" && (
+                    <Button 
+                      onClick={() => setDepositMode(!depositMode)} 
+                      variant={depositMode ? "default" : "outline"}
+                      className={depositMode ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                      size="default"
+                    >
+                      <Shield className="lg:mr-2 h-4 w-4" />
+                      <span className="hidden lg:inline">{depositMode ? "Batal Pilih" : "Deposit"}</span>
+                    </Button>
+                  )}
+                  <Button onClick={handleLogout} variant="outline">
+                    <LogOut className="lg:mr-2 h-4 w-4" />
+                    <span className="hidden lg:inline">Logout</span>
+                  </Button>
+                </div>
+              </div>
 
-        {/* Tabs for Bookings and User Management */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          {/* Mobile: Dropdown */}
-          <div className="lg:hidden">
-            <Select value={activeTab} onValueChange={setActiveTab}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bookings">
-                  <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
-                </SelectItem>
-                <SelectItem value="transactions">
-                  <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
-                </SelectItem>
-                <SelectItem value="customers">
-                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
-                </SelectItem>
-                <SelectItem value="reports">
-                  <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
-                </SelectItem>
-                <SelectItem value="settings">
-                  <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
-                </SelectItem>
-                <SelectItem value="rooms">
-                  <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
-                </SelectItem>
-                {(userRole === "admin" || userRole === "leader") && (
-                  <>
-                    <SelectItem value="activity">
-                      <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
-                    </SelectItem>
-                    <SelectItem value="users">
-                      <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
-                    </SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Desktop: Tabs */}
-          {(() => {
-            const tabs = ["calendar", "transactions", "customers", "reports", "settings", "products_inventory"];
-            if (userRole === "admin" || userRole === "leader") {
-              tabs.push("activity_log", "user_management");
-            }
-            const cols = tabs.length;
-
-            return (
-              <TabsList className="hidden lg:grid w-full max-w-7xl" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-                <TabsTrigger value="bookings">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Kalender
-                </TabsTrigger>
-                <TabsTrigger value="transactions">
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Transaksi
-                </TabsTrigger>
-                <TabsTrigger value="customers">
-                  <Users className="mr-2 h-4 w-4" />
-                  Pelanggan
-                </TabsTrigger>
-                <TabsTrigger value="reports">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Laporan
-                </TabsTrigger>
-                <TabsTrigger value="settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Pengaturan
-                </TabsTrigger>
-                <TabsTrigger value="rooms">
-                  <Package className="mr-2 h-4 w-4" />
-                  Produk & Inventori
-                </TabsTrigger>
-                {(userRole === "admin" || userRole === "leader") && (
-                  <>
-                    <TabsTrigger value="activity">
-                      <History className="mr-2 h-4 w-4" />
-                      Log
-                    </TabsTrigger>
-                    <TabsTrigger value="users">
-                      <UserCog className="mr-2 h-4 w-4" />
-                      Pengguna
-                    </TabsTrigger>
-                  </>
-                )}
-              </TabsList>
-            );
-          })()}
+              {/* Tabs wrapper - keeps TabsContent working */}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                {/* Mobile: Dropdown */}
+                <div className="lg:hidden">
+                  <Select value={activeTab} onValueChange={setActiveTab}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bookings">
+                        <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
+                      </SelectItem>
+                      <SelectItem value="transactions">
+                        <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
+                      </SelectItem>
+                      <SelectItem value="customers">
+                        <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
+                      </SelectItem>
+                      <SelectItem value="reports">
+                        <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
+                      </SelectItem>
+                      <SelectItem value="settings">
+                        <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
+                      </SelectItem>
+                      <SelectItem value="rooms">
+                        <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
+                      </SelectItem>
+                      {(userRole === "admin" || userRole === "leader") && (
+                        <>
+                          <SelectItem value="activity">
+                            <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
+                          </SelectItem>
+                          <SelectItem value="users">
+                            <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
+                          </SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
 
           <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
             {isFeatureEnabled("calendar") ? (
@@ -813,7 +811,10 @@ export default function Dashboard() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
