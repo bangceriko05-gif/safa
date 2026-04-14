@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, PanelLeft } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, PanelLeft, UserCircle, Phone, Mail, Lock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
@@ -19,6 +20,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +94,10 @@ export default function Dashboard() {
   const [depositRoomName, setDepositRoomName] = useState("");
   const [showDepositFormModal, setShowDepositFormModal] = useState(false);
   const [depositRefreshTrigger, setDepositRefreshTrigger] = useState(0);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [profileData, setProfileData] = useState({ name: "", email: "", phone: "" });
+  const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [profileSaving, setProfileSaving] = useState(false);
   const navigate = useNavigate();
   const { hasPermission: checkPerm, hasAnyPermission } = usePermissions();
 
@@ -186,6 +195,7 @@ export default function Dashboard() {
       setSession(session);
       setUser(session.user);
       fetchUserRole(session.user.id);
+      fetchProfile(session.user.id);
     });
 
     // Listen for display size changes
@@ -235,6 +245,65 @@ export default function Dashboard() {
       setSession(null);
       setUserRole(null);
       navigate("/auth");
+    }
+  };
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("name, email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data) {
+      setProfileData({ name: data.name || "", email: data.email || "", phone: "" });
+    }
+  };
+
+  const openProfileDialog = async () => {
+    if (user) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      const pName = data?.name || "";
+      const pEmail = data?.email || user.email || "";
+      setProfileData({ name: pName, email: pEmail, phone: "" });
+      setProfileForm({ name: pName, email: pEmail, phone: "", password: "" });
+      setShowProfileDialog(true);
+    }
+  };
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setProfileSaving(true);
+    try {
+      // Update profile table
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ name: profileForm.name })
+        .eq("id", user.id);
+      if (profileError) throw profileError;
+
+      // Update email if changed
+      if (profileForm.email && profileForm.email !== profileData.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: profileForm.email });
+        if (emailError) throw emailError;
+      }
+
+      // Update password if provided
+      if (profileForm.password) {
+        const { error: pwError } = await supabase.auth.updateUser({ password: profileForm.password });
+        if (pwError) throw pwError;
+      }
+
+      setProfileData({ name: profileForm.name, email: profileForm.email, phone: profileForm.phone });
+      toast.success("Profil berhasil diperbarui");
+      setShowProfileDialog(false);
+    } catch (error: any) {
+      toast.error(error.message || "Gagal memperbarui profil");
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -483,6 +552,37 @@ export default function Dashboard() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="border-t p-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={openProfileDialog}
+                  tooltip="Profil"
+                  className="gap-3"
+                >
+                  <Avatar className="h-6 w-6 shrink-0">
+                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                      {(profileData.name || user?.email || "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col text-left min-w-0">
+                    <span className="text-sm font-medium truncate">{profileData.name || "Profil"}</span>
+                    <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleLogout}
+                  tooltip="Logout"
+                  className="gap-3 text-destructive hover:text-destructive"
+                >
+                  <LogOut className="h-5 w-5 shrink-0" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
         </Sidebar>
 
         {/* Main Content */}
@@ -815,6 +915,62 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Profile Dialog */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCircle className="h-5 w-5" />
+              Profil Saya
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleProfileSave} className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><UserCircle className="h-4 w-4" /> Nama</Label>
+              <Input
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                placeholder="Nama lengkap"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
+              <Input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                placeholder="email@contoh.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Password Baru</Label>
+              <Input
+                type="password"
+                value={profileForm.password}
+                onChange={(e) => setProfileForm({ ...profileForm, password: e.target.value })}
+                placeholder="Kosongkan jika tidak diubah"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Nomor HP</Label>
+              <Input
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                placeholder="08xxxxxxxxxx"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowProfileDialog(false)}>
+                Batal
+              </Button>
+              <Button type="submit" className="flex-1" disabled={profileSaving}>
+                {profileSaving ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
