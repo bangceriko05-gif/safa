@@ -260,13 +260,15 @@ export default function Dashboard() {
 
   const openProfileDialog = async () => {
     if (user) {
-      await fetchProfile(user.id);
-      setProfileForm({
-        name: profileData.name,
-        email: profileData.email,
-        phone: profileData.phone,
-        password: "",
-      });
+      const { data } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      const pName = data?.name || "";
+      const pEmail = data?.email || user.email || "";
+      setProfileData({ name: pName, email: pEmail, phone: "" });
+      setProfileForm({ name: pName, email: pEmail, phone: "", password: "" });
       setShowProfileDialog(true);
     }
   };
