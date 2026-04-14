@@ -195,6 +195,7 @@ export default function Dashboard() {
       setSession(session);
       setUser(session.user);
       fetchUserRole(session.user.id);
+      fetchProfile(session.user.id);
     });
 
     // Listen for display size changes
