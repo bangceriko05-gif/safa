@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, PanelLeft } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, PanelLeft, UserCircle, Phone, Mail, Lock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
