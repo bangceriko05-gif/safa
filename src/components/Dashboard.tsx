@@ -913,6 +913,62 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Profile Dialog */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCircle className="h-5 w-5" />
+              Profil Saya
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleProfileSave} className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><UserCircle className="h-4 w-4" /> Nama</Label>
+              <Input
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                placeholder="Nama lengkap"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
+              <Input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                placeholder="email@contoh.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Password Baru</Label>
+              <Input
+                type="password"
+                value={profileForm.password}
+                onChange={(e) => setProfileForm({ ...profileForm, password: e.target.value })}
+                placeholder="Kosongkan jika tidak diubah"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Nomor HP</Label>
+              <Input
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                placeholder="08xxxxxxxxxx"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowProfileDialog(false)}>
+                Batal
+              </Button>
+              <Button type="submit" className="flex-1" disabled={profileSaving}>
+                {profileSaving ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
