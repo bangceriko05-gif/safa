@@ -550,6 +550,37 @@ export default function Dashboard() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="border-t p-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={openProfileDialog}
+                  tooltip="Profil"
+                  className="gap-3"
+                >
+                  <Avatar className="h-6 w-6 shrink-0">
+                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                      {(profileData.name || user?.email || "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col text-left min-w-0">
+                    <span className="text-sm font-medium truncate">{profileData.name || "Profil"}</span>
+                    <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleLogout}
+                  tooltip="Logout"
+                  className="gap-3 text-destructive hover:text-destructive"
+                >
+                  <LogOut className="h-5 w-5 shrink-0" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
         </Sidebar>
 
         {/* Main Content */}
