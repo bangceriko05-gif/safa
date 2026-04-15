@@ -749,8 +749,10 @@ export type Database = {
       }
       customers: {
         Row: {
+          birth_date: string | null
           created_at: string
           created_by: string
+          domicile: string | null
           email: string | null
           id: string
           identity_document_url: string | null
@@ -763,8 +765,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          birth_date?: string | null
           created_at?: string
           created_by: string
+          domicile?: string | null
           email?: string | null
           id?: string
           identity_document_url?: string | null
@@ -777,8 +781,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          birth_date?: string | null
           created_at?: string
           created_by?: string
+          domicile?: string | null
           email?: string | null
           id?: string
           identity_document_url?: string | null
