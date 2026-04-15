@@ -779,8 +779,28 @@ export default function CustomerManagement() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Catatan</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="birth_date">Tanggal Lahir</Label>
+                <Input
+                  id="birth_date"
+                  type="date"
+                  value={formData.birth_date}
+                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="domicile">Domisili</Label>
+                <Input
+                  id="domicile"
+                  value={formData.domicile}
+                  onChange={(e) => setFormData({ ...formData, domicile: e.target.value })}
+                  placeholder="Kota/Kabupaten"
+                  maxLength={200}
+                />
+              </div>
+            </div>
+
               <Textarea
                 id="notes"
                 value={formData.notes}
