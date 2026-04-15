@@ -433,6 +433,8 @@ export default function CustomerManagement() {
       phone: "",
       email: "",
       notes: "",
+      birth_date: "",
+      domicile: "",
       identity_type: "",
       identity_number: "",
     });
