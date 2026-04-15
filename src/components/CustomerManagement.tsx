@@ -521,17 +521,19 @@ export default function CustomerManagement() {
                 <CreditCard className="mr-2 h-4 w-4" />
                 Belum Upload KTP
               </Button>
-              <Button
-                variant={isSelectionMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  setSelectedIds(new Set());
-                }}
-              >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {isSelectionMode ? "Batal Pilih" : "Pilih"}
-              </Button>
+              {hasPermission("manage_customers") && (
+                <Button
+                  variant={isSelectionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  {isSelectionMode ? "Batal Pilih" : "Pilih"}
+                </Button>
+              )}
               {isSelectionMode && selectedIds.size > 0 && (
                 <Button
                   variant="destructive"
