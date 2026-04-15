@@ -801,6 +801,8 @@ export default function CustomerManagement() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="notes">Catatan</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
