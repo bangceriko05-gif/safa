@@ -578,6 +578,8 @@ export default function CustomerManagement() {
                   <TableHead>Nomor HP</TableHead>
                   <TableHead>Identitas</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Tgl Lahir</TableHead>
+                  <TableHead>Domisili</TableHead>
                   <TableHead>Catatan</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -585,7 +587,7 @@ export default function CustomerManagement() {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isSelectionMode ? 7 : 6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={isSelectionMode ? 9 : 8} className="text-center text-muted-foreground py-8">
                       {customers.length === 0 ? "Belum ada data pelanggan" : "Tidak ada pelanggan yang cocok dengan filter"}
                     </TableCell>
                   </TableRow>
@@ -633,6 +635,12 @@ export default function CustomerManagement() {
                           )}
                         </TableCell>
                         <TableCell>{customer.email || "-"}</TableCell>
+                        <TableCell>
+                          {customer.birth_date
+                            ? new Date(customer.birth_date).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })
+                            : "-"}
+                        </TableCell>
+                        <TableCell>{customer.domicile || "-"}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {customer.notes || "-"}
                         </TableCell>
