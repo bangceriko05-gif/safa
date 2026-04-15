@@ -60,7 +60,7 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
-  const { hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -473,10 +473,12 @@ export default function CustomerManagement() {
           <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Pelanggan
-          </Button>
+          {hasPermission("manage_customers") && (
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Pelanggan
+            </Button>
+          )}
         </div>
       </div>
 
@@ -519,17 +521,19 @@ export default function CustomerManagement() {
                 <CreditCard className="mr-2 h-4 w-4" />
                 Belum Upload KTP
               </Button>
-              <Button
-                variant={isSelectionMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  setSelectedIds(new Set());
-                }}
-              >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {isSelectionMode ? "Batal Pilih" : "Pilih"}
-              </Button>
+              {hasPermission("manage_customers") && (
+                <Button
+                  variant={isSelectionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  {isSelectionMode ? "Batal Pilih" : "Pilih"}
+                </Button>
+              )}
               {isSelectionMode && selectedIds.size > 0 && (
                 <Button
                   variant="destructive"
@@ -575,7 +579,7 @@ export default function CustomerManagement() {
                   </TableRow>
                 ) : (
                   paginatedCustomers.map((customer) => {
-                    const canModify = userRole === "admin" || userRole === "leader" || customer.created_by === userId;
+                    const canModify = hasPermission("manage_customers");
                     
                     return (
                       <TableRow key={customer.id} className={selectedIds.has(customer.id) ? "bg-primary/5" : ""}>
