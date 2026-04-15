@@ -51,6 +51,8 @@ interface Customer {
   phone: string;
   email: string | null;
   notes: string | null;
+  birth_date: string | null;
+  domicile: string | null;
   identity_type: string | null;
   identity_number: string | null;
   identity_document_url: string | null;
@@ -72,6 +74,8 @@ export default function CustomerManagement() {
     phone: "",
     email: "",
     notes: "",
+    birth_date: "",
+    domicile: "",
     identity_type: "",
     identity_number: "",
   });
@@ -241,6 +245,8 @@ export default function CustomerManagement() {
             phone: formData.phone,
             email: formData.email || null,
             notes: formData.notes || null,
+            birth_date: formData.birth_date || null,
+            domicile: formData.domicile || null,
             identity_type: formData.identity_type || null,
             identity_number: formData.identity_number || null,
             identity_document_url: identityDocUrl,
@@ -272,6 +278,8 @@ export default function CustomerManagement() {
             phone: formData.phone,
             email: formData.email || null,
             notes: formData.notes || null,
+            birth_date: formData.birth_date || null,
+            domicile: formData.domicile || null,
             identity_type: formData.identity_type || null,
             identity_number: formData.identity_number || null,
             created_by: userId,
@@ -323,6 +331,8 @@ export default function CustomerManagement() {
       phone: customer.phone,
       email: customer.email || "",
       notes: customer.notes || "",
+      birth_date: customer.birth_date || "",
+      domicile: customer.domicile || "",
       identity_type: customer.identity_type || "",
       identity_number: customer.identity_number || "",
     });
