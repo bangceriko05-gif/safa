@@ -473,10 +473,12 @@ export default function CustomerManagement() {
           <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
         <div className="flex items-center gap-2">
-          {hasPermission("manage_customers") && <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Pelanggan
-          </Button>
+          {hasPermission("manage_customers") && (
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Pelanggan
+            </Button>
+          )}
         </div>
       </div>
 
