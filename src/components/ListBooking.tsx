@@ -120,7 +120,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   };
 
   const hasPermission = (permissionName: string) => {
-    return userPermissions.includes(permissionName) || userRole === "admin";
+    return userPermissions.includes(permissionName) || userRole === "admin" || userRole === "owner" || userRole === "akuntan";
   };
 
   useEffect(() => {
@@ -262,9 +262,9 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         return;
       }
 
-      // Check if user is trying to restore from BATAL - requires admin only
-      if (currentStatus === "BATAL" && userRole !== "admin") {
-        toast.error("Hanya Admin yang dapat memulihkan booking yang dibatalkan");
+      // Check if user is trying to restore from BATAL - requires admin/owner/akuntan
+      if (currentStatus === "BATAL" && userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan") {
+        toast.error("Anda tidak memiliki izin untuk memulihkan booking yang dibatalkan");
         return;
       }
       
@@ -424,16 +424,14 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const isStatusBatal = (status: string | null) => status === "BATAL";
 
   const canChangeStatus = (booking: BookingWithRoom) => {
-    // If status is BATAL and user is not admin, cannot change
-    if (isStatusBatal(booking.status) && userRole !== "admin") {
+    if (isStatusBatal(booking.status) && userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan") {
       return false;
     }
     return true;
   };
 
   const canEdit = (booking: BookingWithRoom) => {
-    // If status is BATAL and user is not admin, cannot edit
-    if (isStatusBatal(booking.status) && userRole !== "admin") {
+    if (isStatusBatal(booking.status) && userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan") {
       return false;
     }
     return true;
@@ -699,7 +697,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                     </DropdownMenuItem>
                                   )}
                                   
-                                  {userRole === "admin" && booking.status === "BATAL" && (
+                                  {(userRole === "admin" || userRole === "owner" || userRole === "akuntan") && booking.status === "BATAL" && (
                                     <DropdownMenuItem onClick={() => handleStatusChange(booking.id, "BO", booking.status)}>
                                       <Undo className="mr-2 h-4 w-4" />
                                       Pulihkan ke Reservasi
