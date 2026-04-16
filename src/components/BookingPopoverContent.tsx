@@ -190,7 +190,7 @@ export default function BookingPopoverContent({
                   {getStatusLabel(newStatus)}
                 </DropdownMenuItem>
               ))}
-              {userRole === "admin" && (
+              {(userRole === "admin" || userRole === "owner" || userRole === "akuntan") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -419,7 +419,7 @@ export default function BookingPopoverContent({
       {/* Action Buttons */}
       <div className="flex gap-2 pt-2 border-t">
         {hasPermission("edit_bookings") &&
-          (status !== "BATAL" || userRole === "admin") && (
+          (status !== "BATAL" || userRole === "admin" || userRole === "owner" || userRole === "akuntan") && (
             <Button
               size="sm"
               variant="outline"
@@ -431,7 +431,7 @@ export default function BookingPopoverContent({
             </Button>
           )}
         {hasPermission("delete_bookings") &&
-          (status !== "BATAL" || userRole === "admin") && (
+          (status !== "BATAL" || userRole === "admin" || userRole === "owner" || userRole === "akuntan") && (
             <Button
               size="sm"
               variant="destructive"
@@ -442,7 +442,7 @@ export default function BookingPopoverContent({
               Hapus
             </Button>
           )}
-        {status === "BATAL" && userRole !== "admin" && (
+        {status === "BATAL" && userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan" && (
           <div className="flex-1 text-center text-sm text-muted-foreground py-2">
             Booking dibatalkan
           </div>
