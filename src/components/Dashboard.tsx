@@ -518,7 +518,7 @@ export default function Dashboard() {
     { key: "reports", label: "Laporan", icon: FileText },
     { key: "settings", label: "Pengaturan", icon: Settings },
     { key: "rooms", label: "Produk & Inventori", icon: Package },
-    ...(userRole === "admin" || userRole === "leader"
+    ...(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan"
       ? [
           { key: "activity", label: "Log", icon: History },
           { key: "users", label: "Pengguna", icon: UserCog },
@@ -685,7 +685,7 @@ export default function Dashboard() {
                       <SelectItem value="rooms">
                         <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
                       </SelectItem>
-                      {(userRole === "admin" || userRole === "leader") && (
+                      {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
                         <>
                           <SelectItem value="activity">
                             <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
@@ -819,7 +819,7 @@ export default function Dashboard() {
           </TabsContent>
 
 
-          {(userRole === "admin" || userRole === "leader") && (
+          {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
             <>
               <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
                 {isFeatureEnabled("activity_log") ? (
@@ -832,12 +832,12 @@ export default function Dashboard() {
               <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
                 {isFeatureEnabled("user_management") ? (
                   <Tabs defaultValue="user-management" className="space-y-4">
-                    <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: userRole === "admin" ? "1fr 1fr" : "1fr" }}>
+                    <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: (userRole === "admin" || userRole === "owner") ? "1fr 1fr" : "1fr" }}>
                       <TabsTrigger value="user-management" className="flex items-center gap-2">
                         <UserCog className="h-4 w-4" />
                         Manajemen Pengguna
                       </TabsTrigger>
-                      {userRole === "admin" && (
+                      {(userRole === "admin" || userRole === "owner") && (
                         <TabsTrigger value="permission-management" className="flex items-center gap-2">
                           <Shield className="h-4 w-4" />
                           Manajemen Permission
@@ -847,7 +847,7 @@ export default function Dashboard() {
                     <TabsContent value="user-management">
                       <UserManagement />
                     </TabsContent>
-                    {userRole === "admin" && (
+                    {(userRole === "admin" || userRole === "owner") && (
                       <TabsContent value="permission-management">
                         <PermissionManagement />
                       </TabsContent>

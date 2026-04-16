@@ -375,7 +375,7 @@ export default function ProductManagement() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {(userRole === "admin" || userRole === "leader") && (
+                        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
                           <Button
                             variant="outline"
                             size="sm"

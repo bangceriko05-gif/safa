@@ -126,7 +126,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
     }
   };
 
-  const canEditColors = userRole === "admin" || userRole === "leader";
+  const canEditColors = userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan";
 
   const applyFontSettings = () => {
     document.documentElement.style.fontFamily = `var(--font-${fontFamily})`;
@@ -682,7 +682,7 @@ export default function DisplaySettings({ userRole }: DisplaySettingsProps) {
       </Card>
 
       {/* Room Variant Schedule Settings - Admin/Leader Only */}
-      {(userRole === "admin" || userRole === "leader") && (
+      {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

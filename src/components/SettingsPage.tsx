@@ -251,7 +251,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     toast.success("Warna Ready (Sudah Dipakai) berhasil diubah");
   };
 
-  const canEditColors = userRole === "admin" || userRole === "leader";
+  const canEditColors = userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan";
 
   const colorOptions = [
     { value: "#87CEEB", label: "Sky Blue" },
@@ -306,10 +306,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {(() => {
           const settingsTabs = ["display", "colors", "notifications"];
-          if (userRole === "admin" || userRole === "leader") {
+          if (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") {
             settingsTabs.push("print", "rooms", "ota", "payment-methods");
           }
-          if (userRole === "admin") settingsTabs.push("outlet");
+          if (userRole === "admin" || userRole === "owner") settingsTabs.push("outlet");
           const cols = settingsTabs.length;
 
           return (
@@ -326,7 +326,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                 <Bell className="mr-1 sm:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Notifikasi</span>
               </TabsTrigger>
-              {(userRole === "admin" || userRole === "leader") && (
+              {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
                 <>
                   <TabsTrigger value="print" className="text-xs sm:text-sm">
                     <Printer className="mr-1 sm:mr-2 h-4 w-4" />
@@ -589,7 +589,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         </TabsContent>
 
         {/* Print Settings */}
-        {(userRole === "admin" || userRole === "leader") && (
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
           <TabsContent value="print" className="mt-4">
             {isFeatureEnabled("settings.print") ? (
               <PrintSettingsComponent />
@@ -600,7 +600,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         )}
 
         {/* Room Settings */}
-        {(userRole === "admin" || userRole === "leader") && (
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
           <TabsContent value="rooms" className="mt-4">
             {isFeatureEnabled("settings.rooms") ? (
               <>
@@ -633,7 +633,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         )}
 
         {/* OTA Management */}
-        {(userRole === "admin" || userRole === "leader") && (
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
           <TabsContent value="ota" className="mt-4">
             {isFeatureEnabled("settings.ota") ? (
               <OtaSourceManagement />
@@ -644,7 +644,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         )}
 
         {/* Payment Method Settings */}
-        {(userRole === "admin" || userRole === "leader") && (
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
           <TabsContent value="payment-methods" className="mt-4">
             <PaymentMethodSettings />
           </TabsContent>
