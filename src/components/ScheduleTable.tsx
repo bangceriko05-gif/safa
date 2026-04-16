@@ -244,7 +244,7 @@ export default function ScheduleTable({
   };
 
   const hasPermission = (permissionName: string) => {
-    return userPermissions.includes(permissionName) || userRole === "admin";
+    return userPermissions.includes(permissionName) || userRole === "admin" || userRole === "owner" || userRole === "akuntan";
   };
 
   const fetchRoomDeposits = async () => {
@@ -1280,7 +1280,7 @@ export default function ScheduleTable({
                                                 {getPopupStatusLabel(newStatus)}
                                               </DropdownMenuItem>
                                             ))}
-                                            {userRole === "admin" && (
+                                            {(userRole === "admin" || userRole === "owner" || userRole === "akuntan") && (
                                               <DropdownMenuItem
                                                 onClick={(e) => {
                                                   e.stopPropagation();

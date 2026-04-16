@@ -221,8 +221,8 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
 
   const handleRestoreBooking = async (bookingId: string) => {
     try {
-      if (userRole !== "admin") {
-        toast.error("Hanya Admin yang dapat memulihkan booking yang dibatalkan");
+      if (userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan") {
+        toast.error("Anda tidak memiliki izin untuk memulihkan booking yang dibatalkan");
         return;
       }
 
@@ -264,8 +264,8 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
 
   const handleDeleteBooking = async (bookingId: string) => {
     try {
-      if (userRole !== "admin") {
-        toast.error("Hanya Admin yang dapat menghapus permanen booking");
+      if (userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan") {
+        toast.error("Anda tidak memiliki izin untuk menghapus permanen booking");
         return;
       }
 
@@ -605,7 +605,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
-                      {userRole !== "admin" && (
+                      {userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan" && (
                         <Badge variant="secondary">BATAL</Badge>
                       )}
                     </TableCell>
