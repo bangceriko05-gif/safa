@@ -630,20 +630,53 @@ export default function PermissionManagement() {
           </TabsContent>
 
           <TabsContent value="user" className="space-y-4">
-            <div className="space-y-2">
+             <div className="space-y-2">
               <Label>Pilih Pengguna</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="max-w-xs">
-                  <SelectValue placeholder="Pilih pengguna..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="relative max-w-xs">
+                <Input
+                  placeholder="Ketik nama atau email pengguna..."
+                  value={userSearchQuery}
+                  onChange={(e) => {
+                    setUserSearchQuery(e.target.value);
+                    setShowUserSuggestions(true);
+                    if (!e.target.value) {
+                      setSelectedUserId("");
+                    }
+                  }}
+                  onFocus={() => setShowUserSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowUserSuggestions(false), 200)}
+                />
+                {showUserSuggestions && userSearchQuery && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                    {users
+                      .filter(u => 
+                        u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                        u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+                      )
+                      .map(user => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setSelectedUserId(user.id);
+                            setUserSearchQuery(`${user.name} (${user.email})`);
+                            setShowUserSuggestions(false);
+                          }}
+                        >
+                          {user.name} ({user.email})
+                        </button>
+                      ))}
+                    {users.filter(u => 
+                      u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                      u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+                    ).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             {selectedUserId ? (
               <>
