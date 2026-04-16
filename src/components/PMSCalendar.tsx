@@ -306,7 +306,7 @@ export default function PMSCalendar({
   };
 
   const hasPermission = (permissionName: string) => {
-    return userPermissions.includes(permissionName) || userRole === "admin";
+    return userPermissions.includes(permissionName) || userRole === "admin" || userRole === "owner" || userRole === "akuntan";
   };
 
   const fetchRooms = async () => {
