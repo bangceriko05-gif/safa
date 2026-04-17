@@ -67,7 +67,21 @@ interface RoomCategory {
   is_active: boolean;
 }
 
-export default function RoomManagement() {
+interface RoomManagementProps {
+  section?: "products" | "inventory" | "rooms" | null;
+}
+
+export default function RoomManagement({ section }: RoomManagementProps = {}) {
+  // Scroll to selected sub-section when changed via sidebar
+  useEffect(() => {
+    if (!section) return;
+    const id = `pi-section-${section}`;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [section]);
+
   const { currentStore, userRole } = useStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomVariants, setRoomVariants] = useState<Record<string, RoomVariant[]>>({});
