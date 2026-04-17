@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
+  const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms" | null>(null);
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
@@ -87,6 +88,11 @@ export default function Dashboard() {
       params.delete("accountingTab");
     }
     setSearchParams(params, { replace: true });
+  };
+  const goToRoomsSection = (section: "products" | "inventory" | "rooms") => {
+    setActiveTab("rooms");
+    setRoomsSection(null);
+    requestAnimationFrame(() => setRoomsSection(section));
   };
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
