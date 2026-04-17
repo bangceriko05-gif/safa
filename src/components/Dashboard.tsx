@@ -551,7 +551,54 @@ export default function Dashboard() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {sidebarMenuItems.map((item) => (
+                  {sidebarMenuItemsTop.map((item) => (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        isActive={activeTab === item.key}
+                        onClick={() => setActiveTab(item.key)}
+                        tooltip={item.label}
+                        className="gap-3"
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+
+                  {/* Produk & Inventori with collapsible sub-menu */}
+                  <Collapsible defaultOpen={activeTab === "rooms"} className="group/collapsible">
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={activeTab === "rooms"}
+                          tooltip="Produk & Inventori"
+                          className="gap-3"
+                        >
+                          <Package className="h-5 w-5 shrink-0" />
+                          <span className="flex-1 text-left">Produk & Inventori</span>
+                          <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {roomsSubItems.map((sub) => (
+                            <SidebarMenuSubItem key={sub.key}>
+                              <SidebarMenuSubButton
+                                isActive={activeTab === "rooms" && roomsSection === sub.key}
+                                onClick={() => goToRoomsSection(sub.key)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <sub.icon className="h-4 w-4 shrink-0" />
+                                <span>{sub.label}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+
+                  {sidebarMenuItemsBottom.map((item) => (
                     <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton
                         isActive={activeTab === item.key}
@@ -565,6 +612,7 @@ export default function Dashboard() {
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
+
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
