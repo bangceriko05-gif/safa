@@ -521,20 +521,26 @@ export default function Dashboard() {
     );
   }
 
-  const sidebarMenuItems = [
+  const sidebarMenuItemsTop = [
     { key: "bookings", label: "Kalender", icon: Calendar },
     { key: "transactions", label: "Transaksi", icon: Receipt },
     { key: "customers", label: "Pelanggan", icon: Users },
     { key: "reports", label: "Laporan", icon: FileText },
     { key: "settings", label: "Pengaturan", icon: Settings },
-    { key: "rooms", label: "Produk & Inventori", icon: Package },
-    ...(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan"
-      ? [
-          { key: "activity", label: "Log", icon: History },
-          { key: "users", label: "Pengguna", icon: UserCog },
-        ]
-      : []),
   ];
+  const sidebarMenuItemsBottom = (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan")
+    ? [
+        { key: "activity", label: "Log", icon: History },
+        { key: "users", label: "Pengguna", icon: UserCog },
+      ]
+    : [];
+
+  const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
+    { key: "products", label: "Produk", icon: ShoppingCart },
+    { key: "inventory", label: "Inventori", icon: Boxes },
+    { key: "rooms", label: "Kamar", icon: Bed },
+  ];
+
 
   return (
     <SidebarProvider>
