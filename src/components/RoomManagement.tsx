@@ -577,16 +577,21 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
   return (
     <div className="space-y-6">
       {/* Product Management Section */}
-      {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
-        <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
-      )}
+      <div id="pi-section-products" className="scroll-mt-4">
+        {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
+          <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
+        )}
+      </div>
 
       {/* Inventory Management Section */}
-      {isFeatureEnabled("products_inventory.inventory") ? <InventoryManagement /> : (
-        <FeatureInactiveNotice featureName="Inventori" icon={Boxes} price={getFeatureInfo("products_inventory.inventory").price} description={getFeatureInfo("products_inventory.inventory").description} />
-      )}
+      <div id="pi-section-inventory" className="scroll-mt-4">
+        {isFeatureEnabled("products_inventory.inventory") ? <InventoryManagement /> : (
+          <FeatureInactiveNotice featureName="Inventori" icon={Boxes} price={getFeatureInfo("products_inventory.inventory").price} description={getFeatureInfo("products_inventory.inventory").description} />
+        )}
+      </div>
 
       {/* Room Management Section */}
+      <div id="pi-section-rooms" className="scroll-mt-4">
       {isFeatureEnabled("products_inventory.rooms") ? (
       <Card>
         <CardHeader>
