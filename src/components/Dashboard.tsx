@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, PanelLeft, UserCircle, Phone, Mail, Lock } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -17,9 +17,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +78,7 @@ export default function Dashboard() {
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
+  const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms" | null>(null);
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
@@ -83,6 +88,11 @@ export default function Dashboard() {
       params.delete("accountingTab");
     }
     setSearchParams(params, { replace: true });
+  };
+  const goToRoomsSection = (section: "products" | "inventory" | "rooms") => {
+    setActiveTab("rooms");
+    setRoomsSection(null);
+    requestAnimationFrame(() => setRoomsSection(section));
   };
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
@@ -511,20 +521,26 @@ export default function Dashboard() {
     );
   }
 
-  const sidebarMenuItems = [
+  const sidebarMenuItemsTop = [
     { key: "bookings", label: "Kalender", icon: Calendar },
     { key: "transactions", label: "Transaksi", icon: Receipt },
     { key: "customers", label: "Pelanggan", icon: Users },
     { key: "reports", label: "Laporan", icon: FileText },
     { key: "settings", label: "Pengaturan", icon: Settings },
-    { key: "rooms", label: "Produk & Inventori", icon: Package },
-    ...(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan"
-      ? [
-          { key: "activity", label: "Log", icon: History },
-          { key: "users", label: "Pengguna", icon: UserCog },
-        ]
-      : []),
   ];
+  const sidebarMenuItemsBottom = (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan")
+    ? [
+        { key: "activity", label: "Log", icon: History },
+        { key: "users", label: "Pengguna", icon: UserCog },
+      ]
+    : [];
+
+  const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
+    { key: "products", label: "Produk", icon: ShoppingCart },
+    { key: "inventory", label: "Inventori", icon: Boxes },
+    { key: "rooms", label: "Kamar", icon: Bed },
+  ];
+
 
   return (
     <SidebarProvider>
@@ -535,7 +551,54 @@ export default function Dashboard() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {sidebarMenuItems.map((item) => (
+                  {sidebarMenuItemsTop.map((item) => (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        isActive={activeTab === item.key}
+                        onClick={() => setActiveTab(item.key)}
+                        tooltip={item.label}
+                        className="gap-3"
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+
+                  {/* Produk & Inventori with collapsible sub-menu */}
+                  <Collapsible defaultOpen={activeTab === "rooms"} className="group/collapsible">
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={activeTab === "rooms"}
+                          tooltip="Produk & Inventori"
+                          className="gap-3"
+                        >
+                          <Package className="h-5 w-5 shrink-0" />
+                          <span className="flex-1 text-left">Produk & Inventori</span>
+                          <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {roomsSubItems.map((sub) => (
+                            <SidebarMenuSubItem key={sub.key}>
+                              <SidebarMenuSubButton
+                                isActive={activeTab === "rooms" && roomsSection === sub.key}
+                                onClick={() => goToRoomsSection(sub.key)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <sub.icon className="h-4 w-4 shrink-0" />
+                                <span>{sub.label}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+
+                  {sidebarMenuItemsBottom.map((item) => (
                     <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton
                         isActive={activeTab === item.key}
@@ -549,6 +612,7 @@ export default function Dashboard() {
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
+
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
@@ -809,7 +873,7 @@ export default function Dashboard() {
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
             {isFeatureEnabled("products_inventory") ? (
               hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
-                <RoomManagement />
+                <RoomManagement section={roomsSection} />
               ) : (
                 <NoAccessMessage featureName="Produk & Inventori" />
               )
