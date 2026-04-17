@@ -32,10 +32,11 @@ import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Sear
 import { logActivity } from "@/utils/activityLogger";
 import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
+import InventoryManagement from "./inventory/InventoryManagement";
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
-import { ShoppingCart, Bed } from "lucide-react";
+import { ShoppingCart, Bed, Boxes } from "lucide-react";
 
 interface Room {
   id: string;
@@ -564,6 +565,11 @@ export default function RoomManagement() {
       {/* Product Management Section */}
       {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
         <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
+      )}
+
+      {/* Inventory Management Section */}
+      {isFeatureEnabled("products_inventory.inventory") ? <InventoryManagement /> : (
+        <FeatureInactiveNotice featureName="Inventori" icon={Boxes} price={getFeatureInfo("products_inventory.inventory").price} description={getFeatureInfo("products_inventory.inventory").description} />
       )}
 
       {/* Room Management Section */}
