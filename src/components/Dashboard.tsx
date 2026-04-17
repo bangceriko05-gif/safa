@@ -873,7 +873,7 @@ export default function Dashboard() {
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
             {isFeatureEnabled("products_inventory") ? (
               hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
-                <RoomManagement />
+                <RoomManagement section={roomsSection} />
               ) : (
                 <NoAccessMessage featureName="Produk & Inventori" />
               )
