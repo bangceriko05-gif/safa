@@ -920,6 +920,18 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
+          <TabsContent value="pos" forceMount className={`mt-6 ${activeTab !== "pos" ? "hidden" : ""}`}>
+            {isFeatureEnabled("pos") ? (
+              isFeatureEnabled("pos.inventory") ? (
+                <InventoryManagement />
+              ) : (
+                <FeatureInactiveNotice featureName="Inventori" icon={Boxes} price={getFeatureInfo("pos.inventory").price} description={getFeatureInfo("pos.inventory").description} />
+              )
+            ) : (
+              <FeatureInactiveNotice featureName="Point of Sale" icon={StoreIcon} price={getFeatureInfo("pos").price} description={getFeatureInfo("pos").description} />
+            )}
+          </TabsContent>
+
 
           {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
             <>
