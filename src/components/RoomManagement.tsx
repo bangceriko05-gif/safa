@@ -574,18 +574,24 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
 
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
 
+  const showProducts = !section || section === "products";
+  const showRooms = !section || section === "rooms";
+
   return (
     <div className="space-y-6">
       {/* Product Management Section */}
+      {showProducts && (
       <div id="pi-section-products" className="scroll-mt-4">
         {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
           <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
         )}
       </div>
+      )}
 
       {/* Inventory moved to Point of Sale module */}
 
       {/* Room Management Section */}
+      {showRooms && (
       <div id="pi-section-rooms" className="scroll-mt-4">
       {isFeatureEnabled("products_inventory.rooms") ? (
       <Card>
@@ -774,6 +780,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("products_inventory.rooms").price} description={getFeatureInfo("products_inventory.rooms").description} />
       )}
       </div>
+      )}
 
 
       {/* Add/Edit Room Dialog */}
