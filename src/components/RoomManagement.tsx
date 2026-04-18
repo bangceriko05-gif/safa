@@ -583,12 +583,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         )}
       </div>
 
-      {/* Inventory Management Section */}
-      <div id="pi-section-inventory" className="scroll-mt-4">
-        {isFeatureEnabled("products_inventory.inventory") ? <InventoryManagement /> : (
-          <FeatureInactiveNotice featureName="Inventori" icon={Boxes} price={getFeatureInfo("products_inventory.inventory").price} description={getFeatureInfo("products_inventory.inventory").description} />
-        )}
-      </div>
+      {/* Inventory moved to Point of Sale module */}
 
       {/* Room Management Section */}
       <div id="pi-section-rooms" className="scroll-mt-4">

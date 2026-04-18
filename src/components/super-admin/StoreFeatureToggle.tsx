@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe, Pencil, Boxes } from "lucide-react";
+import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe, Pencil, Boxes, Store as StoreIcon } from "lucide-react";
 import FeatureMetaEditor from "./FeatureMetaEditor";
 
 interface StoreFeature {
@@ -62,7 +62,12 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
       "products_inventory.rooms": { label: "Kamar", icon: Bed },
       "products_inventory.products": { label: "Produk", icon: ShoppingCart },
       "products_inventory.categories": { label: "Kategori", icon: Tags },
-      "products_inventory.inventory": { label: "Inventori (Stok Masuk/Keluar/Opname)", icon: Boxes },
+    },
+  },
+  pos: {
+    label: "Point of Sale", description: "Modul POS (Inventori, dll.)", icon: StoreIcon,
+    children: {
+      "pos.inventory": { label: "Inventori (Stok Masuk/Keluar/Opname)", icon: Boxes },
     },
   },
   activity_log: { label: "Log Aktivitas", description: "Riwayat aktivitas pengguna", icon: History },
@@ -73,7 +78,7 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
 
 const FEATURE_ORDER = [
   "calendar", "transactions", "customers", "reports",
-  "settings", "products_inventory", "activity_log",
+  "settings", "products_inventory", "pos", "activity_log",
   "user_management", "booking_requests", "deposit",
 ];
 
