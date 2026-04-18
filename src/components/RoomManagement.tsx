@@ -780,6 +780,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("products_inventory.rooms").price} description={getFeatureInfo("products_inventory.rooms").description} />
       )}
       </div>
+      )}
 
 
       {/* Add/Edit Room Dialog */}
