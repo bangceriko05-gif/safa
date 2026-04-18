@@ -575,6 +575,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
 
   const showProducts = !section || section === "products";
+  const showInventory = !section || section === "inventory";
   const showRooms = !section || section === "rooms";
 
   return (
@@ -588,7 +589,12 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       </div>
       )}
 
-      {/* Inventory moved to Point of Sale module */}
+      {/* Inventory Section - controlled by POS master feature */}
+      {showInventory && isFeatureEnabled("pos") && (
+        <div id="pi-section-inventory" className="scroll-mt-4">
+          <InventoryManagement />
+        </div>
+      )}
 
       {/* Room Management Section */}
       {showRooms && (

@@ -54,7 +54,7 @@ import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
 import TransactionManagement from "./TransactionManagement";
-import InventoryManagement from "./inventory/InventoryManagement";
+
 import DepositFormModal from "./deposit/DepositFormModal";
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
@@ -538,11 +538,8 @@ export default function Dashboard() {
 
   const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
     { key: "products", label: "Produk", icon: ShoppingCart },
+    ...(isFeatureEnabled("pos") ? [{ key: "inventory" as const, label: "Inventori", icon: Boxes }] : []),
     { key: "rooms", label: "Kamar", icon: Bed },
-  ];
-
-  const posSubItems: { key: string; label: string; icon: typeof Package }[] = [
-    { key: "inventory", label: "Inventori", icon: Boxes },
   ];
 
 
@@ -602,40 +599,7 @@ export default function Dashboard() {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Point of Sale - feature toggleable */}
-                  {isFeatureEnabled("pos") && (
-                    <Collapsible defaultOpen={activeTab === "pos"} className="group/collapsible">
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton
-                            isActive={activeTab === "pos"}
-                            tooltip="Point of Sale"
-                            className="gap-3"
-                          >
-                            <StoreIcon className="h-5 w-5 shrink-0" />
-                            <span className="flex-1 text-left">Point of Sale</span>
-                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {posSubItems.map((sub) => (
-                              <SidebarMenuSubItem key={sub.key}>
-                                <SidebarMenuSubButton
-                                  isActive={activeTab === "pos"}
-                                  onClick={() => setActiveTab("pos")}
-                                  className="gap-2 cursor-pointer"
-                                >
-                                  <sub.icon className="h-4 w-4 shrink-0" />
-                                  <span>{sub.label}</span>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  )}
+                  {/* Point of Sale is a master toggle controlled by Super Admin; sub-features appear in their respective menus */}
 
                   {sidebarMenuItemsBottom.map((item) => (
                     <SidebarMenuItem key={item.key}>
@@ -921,17 +885,6 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="pos" forceMount className={`mt-6 ${activeTab !== "pos" ? "hidden" : ""}`}>
-            {isFeatureEnabled("pos") ? (
-              isFeatureEnabled("pos.inventory") ? (
-                <InventoryManagement />
-              ) : (
-                <FeatureInactiveNotice featureName="Inventori" icon={Boxes} price={getFeatureInfo("pos.inventory").price} description={getFeatureInfo("pos.inventory").description} />
-              )
-            ) : (
-              <FeatureInactiveNotice featureName="Point of Sale" icon={StoreIcon} price={getFeatureInfo("pos").price} description={getFeatureInfo("pos").description} />
-            )}
-          </TabsContent>
 
 
           {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
