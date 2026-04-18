@@ -289,18 +289,6 @@ export default function ProductManagement() {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsProductSectionExpanded(!isProductSectionExpanded)}
-              className="p-1"
-            >
-              {isProductSectionExpanded ? (
-                <ChevronUp className="h-5 w-5" />
-              ) : (
-                <ChevronDown className="h-5 w-5" />
-              )}
-            </Button>
             <CardTitle>Kelola Produk</CardTitle>
           </div>
           <div className="flex gap-2">
@@ -316,19 +304,17 @@ export default function ProductManagement() {
             </Button>
           </div>
         </div>
-        {isProductSectionExpanded && (
-          <div className="relative mt-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari produk..."
-              className="pl-9"
-            />
-          </div>
-        )}
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari produk..."
+            className="pl-9"
+          />
+        </div>
       </CardHeader>
-      {isProductSectionExpanded && (
+      {true && (
         <CardContent>
           <Table>
             <TableHeader>
