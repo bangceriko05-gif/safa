@@ -54,6 +54,7 @@ import StoreSelector from "./StoreSelector";
 import StoreManagement from "./StoreManagement";
 import BookingRequestsManagement from "./BookingRequestsManagement";
 import TransactionManagement from "./TransactionManagement";
+import InventoryManagement from "./inventory/InventoryManagement";
 import DepositFormModal from "./deposit/DepositFormModal";
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
