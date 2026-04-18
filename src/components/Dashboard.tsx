@@ -599,40 +599,7 @@ export default function Dashboard() {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Point of Sale - feature toggleable */}
-                  {isFeatureEnabled("pos") && (
-                    <Collapsible defaultOpen={activeTab === "pos"} className="group/collapsible">
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton
-                            isActive={activeTab === "pos"}
-                            tooltip="Point of Sale"
-                            className="gap-3"
-                          >
-                            <StoreIcon className="h-5 w-5 shrink-0" />
-                            <span className="flex-1 text-left">Point of Sale</span>
-                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {posSubItems.map((sub) => (
-                              <SidebarMenuSubItem key={sub.key}>
-                                <SidebarMenuSubButton
-                                  isActive={activeTab === "pos"}
-                                  onClick={() => setActiveTab("pos")}
-                                  className="gap-2 cursor-pointer"
-                                >
-                                  <sub.icon className="h-4 w-4 shrink-0" />
-                                  <span>{sub.label}</span>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  )}
+                  {/* Point of Sale is a master toggle controlled by Super Admin; sub-features appear in their respective menus */}
 
                   {sidebarMenuItemsBottom.map((item) => (
                     <SidebarMenuItem key={item.key}>
