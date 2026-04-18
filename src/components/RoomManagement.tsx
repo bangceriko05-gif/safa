@@ -598,18 +598,6 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsRoomSectionExpanded(!isRoomSectionExpanded)}
-                className="p-1"
-              >
-                {isRoomSectionExpanded ? (
-                  <ChevronUp className="h-5 w-5" />
-                ) : (
-                  <ChevronDown className="h-5 w-5" />
-                )}
-              </Button>
               <CardTitle>Kelola Kamar</CardTitle>
             </div>
             <div className="flex gap-2">
@@ -623,19 +611,17 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
               </Button>
             </div>
           </div>
-          {isRoomSectionExpanded && (
-            <div className="relative mt-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={roomSearchQuery}
-                onChange={(e) => setRoomSearchQuery(e.target.value)}
-                placeholder="Cari kamar..."
-                className="pl-9"
-              />
-            </div>
-          )}
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={roomSearchQuery}
+              onChange={(e) => setRoomSearchQuery(e.target.value)}
+              placeholder="Cari kamar..."
+              className="pl-9"
+            />
+          </div>
         </CardHeader>
-        {isRoomSectionExpanded && (
+        {true && (
           <CardContent>
           <div className="space-y-4">
             {rooms.filter(r => r.name.toLowerCase().includes(roomSearchQuery.toLowerCase())).map((room) => (
