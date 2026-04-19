@@ -256,6 +256,32 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       setSaving(false);
     }
   };
+  saveDraftRef.current = saveDraft;
+
+  // Auto-save draft on unmount or browser close (only if still draft & has items)
+  useEffect(() => {
+    const shouldAutoSave = () => {
+      const s = stateRef.current;
+      return s.status === "draft" && (s.items.length > 0 || s.supplierName || s.notes);
+    };
+    const handleBeforeUnload = () => {
+      if (shouldAutoSave()) saveDraftRef.current?.(true);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (shouldAutoSave()) saveDraftRef.current?.(true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleBack = async () => {
+    const s = stateRef.current;
+    if (s.status === "draft" && (s.items.length > 0 || s.supplierName || s.notes)) {
+      await saveDraft(true);
+    }
+    onBack();
+  };
 
   // ===== Post =====
   const postNow = async () => {
