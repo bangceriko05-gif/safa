@@ -413,9 +413,6 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                   <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
                     <Printer className="h-4 w-4" /> Cetak
                   </Button>
-                  <Button variant="default" className="bg-orange-500 hover:bg-orange-600 gap-2" onClick={() => saveDraft(false)} disabled={saving}>
-                    <Save className="h-4 w-4" /> Draf
-                  </Button>
                   <Button variant="default" className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => setCancelOpen(true)}>
                     <X className="h-4 w-4" /> Batalkan
                   </Button>
