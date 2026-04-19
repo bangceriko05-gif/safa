@@ -101,6 +101,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const isDraft = status === "draft";
   const isReadOnly = isPosted || isCancelled;
 
+  // Refs to access latest state inside cleanup/unload handlers
+  const stateRef = useRef({ status, items, bid, supplierName, notes, date, supplierId });
+  stateRef.current = { status, items, bid, supplierName, notes, date, supplierId };
+  const saveDraftRef = useRef<(silent?: boolean) => Promise<string | null>>();
+
   // ===== Load data =====
   useEffect(() => {
     const load = async () => {
