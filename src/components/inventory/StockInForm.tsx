@@ -161,9 +161,15 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           })));
         }
       } else {
-        // New: get user email
+        // New: get user email & preview next BID
         const { data: { user } } = await supabase.auth.getUser();
         setCreatedByEmail(user?.email || "");
+
+        const { data: previewBid } = await supabase.rpc("generate_stock_in_bid", {
+          p_date: date,
+          p_store_id: currentStore.id,
+        });
+        if (previewBid) setBid(previewBid as string);
       }
 
       setLoading(false);
