@@ -1593,6 +1593,7 @@ export type Database = {
           id: string
           name: string
           price: number
+          stock_qty: number
           store_id: string | null
           updated_at: string
         }
@@ -1602,6 +1603,7 @@ export type Database = {
           id?: string
           name: string
           price: number
+          stock_qty?: number
           store_id?: string | null
           updated_at?: string
         }
@@ -1611,6 +1613,7 @@ export type Database = {
           id?: string
           name?: string
           price?: number
+          stock_qty?: number
           store_id?: string | null
           updated_at?: string
         }
@@ -2071,6 +2074,107 @@ export type Database = {
           },
         ]
       }
+      stock_in: {
+        Row: {
+          bid: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          notes: string | null
+          posted_at: string | null
+          posted_by: string | null
+          status: string
+          store_id: string
+          supplier_id: string | null
+          supplier_name: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          bid?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by: string
+          date?: string
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          store_id: string
+          supplier_id?: string | null
+          supplier_name?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          bid?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          store_id?: string
+          supplier_id?: string | null
+          supplier_name?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_in_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          stock_in_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          product_name: string
+          quantity?: number
+          stock_in_id: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          stock_in_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_in_items_stock_in_id_fkey"
+            columns: ["stock_in_id"]
+            isOneToOne: false
+            referencedRelation: "stock_in"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_features: {
         Row: {
           activation_description: string | null
@@ -2156,6 +2260,45 @@ export type Database = {
           slug?: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          store_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -2334,6 +2477,10 @@ export type Database = {
       }
       generate_purchase_bid: {
         Args: { p_store_id: string; purchase_date: string }
+        Returns: string
+      }
+      generate_stock_in_bid: {
+        Args: { p_date: string; p_store_id: string }
         Returns: string
       }
       get_notification_preferences: {

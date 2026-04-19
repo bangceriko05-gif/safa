@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Boxes, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Activity } from "lucide-react";
+import StockInList from "./StockInList";
 
 export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState("stok-masuk");
@@ -40,11 +41,7 @@ export default function InventoryManagement() {
             </TabsList>
 
             <TabsContent value="stok-masuk" className="mt-6">
-              <PlaceholderPanel
-                title="Stok Masuk"
-                description="Catat barang masuk dari pembelian, transfer, atau penyesuaian."
-                icon={ArrowDownToLine}
-              />
+              <StockInList />
             </TabsContent>
 
             <TabsContent value="stok-keluar" className="mt-6">
