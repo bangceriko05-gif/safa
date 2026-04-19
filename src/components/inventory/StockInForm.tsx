@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const isCancelled = status === "cancelled";
   const isDraft = status === "draft";
   const isReadOnly = isPosted || isCancelled;
+
+  // Refs to access latest state inside cleanup/unload handlers
+  const stateRef = useRef({ status, items, bid, supplierName, notes, date, supplierId });
+  stateRef.current = { status, items, bid, supplierName, notes, date, supplierId };
+  const saveDraftRef = useRef<(silent?: boolean) => Promise<string | null>>();
 
   // ===== Load data =====
   useEffect(() => {
@@ -251,6 +256,32 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       setSaving(false);
     }
   };
+  saveDraftRef.current = saveDraft;
+
+  // Auto-save draft on unmount or browser close (only if still draft & has items)
+  useEffect(() => {
+    const shouldAutoSave = () => {
+      const s = stateRef.current;
+      return s.status === "draft" && (s.items.length > 0 || s.supplierName || s.notes);
+    };
+    const handleBeforeUnload = () => {
+      if (shouldAutoSave()) saveDraftRef.current?.(true);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (shouldAutoSave()) saveDraftRef.current?.(true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleBack = async () => {
+    const s = stateRef.current;
+    if (s.status === "draft" && (s.items.length > 0 || s.supplierName || s.notes)) {
+      await saveDraft(true);
+    }
+    onBack();
+  };
 
   // ===== Post =====
   const postNow = async () => {
@@ -377,7 +408,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   return (
     <div className="space-y-4">
       {/* Back */}
-      <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
+      <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
         <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar
       </Button>
 
@@ -412,9 +443,6 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                 <>
                   <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
                     <Printer className="h-4 w-4" /> Cetak
-                  </Button>
-                  <Button variant="default" className="bg-orange-500 hover:bg-orange-600 gap-2" onClick={() => saveDraft(false)} disabled={saving}>
-                    <Save className="h-4 w-4" /> Draf
                   </Button>
                   <Button variant="default" className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => setCancelOpen(true)}>
                     <X className="h-4 w-4" /> Batalkan
