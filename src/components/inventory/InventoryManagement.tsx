@@ -1,34 +1,21 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, ChevronUp, Boxes, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Activity } from "lucide-react";
+import { Boxes, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Activity } from "lucide-react";
 
 export default function InventoryManagement() {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("stok-masuk");
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1"
-            >
-              {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </Button>
-            <Boxes className="h-5 w-5 text-primary" />
-            <CardTitle>Inventori</CardTitle>
-          </div>
+        <div className="flex items-center gap-2">
+          <Boxes className="h-5 w-5 text-primary" />
+          <CardTitle>Inventori</CardTitle>
         </div>
       </CardHeader>
-      {isExpanded && (
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <CardContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
               <TabsTrigger value="stok-masuk" className="flex items-center gap-2">
                 <ArrowDownToLine className="h-4 w-4" />
