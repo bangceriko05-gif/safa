@@ -408,7 +408,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   return (
     <div className="space-y-4">
       {/* Back */}
-      <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
+      <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
         <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar
       </Button>
 
