@@ -72,7 +72,6 @@ export default function InventoryManagement() {
             </TabsContent>
           </Tabs>
         </CardContent>
-      )}
     </Card>
   );
 }
