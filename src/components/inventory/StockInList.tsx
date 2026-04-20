@@ -15,6 +15,7 @@ interface StockInRow {
   total_amount: number;
   status: string;
   created_at: string;
+  item_count: number;
 }
 
 const formatCurrency = (n: number) =>
@@ -47,7 +48,20 @@ export default function StockInList() {
       .select("id, bid, date, supplier_name, total_amount, status, created_at")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false });
-    if (!error && data) setRows(data as any);
+    if (!error && data) {
+      const ids = (data as any[]).map((r) => r.id);
+      let counts: Record<string, number> = {};
+      if (ids.length > 0) {
+        const { data: items } = await supabase
+          .from("stock_in_items" as any)
+          .select("stock_in_id, quantity")
+          .in("stock_in_id", ids);
+        (items as any[] | null)?.forEach((it) => {
+          counts[it.stock_in_id] = (counts[it.stock_in_id] || 0) + Number(it.quantity || 0);
+        });
+      }
+      setRows((data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as any);
+    }
     setLoading(false);
   };
 
@@ -114,7 +128,7 @@ export default function StockInList() {
                 <th className="text-left px-4 py-3 font-medium">Supplier</th>
                 <th className="text-right px-4 py-3 font-medium">Total</th>
                 <th className="text-center px-4 py-3 font-medium">Status</th>
-                <th className="text-right px-4 py-3 font-medium">Aksi</th>
+                <th className="text-right px-4 py-3 font-medium">Jumlah Item</th>
               </tr>
             </thead>
             <tbody>
@@ -133,16 +147,18 @@ export default function StockInList() {
                 </tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.id} className="border-t hover:bg-muted/30">
+                  <tr
+                    key={r.id}
+                    className="border-t hover:bg-muted/30 cursor-pointer transition-colors"
+                    onClick={() => handleOpenEdit(r.id)}
+                  >
                     <td className="px-4 py-3 font-mono font-medium">{r.bid}</td>
                     <td className="px-4 py-3">{formatDate(r.date)}</td>
                     <td className="px-4 py-3">{r.supplier_name || "-"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(r.total_amount)}</td>
                     <td className="px-4 py-3 text-center">{statusBadge(r.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEdit(r.id)}>
-                        Buka
-                      </Button>
+                    <td className="px-4 py-3 text-right font-medium tabular-nums">
+                      {r.item_count}
                     </td>
                   </tr>
                 ))
