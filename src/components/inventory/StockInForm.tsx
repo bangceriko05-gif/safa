@@ -875,6 +875,33 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hard Delete Dialog */}
+      <AlertDialog open={hardDeleteOpen} onOpenChange={(o) => { if (!o && !hardDeleting) setHardDeleteOpen(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus permanen stok masuk?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan menghapus permanen dokumen <span className="font-mono font-semibold">{bid}</span>.
+              {status === "posted" && (
+                <> Stok produk yang sebelumnya ditambahkan akan <b>dikembalikan</b> (dikurangi) terlebih dahulu sebelum dokumen dihapus.</>
+              )}
+              <br />
+              Tindakan ini <b>tidak dapat dibatalkan</b>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={hardDeleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleHardDelete(); }}
+              disabled={hardDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {hardDeleting ? "Menghapus..." : "Hapus Permanen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
