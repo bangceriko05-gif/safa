@@ -4,7 +4,18 @@ import { useStore } from "@/contexts/StoreContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, FileText, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import StockInForm from "./StockInForm";
 
 interface StockInRow {
@@ -32,12 +43,36 @@ const statusBadge = (status: string) => {
 };
 
 export default function StockInList() {
-  const { currentStore } = useStore();
+  const { currentStore, userRole } = useStore();
   const [rows, setRows] = useState<StockInRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StockInRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [canHardDelete, setCanHardDelete] = useState(false);
+
+  useEffect(() => {
+    const checkRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // super admin via RPC
+      const { data: isSuper } = await supabase.rpc("is_super_admin", { _user_id: user.id });
+      if (isSuper) {
+        setCanHardDelete(true);
+        return;
+      }
+      // akuntan role
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const isAkuntan = (roles || []).some((r: any) => r.role === "akuntan");
+      setCanHardDelete(isAkuntan);
+    };
+    checkRole();
+  }, []);
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -72,6 +107,40 @@ export default function StockInList() {
   const handleOpenEdit = (id: string) => {
     setEditId(id);
     setOpenForm(true);
+  };
+
+  const handleHardDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      // If posted, revert stock first by cancelling (trigger reverts qty)
+      if (deleteTarget.status === "posted") {
+        const { error: cErr } = await supabase
+          .from("stock_in" as any)
+          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+          .eq("id", deleteTarget.id);
+        if (cErr) throw cErr;
+      }
+      // Delete items then header
+      const { error: iErr } = await supabase
+        .from("stock_in_items" as any)
+        .delete()
+        .eq("stock_in_id", deleteTarget.id);
+      if (iErr) throw iErr;
+      const { error: hErr } = await supabase
+        .from("stock_in" as any)
+        .delete()
+        .eq("id", deleteTarget.id);
+      if (hErr) throw hErr;
+      toast.success("Data berhasil dihapus permanen");
+      setDeleteTarget(null);
+      fetchData();
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Gagal menghapus: " + (e.message || ""));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (openForm) {
@@ -140,9 +209,23 @@ export default function StockInList() {
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(r.total_amount)}</td>
                     <td className="px-4 py-3 text-center">{statusBadge(r.status)}</td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEdit(r.id)}>
-                        Buka
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(r.id)}>
+                          Buka
+                        </Button>
+                        {canHardDelete && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive gap-1"
+                            onClick={() => setDeleteTarget(r)}
+                            title="Hapus permanen (Akuntan / Super Admin)"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Hapus
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -151,6 +234,35 @@ export default function StockInList() {
           </table>
         </div>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus permanen stok masuk?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan menghapus permanen dokumen <span className="font-mono font-semibold">{deleteTarget?.bid}</span>.
+              {deleteTarget?.status === "posted" && (
+                <> Stok produk yang sebelumnya ditambahkan akan <b>dikembalikan</b> (dikurangi) terlebih dahulu sebelum dokumen dihapus.</>
+              )}
+              <br />
+              Tindakan ini <b>tidak dapat dibatalkan</b>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleHardDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {deleting ? "Menghapus..." : "Hapus Permanen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
