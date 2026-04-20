@@ -114,6 +114,25 @@ export default function StockInForm({ stockInId, onBack }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [canHardDelete, setCanHardDelete] = useState(false);
+  const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
+  const [hardDeleting, setHardDeleting] = useState(false);
+
+  // Check delete privilege (akuntan / super admin)
+  useEffect(() => {
+    const checkRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: isSuper } = await supabase.rpc("is_super_admin", { _user_id: user.id });
+      if (isSuper) { setCanHardDelete(true); return; }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      setCanHardDelete((roles || []).some((r: any) => r.role === "akuntan"));
+    };
+    checkRole();
+  }, []);
 
   const isPosted = status === "posted";
   const isCancelled = status === "cancelled";
