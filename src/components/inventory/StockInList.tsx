@@ -48,7 +48,20 @@ export default function StockInList() {
       .select("id, bid, date, supplier_name, total_amount, status, created_at")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false });
-    if (!error && data) setRows(data as any);
+    if (!error && data) {
+      const ids = (data as any[]).map((r) => r.id);
+      let counts: Record<string, number> = {};
+      if (ids.length > 0) {
+        const { data: items } = await supabase
+          .from("stock_in_items" as any)
+          .select("stock_in_id, quantity")
+          .in("stock_in_id", ids);
+        (items as any[] | null)?.forEach((it) => {
+          counts[it.stock_in_id] = (counts[it.stock_in_id] || 0) + Number(it.quantity || 0);
+        });
+      }
+      setRows((data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as any);
+    }
     setLoading(false);
   };
 
