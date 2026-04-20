@@ -11,6 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   AlertCircle,
   ArrowLeft,
   Pencil,
@@ -22,6 +39,8 @@ import {
   X,
   Check,
   Minus,
+  MoreVertical,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -95,6 +114,25 @@ export default function StockInForm({ stockInId, onBack }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [canHardDelete, setCanHardDelete] = useState(false);
+  const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
+  const [hardDeleting, setHardDeleting] = useState(false);
+
+  // Check delete privilege (akuntan / super admin)
+  useEffect(() => {
+    const checkRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: isSuper } = await supabase.rpc("is_super_admin", { _user_id: user.id });
+      if (isSuper) { setCanHardDelete(true); return; }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      setCanHardDelete((roles || []).some((r: any) => r.role === "akuntan"));
+    };
+    checkRole();
+  }, []);
 
   const isPosted = status === "posted";
   const isCancelled = status === "cancelled";
@@ -310,10 +348,50 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       return;
     }
     toast.success("Stok masuk berhasil di-post");
-    setStatus("posted");
   };
 
-  // ===== Cancel =====
+  // ===== Hard delete (permanent) =====
+  const handleHardDelete = async () => {
+    const id = createdIdRef.current || stockInId;
+    if (!id) {
+      // Nothing persisted yet — just close form
+      setHardDeleteOpen(false);
+      onBack();
+      return;
+    }
+    setHardDeleting(true);
+    try {
+      // If posted, revert stock first by cancelling (trigger reverts qty)
+      if (stateRef.current.status === "posted") {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: cErr } = await supabase
+          .from("stock_in" as any)
+          .update({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            cancelled_by: user?.id,
+          })
+          .eq("id", id);
+        if (cErr) throw cErr;
+      }
+      const { error: iErr } = await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", id);
+      if (iErr) throw iErr;
+      const { error: hErr } = await supabase.from("stock_in" as any).delete().eq("id", id);
+      if (hErr) throw hErr;
+      // Prevent auto-save on unmount from re-creating the row
+      createdIdRef.current = null;
+      stateRef.current = { ...stateRef.current, status: "deleted" as any };
+      toast.success("Data berhasil dihapus permanen");
+      setHardDeleteOpen(false);
+      onBack();
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Gagal menghapus: " + (e.message || ""));
+    } finally {
+      setHardDeleting(false);
+    }
+  };
+
   const doCancel = async () => {
     if (!stockInId && !bid) {
       onBack();
@@ -438,23 +516,60 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               <p className="text-2xl font-bold">{bid || "(akan di-generate)"}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {isPosted && (
+              {(isPosted || isDraft) && (
                 <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
                   <Printer className="h-4 w-4" /> Cetak
                 </Button>
               )}
               {isDraft && (
-                <>
-                  <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
-                    <Printer className="h-4 w-4" /> Cetak
-                  </Button>
-                  <Button variant="default" className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => setCancelOpen(true)}>
-                    <X className="h-4 w-4" /> Batalkan
-                  </Button>
-                  <Button variant="default" className="bg-green-500 hover:bg-green-600 gap-2" onClick={postNow} disabled={saving}>
-                    <Check className="h-4 w-4" /> Post Sekarang
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="default" className="bg-green-500 hover:bg-green-600 gap-2" disabled={saving}>
+                      <Check className="h-4 w-4" /> Aksi
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={postNow} className="gap-2 cursor-pointer">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span>Post Sekarang</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCancelOpen(true)} className="gap-2 cursor-pointer">
+                      <X className="h-4 w-4 text-blue-600" />
+                      <span>Batalkan</span>
+                    </DropdownMenuItem>
+                    {canHardDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setHardDeleteOpen(true)}
+                          className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Hapus Permanen</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {(isPosted || isCancelled) && canHardDelete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" title="Aksi lain">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setHardDeleteOpen(true)}
+                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Hapus Permanen</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -760,6 +875,33 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hard Delete Dialog */}
+      <AlertDialog open={hardDeleteOpen} onOpenChange={(o) => { if (!o && !hardDeleting) setHardDeleteOpen(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus permanen stok masuk?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan menghapus permanen dokumen <span className="font-mono font-semibold">{bid}</span>.
+              {status === "posted" && (
+                <> Stok produk yang sebelumnya ditambahkan akan <b>dikembalikan</b> (dikurangi) terlebih dahulu sebelum dokumen dihapus.</>
+              )}
+              <br />
+              Tindakan ini <b>tidak dapat dibatalkan</b>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={hardDeleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleHardDelete(); }}
+              disabled={hardDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {hardDeleting ? "Menghapus..." : "Hapus Permanen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
