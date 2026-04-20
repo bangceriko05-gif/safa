@@ -94,8 +94,8 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
-  // Add product row
-  const [newProductId, setNewProductId] = useState<string>("");
+  // Add product row — supports multi-select
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [newProductSearchOpen, setNewProductSearchOpen] = useState(false);
   const [newProductSearch, setNewProductSearch] = useState("");
   const [newPrice, setNewPrice] = useState<number>(0);
@@ -418,30 +418,29 @@ export default function StockInForm({ stockInId, onBack }: Props) {
     setCancelOpen(false);
   };
 
-  // ===== Add item =====
+  // ===== Add item(s) — supports multi-select =====
   const handleAddItem = () => {
-    if (!newProductId) {
-      toast.error("Pilih produk");
+    if (selectedProductIds.length === 0) {
+      toast.error("Pilih minimal satu produk");
       return;
     }
     if (newQty <= 0) {
       toast.error("Qty harus lebih dari 0");
       return;
     }
-    const p = products.find((x) => x.id === newProductId);
-    if (!p) return;
     const subtotal = newQty * newPrice;
-    setItems([
-      ...items,
-      {
+    const newItems: Item[] = selectedProductIds
+      .map((pid) => products.find((x) => x.id === pid))
+      .filter((p): p is Product => !!p)
+      .map((p) => ({
         product_id: p.id,
         product_name: p.name,
         quantity: newQty,
         unit_price: newPrice,
         subtotal,
-      },
-    ]);
-    setNewProductId("");
+      }));
+    setItems([...items, ...newItems]);
+    setSelectedProductIds([]);
     setNewProductSearch("");
     setNewPrice(0);
     setNewQty(1);
@@ -641,16 +640,14 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           <div className="px-4 py-3 border-b">
             <h3 className="font-semibold">Tambah Produk</h3>
           </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-[1fr_200px_180px_auto] gap-3 items-end">
+          <div className="p-4 grid grid-cols-1 md:grid-cols-[1fr_200px_180px_auto] gap-3 items-start">
             <div>
               <Label className="text-xs text-muted-foreground">Produk</Label>
               <Popover open={newProductSearchOpen} onOpenChange={setNewProductSearchOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start font-normal mt-1">
+                  <Button variant="outline" className="w-full justify-start font-normal mt-1 h-10">
                     <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {newProductId
-                      ? products.find((p) => p.id === newProductId)?.name
-                      : <span className="text-muted-foreground">Cari Produk</span>}
+                    <span className="text-muted-foreground">Cari Produk</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start">
@@ -659,27 +656,60 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                     <CommandList>
                       <CommandEmpty>Produk tidak ditemukan</CommandEmpty>
                       <CommandGroup>
-                        {products.map((p) => (
-                          <CommandItem
-                            key={p.id}
-                            value={p.name}
-                            onSelect={() => {
-                              setNewProductId(p.id);
-                              setNewPrice(p.price);
-                              setNewProductSearchOpen(false);
-                            }}
-                          >
-                            <div className="flex justify-between w-full">
-                              <span>{p.name}</span>
-                              <span className="text-xs text-muted-foreground">{formatCurrency(p.price)}</span>
-                            </div>
-                          </CommandItem>
-                        ))}
+                        {products.map((p) => {
+                          const isSelected = selectedProductIds.includes(p.id);
+                          return (
+                            <CommandItem
+                              key={p.id}
+                              value={p.name}
+                              onSelect={() => {
+                                if (isSelected) {
+                                  setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
+                                } else {
+                                  setSelectedProductIds([...selectedProductIds, p.id]);
+                                  if (selectedProductIds.length === 0 && newPrice === 0) {
+                                    setNewPrice(p.price);
+                                  }
+                                }
+                              }}
+                            >
+                              <Check className={`h-4 w-4 mr-2 ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                              <div className="flex justify-between w-full">
+                                <span>{p.name}</span>
+                                <span className="text-xs text-muted-foreground">{formatCurrency(p.price)}</span>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
                       </CommandGroup>
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
+              {selectedProductIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedProductIds.map((pid) => {
+                    const p = products.find((x) => x.id === pid);
+                    if (!p) return null;
+                    return (
+                      <Badge
+                        key={pid}
+                        variant="secondary"
+                        className="bg-blue-100 text-blue-800 hover:bg-blue-100 gap-1 pr-1"
+                      >
+                        <span>{p.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProductIds(selectedProductIds.filter((id) => id !== pid))}
+                          className="hover:bg-blue-200 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div>
