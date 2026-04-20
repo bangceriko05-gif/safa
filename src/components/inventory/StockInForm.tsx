@@ -94,8 +94,8 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
-  // Add product row
-  const [newProductId, setNewProductId] = useState<string>("");
+  // Add product row — supports multi-select
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [newProductSearchOpen, setNewProductSearchOpen] = useState(false);
   const [newProductSearch, setNewProductSearch] = useState("");
   const [newPrice, setNewPrice] = useState<number>(0);
