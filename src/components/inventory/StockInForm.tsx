@@ -348,10 +348,50 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       return;
     }
     toast.success("Stok masuk berhasil di-post");
-    setStatus("posted");
   };
 
-  // ===== Cancel =====
+  // ===== Hard delete (permanent) =====
+  const handleHardDelete = async () => {
+    const id = createdIdRef.current || stockInId;
+    if (!id) {
+      // Nothing persisted yet — just close form
+      setHardDeleteOpen(false);
+      onBack();
+      return;
+    }
+    setHardDeleting(true);
+    try {
+      // If posted, revert stock first by cancelling (trigger reverts qty)
+      if (stateRef.current.status === "posted") {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: cErr } = await supabase
+          .from("stock_in" as any)
+          .update({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            cancelled_by: user?.id,
+          })
+          .eq("id", id);
+        if (cErr) throw cErr;
+      }
+      const { error: iErr } = await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", id);
+      if (iErr) throw iErr;
+      const { error: hErr } = await supabase.from("stock_in" as any).delete().eq("id", id);
+      if (hErr) throw hErr;
+      // Prevent auto-save on unmount from re-creating the row
+      createdIdRef.current = null;
+      stateRef.current = { ...stateRef.current, status: "deleted" as any };
+      toast.success("Data berhasil dihapus permanen");
+      setHardDeleteOpen(false);
+      onBack();
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Gagal menghapus: " + (e.message || ""));
+    } finally {
+      setHardDeleting(false);
+    }
+  };
+
   const doCancel = async () => {
     if (!stockInId && !bid) {
       onBack();
