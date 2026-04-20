@@ -128,7 +128,7 @@ export default function StockInList() {
                 <th className="text-left px-4 py-3 font-medium">Supplier</th>
                 <th className="text-right px-4 py-3 font-medium">Total</th>
                 <th className="text-center px-4 py-3 font-medium">Status</th>
-                <th className="text-right px-4 py-3 font-medium">Aksi</th>
+                <th className="text-right px-4 py-3 font-medium">Jumlah Item</th>
               </tr>
             </thead>
             <tbody>
@@ -147,16 +147,18 @@ export default function StockInList() {
                 </tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.id} className="border-t hover:bg-muted/30">
+                  <tr
+                    key={r.id}
+                    className="border-t hover:bg-muted/30 cursor-pointer transition-colors"
+                    onClick={() => handleOpenEdit(r.id)}
+                  >
                     <td className="px-4 py-3 font-mono font-medium">{r.bid}</td>
                     <td className="px-4 py-3">{formatDate(r.date)}</td>
                     <td className="px-4 py-3">{r.supplier_name || "-"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(r.total_amount)}</td>
                     <td className="px-4 py-3 text-center">{statusBadge(r.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEdit(r.id)}>
-                        Buka
-                      </Button>
+                    <td className="px-4 py-3 text-right font-medium tabular-nums">
+                      {r.item_count}
                     </td>
                   </tr>
                 ))
