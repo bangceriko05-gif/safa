@@ -221,13 +221,14 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         createdIdRef.current = id;
         setBid((data as any).bid);
       } else {
+        const s = stateRef.current;
         const { error } = await supabase
           .from("stock_in" as any)
           .update({
-            date,
-            supplier_id: supplierId,
-            supplier_name: supplierName || null,
-            notes: notes || null,
+            date: s.date,
+            supplier_id: s.supplierId,
+            supplier_name: s.supplierName || null,
+            notes: s.notes || null,
             total_amount: totalAmount,
           })
           .eq("id", id);
@@ -237,8 +238,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", id);
       }
 
-      if (items.length > 0 && id) {
-        const payload = items.map((it) => ({
+      const curItems = stateRef.current.items;
+      if (curItems.length > 0 && id) {
+        const payload = curItems.map((it) => ({
           stock_in_id: id,
           product_id: it.product_id,
           product_name: it.product_name,
@@ -254,7 +256,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       return id;
     } catch (e: any) {
       console.error(e);
-      toast.error("Gagal menyimpan: " + e.message);
+      if (!silent) toast.error("Gagal menyimpan: " + e.message);
       return null;
     } finally {
       setSaving(false);
@@ -262,12 +264,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   };
   saveDraftRef.current = saveDraft;
 
-  // Auto-save draft on unmount or browser close (only if still draft & has items)
+  // Auto-save draft on unmount or browser close.
+  // For NEW entries: always create a draft so the previewed BID becomes a real row.
+  // For EXISTING drafts: persist any pending edits.
   useEffect(() => {
-    const shouldAutoSave = () => {
-      const s = stateRef.current;
-      return s.status === "draft" && (s.items.length > 0 || s.supplierName || s.notes);
-    };
+    const shouldAutoSave = () => stateRef.current.status === "draft";
     const handleBeforeUnload = () => {
       if (shouldAutoSave()) saveDraftRef.current?.(true);
     };
@@ -280,8 +281,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   }, []);
 
   const handleBack = async () => {
-    const s = stateRef.current;
-    if (s.status === "draft" && (s.items.length > 0 || s.supplierName || s.notes)) {
+    if (stateRef.current.status === "draft") {
       await saveDraft(true);
     }
     onBack();
