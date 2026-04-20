@@ -15,6 +15,7 @@ interface StockInRow {
   total_amount: number;
   status: string;
   created_at: string;
+  item_count: number;
 }
 
 const formatCurrency = (n: number) =>
