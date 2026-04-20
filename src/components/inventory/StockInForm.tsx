@@ -418,30 +418,29 @@ export default function StockInForm({ stockInId, onBack }: Props) {
     setCancelOpen(false);
   };
 
-  // ===== Add item =====
+  // ===== Add item(s) — supports multi-select =====
   const handleAddItem = () => {
-    if (!newProductId) {
-      toast.error("Pilih produk");
+    if (selectedProductIds.length === 0) {
+      toast.error("Pilih minimal satu produk");
       return;
     }
     if (newQty <= 0) {
       toast.error("Qty harus lebih dari 0");
       return;
     }
-    const p = products.find((x) => x.id === newProductId);
-    if (!p) return;
     const subtotal = newQty * newPrice;
-    setItems([
-      ...items,
-      {
+    const newItems: Item[] = selectedProductIds
+      .map((pid) => products.find((x) => x.id === pid))
+      .filter((p): p is Product => !!p)
+      .map((p) => ({
         product_id: p.id,
         product_name: p.name,
         quantity: newQty,
         unit_price: newPrice,
         subtotal,
-      },
-    ]);
-    setNewProductId("");
+      }));
+    setItems([...items, ...newItems]);
+    setSelectedProductIds([]);
     setNewProductSearch("");
     setNewPrice(0);
     setNewQty(1);
