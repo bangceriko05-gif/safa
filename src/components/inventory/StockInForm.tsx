@@ -516,23 +516,60 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               <p className="text-2xl font-bold">{bid || "(akan di-generate)"}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {isPosted && (
+              {(isPosted || isDraft) && (
                 <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
                   <Printer className="h-4 w-4" /> Cetak
                 </Button>
               )}
               {isDraft && (
-                <>
-                  <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
-                    <Printer className="h-4 w-4" /> Cetak
-                  </Button>
-                  <Button variant="default" className="bg-blue-600 hover:bg-blue-700 gap-2" onClick={() => setCancelOpen(true)}>
-                    <X className="h-4 w-4" /> Batalkan
-                  </Button>
-                  <Button variant="default" className="bg-green-500 hover:bg-green-600 gap-2" onClick={postNow} disabled={saving}>
-                    <Check className="h-4 w-4" /> Post Sekarang
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="default" className="bg-green-500 hover:bg-green-600 gap-2" disabled={saving}>
+                      <Check className="h-4 w-4" /> Aksi
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={postNow} className="gap-2 cursor-pointer">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span>Post Sekarang</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCancelOpen(true)} className="gap-2 cursor-pointer">
+                      <X className="h-4 w-4 text-blue-600" />
+                      <span>Batalkan</span>
+                    </DropdownMenuItem>
+                    {canHardDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setHardDeleteOpen(true)}
+                          className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Hapus Permanen</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {(isPosted || isCancelled) && canHardDelete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" title="Aksi lain">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setHardDeleteOpen(true)}
+                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Hapus Permanen</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
