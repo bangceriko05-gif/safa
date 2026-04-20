@@ -188,6 +188,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   );
 
   // ===== Save draft (or create new) =====
+  const createdIdRef = useRef<string | null>(stockInId);
   const saveDraft = async (silent = false): Promise<string | null> => {
     if (!currentStore) return null;
     setSaving(true);
@@ -195,18 +196,20 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      let id = stockInId;
+      let id = createdIdRef.current;
 
       if (!id) {
-        // create
+        // create — preserve the previewed BID so the list shows the same number
+        const s = stateRef.current;
         const { data, error } = await supabase
           .from("stock_in" as any)
           .insert({
             store_id: currentStore.id,
-            date,
-            supplier_id: supplierId,
-            supplier_name: supplierName || null,
-            notes: notes || null,
+            bid: s.bid || null,
+            date: s.date,
+            supplier_id: s.supplierId,
+            supplier_name: s.supplierName || null,
+            notes: s.notes || null,
             total_amount: totalAmount,
             status: "draft",
             created_by: user.id,
@@ -215,6 +218,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           .single();
         if (error) throw error;
         id = (data as any).id;
+        createdIdRef.current = id;
         setBid((data as any).bid);
       } else {
         const { error } = await supabase
