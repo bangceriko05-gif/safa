@@ -1019,3 +1019,89 @@ export default function Dashboard() {
     </SidebarProvider>
   );
 }
+
+function ProdukInventoriMenu({
+  activeTab,
+  roomsSection,
+  roomsSubItems,
+  onSelect,
+}: {
+  activeTab: string;
+  roomsSection: string;
+  roomsSubItems: { key: any; label: string; icon: any }[];
+  onSelect: (key: any) => void;
+}) {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+  const isActive = activeTab === "rooms";
+
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              isActive={isActive}
+              tooltip="Produk & Inventori"
+              className="gap-3"
+            >
+              <Package className="h-5 w-5 shrink-0" />
+              <span className="flex-1 text-left">Produk & Inventori</span>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" className="min-w-48">
+            <DropdownMenuLabel>Produk & Inventori</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {roomsSubItems.map((sub) => (
+              <DropdownMenuItem
+                key={sub.key}
+                onSelect={() => onSelect(sub.key)}
+                className={cn(
+                  "gap-2 cursor-pointer",
+                  isActive && roomsSection === sub.key && "text-primary font-medium"
+                )}
+              >
+                <sub.icon className="h-4 w-4 shrink-0" />
+                <span>{sub.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <Collapsible defaultOpen={isActive} className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            isActive={isActive}
+            tooltip="Produk & Inventori"
+            className="gap-3"
+          >
+            <Package className="h-5 w-5 shrink-0" />
+            <span className="flex-1 text-left">Produk & Inventori</span>
+            <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {roomsSubItems.map((sub) => (
+              <SidebarMenuSubItem key={sub.key}>
+                <SidebarMenuSubButton
+                  isActive={isActive && roomsSection === sub.key}
+                  onClick={() => onSelect(sub.key)}
+                  className="gap-2 cursor-pointer"
+                >
+                  <sub.icon className="h-4 w-4 shrink-0" />
+                  <span>{sub.label}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
