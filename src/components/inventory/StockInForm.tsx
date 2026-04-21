@@ -645,18 +645,35 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               <Label className="text-xs text-muted-foreground">Produk</Label>
               <Popover open={newProductSearchOpen} onOpenChange={setNewProductSearchOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start font-normal mt-1 h-10">
-                    <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">Cari Produk</span>
-                  </Button>
+                  <div className="relative mt-1">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Cari Produk"
+                      value={newProductSearch}
+                      onChange={(e) => {
+                        setNewProductSearch(e.target.value);
+                        if (!newProductSearchOpen) setNewProductSearchOpen(true);
+                      }}
+                      onFocus={() => setNewProductSearchOpen(true)}
+                      className="pl-9 h-10"
+                    />
+                  </div>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start">
-                  <Command>
-                    <CommandInput placeholder="Cari produk..." value={newProductSearch} onValueChange={setNewProductSearch} />
+                <PopoverContent
+                  className="p-0 w-[--radix-popover-trigger-width]"
+                  align="start"
+                  side="bottom"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                  <Command shouldFilter={false}>
                     <CommandList>
                       <CommandEmpty>Produk tidak ditemukan</CommandEmpty>
                       <CommandGroup>
-                        {products.map((p) => {
+                        {products
+                          .filter((p) =>
+                            p.name.toLowerCase().includes(newProductSearch.toLowerCase())
+                          )
+                          .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
                           return (
                             <CommandItem
