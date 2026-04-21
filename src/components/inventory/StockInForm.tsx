@@ -41,6 +41,7 @@ import {
   Minus,
   MoreVertical,
   ChevronDown,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -100,6 +101,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const [newProductSearch, setNewProductSearch] = useState("");
   const [newPrice, setNewPrice] = useState<number>(0);
   const [newQty, setNewQty] = useState<number>(1);
+
+  // Inline-edit row state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState<number>(0);
+  const [editQty, setEditQty] = useState<number>(1);
 
   // Edit dialogs
   const [editDateOpen, setEditDateOpen] = useState(false);
@@ -788,32 +794,124 @@ export default function StockInForm({ stockInId, onBack }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-4 py-2 font-medium">Produk</th>
-                  <th className="text-right px-4 py-2 font-medium">Harga Beli</th>
-                  <th className="text-center px-4 py-2 font-medium">Qty</th>
-                  <th className="text-right px-4 py-2 font-medium">Subtotal</th>
-                  {!isReadOnly && <th className="text-right px-4 py-2 font-medium w-16">Aksi</th>}
+                  <th className="text-left px-3 py-2 font-medium w-10">No</th>
+                  <th className="text-left px-3 py-2 font-medium">Nama</th>
+                  <th className="text-left px-3 py-2 font-medium">Harga Beli</th>
+                  <th className="text-left px-3 py-2 font-medium">Qty</th>
+                  <th className="text-left px-3 py-2 font-medium">Rata-rata Harga Beli</th>
+                  <th className="text-left px-3 py-2 font-medium">Total</th>
+                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-32">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
-                {items.map((it, i) => (
-                  <tr key={i} className="border-t">
-                    <td className="px-4 py-2">{it.product_name}</td>
-                    <td className="px-4 py-2 text-right">{formatCurrency(it.unit_price)}</td>
-                    <td className="px-4 py-2 text-center">{it.quantity}</td>
-                    <td className="px-4 py-2 text-right font-medium">{formatCurrency(it.subtotal)}</td>
-                    {!isReadOnly && (
-                      <td className="px-4 py-2 text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(i)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                {items.map((it, i) => {
+                  const product = products.find((p) => p.id === it.product_id);
+                  const avgPrice = product?.price ?? it.unit_price;
+                  const isEditing = editingIndex === i;
+                  return (
+                    <tr key={i} className="border-t">
+                      <td className="px-3 py-3 text-muted-foreground">{i + 1}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex flex-col leading-tight">
+                            <span className="font-semibold">{it.product_name}</span>
+                          </div>
+                        </div>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-3 py-3">
+                        {isEditing ? (
+                          <Input
+                            type="text"
+                            value={`Rp. ${editPrice.toLocaleString("id-ID")}`}
+                            onChange={(e) => {
+                              const num = parseInt(e.target.value.replace(/\D/g, ""), 10) || 0;
+                              setEditPrice(num);
+                            }}
+                            className="h-9 max-w-[180px]"
+                          />
+                        ) : (
+                          <span className="text-primary">{formatCurrency(it.unit_price)}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min={1}
+                            value={editQty}
+                            onChange={(e) => setEditQty(parseInt(e.target.value) || 1)}
+                            className="h-9 max-w-[120px]"
+                          />
+                        ) : (
+                          <span>{it.quantity}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-primary">{formatCurrency(avgPrice)}</td>
+                      <td className="px-3 py-3">{formatCurrency(isEditing ? editPrice * editQty : it.subtotal)}</td>
+                      {!isReadOnly && (
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => removeItem(i)}
+                            >
+                              <Trash2 className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            {isEditing ? (
+                              <>
+                                <Button
+                                  size="icon"
+                                  className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white"
+                                  onClick={() => {
+                                    const next = [...items];
+                                    next[i] = {
+                                      ...next[i],
+                                      unit_price: editPrice,
+                                      quantity: editQty,
+                                      subtotal: editPrice * editQty,
+                                    };
+                                    setItems(next);
+                                    setEditingIndex(null);
+                                  }}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditingIndex(null)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="icon"
+                                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white"
+                                onClick={() => {
+                                  setEditingIndex(i);
+                                  setEditPrice(it.unit_price);
+                                  setEditQty(it.quantity);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
                 <tr className="border-t bg-muted/30 font-bold">
-                  <td colSpan={3} className="px-4 py-3 text-right">Total</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(totalAmount)}</td>
+                  <td colSpan={5} className="px-3 py-3 text-right">Total</td>
+                  <td className="px-3 py-3">{formatCurrency(totalAmount)}</td>
                   {!isReadOnly && <td />}
                 </tr>
               </tbody>
