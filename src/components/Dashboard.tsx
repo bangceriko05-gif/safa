@@ -581,11 +581,23 @@ export default function Dashboard() {
                   ))}
 
                   {/* Produk & Inventori with collapsible sub-menu */}
-                  <ProdukInventoriMenu
-                    activeTab={activeTab}
-                    roomsSection={roomsSection}
-                    roomsSubItems={roomsSubItems}
+                  <CollapsibleSidebarMenu
+                    isActive={activeTab === "rooms"}
+                    label="Produk & Inventori"
+                    icon={Package}
+                    subItems={roomsSubItems}
+                    activeSubKey={roomsSection}
                     onSelect={goToRoomsSection}
+                  />
+
+                  {/* Pelanggan with collapsible sub-menu */}
+                  <CollapsibleSidebarMenu
+                    isActive={activeTab === "customers"}
+                    label="Pelanggan"
+                    icon={Users}
+                    subItems={customersSubItems}
+                    activeSubKey={customersSection}
+                    onSelect={goToCustomersSection}
                   />
 
                   {/* Point of Sale is a master toggle controlled by Super Admin; sub-features appear in their respective menus */}
@@ -840,7 +852,25 @@ export default function Dashboard() {
 
           <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
             {isFeatureEnabled("customers") ? (
-              <CustomerManagement />
+              customersSection === "suppliers" ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
+                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Package className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Supplier</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">Manajemen supplier akan segera hadir.</p>
+                </div>
+              ) : customersSection === "crm" ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
+                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <UserCircle className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">CRM</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">Customer Relationship Management akan segera hadir.</p>
+                </div>
+              ) : (
+                <CustomerManagement />
+              )
             ) : (
               <FeatureInactiveNotice featureName="Pelanggan" icon={Users} price={getFeatureInfo("customers").price} description={getFeatureInfo("customers").description} />
             )}
@@ -1032,45 +1062,44 @@ export default function Dashboard() {
   );
 }
 
-function ProdukInventoriMenu({
-  activeTab,
-  roomsSection,
-  roomsSubItems,
+function CollapsibleSidebarMenu({
+  isActive,
+  label,
+  icon: Icon,
+  subItems,
+  activeSubKey,
   onSelect,
 }: {
-  activeTab: string;
-  roomsSection: string;
-  roomsSubItems: { key: any; label: string; icon: any }[];
+  isActive: boolean;
+  label: string;
+  icon: any;
+  subItems: { key: any; label: string; icon: any }[];
+  activeSubKey: string | null;
   onSelect: (key: any) => void;
 }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const isActive = activeTab === "rooms";
 
   if (isCollapsed) {
     return (
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              isActive={isActive}
-              tooltip="Produk & Inventori"
-              className="gap-3"
-            >
-              <Package className="h-5 w-5 shrink-0" />
-              <span className="flex-1 text-left">Produk & Inventori</span>
+            <SidebarMenuButton isActive={isActive} tooltip={label} className="gap-3">
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="flex-1 text-left">{label}</span>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" className="min-w-48">
-            <DropdownMenuLabel>Produk & Inventori</DropdownMenuLabel>
+            <DropdownMenuLabel>{label}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {roomsSubItems.map((sub) => (
+            {subItems.map((sub) => (
               <DropdownMenuItem
                 key={sub.key}
                 onSelect={() => onSelect(sub.key)}
                 className={cn(
                   "gap-2 cursor-pointer",
-                  isActive && roomsSection === sub.key && "text-primary font-medium"
+                  isActive && activeSubKey === sub.key && "text-primary font-medium"
                 )}
               >
                 <sub.icon className="h-4 w-4 shrink-0" />
@@ -1087,22 +1116,18 @@ function ProdukInventoriMenu({
     <Collapsible defaultOpen={isActive} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            isActive={isActive}
-            tooltip="Produk & Inventori"
-            className="gap-3"
-          >
-            <Package className="h-5 w-5 shrink-0" />
-            <span className="flex-1 text-left">Produk & Inventori</span>
+          <SidebarMenuButton isActive={isActive} tooltip={label} className="gap-3">
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="flex-1 text-left">{label}</span>
             <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
-            {roomsSubItems.map((sub) => (
+            {subItems.map((sub) => (
               <SidebarMenuSubItem key={sub.key}>
                 <SidebarMenuSubButton
-                  isActive={isActive && roomsSection === sub.key}
+                  isActive={isActive && activeSubKey === sub.key}
                   onClick={() => onSelect(sub.key)}
                   className="gap-2 cursor-pointer"
                 >
