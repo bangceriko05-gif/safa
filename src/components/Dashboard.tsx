@@ -49,6 +49,7 @@ import BookingModal from "./BookingModal";
 import UserManagement from "./UserManagement";
 import RoomManagement from "./RoomManagement";
 import CustomerManagement from "./CustomerManagement";
+import SupplierManagement from "./suppliers/SupplierManagement";
 import { ActivityLog } from "./ActivityLog";
 import Reports from "./Reports";
 import PermissionManagement from "./PermissionManagement";
@@ -853,13 +854,7 @@ export default function Dashboard() {
           <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
             {isFeatureEnabled("customers") ? (
               customersSection === "suppliers" ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
-                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Package className="h-7 w-7 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">Supplier</h3>
-                  <p className="text-sm text-muted-foreground max-w-md">Manajemen supplier akan segera hadir.</p>
-                </div>
+                <SupplierManagement />
               ) : customersSection === "crm" ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
                   <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
