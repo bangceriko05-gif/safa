@@ -41,6 +41,7 @@ import {
   Minus,
   MoreVertical,
   ChevronDown,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -100,6 +101,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const [newProductSearch, setNewProductSearch] = useState("");
   const [newPrice, setNewPrice] = useState<number>(0);
   const [newQty, setNewQty] = useState<number>(1);
+
+  // Inline-edit row state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState<number>(0);
+  const [editQty, setEditQty] = useState<number>(1);
 
   // Edit dialogs
   const [editDateOpen, setEditDateOpen] = useState(false);
