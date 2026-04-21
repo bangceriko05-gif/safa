@@ -24,6 +24,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useSidebar } from "@/components/ui/sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -567,37 +569,12 @@ export default function Dashboard() {
                   ))}
 
                   {/* Produk & Inventori with collapsible sub-menu */}
-                  <Collapsible defaultOpen={activeTab === "rooms"} className="group/collapsible">
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          isActive={activeTab === "rooms"}
-                          tooltip="Produk & Inventori"
-                          className="gap-3"
-                        >
-                          <Package className="h-5 w-5 shrink-0" />
-                          <span className="flex-1 text-left">Produk & Inventori</span>
-                          <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {roomsSubItems.map((sub) => (
-                            <SidebarMenuSubItem key={sub.key}>
-                              <SidebarMenuSubButton
-                                isActive={activeTab === "rooms" && roomsSection === sub.key}
-                                onClick={() => goToRoomsSection(sub.key)}
-                                className="gap-2 cursor-pointer"
-                              >
-                                <sub.icon className="h-4 w-4 shrink-0" />
-                                <span>{sub.label}</span>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+                  <ProdukInventoriMenu
+                    activeTab={activeTab}
+                    roomsSection={roomsSection}
+                    roomsSubItems={roomsSubItems}
+                    onSelect={goToRoomsSection}
+                  />
 
                   {/* Point of Sale is a master toggle controlled by Super Admin; sub-features appear in their respective menus */}
 
