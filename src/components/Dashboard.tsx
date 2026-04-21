@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms" | null>(null);
+  const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
@@ -97,6 +98,11 @@ export default function Dashboard() {
     setActiveTab("rooms");
     setRoomsSection(null);
     requestAnimationFrame(() => setRoomsSection(section));
+  };
+  const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
+    setActiveTab("customers");
+    setCustomersSection(null);
+    requestAnimationFrame(() => setCustomersSection(section));
   };
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
@@ -528,7 +534,6 @@ export default function Dashboard() {
   const sidebarMenuItemsTop = [
     { key: "bookings", label: "Kalender", icon: Calendar },
     { key: "transactions", label: "Transaksi", icon: Receipt },
-    { key: "customers", label: "Pelanggan", icon: Users },
     { key: "reports", label: "Laporan", icon: FileText },
     { key: "settings", label: "Pengaturan", icon: Settings },
   ];
@@ -543,6 +548,12 @@ export default function Dashboard() {
     { key: "products", label: "Produk", icon: ShoppingCart },
     ...(isFeatureEnabled("pos") ? [{ key: "inventory" as const, label: "Inventori", icon: Boxes }] : []),
     { key: "rooms", label: "Kamar", icon: Bed },
+  ];
+
+  const customersSubItems: { key: "customers" | "suppliers" | "crm"; label: string; icon: typeof Users }[] = [
+    { key: "customers", label: "Pelanggan", icon: Users },
+    { key: "suppliers", label: "Supplier", icon: Package },
+    { key: "crm", label: "CRM", icon: UserCircle },
   ];
 
 
