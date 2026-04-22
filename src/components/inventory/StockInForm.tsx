@@ -224,6 +224,58 @@ export default function StockInForm({ stockInId, onBack }: Props) {
             unit_price: Number(it.unit_price),
             subtotal: Number(it.subtotal),
           })));
+
+          // Build history (audit trail) — collect all actor user ids first
+          const actorIds = Array.from(
+            new Set(
+              [r.created_by, r.posted_by, r.cancelled_by].filter(Boolean) as string[]
+            )
+          );
+          let actorMap: Record<string, { name: string; email: string }> = {};
+          if (actorIds.length > 0) {
+            const { data: actors } = await supabase
+              .from("profiles")
+              .select("id, name, email")
+              .in("id", actorIds);
+            (actors || []).forEach((a: any) => {
+              actorMap[a.id] = { name: a.name || "", email: a.email || "" };
+            });
+          }
+          const events: HistoryEvent[] = [];
+          if (r.created_at) {
+            const a = actorMap[r.created_by] || { name: "", email: "" };
+            events.push({
+              type: "created",
+              label: "Membuat dokumen",
+              userName: a.name || a.email || "Unknown",
+              userEmail: a.email,
+              timestamp: r.created_at,
+            });
+          }
+          if (r.posted_at && r.posted_by) {
+            const a = actorMap[r.posted_by] || { name: "", email: "" };
+            events.push({
+              type: "posted",
+              label: "Memposting dokumen",
+              userName: a.name || a.email || "Unknown",
+              userEmail: a.email,
+              timestamp: r.posted_at,
+            });
+          }
+          if (r.cancelled_at && r.cancelled_by) {
+            const a = actorMap[r.cancelled_by] || { name: "", email: "" };
+            events.push({
+              type: "cancelled",
+              label: "Membatalkan dokumen",
+              userName: a.name || a.email || "Unknown",
+              userEmail: a.email,
+              timestamp: r.cancelled_at,
+              reason: r.cancel_reason,
+            });
+          }
+          // Sort ascending by timestamp
+          events.sort((x, y) => new Date(x.timestamp).getTime() - new Date(y.timestamp).getTime());
+          setHistory(events);
         }
       } else {
         // New: get user email & preview next BID
