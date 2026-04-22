@@ -42,6 +42,10 @@ import {
   MoreVertical,
   ChevronDown,
   Package,
+  History,
+  FileText,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,6 +74,15 @@ interface Item {
   subtotal: number;
 }
 
+interface HistoryEvent {
+  type: "created" | "posted" | "cancelled";
+  label: string;
+  userName: string;
+  userEmail: string;
+  timestamp: string;
+  reason?: string | null;
+}
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n || 0);
 
@@ -94,6 +107,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+
+  // History (audit trail)
+  const [history, setHistory] = useState<HistoryEvent[]>([]);
 
   // Add product row — supports multi-select
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -208,6 +224,58 @@ export default function StockInForm({ stockInId, onBack }: Props) {
             unit_price: Number(it.unit_price),
             subtotal: Number(it.subtotal),
           })));
+
+          // Build history (audit trail) — collect all actor user ids first
+          const actorIds = Array.from(
+            new Set(
+              [r.created_by, r.posted_by, r.cancelled_by].filter(Boolean) as string[]
+            )
+          );
+          let actorMap: Record<string, { name: string; email: string }> = {};
+          if (actorIds.length > 0) {
+            const { data: actors } = await supabase
+              .from("profiles")
+              .select("id, name, email")
+              .in("id", actorIds);
+            (actors || []).forEach((a: any) => {
+              actorMap[a.id] = { name: a.name || "", email: a.email || "" };
+            });
+          }
+          const events: HistoryEvent[] = [];
+          if (r.created_at) {
+            const a = actorMap[r.created_by] || { name: "", email: "" };
+            events.push({
+              type: "created",
+              label: "Membuat dokumen",
+              userName: a.name || a.email || "Unknown",
+              userEmail: a.email,
+              timestamp: r.created_at,
+            });
+          }
+          if (r.posted_at && r.posted_by) {
+            const a = actorMap[r.posted_by] || { name: "", email: "" };
+            events.push({
+              type: "posted",
+              label: "Memposting dokumen",
+              userName: a.name || a.email || "Unknown",
+              userEmail: a.email,
+              timestamp: r.posted_at,
+            });
+          }
+          if (r.cancelled_at && r.cancelled_by) {
+            const a = actorMap[r.cancelled_by] || { name: "", email: "" };
+            events.push({
+              type: "cancelled",
+              label: "Membatalkan dokumen",
+              userName: a.name || a.email || "Unknown",
+              userEmail: a.email,
+              timestamp: r.cancelled_at,
+              reason: r.cancel_reason,
+            });
+          }
+          // Sort ascending by timestamp
+          events.sort((x, y) => new Date(x.timestamp).getTime() - new Date(y.timestamp).getTime());
+          setHistory(events);
         }
       } else {
         // New: get user email & preview next BID
@@ -916,6 +984,71 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Riwayat Aktivitas */}
+      {stockInId && history.length > 0 && (
+        <div className="border rounded-lg bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center gap-2">
+            <History className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-semibold">Riwayat Aktivitas</h3>
+          </div>
+          <div className="p-4">
+            <ol className="relative border-l-2 border-muted ml-3 space-y-5">
+              {history.map((ev, idx) => {
+                const Icon =
+                  ev.type === "created" ? FileText : ev.type === "posted" ? CheckCircle2 : XCircle;
+                const dotClass =
+                  ev.type === "created"
+                    ? "bg-blue-500 text-white"
+                    : ev.type === "posted"
+                    ? "bg-green-500 text-white"
+                    : "bg-destructive text-destructive-foreground";
+                const ts = new Date(ev.timestamp);
+                const dateStr = ts.toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                });
+                const timeStr = ts.toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                return (
+                  <li key={idx} className="ml-6">
+                    <span
+                      className={`absolute -left-[15px] flex items-center justify-center h-7 w-7 rounded-full ring-4 ring-card ${dotClass}`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <div>
+                        <p className="text-sm font-semibold">{ev.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          oleh{" "}
+                          <span className="font-medium text-foreground">{ev.userName}</span>
+                          {ev.userEmail && ev.userEmail !== ev.userName && (
+                            <span className="text-muted-foreground"> ({ev.userEmail})</span>
+                          )}
+                        </p>
+                        {ev.reason && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">
+                            Alasan: {ev.reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground sm:text-right">
+                        <span className="font-medium">{dateStr}</span>
+                        <span className="mx-1">·</span>
+                        <span>{timeStr}</span>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
         </div>
       )}
