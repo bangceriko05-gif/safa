@@ -988,6 +988,71 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         </div>
       )}
 
+      {/* Riwayat Aktivitas */}
+      {stockInId && history.length > 0 && (
+        <div className="border rounded-lg bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center gap-2">
+            <History className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-semibold">Riwayat Aktivitas</h3>
+          </div>
+          <div className="p-4">
+            <ol className="relative border-l-2 border-muted ml-3 space-y-5">
+              {history.map((ev, idx) => {
+                const Icon =
+                  ev.type === "created" ? FileText : ev.type === "posted" ? CheckCircle2 : XCircle;
+                const dotClass =
+                  ev.type === "created"
+                    ? "bg-blue-500 text-white"
+                    : ev.type === "posted"
+                    ? "bg-green-500 text-white"
+                    : "bg-destructive text-destructive-foreground";
+                const ts = new Date(ev.timestamp);
+                const dateStr = ts.toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                });
+                const timeStr = ts.toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                return (
+                  <li key={idx} className="ml-6">
+                    <span
+                      className={`absolute -left-[15px] flex items-center justify-center h-7 w-7 rounded-full ring-4 ring-card ${dotClass}`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <div>
+                        <p className="text-sm font-semibold">{ev.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          oleh{" "}
+                          <span className="font-medium text-foreground">{ev.userName}</span>
+                          {ev.userEmail && ev.userEmail !== ev.userName && (
+                            <span className="text-muted-foreground"> ({ev.userEmail})</span>
+                          )}
+                        </p>
+                        {ev.reason && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">
+                            Alasan: {ev.reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground sm:text-right">
+                        <span className="font-medium">{dateStr}</span>
+                        <span className="mx-1">·</span>
+                        <span>{timeStr}</span>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </div>
+      )}
+
       {/* Edit Date Dialog */}
       <Dialog open={editDateOpen} onOpenChange={setEditDateOpen}>
         <DialogContent>
