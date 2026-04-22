@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { startOfYear } from "date-fns";
 import StockInForm from "./StockInForm";
+import InventoryToolbar from "./InventoryToolbar";
 
 interface StockInRow {
   id: string;
@@ -39,6 +40,11 @@ export default function StockInList() {
   const [search, setSearch] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState(10);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfYear(new Date()),
+    to: new Date(),
+  });
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -71,12 +77,22 @@ export default function StockInList() {
 
   const filtered = rows.filter((r) => {
     const q = search.toLowerCase().trim();
+    if (dateRange?.from) {
+      const d = new Date(r.date);
+      const from = new Date(dateRange.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(dateRange.to || dateRange.from);
+      to.setHours(23, 59, 59, 999);
+      if (d < from || d > to) return false;
+    }
     if (!q) return true;
     return (
       r.bid?.toLowerCase().includes(q) ||
       (r.supplier_name || "").toLowerCase().includes(q)
     );
   });
+
+  const paginated = filtered.slice(0, pageSize);
 
   const handleOpenNew = () => {
     setEditId(null);
@@ -103,20 +119,20 @@ export default function StockInList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cari nomor stok masuk / supplier..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button onClick={handleOpenNew} className="gap-2">
-          <Plus className="h-4 w-4" /> Tambah Stok Masuk
-        </Button>
-      </div>
+      <InventoryToolbar
+        title="Daftar Stok Masuk"
+        count={filtered.length}
+        countLabel="Stok Masuk"
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari No. Stok Masuk"
+        onAdd={handleOpenNew}
+        addLabel="Tambah"
+      />
 
       <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -138,7 +154,7 @@ export default function StockInList() {
                     Memuat...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-muted-foreground">
                     <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
@@ -146,7 +162,7 @@ export default function StockInList() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
+                paginated.map((r) => (
                   <tr
                     key={r.id}
                     className="border-t hover:bg-muted/30 cursor-pointer transition-colors"

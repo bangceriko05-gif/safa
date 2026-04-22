@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Boxes, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Activity } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { startOfYear } from "date-fns";
 import StockInList from "./StockInList";
+import InventoryToolbar from "./InventoryToolbar";
 
 export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState("stok-masuk");
@@ -45,26 +48,34 @@ export default function InventoryManagement() {
             </TabsContent>
 
             <TabsContent value="stok-keluar" className="mt-6">
-              <PlaceholderPanel
+              <PlaceholderWithToolbar
                 title="Stok Keluar"
+                countLabel="Stok Keluar"
                 description="Catat pengeluaran barang untuk operasional, penjualan, atau penyesuaian."
                 icon={ArrowUpFromLine}
+                searchPlaceholder="Cari No. Stok Keluar"
+                addLabel="Tambah"
               />
             </TabsContent>
 
             <TabsContent value="stok-opname" className="mt-6">
-              <PlaceholderPanel
+              <PlaceholderWithToolbar
                 title="Stok Opname"
+                countLabel="Stok Opname"
                 description="Lakukan perhitungan fisik stok dan penyesuaian selisih."
                 icon={ClipboardList}
+                searchPlaceholder="Cari No. Stok Opname"
+                addLabel="Tambah"
               />
             </TabsContent>
 
             <TabsContent value="pergerakan-stok" className="mt-6">
-              <PlaceholderPanel
+              <PlaceholderWithToolbar
                 title="Pergerakan Stok"
+                countLabel="Pergerakan"
                 description="Riwayat lengkap mutasi stok dari semua transaksi."
                 icon={Activity}
+                searchPlaceholder="Cari pergerakan stok"
               />
             </TabsContent>
           </Tabs>
@@ -73,25 +84,54 @@ export default function InventoryManagement() {
   );
 }
 
-function PlaceholderPanel({
+function PlaceholderWithToolbar({
   title,
+  countLabel,
   description,
   icon: Icon,
+  searchPlaceholder,
+  addLabel,
 }: {
   title: string;
+  countLabel: string;
   description: string;
   icon: React.ElementType;
+  searchPlaceholder: string;
+  addLabel?: string;
 }) {
+  const [search, setSearch] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfYear(new Date()),
+    to: new Date(),
+  });
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
-      <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-        <Icon className="h-7 w-7 text-primary" />
+    <div className="space-y-4">
+      <InventoryToolbar
+        title={`Daftar ${title}`}
+        count={0}
+        countLabel={countLabel}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={searchPlaceholder}
+        onAdd={addLabel ? () => {} : undefined}
+        addLabel={addLabel}
+      />
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
+        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+          <Icon className="h-7 w-7 text-primary" />
+        </div>
+        <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+        <p className="text-sm text-muted-foreground max-w-md mb-4">{description}</p>
+        <p className="text-xs text-muted-foreground italic">
+          Fitur ini sedang dalam pengembangan. Segera hadir.
+        </p>
       </div>
-      <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-md mb-4">{description}</p>
-      <p className="text-xs text-muted-foreground italic">
-        Fitur ini sedang dalam pengembangan. Segera hadir.
-      </p>
     </div>
   );
 }
