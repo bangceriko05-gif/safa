@@ -108,6 +108,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
+  // History (audit trail)
+  const [history, setHistory] = useState<HistoryEvent[]>([]);
+
   // Add product row — supports multi-select
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [newProductSearchOpen, setNewProductSearchOpen] = useState(false);
