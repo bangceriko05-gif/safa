@@ -559,7 +559,13 @@ export default function Dashboard() {
 
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "13rem",
+        } as React.CSSProperties
+      }
+    >
       <div className="min-h-screen flex w-full" style={{ background: "var(--gradient-main)" }}>
         {/* Left Sidebar - Desktop only */}
         <Sidebar collapsible="icon" className="hidden lg:flex border-r bg-background">
