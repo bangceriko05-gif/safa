@@ -74,6 +74,15 @@ interface Item {
   subtotal: number;
 }
 
+interface HistoryEvent {
+  type: "created" | "posted" | "cancelled";
+  label: string;
+  userName: string;
+  userEmail: string;
+  timestamp: string;
+  reason?: string | null;
+}
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n || 0);
 
