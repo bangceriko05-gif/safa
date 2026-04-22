@@ -562,7 +562,7 @@ export default function Dashboard() {
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "13rem",
+          "--sidebar-width": "11rem",
         } as React.CSSProperties
       }
     >
