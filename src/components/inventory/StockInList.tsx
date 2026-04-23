@@ -354,6 +354,12 @@ export default function StockInList() {
 
             <div className="border rounded-lg p-4">
               <h4 className="text-sm font-semibold mb-3">Import dari Excel/CSV (max. 200 baris)</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Kolom: <span className="font-mono">product</span>, <span className="font-mono">variant</span>,{" "}
+                <span className="font-mono">sku</span>, <span className="font-mono">supplier</span>,{" "}
+                <span className="font-mono">qty</span>, <span className="font-mono">new_buy_price</span>.
+                Tiap baris = 1 item; baris dengan supplier sama akan digabung ke 1 stok masuk.
+              </p>
 
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
