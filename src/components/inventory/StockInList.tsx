@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileDown, Upload, Trash2 } from "lucide-react";
+import { FileDown, Upload, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { Badge as UIBadge } from "@/components/ui/badge";
 
 interface StockInRow {
   id: string;
@@ -56,6 +57,8 @@ export default function StockInList() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [previewRows, setPreviewRows] = useState<PreviewRow[] | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const fetchData = async () => {
     if (!currentStore) return;
