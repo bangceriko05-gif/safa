@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,9 @@ import { DateRange } from "react-day-picker";
 import { startOfYear } from "date-fns";
 import StockInForm from "./StockInForm";
 import InventoryToolbar from "./InventoryToolbar";
+import { exportToExcel, getExportFileName } from "@/utils/reportExport";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 interface StockInRow {
   id: string;
@@ -45,6 +48,7 @@ export default function StockInList() {
     from: startOfYear(new Date()),
     to: new Date(),
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -104,6 +108,96 @@ export default function StockInList() {
     setOpenForm(true);
   };
 
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      toast.error("Tidak ada data untuk diekspor");
+      return;
+    }
+    const formatDateExp = (s: string) =>
+      new Date(s).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const formatDateTime = (s: string) =>
+      new Date(s).toLocaleString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const data = filtered.map((r) => ({
+      "No. Stok Masuk": r.bid,
+      "Tanggal": formatDateExp(r.date),
+      "Supplier": r.supplier_name || "-",
+      "Total": r.total_amount,
+      "Status": r.status,
+      "Jumlah Item": r.item_count,
+      "Dibuat": formatDateTime(r.created_at),
+    }));
+    const fileName = getExportFileName("Stok_Masuk", currentStore?.name || "Outlet", "all");
+    exportToExcel(data, "Stok Masuk", fileName);
+    toast.success(`Berhasil mengekspor ${data.length} data`);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentStore) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json: any[] = XLSX.utils.sheet_to_json(ws);
+      if (json.length === 0) {
+        toast.error("File kosong atau format tidak valid");
+        return;
+      }
+      toast.info(`Membaca ${json.length} baris...`);
+
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        toast.error("Sesi tidak valid");
+        return;
+      }
+
+      let success = 0;
+      let failed = 0;
+      for (const row of json) {
+        const bid = row["No. Stok Masuk"] || row["bid"] || `IN${Date.now()}`;
+        const dateStr = row["Tanggal"] || row["date"];
+        let date = new Date().toISOString().split("T")[0];
+        if (dateStr) {
+          const parts = String(dateStr).split(/[\/\-]/);
+          if (parts.length === 3) {
+            const d = parts[0].padStart(2, "0");
+            const m = parts[1].padStart(2, "0");
+            const y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+            date = `${y}-${m}-${d}`;
+          }
+        }
+        const supplier_name = row["Supplier"] && row["Supplier"] !== "-" ? row["Supplier"] : null;
+        const total_amount = Number(row["Total"]) || 0;
+        const status = (row["Status"] || "draft").toString().toLowerCase();
+
+        const { error } = await supabase.from("stock_in" as any).insert({
+          store_id: currentStore.id,
+          bid,
+          date,
+          supplier_name,
+          total_amount,
+          status,
+          created_by: userId,
+        } as any);
+        if (error) failed++;
+        else success++;
+      }
+      if (success > 0) toast.success(`Berhasil mengimpor ${success} data`);
+      if (failed > 0) toast.error(`${failed} data gagal diimpor`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal membaca file");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   if (openForm) {
     return (
       <StockInForm
@@ -130,8 +224,17 @@ export default function StockInList() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Cari No. Stok Masuk"
+        onExport={handleExport}
+        onImport={handleImportClick}
         onAdd={handleOpenNew}
         addLabel="Tambah"
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={handleImportFile}
       />
 
       <div className="border rounded-lg overflow-hidden">
