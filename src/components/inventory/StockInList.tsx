@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import InventoryToolbar from "./InventoryToolbar";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { useRef } from "react";
 
 interface StockInRow {
   id: string;
