@@ -20,7 +20,6 @@ import {
   Search,
   ChevronDown,
   Check,
-  FileDown,
 } from "lucide-react";
 import {
   format,
@@ -52,7 +51,6 @@ interface InventoryToolbarProps {
   searchPlaceholder?: string;
   onExport?: () => void;
   onImport?: () => void;
-  onDownloadTemplate?: () => void;
   onAdd?: () => void;
   addLabel?: string;
 }
@@ -123,7 +121,6 @@ export default function InventoryToolbar({
   searchPlaceholder = "Cari...",
   onExport,
   onImport,
-  onDownloadTemplate,
   onAdd,
   addLabel = "Tambah",
 }: InventoryToolbarProps) {
@@ -318,15 +315,6 @@ export default function InventoryToolbar({
               className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
             >
               <Upload className="h-4 w-4" /> Import
-            </Button>
-          )}
-          {onDownloadTemplate && (
-            <Button
-              variant="outline"
-              onClick={onDownloadTemplate}
-              className="gap-2"
-            >
-              <FileDown className="h-4 w-4" /> Template
             </Button>
           )}
           {onAdd && (

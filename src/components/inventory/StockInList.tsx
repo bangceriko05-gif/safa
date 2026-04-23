@@ -10,6 +10,9 @@ import InventoryToolbar from "./InventoryToolbar";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { FileDown, Upload, Trash2 } from "lucide-react";
 
 interface StockInRow {
   id: string;
@@ -49,6 +52,10 @@ export default function StockInList() {
     to: new Date(),
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -132,7 +139,8 @@ export default function StockInList() {
   };
 
   const handleImportClick = () => {
-    fileInputRef.current?.click();
+    setPendingFile(null);
+    setImportOpen(true);
   };
 
   const handleDownloadTemplate = () => {
@@ -163,9 +171,26 @@ export default function StockInList() {
     toast.success("Template berhasil diunduh");
   };
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentStore) return;
+    if (file) setPendingFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) setPendingFile(file);
+  };
+
+  const handleProcessImport = async () => {
+    const file = pendingFile;
+    if (!file || !currentStore) {
+      toast.error("Pilih file terlebih dahulu");
+      return;
+    }
+    setImporting(true);
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
@@ -218,11 +243,13 @@ export default function StockInList() {
       if (success > 0) toast.success(`Berhasil mengimpor ${success} data`);
       if (failed > 0) toast.error(`${failed} data gagal diimpor`);
       fetchData();
+      setImportOpen(false);
+      setPendingFile(null);
     } catch (err) {
       console.error(err);
       toast.error("Gagal membaca file");
     } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setImporting(false);
     }
   };
 
@@ -254,7 +281,6 @@ export default function StockInList() {
         searchPlaceholder="Cari No. Stok Masuk"
         onExport={handleExport}
         onImport={handleImportClick}
-        onDownloadTemplate={handleDownloadTemplate}
         onAdd={handleOpenNew}
         addLabel="Tambah"
       />
@@ -263,8 +289,91 @@ export default function StockInList() {
         type="file"
         accept=".xlsx,.xls,.csv"
         className="hidden"
-        onChange={handleImportFile}
+        onChange={handleFileSelect}
       />
+
+      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) setImportOpen(o); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Stok Masuk</DialogTitle>
+            <DialogDescription>
+              Unggah file Excel/CSV untuk menambahkan banyak data sekaligus.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={handleDownloadTemplate}
+              className="gap-2 w-fit"
+              size="sm"
+            >
+              <FileDown className="h-4 w-4" /> Download Template
+            </Button>
+
+            <div className="border rounded-lg p-4">
+              <h4 className="text-sm font-semibold mb-3">Import dari Excel/CSV (max. 200 baris)</h4>
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                }`}
+              >
+                {pendingFile ? (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto text-primary" />
+                    <p className="text-sm font-medium text-foreground">{pendingFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(pendingFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Drop file di sini atau klik untuk pilih
+                    </p>
+                    <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv</p>
+                  </div>
+                )}
+              </div>
+
+              {pendingFile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPendingFile(null)}
+                  className="mt-3 gap-2 text-muted-foreground"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Hapus file
+                </Button>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setImportOpen(false)}
+                disabled={importing}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleProcessImport}
+                disabled={!pendingFile || importing}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {importing ? "Mengimpor..." : "Import"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
