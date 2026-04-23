@@ -408,8 +408,8 @@ export default function StockInList() {
         onChange={handleFileSelect}
       />
 
-      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) setImportOpen(o); }}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) { setImportOpen(o); if (!o) { setPendingFile(null); setPreviewRows(null); } } }}>
+        <DialogContent className={previewRows ? "sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" : "sm:max-w-md"}>
           <DialogHeader>
             <DialogTitle>Import Stok Masuk</DialogTitle>
             <DialogDescription>
@@ -417,16 +417,27 @@ export default function StockInList() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <Button
-              variant="outline"
-              onClick={handleDownloadTemplate}
-              className="gap-2 w-fit"
-              size="sm"
-            >
-              <FileDown className="h-4 w-4" /> Download Template
-            </Button>
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                {pendingFile && (
+                  <>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium truncate max-w-[280px]">{pendingFile.name}</span>
+                  </>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleDownloadTemplate}
+                className="gap-2"
+                size="sm"
+              >
+                <FileDown className="h-4 w-4" /> Download Template
+              </Button>
+            </div>
 
+            {!previewRows && (
             <div className="border rounded-lg p-4">
               <h4 className="text-sm font-semibold mb-3">Import dari Excel/CSV (max. 200 baris)</h4>
               <p className="text-xs text-muted-foreground mb-3">
@@ -445,7 +456,12 @@ export default function StockInList() {
                   dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
                 }`}
               >
-                {pendingFile ? (
+                {analyzing ? (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto text-primary animate-pulse" />
+                    <p className="text-sm text-muted-foreground">Menganalisis file...</p>
+                  </div>
+                ) : pendingFile ? (
                   <div className="space-y-1">
                     <Upload className="h-8 w-8 mx-auto text-primary" />
                     <p className="text-sm font-medium text-foreground">{pendingFile.name}</p>
@@ -463,20 +479,87 @@ export default function StockInList() {
                   </div>
                 )}
               </div>
-
-              {pendingFile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPendingFile(null)}
-                  className="mt-3 gap-2 text-muted-foreground"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Hapus file
-                </Button>
-              )}
             </div>
+            )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            {previewRows && (
+              <>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <UIBadge className="bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500/10 gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {previewRows.filter((r) => r.status === "valid").length} valid
+                  </UIBadge>
+                  <UIBadge variant="outline">{previewRows.length} baris</UIBadge>
+                  {previewRows.some((r) => r.status === "error") && (
+                    <UIBadge variant="outline" className="text-destructive border-destructive/30 gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {previewRows.filter((r) => r.status === "error").length} error
+                    </UIBadge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setPendingFile(null); setPreviewRows(null); }}
+                    className="ml-auto gap-2 text-muted-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" /> Reset
+                  </Button>
+                </div>
+
+                {previewRows.some((r) => r.status === "error") && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    Data dengan error tidak akan diimport. Pastikan nama produk sesuai dengan yang ada di sistem.
+                  </div>
+                )}
+
+                <div className="border rounded-lg overflow-auto flex-1">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium">Status</th>
+                        <th className="text-left px-3 py-2 font-medium">Nama Produk</th>
+                        <th className="text-left px-3 py-2 font-medium">SKU</th>
+                        <th className="text-left px-3 py-2 font-medium">Varian</th>
+                        <th className="text-left px-3 py-2 font-medium">SKU Varian</th>
+                        <th className="text-left px-3 py-2 font-medium">Supplier</th>
+                        <th className="text-right px-3 py-2 font-medium">Qty</th>
+                        <th className="text-right px-3 py-2 font-medium">Harga Beli</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRows.map((r) => (
+                        <tr
+                          key={r.index}
+                          className={`border-t ${r.status === "error" ? "bg-destructive/5" : ""}`}
+                        >
+                          <td className="px-3 py-2 align-top">
+                            {r.status === "valid" ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <span className="text-destructive text-xs">{r.errorMessage}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 font-medium">{r.product || "-"}</td>
+                          <td className="px-3 py-2 text-muted-foreground">-</td>
+                          <td className="px-3 py-2">
+                            {r.variant ? <UIBadge variant="outline">{r.variant}</UIBadge> : "-"}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">{r.sku || "-"}</td>
+                          <td className="px-3 py-2">{r.supplier || "-"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {r.new_buy_price.toLocaleString("id-ID")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
               <Button
                 variant="outline"
                 onClick={() => setImportOpen(false)}
@@ -486,11 +569,15 @@ export default function StockInList() {
               </Button>
               <Button
                 onClick={handleProcessImport}
-                disabled={!pendingFile || importing}
+                disabled={!previewRows || importing || analyzing || previewRows.filter((r) => r.status === "valid").length === 0}
                 className="gap-2"
               >
                 <Upload className="h-4 w-4" />
-                {importing ? "Mengimpor..." : "Import"}
+                {importing
+                  ? "Mengimpor..."
+                  : previewRows
+                  ? `Import (${previewRows.filter((r) => r.status === "valid").length})`
+                  : "Import"}
               </Button>
             </div>
           </div>
