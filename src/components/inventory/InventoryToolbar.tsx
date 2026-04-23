@@ -301,18 +301,22 @@ export default function InventoryToolbar({
             </Button>
           </div>
 
-          <Button
-            onClick={onExport}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-          >
-            <Download className="h-4 w-4" /> Export
-          </Button>
-          <Button
-            onClick={onImport}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-          >
-            <Upload className="h-4 w-4" /> Import
-          </Button>
+          {onExport && (
+            <Button
+              onClick={onExport}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            >
+              <Download className="h-4 w-4" /> Export
+            </Button>
+          )}
+          {onImport && (
+            <Button
+              onClick={onImport}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            >
+              <Upload className="h-4 w-4" /> Import
+            </Button>
+          )}
           {onAdd && (
             <Button
               onClick={onAdd}
