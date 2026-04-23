@@ -192,39 +192,97 @@ export default function StockInList() {
         return;
       }
 
-      let success = 0;
-      let failed = 0;
-      for (const row of json) {
-        const bid = row["No. Stok Masuk"] || row["bid"] || `IN${Date.now()}`;
-        const dateStr = row["Tanggal"] || row["date"];
-        let date = new Date().toISOString().split("T")[0];
-        if (dateStr) {
-          const parts = String(dateStr).split(/[\/\-]/);
-          if (parts.length === 3) {
-            const d = parts[0].padStart(2, "0");
-            const m = parts[1].padStart(2, "0");
-            const y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
-            date = `${y}-${m}-${d}`;
-          }
-        }
-        const supplier_name = row["Supplier"] && row["Supplier"] !== "-" ? row["Supplier"] : null;
-        const total_amount = Number(row["Total"]) || 0;
-        const status = (row["Status"] || "draft").toString().toLowerCase();
+      // Load existing products for matching by name
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("store_id", currentStore.id);
+      const productMap = new Map<string, { id: string; name: string; price: number }>();
+      (prods || []).forEach((p: any) => {
+        productMap.set(String(p.name).toLowerCase().trim(), p);
+      });
 
-        const { error } = await supabase.from("stock_in" as any).insert({
-          store_id: currentStore.id,
-          bid,
-          date,
-          supplier_name,
-          total_amount,
-          status,
-          created_by: userId,
-        } as any);
-        if (error) failed++;
-        else success++;
+      // Group rows by supplier (one stock_in per supplier)
+      const groups = new Map<string, any[]>();
+      for (const row of json) {
+        const sup = (row.supplier ?? row.Supplier ?? "").toString().trim() || "-";
+        if (!groups.has(sup)) groups.set(sup, []);
+        groups.get(sup)!.push(row);
       }
-      if (success > 0) toast.success(`Berhasil mengimpor ${success} data`);
-      if (failed > 0) toast.error(`${failed} data gagal diimpor`);
+
+      const today = new Date().toISOString().split("T")[0];
+      let successItems = 0;
+      let failedItems = 0;
+      let createdHeaders = 0;
+
+      for (const [supplier, items] of groups.entries()) {
+        // Resolve products (auto-create missing ones)
+        const resolved: { product_id: string; product_name: string; quantity: number; unit_price: number; subtotal: number }[] = [];
+        for (const row of items) {
+          const name = (row.product ?? row.Product ?? "").toString().trim();
+          if (!name) { failedItems++; continue; }
+          const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
+          const price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
+
+          let prod = productMap.get(name.toLowerCase());
+          if (!prod) {
+            const { data: newProd, error: pErr } = await supabase
+              .from("products")
+              .insert({
+                name,
+                price,
+                store_id: currentStore.id,
+                created_by: userId,
+              })
+              .select("id, name, price")
+              .single();
+            if (pErr || !newProd) { failedItems++; continue; }
+            prod = newProd as any;
+            productMap.set(name.toLowerCase(), prod!);
+          }
+
+          resolved.push({
+            product_id: prod!.id,
+            product_name: prod!.name,
+            quantity: qty,
+            unit_price: price,
+            subtotal: qty * price,
+          });
+        }
+
+        if (resolved.length === 0) continue;
+
+        const total_amount = resolved.reduce((s, r) => s + r.subtotal, 0);
+        const supplier_name = supplier === "-" ? null : supplier;
+
+        const { data: header, error: hErr } = await supabase
+          .from("stock_in" as any)
+          .insert({
+            store_id: currentStore.id,
+            date: today,
+            supplier_name,
+            total_amount,
+            status: "draft",
+            created_by: userId,
+          } as any)
+          .select("id")
+          .single();
+
+        if (hErr || !header) {
+          failedItems += resolved.length;
+          continue;
+        }
+        createdHeaders++;
+
+        const itemRows = resolved.map((r) => ({ ...r, stock_in_id: (header as any).id }));
+        const { error: iErr } = await supabase.from("stock_in_items" as any).insert(itemRows as any);
+        if (iErr) failedItems += resolved.length;
+        else successItems += resolved.length;
+      }
+
+      if (successItems > 0)
+        toast.success(`Berhasil mengimpor ${successItems} item ke ${createdHeaders} stok masuk`);
+      if (failedItems > 0) toast.error(`${failedItems} item gagal diimpor`);
       fetchData();
       setImportOpen(false);
       setPendingFile(null);
