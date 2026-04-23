@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -44,6 +44,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { validateCustomerInput } from "@/utils/customerValidation";
 import { usePermissions } from "@/hooks/usePermissions";
 import NoAccessMessage from "./NoAccessMessage";
+import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 
 interface Customer {
   id: string;
@@ -485,6 +486,46 @@ export default function CustomerManagement() {
           <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (filteredCustomers.length === 0) {
+                toast.error("Tidak ada data untuk diekspor");
+                return;
+              }
+              const rows = filteredCustomers.map((c) => ({
+                Nama: c.name,
+                "Nomor HP": c.phone,
+                "Jenis Identitas": c.identity_type || "",
+                "Nomor Identitas": c.identity_number || "",
+                Email: c.email || "",
+                "Tgl Lahir": c.birth_date
+                  ? new Date(c.birth_date).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
+                  : "",
+                Domisili: c.domicile || "",
+                Catatan: c.notes || "",
+                "Tanggal Dibuat": new Date(c.created_at).toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                }),
+              }));
+              const fileName = getExportFileName(
+                "Data_Pelanggan",
+                currentStore?.name || "Outlet",
+                "all"
+              );
+              exportToExcel(rows, "Pelanggan", fileName);
+              toast.success(`${rows.length} pelanggan berhasil diekspor`);
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
           {hasPermission("manage_customers") && (
             <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" />
