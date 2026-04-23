@@ -10,6 +10,9 @@ import InventoryToolbar from "./InventoryToolbar";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { FileDown, Upload, Trash2 } from "lucide-react";
 
 interface StockInRow {
   id: string;
@@ -49,6 +52,10 @@ export default function StockInList() {
     to: new Date(),
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -132,7 +139,8 @@ export default function StockInList() {
   };
 
   const handleImportClick = () => {
-    fileInputRef.current?.click();
+    setPendingFile(null);
+    setImportOpen(true);
   };
 
   const handleDownloadTemplate = () => {
@@ -163,9 +171,26 @@ export default function StockInList() {
     toast.success("Template berhasil diunduh");
   };
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentStore) return;
+    if (file) setPendingFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) setPendingFile(file);
+  };
+
+  const handleProcessImport = async () => {
+    const file = pendingFile;
+    if (!file || !currentStore) {
+      toast.error("Pilih file terlebih dahulu");
+      return;
+    }
+    setImporting(true);
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
@@ -218,11 +243,13 @@ export default function StockInList() {
       if (success > 0) toast.success(`Berhasil mengimpor ${success} data`);
       if (failed > 0) toast.error(`${failed} data gagal diimpor`);
       fetchData();
+      setImportOpen(false);
+      setPendingFile(null);
     } catch (err) {
       console.error(err);
       toast.error("Gagal membaca file");
     } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setImporting(false);
     }
   };
 
