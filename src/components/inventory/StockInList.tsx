@@ -156,6 +156,7 @@ export default function StockInList() {
 
   const handleImportClick = () => {
     setPendingFile(null);
+    setPreviewRows(null);
     setImportOpen(true);
   };
 
@@ -172,7 +173,10 @@ export default function StockInList() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setPendingFile(file);
+    if (file) {
+      setPendingFile(file);
+      analyzeFile(file);
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -180,27 +184,118 @@ export default function StockInList() {
     e.preventDefault();
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) setPendingFile(file);
+    if (file) {
+      setPendingFile(file);
+      analyzeFile(file);
+    }
   };
 
-  const handleProcessImport = async () => {
-    const file = pendingFile;
-    if (!file || !currentStore) {
-      toast.error("Pilih file terlebih dahulu");
-      return;
-    }
-    setImporting(true);
+  const analyzeFile = async (file: File) => {
+    if (!currentStore) return;
+    setAnalyzing(true);
+    setPreviewRows(null);
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const json: any[] = XLSX.utils.sheet_to_json(ws);
+      const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (json.length === 0) {
         toast.error("File kosong atau format tidak valid");
+        setPendingFile(null);
         return;
       }
-      toast.info(`Membaca ${json.length} baris...`);
+      if (json.length > 200) {
+        toast.error("Maksimum 200 baris per import");
+        setPendingFile(null);
+        return;
+      }
 
+      // Load existing products for validation by name
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("store_id", currentStore.id);
+      const productMap = new Map<string, { id: string; name: string }>();
+      (prods || []).forEach((p: any) => {
+        productMap.set(String(p.name).toLowerCase().trim(), p);
+      });
+
+      const seenSkus = new Set<string>();
+      const rowsParsed: PreviewRow[] = json.map((row, i) => {
+        const product = (row.product ?? row.Product ?? "").toString().trim();
+        const variant = (row.variant ?? row.Variant ?? "").toString().trim();
+        const sku = (row.sku ?? row.SKU ?? row.Sku ?? "").toString().trim();
+        const supplier = (row.supplier ?? row.Supplier ?? "").toString().trim();
+        const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
+        const new_buy_price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
+
+        let status: "valid" | "error" = "valid";
+        let errorMessage: string | undefined;
+        let matchedProductId: string | undefined;
+
+        if (!product) {
+          status = "error";
+          errorMessage = "Nama produk kosong";
+        } else {
+          const matched = productMap.get(product.toLowerCase());
+          if (!matched) {
+            status = "error";
+            errorMessage = `Produk "${product}" tidak ditemukan di database`;
+          } else {
+            matchedProductId = matched.id;
+          }
+        }
+        if (status === "valid" && qty <= 0) {
+          status = "error";
+          errorMessage = "Qty harus lebih dari 0";
+        }
+        if (status === "valid" && sku) {
+          const skuKey = sku.toLowerCase();
+          if (seenSkus.has(skuKey)) {
+            status = "error";
+            errorMessage = `SKU varian "${sku}" duplikat di file`;
+          } else {
+            seenSkus.add(skuKey);
+          }
+        }
+
+        return {
+          index: i + 1,
+          product,
+          variant,
+          sku,
+          supplier,
+          qty,
+          new_buy_price,
+          status,
+          errorMessage,
+          matchedProductId,
+        };
+      });
+
+      setPreviewRows(rowsParsed);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal membaca file");
+      setPendingFile(null);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleProcessImport = async () => {
+    if (!currentStore || !previewRows) {
+      toast.error("Pilih file terlebih dahulu");
+      return;
+    }
+    const validRows = previewRows.filter((r) => r.status === "valid");
+    if (validRows.length === 0) {
+      toast.error("Tidak ada baris valid untuk diimpor");
+      return;
+    }
+
+    setImporting(true);
+    try {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       if (!userId) {
@@ -208,20 +303,10 @@ export default function StockInList() {
         return;
       }
 
-      // Load existing products for matching by name
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id, name, price")
-        .eq("store_id", currentStore.id);
-      const productMap = new Map<string, { id: string; name: string; price: number }>();
-      (prods || []).forEach((p: any) => {
-        productMap.set(String(p.name).toLowerCase().trim(), p);
-      });
-
-      // Group rows by supplier (one stock_in per supplier)
-      const groups = new Map<string, any[]>();
-      for (const row of json) {
-        const sup = (row.supplier ?? row.Supplier ?? "").toString().trim() || "-";
+      // Group valid rows by supplier
+      const groups = new Map<string, PreviewRow[]>();
+      for (const row of validRows) {
+        const sup = row.supplier || "-";
         if (!groups.has(sup)) groups.set(sup, []);
         groups.get(sup)!.push(row);
       }
@@ -232,42 +317,13 @@ export default function StockInList() {
       let createdHeaders = 0;
 
       for (const [supplier, items] of groups.entries()) {
-        // Resolve products (auto-create missing ones)
-        const resolved: { product_id: string; product_name: string; quantity: number; unit_price: number; subtotal: number }[] = [];
-        for (const row of items) {
-          const name = (row.product ?? row.Product ?? "").toString().trim();
-          if (!name) { failedItems++; continue; }
-          const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
-          const price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
-
-          let prod = productMap.get(name.toLowerCase());
-          if (!prod) {
-            const { data: newProd, error: pErr } = await supabase
-              .from("products")
-              .insert({
-                name,
-                price,
-                store_id: currentStore.id,
-                created_by: userId,
-              })
-              .select("id, name, price")
-              .single();
-            if (pErr || !newProd) { failedItems++; continue; }
-            prod = newProd as any;
-            productMap.set(name.toLowerCase(), prod!);
-          }
-
-          resolved.push({
-            product_id: prod!.id,
-            product_name: prod!.name,
-            quantity: qty,
-            unit_price: price,
-            subtotal: qty * price,
-          });
-        }
-
-        if (resolved.length === 0) continue;
-
+        const resolved = items.map((r) => ({
+          product_id: r.matchedProductId!,
+          product_name: r.product,
+          quantity: r.qty,
+          unit_price: r.new_buy_price,
+          subtotal: r.qty * r.new_buy_price,
+        }));
         const total_amount = resolved.reduce((s, r) => s + r.subtotal, 0);
         const supplier_name = supplier === "-" ? null : supplier;
 
@@ -296,15 +352,18 @@ export default function StockInList() {
         else successItems += resolved.length;
       }
 
+      const errorCount = previewRows.length - validRows.length;
       if (successItems > 0)
         toast.success(`Berhasil mengimpor ${successItems} item ke ${createdHeaders} stok masuk`);
       if (failedItems > 0) toast.error(`${failedItems} item gagal diimpor`);
+      if (errorCount > 0) toast.warning(`${errorCount} baris dilewati karena error`);
       fetchData();
       setImportOpen(false);
       setPendingFile(null);
+      setPreviewRows(null);
     } catch (err) {
       console.error(err);
-      toast.error("Gagal membaca file");
+      toast.error("Gagal mengimpor data");
     } finally {
       setImporting(false);
     }
