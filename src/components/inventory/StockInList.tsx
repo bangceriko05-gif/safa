@@ -281,7 +281,6 @@ export default function StockInList() {
         searchPlaceholder="Cari No. Stok Masuk"
         onExport={handleExport}
         onImport={handleImportClick}
-        onDownloadTemplate={handleDownloadTemplate}
         onAdd={handleOpenNew}
         addLabel="Tambah"
       />
@@ -290,8 +289,91 @@ export default function StockInList() {
         type="file"
         accept=".xlsx,.xls,.csv"
         className="hidden"
-        onChange={handleImportFile}
+        onChange={handleFileSelect}
       />
+
+      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) setImportOpen(o); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Stok Masuk</DialogTitle>
+            <DialogDescription>
+              Unggah file Excel/CSV untuk menambahkan banyak data sekaligus.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={handleDownloadTemplate}
+              className="gap-2 w-fit"
+              size="sm"
+            >
+              <FileDown className="h-4 w-4" /> Download Template
+            </Button>
+
+            <div className="border rounded-lg p-4">
+              <h4 className="text-sm font-semibold mb-3">Import dari Excel/CSV (max. 200 baris)</h4>
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                }`}
+              >
+                {pendingFile ? (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto text-primary" />
+                    <p className="text-sm font-medium text-foreground">{pendingFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(pendingFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Drop file di sini atau klik untuk pilih
+                    </p>
+                    <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv</p>
+                  </div>
+                )}
+              </div>
+
+              {pendingFile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPendingFile(null)}
+                  className="mt-3 gap-2 text-muted-foreground"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Hapus file
+                </Button>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setImportOpen(false)}
+                disabled={importing}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleProcessImport}
+                disabled={!pendingFile || importing}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {importing ? "Mengimpor..." : "Import"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
