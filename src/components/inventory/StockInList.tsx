@@ -254,6 +254,7 @@ export default function StockInList() {
         searchPlaceholder="Cari No. Stok Masuk"
         onExport={handleExport}
         onImport={handleImportClick}
+        onDownloadTemplate={handleDownloadTemplate}
         onAdd={handleOpenNew}
         addLabel="Tambah"
       />
