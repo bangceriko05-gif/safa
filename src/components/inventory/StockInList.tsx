@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileDown, Upload, Trash2 } from "lucide-react";
+import { FileDown, Upload, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { Badge as UIBadge } from "@/components/ui/badge";
 
 interface StockInRow {
   id: string;
@@ -23,6 +24,19 @@ interface StockInRow {
   status: string;
   created_at: string;
   item_count: number;
+}
+
+interface PreviewRow {
+  index: number;
+  product: string;
+  variant: string;
+  sku: string;
+  supplier: string;
+  qty: number;
+  new_buy_price: number;
+  status: "valid" | "error";
+  errorMessage?: string;
+  matchedProductId?: string;
 }
 
 const formatCurrency = (n: number) =>
@@ -56,6 +70,8 @@ export default function StockInList() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [previewRows, setPreviewRows] = useState<PreviewRow[] | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const fetchData = async () => {
     if (!currentStore) return;
@@ -140,6 +156,7 @@ export default function StockInList() {
 
   const handleImportClick = () => {
     setPendingFile(null);
+    setPreviewRows(null);
     setImportOpen(true);
   };
 
@@ -156,7 +173,10 @@ export default function StockInList() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setPendingFile(file);
+    if (file) {
+      setPendingFile(file);
+      analyzeFile(file);
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -164,27 +184,118 @@ export default function StockInList() {
     e.preventDefault();
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) setPendingFile(file);
+    if (file) {
+      setPendingFile(file);
+      analyzeFile(file);
+    }
   };
 
-  const handleProcessImport = async () => {
-    const file = pendingFile;
-    if (!file || !currentStore) {
-      toast.error("Pilih file terlebih dahulu");
-      return;
-    }
-    setImporting(true);
+  const analyzeFile = async (file: File) => {
+    if (!currentStore) return;
+    setAnalyzing(true);
+    setPreviewRows(null);
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const json: any[] = XLSX.utils.sheet_to_json(ws);
+      const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (json.length === 0) {
         toast.error("File kosong atau format tidak valid");
+        setPendingFile(null);
         return;
       }
-      toast.info(`Membaca ${json.length} baris...`);
+      if (json.length > 200) {
+        toast.error("Maksimum 200 baris per import");
+        setPendingFile(null);
+        return;
+      }
 
+      // Load existing products for validation by name
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("store_id", currentStore.id);
+      const productMap = new Map<string, { id: string; name: string }>();
+      (prods || []).forEach((p: any) => {
+        productMap.set(String(p.name).toLowerCase().trim(), p);
+      });
+
+      const seenSkus = new Set<string>();
+      const rowsParsed: PreviewRow[] = json.map((row, i) => {
+        const product = (row.product ?? row.Product ?? "").toString().trim();
+        const variant = (row.variant ?? row.Variant ?? "").toString().trim();
+        const sku = (row.sku ?? row.SKU ?? row.Sku ?? "").toString().trim();
+        const supplier = (row.supplier ?? row.Supplier ?? "").toString().trim();
+        const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
+        const new_buy_price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
+
+        let status: "valid" | "error" = "valid";
+        let errorMessage: string | undefined;
+        let matchedProductId: string | undefined;
+
+        if (!product) {
+          status = "error";
+          errorMessage = "Nama produk kosong";
+        } else {
+          const matched = productMap.get(product.toLowerCase());
+          if (!matched) {
+            status = "error";
+            errorMessage = `Produk "${product}" tidak ditemukan di database`;
+          } else {
+            matchedProductId = matched.id;
+          }
+        }
+        if (status === "valid" && qty <= 0) {
+          status = "error";
+          errorMessage = "Qty harus lebih dari 0";
+        }
+        if (status === "valid" && sku) {
+          const skuKey = sku.toLowerCase();
+          if (seenSkus.has(skuKey)) {
+            status = "error";
+            errorMessage = `SKU varian "${sku}" duplikat di file`;
+          } else {
+            seenSkus.add(skuKey);
+          }
+        }
+
+        return {
+          index: i + 1,
+          product,
+          variant,
+          sku,
+          supplier,
+          qty,
+          new_buy_price,
+          status,
+          errorMessage,
+          matchedProductId,
+        };
+      });
+
+      setPreviewRows(rowsParsed);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal membaca file");
+      setPendingFile(null);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleProcessImport = async () => {
+    if (!currentStore || !previewRows) {
+      toast.error("Pilih file terlebih dahulu");
+      return;
+    }
+    const validRows = previewRows.filter((r) => r.status === "valid");
+    if (validRows.length === 0) {
+      toast.error("Tidak ada baris valid untuk diimpor");
+      return;
+    }
+
+    setImporting(true);
+    try {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       if (!userId) {
@@ -192,20 +303,10 @@ export default function StockInList() {
         return;
       }
 
-      // Load existing products for matching by name
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id, name, price")
-        .eq("store_id", currentStore.id);
-      const productMap = new Map<string, { id: string; name: string; price: number }>();
-      (prods || []).forEach((p: any) => {
-        productMap.set(String(p.name).toLowerCase().trim(), p);
-      });
-
-      // Group rows by supplier (one stock_in per supplier)
-      const groups = new Map<string, any[]>();
-      for (const row of json) {
-        const sup = (row.supplier ?? row.Supplier ?? "").toString().trim() || "-";
+      // Group valid rows by supplier
+      const groups = new Map<string, PreviewRow[]>();
+      for (const row of validRows) {
+        const sup = row.supplier || "-";
         if (!groups.has(sup)) groups.set(sup, []);
         groups.get(sup)!.push(row);
       }
@@ -216,42 +317,13 @@ export default function StockInList() {
       let createdHeaders = 0;
 
       for (const [supplier, items] of groups.entries()) {
-        // Resolve products (auto-create missing ones)
-        const resolved: { product_id: string; product_name: string; quantity: number; unit_price: number; subtotal: number }[] = [];
-        for (const row of items) {
-          const name = (row.product ?? row.Product ?? "").toString().trim();
-          if (!name) { failedItems++; continue; }
-          const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
-          const price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
-
-          let prod = productMap.get(name.toLowerCase());
-          if (!prod) {
-            const { data: newProd, error: pErr } = await supabase
-              .from("products")
-              .insert({
-                name,
-                price,
-                store_id: currentStore.id,
-                created_by: userId,
-              })
-              .select("id, name, price")
-              .single();
-            if (pErr || !newProd) { failedItems++; continue; }
-            prod = newProd as any;
-            productMap.set(name.toLowerCase(), prod!);
-          }
-
-          resolved.push({
-            product_id: prod!.id,
-            product_name: prod!.name,
-            quantity: qty,
-            unit_price: price,
-            subtotal: qty * price,
-          });
-        }
-
-        if (resolved.length === 0) continue;
-
+        const resolved = items.map((r) => ({
+          product_id: r.matchedProductId!,
+          product_name: r.product,
+          quantity: r.qty,
+          unit_price: r.new_buy_price,
+          subtotal: r.qty * r.new_buy_price,
+        }));
         const total_amount = resolved.reduce((s, r) => s + r.subtotal, 0);
         const supplier_name = supplier === "-" ? null : supplier;
 
@@ -280,15 +352,18 @@ export default function StockInList() {
         else successItems += resolved.length;
       }
 
+      const errorCount = previewRows.length - validRows.length;
       if (successItems > 0)
         toast.success(`Berhasil mengimpor ${successItems} item ke ${createdHeaders} stok masuk`);
       if (failedItems > 0) toast.error(`${failedItems} item gagal diimpor`);
+      if (errorCount > 0) toast.warning(`${errorCount} baris dilewati karena error`);
       fetchData();
       setImportOpen(false);
       setPendingFile(null);
+      setPreviewRows(null);
     } catch (err) {
       console.error(err);
-      toast.error("Gagal membaca file");
+      toast.error("Gagal mengimpor data");
     } finally {
       setImporting(false);
     }
@@ -333,8 +408,8 @@ export default function StockInList() {
         onChange={handleFileSelect}
       />
 
-      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) setImportOpen(o); }}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) { setImportOpen(o); if (!o) { setPendingFile(null); setPreviewRows(null); } } }}>
+        <DialogContent className={previewRows ? "sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" : "sm:max-w-md"}>
           <DialogHeader>
             <DialogTitle>Import Stok Masuk</DialogTitle>
             <DialogDescription>
@@ -342,16 +417,27 @@ export default function StockInList() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <Button
-              variant="outline"
-              onClick={handleDownloadTemplate}
-              className="gap-2 w-fit"
-              size="sm"
-            >
-              <FileDown className="h-4 w-4" /> Download Template
-            </Button>
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                {pendingFile && (
+                  <>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium truncate max-w-[280px]">{pendingFile.name}</span>
+                  </>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleDownloadTemplate}
+                className="gap-2"
+                size="sm"
+              >
+                <FileDown className="h-4 w-4" /> Download Template
+              </Button>
+            </div>
 
+            {!previewRows && (
             <div className="border rounded-lg p-4">
               <h4 className="text-sm font-semibold mb-3">Import dari Excel/CSV (max. 200 baris)</h4>
               <p className="text-xs text-muted-foreground mb-3">
@@ -370,7 +456,12 @@ export default function StockInList() {
                   dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
                 }`}
               >
-                {pendingFile ? (
+                {analyzing ? (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto text-primary animate-pulse" />
+                    <p className="text-sm text-muted-foreground">Menganalisis file...</p>
+                  </div>
+                ) : pendingFile ? (
                   <div className="space-y-1">
                     <Upload className="h-8 w-8 mx-auto text-primary" />
                     <p className="text-sm font-medium text-foreground">{pendingFile.name}</p>
@@ -388,20 +479,87 @@ export default function StockInList() {
                   </div>
                 )}
               </div>
-
-              {pendingFile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPendingFile(null)}
-                  className="mt-3 gap-2 text-muted-foreground"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Hapus file
-                </Button>
-              )}
             </div>
+            )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            {previewRows && (
+              <>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <UIBadge className="bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500/10 gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {previewRows.filter((r) => r.status === "valid").length} valid
+                  </UIBadge>
+                  <UIBadge variant="outline">{previewRows.length} baris</UIBadge>
+                  {previewRows.some((r) => r.status === "error") && (
+                    <UIBadge variant="outline" className="text-destructive border-destructive/30 gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {previewRows.filter((r) => r.status === "error").length} error
+                    </UIBadge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setPendingFile(null); setPreviewRows(null); }}
+                    className="ml-auto gap-2 text-muted-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" /> Reset
+                  </Button>
+                </div>
+
+                {previewRows.some((r) => r.status === "error") && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    Data dengan error tidak akan diimport. Pastikan nama produk sesuai dengan yang ada di sistem.
+                  </div>
+                )}
+
+                <div className="border rounded-lg overflow-auto flex-1">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium">Status</th>
+                        <th className="text-left px-3 py-2 font-medium">Nama Produk</th>
+                        <th className="text-left px-3 py-2 font-medium">SKU</th>
+                        <th className="text-left px-3 py-2 font-medium">Varian</th>
+                        <th className="text-left px-3 py-2 font-medium">SKU Varian</th>
+                        <th className="text-left px-3 py-2 font-medium">Supplier</th>
+                        <th className="text-right px-3 py-2 font-medium">Qty</th>
+                        <th className="text-right px-3 py-2 font-medium">Harga Beli</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRows.map((r) => (
+                        <tr
+                          key={r.index}
+                          className={`border-t ${r.status === "error" ? "bg-destructive/5" : ""}`}
+                        >
+                          <td className="px-3 py-2 align-top">
+                            {r.status === "valid" ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <span className="text-destructive text-xs">{r.errorMessage}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 font-medium">{r.product || "-"}</td>
+                          <td className="px-3 py-2 text-muted-foreground">-</td>
+                          <td className="px-3 py-2">
+                            {r.variant ? <UIBadge variant="outline">{r.variant}</UIBadge> : "-"}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">{r.sku || "-"}</td>
+                          <td className="px-3 py-2">{r.supplier || "-"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {r.new_buy_price.toLocaleString("id-ID")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
               <Button
                 variant="outline"
                 onClick={() => setImportOpen(false)}
@@ -411,11 +569,15 @@ export default function StockInList() {
               </Button>
               <Button
                 onClick={handleProcessImport}
-                disabled={!pendingFile || importing}
+                disabled={!previewRows || importing || analyzing || previewRows.filter((r) => r.status === "valid").length === 0}
                 className="gap-2"
               >
                 <Upload className="h-4 w-4" />
-                {importing ? "Mengimpor..." : "Import"}
+                {importing
+                  ? "Mengimpor..."
+                  : previewRows
+                  ? `Import (${previewRows.filter((r) => r.status === "valid").length})`
+                  : "Import"}
               </Button>
             </div>
           </div>
