@@ -26,6 +26,19 @@ interface StockInRow {
   item_count: number;
 }
 
+interface PreviewRow {
+  index: number;
+  product: string;
+  variant: string;
+  sku: string;
+  supplier: string;
+  qty: number;
+  new_buy_price: number;
+  status: "valid" | "error";
+  errorMessage?: string;
+  matchedProductId?: string;
+}
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n || 0);
 
