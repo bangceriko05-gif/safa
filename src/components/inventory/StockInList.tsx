@@ -144,28 +144,11 @@ export default function StockInList() {
   };
 
   const handleDownloadTemplate = () => {
-    const today = new Date().toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
     const sample = [
-      {
-        "No. Stok Masuk": "IN23042600000099",
-        "Tanggal": today,
-        "Supplier": "PT Contoh Supplier",
-        "Total": 150000,
-        "Status": "draft",
-        "Jumlah Item": 10,
-      },
-      {
-        "No. Stok Masuk": "IN23042600000100",
-        "Tanggal": today,
-        "Supplier": "-",
-        "Total": 0,
-        "Status": "draft",
-        "Jumlah Item": 0,
-      },
+      { product: "hk025", variant: "", sku: "hk02540-1", supplier: "", qty: 1, new_buy_price: 50000 },
+      { product: "hk034", variant: "", sku: "hk03439-1", supplier: "", qty: 1, new_buy_price: 50000 },
+      { product: "hk054", variant: "", sku: "hk05440-2", supplier: "", qty: 3, new_buy_price: 50000 },
+      { product: "hb082", variant: "", sku: "hb08237", supplier: "", qty: 1, new_buy_price: 55000 },
     ];
     exportToExcel(sample, "Template Stok Masuk", "Template_Import_Stok_Masuk");
     toast.success("Template berhasil diunduh");
@@ -209,39 +192,97 @@ export default function StockInList() {
         return;
       }
 
-      let success = 0;
-      let failed = 0;
-      for (const row of json) {
-        const bid = row["No. Stok Masuk"] || row["bid"] || `IN${Date.now()}`;
-        const dateStr = row["Tanggal"] || row["date"];
-        let date = new Date().toISOString().split("T")[0];
-        if (dateStr) {
-          const parts = String(dateStr).split(/[\/\-]/);
-          if (parts.length === 3) {
-            const d = parts[0].padStart(2, "0");
-            const m = parts[1].padStart(2, "0");
-            const y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
-            date = `${y}-${m}-${d}`;
-          }
-        }
-        const supplier_name = row["Supplier"] && row["Supplier"] !== "-" ? row["Supplier"] : null;
-        const total_amount = Number(row["Total"]) || 0;
-        const status = (row["Status"] || "draft").toString().toLowerCase();
+      // Load existing products for matching by name
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("store_id", currentStore.id);
+      const productMap = new Map<string, { id: string; name: string; price: number }>();
+      (prods || []).forEach((p: any) => {
+        productMap.set(String(p.name).toLowerCase().trim(), p);
+      });
 
-        const { error } = await supabase.from("stock_in" as any).insert({
-          store_id: currentStore.id,
-          bid,
-          date,
-          supplier_name,
-          total_amount,
-          status,
-          created_by: userId,
-        } as any);
-        if (error) failed++;
-        else success++;
+      // Group rows by supplier (one stock_in per supplier)
+      const groups = new Map<string, any[]>();
+      for (const row of json) {
+        const sup = (row.supplier ?? row.Supplier ?? "").toString().trim() || "-";
+        if (!groups.has(sup)) groups.set(sup, []);
+        groups.get(sup)!.push(row);
       }
-      if (success > 0) toast.success(`Berhasil mengimpor ${success} data`);
-      if (failed > 0) toast.error(`${failed} data gagal diimpor`);
+
+      const today = new Date().toISOString().split("T")[0];
+      let successItems = 0;
+      let failedItems = 0;
+      let createdHeaders = 0;
+
+      for (const [supplier, items] of groups.entries()) {
+        // Resolve products (auto-create missing ones)
+        const resolved: { product_id: string; product_name: string; quantity: number; unit_price: number; subtotal: number }[] = [];
+        for (const row of items) {
+          const name = (row.product ?? row.Product ?? "").toString().trim();
+          if (!name) { failedItems++; continue; }
+          const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
+          const price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
+
+          let prod = productMap.get(name.toLowerCase());
+          if (!prod) {
+            const { data: newProd, error: pErr } = await supabase
+              .from("products")
+              .insert({
+                name,
+                price,
+                store_id: currentStore.id,
+                created_by: userId,
+              })
+              .select("id, name, price")
+              .single();
+            if (pErr || !newProd) { failedItems++; continue; }
+            prod = newProd as any;
+            productMap.set(name.toLowerCase(), prod!);
+          }
+
+          resolved.push({
+            product_id: prod!.id,
+            product_name: prod!.name,
+            quantity: qty,
+            unit_price: price,
+            subtotal: qty * price,
+          });
+        }
+
+        if (resolved.length === 0) continue;
+
+        const total_amount = resolved.reduce((s, r) => s + r.subtotal, 0);
+        const supplier_name = supplier === "-" ? null : supplier;
+
+        const { data: header, error: hErr } = await supabase
+          .from("stock_in" as any)
+          .insert({
+            store_id: currentStore.id,
+            date: today,
+            supplier_name,
+            total_amount,
+            status: "draft",
+            created_by: userId,
+          } as any)
+          .select("id")
+          .single();
+
+        if (hErr || !header) {
+          failedItems += resolved.length;
+          continue;
+        }
+        createdHeaders++;
+
+        const itemRows = resolved.map((r) => ({ ...r, stock_in_id: (header as any).id }));
+        const { error: iErr } = await supabase.from("stock_in_items" as any).insert(itemRows as any);
+        if (iErr) failedItems += resolved.length;
+        else successItems += resolved.length;
+      }
+
+      if (successItems > 0)
+        toast.success(`Berhasil mengimpor ${successItems} item ke ${createdHeaders} stok masuk`);
+      if (failedItems > 0) toast.error(`${failedItems} item gagal diimpor`);
       fetchData();
       setImportOpen(false);
       setPendingFile(null);
@@ -313,6 +354,12 @@ export default function StockInList() {
 
             <div className="border rounded-lg p-4">
               <h4 className="text-sm font-semibold mb-3">Import dari Excel/CSV (max. 200 baris)</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Kolom: <span className="font-mono">product</span>, <span className="font-mono">variant</span>,{" "}
+                <span className="font-mono">sku</span>, <span className="font-mono">supplier</span>,{" "}
+                <span className="font-mono">qty</span>, <span className="font-mono">new_buy_price</span>.
+                Tiap baris = 1 item; baris dengan supplier sama akan digabung ke 1 stok masuk.
+              </p>
 
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
