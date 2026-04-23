@@ -135,6 +135,34 @@ export default function StockInList() {
     fileInputRef.current?.click();
   };
 
+  const handleDownloadTemplate = () => {
+    const today = new Date().toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const sample = [
+      {
+        "No. Stok Masuk": "IN23042600000099",
+        "Tanggal": today,
+        "Supplier": "PT Contoh Supplier",
+        "Total": 150000,
+        "Status": "draft",
+        "Jumlah Item": 10,
+      },
+      {
+        "No. Stok Masuk": "IN23042600000100",
+        "Tanggal": today,
+        "Supplier": "-",
+        "Total": 0,
+        "Status": "draft",
+        "Jumlah Item": 0,
+      },
+    ];
+    exportToExcel(sample, "Template Stok Masuk", "Template_Import_Stok_Masuk");
+    toast.success("Template berhasil diunduh");
+  };
+
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !currentStore) return;
