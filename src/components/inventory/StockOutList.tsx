@@ -223,7 +223,7 @@ export default function StockOutList() {
       // Load existing products for validation by name
       const { data: prods, error: prodErr } = await supabase
         .from("products")
-        .select("id, name")
+        .select("id, name, stock_qty")
         .eq("store_id", currentStore.id);
       if (prodErr) {
         console.error("[StockOut Import] product fetch error:", prodErr);
@@ -231,23 +231,22 @@ export default function StockOutList() {
         setPendingFile(null);
         return;
       }
-      const productMap = new Map<string, { id: string; name: string }>();
+      const productMap = new Map<string, { id: string; name: string; stock_qty: number }>();
       (prods || []).forEach((p: any) => {
-        productMap.set(String(p.name).toLowerCase().trim(), p);
+        productMap.set(String(p.name).toLowerCase().trim(), { id: p.id, name: p.name, stock_qty: Number(p.stock_qty || 0) });
       });
 
       const seenSkus = new Set<string>();
+      const usedQtyByProduct = new Map<string, number>();
       const rowsParsed: PreviewRow[] = json.map((row, i) => {
         const product = (row.product ?? row.Product ?? "").toString().trim();
-        const variant = (row.variant ?? row.Variant ?? "").toString().trim();
         const sku = (row.sku ?? row.SKU ?? row.Sku ?? "").toString().trim();
-        const supplier = (row.supplier ?? row.Supplier ?? "").toString().trim();
         const qty = Number(row.qty ?? row.Qty ?? row.quantity ?? 0) || 0;
-        const new_buy_price = Number(row.new_buy_price ?? row.price ?? 0) || 0;
 
         let status: "valid" | "error" = "valid";
         let errorMessage: string | undefined;
         let matchedProductId: string | undefined;
+        let available_stock = 0;
 
         if (!product) {
           status = "error";
@@ -259,11 +258,21 @@ export default function StockOutList() {
             errorMessage = `Produk "${product}" tidak ditemukan di database`;
           } else {
             matchedProductId = matched.id;
+            available_stock = matched.stock_qty;
           }
         }
         if (status === "valid" && qty <= 0) {
           status = "error";
           errorMessage = "Qty harus lebih dari 0";
+        }
+        if (status === "valid" && matchedProductId) {
+          const used = usedQtyByProduct.get(matchedProductId) || 0;
+          if (used + qty > available_stock) {
+            status = "error";
+            errorMessage = `Stok tidak cukup (tersedia ${available_stock}, diminta ${used + qty})`;
+          } else {
+            usedQtyByProduct.set(matchedProductId, used + qty);
+          }
         }
         if (status === "valid" && sku) {
           const skuKey = sku.toLowerCase();
@@ -278,11 +287,9 @@ export default function StockOutList() {
         return {
           index: i + 1,
           product,
-          variant,
           sku,
-          supplier,
           qty,
-          new_buy_price,
+          available_stock,
           status,
           errorMessage,
           matchedProductId,
@@ -319,36 +326,27 @@ export default function StockOutList() {
         return;
       }
 
-      // Group valid rows by supplier
-      const groups = new Map<string, PreviewRow[]>();
-      for (const row of validRows) {
-        const sup = row.supplier || "-";
-        if (!groups.has(sup)) groups.set(sup, []);
-        groups.get(sup)!.push(row);
-      }
-
+      // All valid rows go into a single stock_out document
       const today = new Date().toISOString().split("T")[0];
       let successItems = 0;
       let failedItems = 0;
       let createdHeaders = 0;
 
-      for (const [supplier, items] of groups.entries()) {
-        const resolved = items.map((r) => ({
+      {
+        const resolved = validRows.map((r) => ({
           product_id: r.matchedProductId!,
           product_name: r.product,
           quantity: r.qty,
-          unit_price: r.new_buy_price,
-          subtotal: r.qty * r.new_buy_price,
+          unit_price: 0,
+          subtotal: 0,
         }));
         const total_amount = resolved.reduce((s, r) => s + r.subtotal, 0);
-        const supplier_name = supplier === "-" ? null : supplier;
 
         const { data: header, error: hErr } = await supabase
           .from("stock_out" as any)
           .insert({
             store_id: currentStore.id,
             date: today,
-            supplier_name,
             total_amount,
             status: "draft",
             created_by: userId,
@@ -358,14 +356,13 @@ export default function StockOutList() {
 
         if (hErr || !header) {
           failedItems += resolved.length;
-          continue;
+        } else {
+          createdHeaders++;
+          const itemRows = resolved.map((r) => ({ ...r, stock_out_id: (header as any).id }));
+          const { error: iErr } = await supabase.from("stock_out_items" as any).insert(itemRows as any);
+          if (iErr) failedItems += resolved.length;
+          else successItems += resolved.length;
         }
-        createdHeaders++;
-
-        const itemRows = resolved.map((r) => ({ ...r, stock_out_id: (header as any).id }));
-        const { error: iErr } = await supabase.from("stock_out_items" as any).insert(itemRows as any);
-        if (iErr) failedItems += resolved.length;
-        else successItems += resolved.length;
       }
 
       const errorCount = previewRows.length - validRows.length;
