@@ -2175,6 +2175,122 @@ export type Database = {
           },
         ]
       }
+      stock_out: {
+        Row: {
+          bid: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          notes: string | null
+          posted_at: string | null
+          posted_by: string | null
+          reason: string | null
+          recipient: string | null
+          status: string
+          store_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          bid?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by: string
+          date?: string
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          reason?: string | null
+          recipient?: string | null
+          status?: string
+          store_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          bid?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          reason?: string | null
+          recipient?: string | null
+          status?: string
+          store_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_out_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_out_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          stock_out_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          product_name: string
+          quantity: number
+          stock_out_id: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          stock_out_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_out_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_out_items_stock_out_id_fkey"
+            columns: ["stock_out_id"]
+            isOneToOne: false
+            referencedRelation: "stock_out"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_features: {
         Row: {
           activation_description: string | null
@@ -2501,6 +2617,10 @@ export type Database = {
         Returns: string
       }
       generate_stock_in_bid: {
+        Args: { p_date: string; p_store_id: string }
+        Returns: string
+      }
+      generate_stock_out_bid: {
         Args: { p_date: string; p_store_id: string }
         Returns: string
       }
