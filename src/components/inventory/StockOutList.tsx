@@ -19,7 +19,8 @@ interface StockOutRow {
   id: string;
   bid: string;
   date: string;
-  supplier_name: string | null;
+  recipient: string | null;
+  reason: string | null;
   total_amount: number;
   status: string;
   created_at: string;
@@ -29,11 +30,9 @@ interface StockOutRow {
 interface PreviewRow {
   index: number;
   product: string;
-  variant: string;
   sku: string;
-  supplier: string;
   qty: number;
-  new_buy_price: number;
+  available_stock: number;
   status: "valid" | "error";
   errorMessage?: string;
   matchedProductId?: string;
