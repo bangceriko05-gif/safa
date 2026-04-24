@@ -77,7 +77,7 @@ export default function StockOutList() {
     setLoading(true);
     const { data, error } = await supabase
       .from("stock_out" as any)
-      .select("id, bid, date, supplier_name, total_amount, status, created_at")
+      .select("id, bid, date, recipient, reason, total_amount, status, created_at")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false });
     if (!error && data) {
@@ -532,12 +532,9 @@ export default function StockOutList() {
                       <tr>
                         <th className="text-left px-3 py-2 font-medium">Status</th>
                         <th className="text-left px-3 py-2 font-medium">Nama Produk</th>
-                        <th className="text-left px-3 py-2 font-medium">SKU</th>
-                        <th className="text-left px-3 py-2 font-medium">Varian</th>
                         <th className="text-left px-3 py-2 font-medium">SKU Varian</th>
-                        <th className="text-left px-3 py-2 font-medium">Supplier</th>
                         <th className="text-right px-3 py-2 font-medium">Qty</th>
-                        <th className="text-right px-3 py-2 font-medium">Harga Beli</th>
+                        <th className="text-right px-3 py-2 font-medium">Stok Tersedia</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -554,15 +551,10 @@ export default function StockOutList() {
                             )}
                           </td>
                           <td className="px-3 py-2 font-medium">{r.product || "-"}</td>
-                          <td className="px-3 py-2 text-muted-foreground">-</td>
-                          <td className="px-3 py-2">
-                            {r.variant ? <UIBadge variant="outline">{r.variant}</UIBadge> : "-"}
-                          </td>
                           <td className="px-3 py-2 font-mono text-xs">{r.sku || "-"}</td>
-                          <td className="px-3 py-2">{r.supplier || "-"}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
                           <td className="px-3 py-2 text-right tabular-nums">
-                            {r.new_buy_price.toLocaleString("id-ID")}
+                            {r.available_stock.toLocaleString("id-ID")}
                           </td>
                         </tr>
                       ))}
@@ -604,7 +596,8 @@ export default function StockOutList() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium">No. Stok Keluar</th>
                 <th className="text-left px-4 py-3 font-medium">Tanggal</th>
-                <th className="text-left px-4 py-3 font-medium">Supplier</th>
+                <th className="text-left px-4 py-3 font-medium">Tujuan</th>
+                <th className="text-left px-4 py-3 font-medium">Alasan</th>
                 <th className="text-right px-4 py-3 font-medium">Total</th>
                 <th className="text-center px-4 py-3 font-medium">Status</th>
                 <th className="text-right px-4 py-3 font-medium">Jumlah Item</th>
@@ -613,13 +606,13 @@ export default function StockOutList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-8 text-muted-foreground">
                     Memuat...
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     Belum ada data stok keluar
                   </td>
@@ -633,7 +626,8 @@ export default function StockOutList() {
                   >
                     <td className="px-4 py-3 font-mono font-medium">{r.bid}</td>
                     <td className="px-4 py-3">{formatDate(r.date)}</td>
-                    <td className="px-4 py-3">{r.supplier_name || "-"}</td>
+                    <td className="px-4 py-3">{r.recipient || "-"}</td>
+                    <td className="px-4 py-3">{r.reason || "-"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(r.total_amount)}</td>
                     <td className="px-4 py-3 text-center">{statusBadge(r.status)}</td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
