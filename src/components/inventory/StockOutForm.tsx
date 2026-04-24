@@ -169,19 +169,10 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       // Products
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price")
+        .select("id, name, price, stock_qty")
         .eq("store_id", currentStore.id)
         .order("name");
-      setProducts(prods || []);
-
-      // Suppliers
-      const { data: sups } = await supabase
-        .from("suppliers" as any)
-        .select("id, name")
-        .eq("store_id", currentStore.id)
-        .eq("is_active", true)
-        .order("name");
-      setSuppliers((sups as any) || []);
+      setProducts((prods || []) as Product[]);
 
       // If editing, load existing
       if (stockOutId) {
@@ -194,8 +185,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
           const r: any = si;
           setBid(r.bid);
           setDate(r.date);
-          setSupplierId(r.supplier_id);
-          setSupplierName(r.supplier_name || "");
+          setRecipient(r.recipient || "");
+          setReason(r.reason || "");
           setNotes(r.notes || "");
           setStatus(r.status);
 
