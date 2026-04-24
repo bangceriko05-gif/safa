@@ -509,32 +509,6 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     setItems(items.filter((_, i) => i !== idx));
   };
 
-  // ===== Add supplier =====
-  const handleAddSupplier = async () => {
-    if (!currentStore || !newSupplierName.trim()) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("suppliers" as any)
-      .insert({
-        store_id: currentStore.id,
-        name: newSupplierName.trim(),
-        created_by: user?.id,
-      })
-      .select()
-      .single();
-    if (error) {
-      toast.error("Gagal menambah supplier");
-      return;
-    }
-    const s: any = data;
-    setSuppliers([...suppliers, { id: s.id, name: s.name }]);
-    setSupplierId(s.id);
-    setSupplierName(s.name);
-    setNewSupplierName("");
-    setSupplierFormOpen(false);
-    toast.success("Supplier ditambahkan");
-  };
-
   if (loading) {
     return <div className="py-12 text-center text-muted-foreground">Memuat...</div>;
   }
@@ -658,21 +632,26 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
           </div>
         </div>
 
-        {/* Supplier */}
+        {/* Penerima / Tujuan */}
         <div className="border rounded-lg bg-card">
           <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h3 className="font-semibold">Supplier</h3>
+            <h3 className="font-semibold">Penerima / Tujuan</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditSupplierOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditRecipientOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
           </div>
-          <div className="px-4 py-3 text-sm min-h-[60px]">
-            {supplierName ? (
-              <span className="font-medium">{supplierName}</span>
+          <div className="px-4 py-3 text-sm min-h-[60px] space-y-1">
+            {recipient ? (
+              <div><span className="text-muted-foreground">Penerima: </span><span className="font-medium">{recipient}</span></div>
             ) : (
-              <span className="text-muted-foreground italic">Belum ada supplier</span>
+              <div className="text-muted-foreground italic">Belum ada penerima</div>
+            )}
+            {reason ? (
+              <div><span className="text-muted-foreground">Alasan: </span><span className="font-medium">{reason}</span></div>
+            ) : (
+              <div className="text-muted-foreground italic">Belum ada alasan</div>
             )}
           </div>
         </div>
@@ -1055,54 +1034,37 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Supplier Dialog */}
-      <Dialog open={editSupplierOpen} onOpenChange={setEditSupplierOpen}>
+      {/* Edit Penerima / Alasan Dialog */}
+      <Dialog open={editRecipientOpen} onOpenChange={setEditRecipientOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Pilih Supplier</DialogTitle>
+            <DialogTitle>Penerima & Alasan</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Select
-              value={supplierId || ""}
-              onValueChange={(v) => {
-                setSupplierId(v);
-                const s = suppliers.find((x) => x.id === v);
-                setSupplierName(s?.name || "");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih supplier..." />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" className="w-full gap-2" onClick={() => { setEditSupplierOpen(false); setSupplierFormOpen(true); }}>
-              <Plus className="h-4 w-4" /> Tambah Supplier Baru
-            </Button>
+            <div>
+              <Label>Penerima / Tujuan</Label>
+              <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Contoh: Dapur, Marketing, dll" />
+            </div>
+            <div>
+              <Label>Alasan Pengeluaran</Label>
+              <Select value={reason || ""} onValueChange={setReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih alasan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Operasional">Operasional</SelectItem>
+                  <SelectItem value="Penjualan">Penjualan</SelectItem>
+                  <SelectItem value="Rusak">Rusak</SelectItem>
+                  <SelectItem value="Hilang">Hilang</SelectItem>
+                  <SelectItem value="Penyesuaian">Penyesuaian</SelectItem>
+                  <SelectItem value="Lainnya">Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSupplierOpen(false)}>Batal</Button>
-            <Button onClick={() => setEditSupplierOpen(false)}>Simpan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Supplier Form */}
-      <Dialog open={supplierFormOpen} onOpenChange={setSupplierFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Supplier</DialogTitle>
-          </DialogHeader>
-          <div>
-            <Label>Nama Supplier</Label>
-            <Input value={newSupplierName} onChange={(e) => setNewSupplierName(e.target.value)} placeholder="Contoh: PT Sinar Jaya" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSupplierFormOpen(false)}>Batal</Button>
-            <Button onClick={handleAddSupplier}>Simpan</Button>
+            <Button variant="outline" onClick={() => setEditRecipientOpen(false)}>Batal</Button>
+            <Button onClick={() => setEditRecipientOpen(false)}>Simpan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
