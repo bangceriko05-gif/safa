@@ -58,11 +58,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
-}
-
-interface Supplier {
-  id: string;
-  name: string;
+  stock_qty: number;
 }
 
 interface Item {
