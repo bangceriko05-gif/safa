@@ -5,6 +5,7 @@ import { Boxes, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Activity } from
 import { DateRange } from "react-day-picker";
 import { startOfYear } from "date-fns";
 import StockInList from "./StockInList";
+import StockOutList from "./StockOutList";
 import InventoryToolbar from "./InventoryToolbar";
 
 export default function InventoryManagement() {
@@ -48,14 +49,7 @@ export default function InventoryManagement() {
             </TabsContent>
 
             <TabsContent value="stok-keluar" className="mt-6">
-              <PlaceholderWithToolbar
-                title="Stok Keluar"
-                countLabel="Stok Keluar"
-                description="Catat pengeluaran barang untuk operasional, penjualan, atau penyesuaian."
-                icon={ArrowUpFromLine}
-                searchPlaceholder="Cari No. Stok Keluar"
-                addLabel="Tambah"
-              />
+              <StockOutList />
             </TabsContent>
 
             <TabsContent value="stok-opname" className="mt-6">
