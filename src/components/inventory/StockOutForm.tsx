@@ -304,8 +304,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
             store_id: currentStore.id,
             bid: s.bid || null,
             date: s.date,
-            supplier_id: s.supplierId,
-            supplier_name: s.supplierName || null,
+            recipient: s.recipient || null,
+            reason: s.reason || null,
             notes: s.notes || null,
             total_amount: totalAmount,
             status: "draft",
@@ -323,8 +323,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
           .from("stock_out" as any)
           .update({
             date: s.date,
-            supplier_id: s.supplierId,
-            supplier_name: s.supplierName || null,
+            recipient: s.recipient || null,
+            reason: s.reason || null,
             notes: s.notes || null,
             total_amount: totalAmount,
           })
