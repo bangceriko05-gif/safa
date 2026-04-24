@@ -596,7 +596,8 @@ export default function StockOutList() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium">No. Stok Keluar</th>
                 <th className="text-left px-4 py-3 font-medium">Tanggal</th>
-                <th className="text-left px-4 py-3 font-medium">Supplier</th>
+                <th className="text-left px-4 py-3 font-medium">Tujuan</th>
+                <th className="text-left px-4 py-3 font-medium">Alasan</th>
                 <th className="text-right px-4 py-3 font-medium">Total</th>
                 <th className="text-center px-4 py-3 font-medium">Status</th>
                 <th className="text-right px-4 py-3 font-medium">Jumlah Item</th>
@@ -605,13 +606,13 @@ export default function StockOutList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-8 text-muted-foreground">
                     Memuat...
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     Belum ada data stok keluar
                   </td>
@@ -625,7 +626,8 @@ export default function StockOutList() {
                   >
                     <td className="px-4 py-3 font-mono font-medium">{r.bid}</td>
                     <td className="px-4 py-3">{formatDate(r.date)}</td>
-                    <td className="px-4 py-3">{r.supplier_name || "-"}</td>
+                    <td className="px-4 py-3">{r.recipient || "-"}</td>
+                    <td className="px-4 py-3">{r.reason || "-"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(r.total_amount)}</td>
                     <td className="px-4 py-3 text-center">{statusBadge(r.status)}</td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
