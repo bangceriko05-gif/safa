@@ -487,6 +487,20 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       toast.error("Qty harus lebih dari 0");
       return;
     }
+    // Validasi stok: hitung sisa stok setelah dikurangi item yang sudah dipilih sebelumnya
+    const usedByProduct = items.reduce<Record<string, number>>((acc, it) => {
+      acc[it.product_id] = (acc[it.product_id] || 0) + it.quantity;
+      return acc;
+    }, {});
+    const insufficient = selectedProductIds
+      .map((pid) => products.find((x) => x.id === pid))
+      .filter((p): p is Product => !!p)
+      .find((p) => (p.stock_qty - (usedByProduct[p.id] || 0)) < newQty);
+    if (insufficient) {
+      const remain = insufficient.stock_qty - (usedByProduct[insufficient.id] || 0);
+      toast.error(`Stok ${insufficient.name} tidak cukup (sisa ${remain})`);
+      return;
+    }
     const subtotal = newQty * newPrice;
     const newItems: Item[] = selectedProductIds
       .map((pid) => products.find((x) => x.id === pid))
@@ -713,11 +727,17 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                           )
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
+                          const outOfStock = (p.stock_qty || 0) <= 0;
                           return (
                             <CommandItem
                               key={p.id}
                               value={p.name}
+                              disabled={outOfStock}
                               onSelect={() => {
+                                if (outOfStock) {
+                                  toast.error(`Stok ${p.name} habis`);
+                                  return;
+                                }
                                 if (isSelected) {
                                   setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
                                 } else {
@@ -727,11 +747,14 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                                   }
                                 }
                               }}
+                              className={outOfStock ? "opacity-50 cursor-not-allowed" : ""}
                             >
                               <Check className={`h-4 w-4 mr-2 ${isSelected ? "opacity-100" : "opacity-0"}`} />
                               <div className="flex justify-between w-full">
                                 <span>{p.name}</span>
-                                <span className="text-xs text-muted-foreground">{formatCurrency(p.price)}</span>
+                                <span className={`text-xs ${outOfStock ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                                  Stok: {p.stock_qty || 0}
+                                </span>
                               </div>
                             </CommandItem>
                           );
