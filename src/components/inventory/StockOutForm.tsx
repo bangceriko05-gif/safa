@@ -50,7 +50,7 @@ import {
 import { toast } from "sonner";
 
 interface Props {
-  stockInId: string | null;
+  stockOutId: string | null;
   onBack: () => void;
 }
 
@@ -91,7 +91,7 @@ const formatDate = (s: string) => {
   return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-export default function StockInForm({ stockInId, onBack }: Props) {
+export default function StockOutForm({ stockOutId, onBack }: Props) {
   const { currentStore } = useStore();
 
   // Header
@@ -190,11 +190,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       setSuppliers((sups as any) || []);
 
       // If editing, load existing
-      if (stockInId) {
+      if (stockOutId) {
         const { data: si } = await supabase
-          .from("stock_in" as any)
+          .from("stock_out" as any)
           .select("*")
-          .eq("id", stockInId)
+          .eq("id", stockOutId)
           .single();
         if (si) {
           const r: any = si;
@@ -213,9 +213,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           setCreatedByEmail(prof?.email || "");
 
           const { data: its } = await supabase
-            .from("stock_in_items" as any)
+            .from("stock_out_items" as any)
             .select("*")
-            .eq("stock_in_id", stockInId);
+            .eq("stock_out_id", stockOutId);
           setItems(((its as any) || []).map((it: any) => ({
             id: it.id,
             product_id: it.product_id,
@@ -282,7 +282,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         const { data: { user } } = await supabase.auth.getUser();
         setCreatedByEmail(user?.email || "");
 
-        const { data: previewBid } = await supabase.rpc("generate_stock_in_bid", {
+        const { data: previewBid } = await supabase.rpc("generate_stock_out_bid", {
           p_date: date,
           p_store_id: currentStore.id,
         });
@@ -292,7 +292,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       setLoading(false);
     };
     load();
-  }, [stockInId, currentStore]);
+  }, [stockOutId, currentStore]);
 
   const totalAmount = useMemo(
     () => items.reduce((s, it) => s + it.subtotal, 0),
@@ -300,7 +300,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   );
 
   // ===== Save draft (or create new) =====
-  const createdIdRef = useRef<string | null>(stockInId);
+  const createdIdRef = useRef<string | null>(stockOutId);
   const saveDraft = async (silent = false): Promise<string | null> => {
     if (!currentStore) return null;
     setSaving(true);
@@ -314,7 +314,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         // create — preserve the previewed BID so the list shows the same number
         const s = stateRef.current;
         const { data, error } = await supabase
-          .from("stock_in" as any)
+          .from("stock_out" as any)
           .insert({
             store_id: currentStore.id,
             bid: s.bid || null,
@@ -335,7 +335,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       } else {
         const s = stateRef.current;
         const { error } = await supabase
-          .from("stock_in" as any)
+          .from("stock_out" as any)
           .update({
             date: s.date,
             supplier_id: s.supplierId,
@@ -347,20 +347,20 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         if (error) throw error;
 
         // Replace items: delete existing then re-insert
-        await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", id);
+        await supabase.from("stock_out_items" as any).delete().eq("stock_out_id", id);
       }
 
       const curItems = stateRef.current.items;
       if (curItems.length > 0 && id) {
         const payload = curItems.map((it) => ({
-          stock_in_id: id,
+          stock_out_id: id,
           product_id: it.product_id,
           product_name: it.product_name,
           quantity: it.quantity,
           unit_price: it.unit_price,
           subtotal: it.subtotal,
         }));
-        const { error: ie } = await supabase.from("stock_in_items" as any).insert(payload);
+        const { error: ie } = await supabase.from("stock_out_items" as any).insert(payload);
         if (ie) throw ie;
       }
 
@@ -410,7 +410,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
 
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
-      .from("stock_in" as any)
+      .from("stock_out" as any)
       .update({
         status: "posted",
         posted_at: new Date().toISOString(),
@@ -426,7 +426,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
 
   // ===== Hard delete (permanent) =====
   const handleHardDelete = async () => {
-    const id = createdIdRef.current || stockInId;
+    const id = createdIdRef.current || stockOutId;
     if (!id) {
       // Nothing persisted yet — just close form
       setHardDeleteOpen(false);
@@ -439,7 +439,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       if (stateRef.current.status === "posted") {
         const { data: { user } } = await supabase.auth.getUser();
         const { error: cErr } = await supabase
-          .from("stock_in" as any)
+          .from("stock_out" as any)
           .update({
             status: "cancelled",
             cancelled_at: new Date().toISOString(),
@@ -448,9 +448,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           .eq("id", id);
         if (cErr) throw cErr;
       }
-      const { error: iErr } = await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", id);
+      const { error: iErr } = await supabase.from("stock_out_items" as any).delete().eq("stock_out_id", id);
       if (iErr) throw iErr;
-      const { error: hErr } = await supabase.from("stock_in" as any).delete().eq("id", id);
+      const { error: hErr } = await supabase.from("stock_out" as any).delete().eq("id", id);
       if (hErr) throw hErr;
       // Prevent auto-save on unmount from re-creating the row
       createdIdRef.current = null;
@@ -467,15 +467,15 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   };
 
   const doCancel = async () => {
-    if (!stockInId && !bid) {
+    if (!stockOutId && !bid) {
       onBack();
       return;
     }
-    const id = stockInId || (await saveDraft(true));
+    const id = stockOutId || (await saveDraft(true));
     if (!id) return;
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
-      .from("stock_in" as any)
+      .from("stock_out" as any)
       .update({
         status: "cancelled",
         cancelled_at: new Date().toISOString(),
@@ -585,7 +585,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           </div>
           <div className="flex-1 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">No. Stok Masuk</p>
+              <p className="text-sm text-muted-foreground">No. Stok Keluar</p>
               <p className="text-2xl font-bold">{bid || "(akan di-generate)"}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -989,7 +989,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       )}
 
       {/* Riwayat Aktivitas */}
-      {stockInId && history.length > 0 && (
+      {stockOutId && history.length > 0 && (
         <div className="border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-3 border-b flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />
@@ -1140,7 +1140,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Batalkan Stok Masuk?</DialogTitle>
+            <DialogTitle>Batalkan Stok Keluar?</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Dokumen ini akan ditandai sebagai dibatalkan dan tidak bisa diubah lagi.</p>
@@ -1158,7 +1158,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       <AlertDialog open={hardDeleteOpen} onOpenChange={(o) => { if (!o && !hardDeleting) setHardDeleteOpen(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus permanen stok masuk?</AlertDialogTitle>
+            <AlertDialogTitle>Hapus permanen stok keluar?</AlertDialogTitle>
             <AlertDialogDescription>
               Anda akan menghapus permanen dokumen <span className="font-mono font-semibold">{bid}</span>.
               {status === "posted" && (

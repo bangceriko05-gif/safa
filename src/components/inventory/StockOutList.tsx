@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { startOfYear } from "date-fns";
-import StockInForm from "./StockInForm";
+import StockOutForm from "./StockOutForm";
 import InventoryToolbar from "./InventoryToolbar";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FileDown, Upload, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { Badge as UIBadge } from "@/components/ui/badge";
 
-interface StockInRow {
+interface StockOutRow {
   id: string;
   bid: string;
   date: string;
@@ -53,9 +53,9 @@ const statusBadge = (status: string) => {
   return <Badge className="bg-orange-500/10 text-orange-700 border-orange-500/20 hover:bg-orange-500/10">Draft</Badge>;
 };
 
-export default function StockInList() {
+export default function StockOutList() {
   const { currentStore } = useStore();
-  const [rows, setRows] = useState<StockInRow[]>([]);
+  const [rows, setRows] = useState<StockOutRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [openForm, setOpenForm] = useState(false);
@@ -77,7 +77,7 @@ export default function StockInList() {
     if (!currentStore) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from("stock_in" as any)
+      .from("stock_out" as any)
       .select("id, bid, date, supplier_name, total_amount, status, created_at")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false });
@@ -86,11 +86,11 @@ export default function StockInList() {
       let counts: Record<string, number> = {};
       if (ids.length > 0) {
         const { data: items } = await supabase
-          .from("stock_in_items" as any)
-          .select("stock_in_id, quantity")
-          .in("stock_in_id", ids);
+          .from("stock_out_items" as any)
+          .select("stock_out_id, quantity")
+          .in("stock_out_id", ids);
         (items as any[] | null)?.forEach((it) => {
-          counts[it.stock_in_id] = (counts[it.stock_in_id] || 0) + Number(it.quantity || 0);
+          counts[it.stock_out_id] = (counts[it.stock_out_id] || 0) + Number(it.quantity || 0);
         });
       }
       setRows((data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as any);
@@ -141,7 +141,7 @@ export default function StockInList() {
     const formatDateTime = (s: string) =>
       new Date(s).toLocaleString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
     const data = filtered.map((r) => ({
-      "No. Stok Masuk": r.bid,
+      "No. Stok Keluar": r.bid,
       "Tanggal": formatDateExp(r.date),
       "Supplier": r.supplier_name || "-",
       "Total": r.total_amount,
@@ -149,8 +149,8 @@ export default function StockInList() {
       "Jumlah Item": r.item_count,
       "Dibuat": formatDateTime(r.created_at),
     }));
-    const fileName = getExportFileName("Stok_Masuk", currentStore?.name || "Outlet", "all");
-    exportToExcel(data, "Stok Masuk", fileName);
+    const fileName = getExportFileName("Stok_Keluar", currentStore?.name || "Outlet", "all");
+    exportToExcel(data, "Stok Keluar", fileName);
     toast.success(`Berhasil mengekspor ${data.length} data`);
   };
 
@@ -167,7 +167,7 @@ export default function StockInList() {
       { product: "hk054", variant: "", sku: "hk05440-2", supplier: "", qty: 3, new_buy_price: 50000 },
       { product: "hb082", variant: "", sku: "hb08237", supplier: "", qty: 1, new_buy_price: 55000 },
     ];
-    exportToExcel(sample, "Template Stok Masuk", "Template_Import_Stok_Masuk");
+    exportToExcel(sample, "Template Stok Keluar", "Template_Import_Stok_Keluar");
     toast.success("Template berhasil diunduh");
   };
 
@@ -209,7 +209,7 @@ export default function StockInList() {
       }
       const ws = wb.Sheets[firstSheet];
       const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      console.log("[StockIn Import] parsed rows:", json.length, json[0]);
+      console.log("[StockOut Import] parsed rows:", json.length, json[0]);
       if (json.length === 0) {
         toast.error("File kosong atau format tidak valid");
         setPendingFile(null);
@@ -227,7 +227,7 @@ export default function StockInList() {
         .select("id, name")
         .eq("store_id", currentStore.id);
       if (prodErr) {
-        console.error("[StockIn Import] product fetch error:", prodErr);
+        console.error("[StockOut Import] product fetch error:", prodErr);
         toast.error("Gagal memuat daftar produk: " + prodErr.message);
         setPendingFile(null);
         return;
@@ -292,7 +292,7 @@ export default function StockInList() {
 
       setPreviewRows(rowsParsed);
     } catch (err: any) {
-      console.error("[StockIn Import] analyze error:", err);
+      console.error("[StockOut Import] analyze error:", err);
       toast.error("Gagal membaca file: " + (err?.message || "unknown"));
       setPendingFile(null);
     } finally {
@@ -345,7 +345,7 @@ export default function StockInList() {
         const supplier_name = supplier === "-" ? null : supplier;
 
         const { data: header, error: hErr } = await supabase
-          .from("stock_in" as any)
+          .from("stock_out" as any)
           .insert({
             store_id: currentStore.id,
             date: today,
@@ -363,15 +363,15 @@ export default function StockInList() {
         }
         createdHeaders++;
 
-        const itemRows = resolved.map((r) => ({ ...r, stock_in_id: (header as any).id }));
-        const { error: iErr } = await supabase.from("stock_in_items" as any).insert(itemRows as any);
+        const itemRows = resolved.map((r) => ({ ...r, stock_out_id: (header as any).id }));
+        const { error: iErr } = await supabase.from("stock_out_items" as any).insert(itemRows as any);
         if (iErr) failedItems += resolved.length;
         else successItems += resolved.length;
       }
 
       const errorCount = previewRows.length - validRows.length;
       if (successItems > 0)
-        toast.success(`Berhasil mengimpor ${successItems} item ke ${createdHeaders} stok masuk`);
+        toast.success(`Berhasil mengimpor ${successItems} item ke ${createdHeaders} stok keluar`);
       if (failedItems > 0) toast.error(`${failedItems} item gagal diimpor`);
       if (errorCount > 0) toast.warning(`${errorCount} baris dilewati karena error`);
       fetchData();
@@ -388,8 +388,8 @@ export default function StockInList() {
 
   if (openForm) {
     return (
-      <StockInForm
-        stockInId={editId}
+      <StockOutForm
+        stockOutId={editId}
         onBack={() => {
           setOpenForm(false);
           setEditId(null);
@@ -402,16 +402,16 @@ export default function StockInList() {
   return (
     <div className="space-y-4">
       <InventoryToolbar
-        title="Daftar Stok Masuk"
+        title="Daftar Stok Keluar"
         count={filtered.length}
-        countLabel="Stok Masuk"
+        countLabel="Stok Keluar"
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Cari No. Stok Masuk"
+        searchPlaceholder="Cari No. Stok Keluar"
         onExport={handleExport}
         onImport={handleImportClick}
         onAdd={handleOpenNew}
@@ -428,7 +428,7 @@ export default function StockInList() {
       <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) { setImportOpen(o); if (!o) { setPendingFile(null); setPreviewRows(null); } } }}>
         <DialogContent className={previewRows ? "sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" : "sm:max-w-md"}>
           <DialogHeader>
-            <DialogTitle>Import Stok Masuk</DialogTitle>
+            <DialogTitle>Import Stok Keluar</DialogTitle>
             <DialogDescription>
               Unggah file Excel/CSV untuk menambahkan banyak data sekaligus.
             </DialogDescription>
@@ -461,7 +461,7 @@ export default function StockInList() {
                 Kolom: <span className="font-mono">product</span>, <span className="font-mono">variant</span>,{" "}
                 <span className="font-mono">sku</span>, <span className="font-mono">supplier</span>,{" "}
                 <span className="font-mono">qty</span>, <span className="font-mono">new_buy_price</span>.
-                Tiap baris = 1 item; baris dengan supplier sama akan digabung ke 1 stok masuk.
+                Tiap baris = 1 item; baris dengan supplier sama akan digabung ke 1 stok keluar.
               </p>
 
               <div
@@ -606,7 +606,7 @@ export default function StockInList() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left px-4 py-3 font-medium">No. Stok Masuk</th>
+                <th className="text-left px-4 py-3 font-medium">No. Stok Keluar</th>
                 <th className="text-left px-4 py-3 font-medium">Tanggal</th>
                 <th className="text-left px-4 py-3 font-medium">Supplier</th>
                 <th className="text-right px-4 py-3 font-medium">Total</th>
@@ -625,7 +625,7 @@ export default function StockInList() {
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-muted-foreground">
                     <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    Belum ada data stok masuk
+                    Belum ada data stok keluar
                   </td>
                 </tr>
               ) : (
