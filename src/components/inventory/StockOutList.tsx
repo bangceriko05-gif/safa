@@ -532,12 +532,9 @@ export default function StockOutList() {
                       <tr>
                         <th className="text-left px-3 py-2 font-medium">Status</th>
                         <th className="text-left px-3 py-2 font-medium">Nama Produk</th>
-                        <th className="text-left px-3 py-2 font-medium">SKU</th>
-                        <th className="text-left px-3 py-2 font-medium">Varian</th>
                         <th className="text-left px-3 py-2 font-medium">SKU Varian</th>
-                        <th className="text-left px-3 py-2 font-medium">Supplier</th>
                         <th className="text-right px-3 py-2 font-medium">Qty</th>
-                        <th className="text-right px-3 py-2 font-medium">Harga Beli</th>
+                        <th className="text-right px-3 py-2 font-medium">Stok Tersedia</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -554,15 +551,10 @@ export default function StockOutList() {
                             )}
                           </td>
                           <td className="px-3 py-2 font-medium">{r.product || "-"}</td>
-                          <td className="px-3 py-2 text-muted-foreground">-</td>
-                          <td className="px-3 py-2">
-                            {r.variant ? <UIBadge variant="outline">{r.variant}</UIBadge> : "-"}
-                          </td>
                           <td className="px-3 py-2 font-mono text-xs">{r.sku || "-"}</td>
-                          <td className="px-3 py-2">{r.supplier || "-"}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
                           <td className="px-3 py-2 text-right tabular-nums">
-                            {r.new_buy_price.toLocaleString("id-ID")}
+                            {r.available_stock.toLocaleString("id-ID")}
                           </td>
                         </tr>
                       ))}
