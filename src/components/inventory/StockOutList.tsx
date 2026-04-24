@@ -77,7 +77,7 @@ export default function StockOutList() {
     setLoading(true);
     const { data, error } = await supabase
       .from("stock_out" as any)
-      .select("id, bid, date, supplier_name, total_amount, status, created_at")
+      .select("id, bid, date, recipient, reason, total_amount, status, created_at")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false });
     if (!error && data) {
