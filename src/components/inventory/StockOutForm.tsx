@@ -93,15 +93,14 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
   // Header
   const [bid, setBid] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [supplierId, setSupplierId] = useState<string | null>(null);
-  const [supplierName, setSupplierName] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("draft");
   const [createdByEmail, setCreatedByEmail] = useState("");
 
   // Data
   const [products, setProducts] = useState<Product[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
   // History (audit trail)
@@ -121,10 +120,9 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
 
   // Edit dialogs
   const [editDateOpen, setEditDateOpen] = useState(false);
-  const [editSupplierOpen, setEditSupplierOpen] = useState(false);
+  const [editRecipientOpen, setEditRecipientOpen] = useState(false);
+  const [editReasonOpen, setEditReasonOpen] = useState(false);
   const [editNotesOpen, setEditNotesOpen] = useState(false);
-  const [supplierFormOpen, setSupplierFormOpen] = useState(false);
-  const [newSupplierName, setNewSupplierName] = useState("");
 
   // Cancel dialog
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -158,8 +156,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
   const isReadOnly = isPosted || isCancelled;
 
   // Refs to access latest state inside cleanup/unload handlers
-  const stateRef = useRef({ status, items, bid, supplierName, notes, date, supplierId });
-  stateRef.current = { status, items, bid, supplierName, notes, date, supplierId };
+  const stateRef = useRef({ status, items, bid, recipient, reason, notes, date });
+  stateRef.current = { status, items, bid, recipient, reason, notes, date };
   const saveDraftRef = useRef<(silent?: boolean) => Promise<string | null>>();
 
   // ===== Load data =====
