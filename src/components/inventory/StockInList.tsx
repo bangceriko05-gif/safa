@@ -191,14 +191,25 @@ export default function StockInList() {
   };
 
   const analyzeFile = async (file: File) => {
-    if (!currentStore) return;
+    if (!currentStore) {
+      toast.error("Pilih cabang terlebih dahulu");
+      setPendingFile(null);
+      return;
+    }
     setAnalyzing(true);
     setPreviewRows(null);
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
+      const firstSheet = wb.SheetNames[0];
+      if (!firstSheet) {
+        toast.error("File tidak memiliki sheet");
+        setPendingFile(null);
+        return;
+      }
+      const ws = wb.Sheets[firstSheet];
       const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      console.log("[StockIn Import] parsed rows:", json.length, json[0]);
       if (json.length === 0) {
         toast.error("File kosong atau format tidak valid");
         setPendingFile(null);
@@ -211,10 +222,16 @@ export default function StockInList() {
       }
 
       // Load existing products for validation by name
-      const { data: prods } = await supabase
+      const { data: prods, error: prodErr } = await supabase
         .from("products")
         .select("id, name")
         .eq("store_id", currentStore.id);
+      if (prodErr) {
+        console.error("[StockIn Import] product fetch error:", prodErr);
+        toast.error("Gagal memuat daftar produk: " + prodErr.message);
+        setPendingFile(null);
+        return;
+      }
       const productMap = new Map<string, { id: string; name: string }>();
       (prods || []).forEach((p: any) => {
         productMap.set(String(p.name).toLowerCase().trim(), p);
@@ -274,9 +291,9 @@ export default function StockInList() {
       });
 
       setPreviewRows(rowsParsed);
-    } catch (err) {
-      console.error(err);
-      toast.error("Gagal membaca file");
+    } catch (err: any) {
+      console.error("[StockIn Import] analyze error:", err);
+      toast.error("Gagal membaca file: " + (err?.message || "unknown"));
       setPendingFile(null);
     } finally {
       setAnalyzing(false);
