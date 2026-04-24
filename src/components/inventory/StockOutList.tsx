@@ -114,7 +114,8 @@ export default function StockOutList() {
     if (!q) return true;
     return (
       r.bid?.toLowerCase().includes(q) ||
-      (r.supplier_name || "").toLowerCase().includes(q)
+      (r.recipient || "").toLowerCase().includes(q) ||
+      (r.reason || "").toLowerCase().includes(q)
     );
   });
 
@@ -142,7 +143,8 @@ export default function StockOutList() {
     const data = filtered.map((r) => ({
       "No. Stok Keluar": r.bid,
       "Tanggal": formatDateExp(r.date),
-      "Supplier": r.supplier_name || "-",
+      "Penerima": r.recipient || "-",
+      "Alasan": r.reason || "-",
       "Total": r.total_amount,
       "Status": r.status,
       "Jumlah Item": r.item_count,
@@ -161,10 +163,8 @@ export default function StockOutList() {
 
   const handleDownloadTemplate = () => {
     const sample = [
-      { product: "hk025", variant: "", sku: "hk02540-1", supplier: "", qty: 1, new_buy_price: 50000 },
-      { product: "hk034", variant: "", sku: "hk03439-1", supplier: "", qty: 1, new_buy_price: 50000 },
-      { product: "hk054", variant: "", sku: "hk05440-2", supplier: "", qty: 3, new_buy_price: 50000 },
-      { product: "hb082", variant: "", sku: "hb08237", supplier: "", qty: 1, new_buy_price: 55000 },
+      { product: "FISHING TEST SET PER PCS", sku: "", qty: 10 },
+      { product: "My product", sku: "", qty: 2 },
     ];
     exportToExcel(sample, "Template Stok Keluar", "Template_Import_Stok_Keluar");
     toast.success("Template berhasil diunduh");
