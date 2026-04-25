@@ -108,3 +108,41 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* ===== Print: only show elements marked .print-area ===== */
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+  /* Show the print area and all its descendants */
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  /* Position print area at the top of the page */
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 16px;
+    background: white !important;
+  }
+  /* Hide elements explicitly marked as no-print, even inside .print-area */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+  /* Remove sticky/fixed positioning from headers in print */
+  .print-area .sticky,
+  .print-area .fixed {
+    position: static !important;
+  }
+  /* Avoid breaking inside cards/tables */
+  .print-area table { page-break-inside: auto; }
+  .print-area tr { page-break-inside: avoid; page-break-after: auto; }
+  /* Ensure colors print */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  @page { margin: 12mm; }
+}
