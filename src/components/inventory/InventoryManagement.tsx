@@ -6,6 +6,7 @@ import { DateRange } from "react-day-picker";
 import { startOfYear } from "date-fns";
 import StockInList from "./StockInList";
 import StockOutList from "./StockOutList";
+import StockOpnameList from "./StockOpnameList";
 import InventoryToolbar from "./InventoryToolbar";
 
 export default function InventoryManagement() {
@@ -53,14 +54,7 @@ export default function InventoryManagement() {
             </TabsContent>
 
             <TabsContent value="stok-opname" className="mt-6">
-              <PlaceholderWithToolbar
-                title="Stok Opname"
-                countLabel="Stok Opname"
-                description="Lakukan perhitungan fisik stok dan penyesuaian selisih."
-                icon={ClipboardList}
-                searchPlaceholder="Cari No. Stok Opname"
-                addLabel="Tambah"
-              />
+              <StockOpnameList />
             </TabsContent>
 
             <TabsContent value="pergerakan-stok" className="mt-6">
