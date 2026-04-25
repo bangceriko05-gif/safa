@@ -829,7 +829,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
                   }`}>
                     {totals.totalValueDiff > 0 ? "+" : ""}{formatCurrency(totals.totalValueDiff)}
                   </td>
-                  {!isReadOnly && <td />}
+                  {!isReadOnly && <td className="no-print" />}
                 </tr>
               </tbody>
             </table>
