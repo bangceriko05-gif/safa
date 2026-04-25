@@ -839,7 +839,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
 
       {/* History */}
       {stockOpnameId && history.length > 0 && (
-        <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="border rounded-lg bg-card overflow-hidden no-print">
           <div className="px-4 py-3 border-b flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />
             <h3 className="font-semibold">Riwayat Aktivitas</h3>
