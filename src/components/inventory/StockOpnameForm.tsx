@@ -733,7 +733,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
         <div className="px-4 py-3 border-b bg-blue-50/60 flex items-center justify-between">
           <h3 className="font-semibold text-blue-900">Produk Stok Opname ({items.length})</h3>
           {!isReadOnly && (
-            <Button onClick={openAddDialog} className="bg-blue-500 hover:bg-blue-600 gap-2">
+            <Button onClick={openAddDialog} className="bg-blue-500 hover:bg-blue-600 gap-2 no-print">
               <Plus className="h-4 w-4" /> Tambah Produk
             </Button>
           )}
@@ -755,7 +755,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
                   <th className="text-right px-3 py-2 font-medium">Selisih</th>
                   <th className="text-right px-3 py-2 font-medium">Harga</th>
                   <th className="text-right px-3 py-2 font-medium">Nilai Selisih</th>
-                  {!isReadOnly && <th className="text-center px-3 py-2 font-medium w-20">Aksi</th>}
+                  {!isReadOnly && <th className="text-center px-3 py-2 font-medium w-20 no-print">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
@@ -778,13 +778,16 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
                         {isReadOnly ? (
                           <span>{it.actual_stock}</span>
                         ) : (
-                          <Input
-                            type="number"
-                            min={0}
-                            value={it.actual_stock}
-                            onChange={(e) => updateItemActual(i, parseFloat(e.target.value) || 0)}
-                            className="h-9 max-w-[100px] ml-auto text-right"
-                          />
+                          <>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={it.actual_stock}
+                              onChange={(e) => updateItemActual(i, parseFloat(e.target.value) || 0)}
+                              className="h-9 max-w-[100px] ml-auto text-right print:hidden"
+                            />
+                            <span className="hidden print:inline">{it.actual_stock}</span>
+                          </>
                         )}
                       </td>
                       <td className={`px-3 py-3 text-right font-semibold ${
@@ -799,7 +802,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
                         {diffPositive ? "+" : ""}{formatCurrency(it.value_difference)}
                       </td>
                       {!isReadOnly && (
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-3 py-3 text-center no-print">
                           <Button
                             variant="ghost"
                             size="icon"
