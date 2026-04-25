@@ -2175,6 +2175,125 @@ export type Database = {
           },
         ]
       }
+      stock_opname: {
+        Row: {
+          bid: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          notes: string | null
+          posted_at: string | null
+          posted_by: string | null
+          status: string
+          store_id: string
+          total_difference: number
+          total_value_difference: number
+          updated_at: string
+        }
+        Insert: {
+          bid?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by: string
+          date?: string
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          store_id: string
+          total_difference?: number
+          total_value_difference?: number
+          updated_at?: string
+        }
+        Update: {
+          bid?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          store_id?: string
+          total_difference?: number
+          total_value_difference?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_opname_items: {
+        Row: {
+          actual_stock: number
+          created_at: string
+          difference: number
+          id: string
+          product_id: string
+          product_name: string
+          stock_opname_id: string
+          system_stock: number
+          unit_price: number
+          value_difference: number
+        }
+        Insert: {
+          actual_stock?: number
+          created_at?: string
+          difference?: number
+          id?: string
+          product_id: string
+          product_name: string
+          stock_opname_id: string
+          system_stock?: number
+          unit_price?: number
+          value_difference?: number
+        }
+        Update: {
+          actual_stock?: number
+          created_at?: string
+          difference?: number
+          id?: string
+          product_id?: string
+          product_name?: string
+          stock_opname_id?: string
+          system_stock?: number
+          unit_price?: number
+          value_difference?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_items_stock_opname_id_fkey"
+            columns: ["stock_opname_id"]
+            isOneToOne: false
+            referencedRelation: "stock_opname"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_out: {
         Row: {
           bid: string | null
@@ -2617,6 +2736,10 @@ export type Database = {
         Returns: string
       }
       generate_stock_in_bid: {
+        Args: { p_date: string; p_store_id: string }
+        Returns: string
+      }
+      generate_stock_opname_bid: {
         Args: { p_date: string; p_store_id: string }
         Returns: string
       }
