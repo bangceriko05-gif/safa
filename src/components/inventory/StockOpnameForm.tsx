@@ -621,7 +621,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
       {/* Header card */}
       <div className="border rounded-lg overflow-hidden bg-card">
         <div className="flex flex-col md:flex-row">
-          <div className="bg-orange-100/60 px-6 py-6 flex items-center justify-center md:w-48">
+          <div className="bg-orange-100/60 px-6 py-6 flex items-center justify-center md:w-48 no-print">
             <StatusBadge />
           </div>
           <div className="flex-1 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
