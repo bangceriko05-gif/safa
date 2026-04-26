@@ -401,6 +401,17 @@ export default function StockMovementList() {
     setEditForm(target);
   };
 
+  // Compute running balances for detail modal (must run before any early returns)
+  const runningDetails = useMemo(() => {
+    if (!details || !selected) return [];
+    let running = selected.awal;
+    return details.map((d) => {
+      const awalBaris = running;
+      running = running + d.qtyIn - d.qtyOut;
+      return { ...d, awalBaris, sisaBaris: running };
+    });
+  }, [details, selected]);
+
   // Render edit form full-screen
   if (editForm?.kind === "stock_in") {
     return (
@@ -461,17 +472,6 @@ export default function StockMovementList() {
       </div>
     );
   }
-
-  // Compute running balances for detail modal
-  const runningDetails = useMemo(() => {
-    if (!details || !selected) return [];
-    let running = selected.awal;
-    return details.map((d) => {
-      const awalBaris = running;
-      running = running + d.qtyIn - d.qtyOut;
-      return { ...d, awalBaris, sisaBaris: running };
-    });
-  }, [details, selected]);
 
   return (
     <div className="space-y-4">
