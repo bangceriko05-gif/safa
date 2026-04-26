@@ -13,6 +13,7 @@ import StockInForm from "./StockInForm";
 import StockOutForm from "./StockOutForm";
 import StockOpnameForm from "./StockOpnameForm";
 import BidPreviewPopup, { BidType } from "./BidPreviewPopup";
+import BookingModal from "@/components/BookingModal";
 
 interface ProductRow {
   id: string;
@@ -64,6 +65,17 @@ export default function StockMovementList() {
     | { kind: "stock_opname"; id: string }
     | null
   >(null);
+
+  // Booking edit (full-screen)
+  const [editBooking, setEditBooking] = useState<any>(null);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id);
+    });
+  }, []);
 
   // Preview popup state
   const [preview, setPreview] = useState<
@@ -354,9 +366,29 @@ export default function StockMovementList() {
   const handlePreviewEdit = () => {
     if (!preview) return;
     if (preview.type === "bookings") {
-      const url = `/dashboard?tab=transactions&bid=${encodeURIComponent(preview.bid)}`;
+      const refId = preview.refId;
       setPreview(null);
-      window.location.href = url;
+      setSelected(null);
+      setDetails(null);
+      // Fetch booking and open full-screen edit
+      (async () => {
+        setLoadingBooking(true);
+        try {
+          const { data, error } = await supabase
+            .from("bookings")
+            .select("*")
+            .eq("id", refId)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) setEditBooking(data);
+          else toast.error("Booking tidak ditemukan");
+        } catch (err) {
+          console.error("[StockMovement] booking fetch error:", err);
+          toast.error("Gagal memuat booking");
+        } finally {
+          setLoadingBooking(false);
+        }
+      })();
       return;
     }
     const target = { kind: preview.type, id: preview.refId } as
@@ -400,6 +432,24 @@ export default function StockMovementList() {
           setEditForm(null);
           fetchData();
         }}
+      />
+    );
+  }
+
+  // Render booking edit full-screen
+  if (editBooking) {
+    return (
+      <BookingModal
+        isOpen={true}
+        fullscreen
+        onClose={() => {
+          setEditBooking(null);
+          fetchData();
+        }}
+        selectedDate={new Date(editBooking.date)}
+        selectedSlot={null}
+        editingBooking={editBooking}
+        userId={currentUserId}
       />
     );
   }
