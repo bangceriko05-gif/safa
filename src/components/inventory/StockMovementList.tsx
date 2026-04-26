@@ -454,6 +454,14 @@ export default function StockMovementList() {
     );
   }
 
+  if (loadingBooking) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat booking...
+      </div>
+    );
+  }
+
   // Compute running balances for detail modal
   const runningDetails = useMemo(() => {
     if (!details || !selected) return [];
