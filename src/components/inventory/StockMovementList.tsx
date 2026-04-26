@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import StockInForm from "./StockInForm";
 import StockOutForm from "./StockOutForm";
 import StockOpnameForm from "./StockOpnameForm";
+import BidPreviewPopup, { BidType } from "./BidPreviewPopup";
 
 interface ProductRow {
   id: string;
@@ -61,6 +62,12 @@ export default function StockMovementList() {
     | { kind: "stock_in"; id: string }
     | { kind: "stock_out"; id: string }
     | { kind: "stock_opname"; id: string }
+    | null
+  >(null);
+
+  // Preview popup state
+  const [preview, setPreview] = useState<
+    | { type: BidType; refId: string; bid: string }
     | null
   >(null);
 
@@ -341,15 +348,25 @@ export default function StockMovementList() {
   };
 
   const handleBidClick = (d: MovementDetail) => {
-    if (d.refTable === "bookings") {
-      // Navigate to transactions tab with this BID — open in new tab
-      const url = `/dashboard?tab=transactions&bid=${encodeURIComponent(d.bid)}`;
-      window.open(url, "_blank");
+    setPreview({ type: d.refTable as BidType, refId: d.refId, bid: d.bid });
+  };
+
+  const handlePreviewEdit = () => {
+    if (!preview) return;
+    if (preview.type === "bookings") {
+      const url = `/dashboard?tab=transactions&bid=${encodeURIComponent(preview.bid)}`;
+      setPreview(null);
+      window.location.href = url;
       return;
     }
+    const target = { kind: preview.type, id: preview.refId } as
+      | { kind: "stock_in"; id: string }
+      | { kind: "stock_out"; id: string }
+      | { kind: "stock_opname"; id: string };
+    setPreview(null);
     setSelected(null);
     setDetails(null);
-    setEditForm({ kind: d.refTable as any, id: d.refId });
+    setEditForm(target);
   };
 
   // Render edit form full-screen
@@ -527,6 +544,18 @@ export default function StockMovementList() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* BID Preview Popup */}
+      {preview && (
+        <BidPreviewPopup
+          open={!!preview}
+          onClose={() => setPreview(null)}
+          type={preview.type}
+          refId={preview.refId}
+          bid={preview.bid}
+          onEdit={handlePreviewEdit}
+        />
+      )}
     </div>
   );
 }
