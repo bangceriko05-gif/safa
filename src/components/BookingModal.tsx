@@ -45,6 +45,7 @@ interface BookingModalProps {
   selectedSlot: { roomId: string; time: string } | null;
   editingBooking: any;
   userId: string;
+  fullscreen?: boolean;
 }
 
 interface Room {
@@ -92,6 +93,7 @@ export default function BookingModal({
   selectedSlot,
   editingBooking,
   userId,
+  fullscreen = false,
 }: BookingModalProps) {
   const { currentStore } = useStore();
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
@@ -1489,7 +1491,13 @@ export default function BookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={
+          fullscreen
+            ? "max-w-none w-screen h-screen sm:rounded-none p-6 overflow-y-auto"
+            : "max-w-md max-h-[90vh] overflow-y-auto"
+        }
+      >
         <DialogHeader>
           <DialogTitle>
             {editingBooking ? "Ubah Booking" : "Tambah Booking"}

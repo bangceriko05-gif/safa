@@ -140,12 +140,12 @@ export default function BidPreviewPopup({ open, onClose, type, refId, bid, onEdi
         });
         const { data: it } = await supabase
           .from("booking_products")
-          .select("product_name, quantity, unit_price, subtotal")
+          .select("product_name, quantity, product_price, subtotal")
           .eq("booking_id", refId);
         setItems(((it as any[]) || []).map((r) => ({
           product_name: r.product_name || "-",
           quantity: Number(r.quantity || 0),
-          unit_price: Number(r.unit_price || 0),
+          unit_price: Number(r.product_price || 0),
           subtotal: Number(r.subtotal || 0),
         })));
       }
