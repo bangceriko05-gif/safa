@@ -7,6 +7,7 @@ import { startOfYear } from "date-fns";
 import StockInList from "./StockInList";
 import StockOutList from "./StockOutList";
 import StockOpnameList from "./StockOpnameList";
+import StockMovementList from "./StockMovementList";
 import InventoryToolbar from "./InventoryToolbar";
 
 export default function InventoryManagement() {
@@ -58,13 +59,7 @@ export default function InventoryManagement() {
             </TabsContent>
 
             <TabsContent value="pergerakan-stok" className="mt-6">
-              <PlaceholderWithToolbar
-                title="Pergerakan Stok"
-                countLabel="Pergerakan"
-                description="Riwayat lengkap mutasi stok dari semua transaksi."
-                icon={Activity}
-                searchPlaceholder="Cari pergerakan stok"
-              />
+              <StockMovementList />
             </TabsContent>
           </Tabs>
         </CardContent>
