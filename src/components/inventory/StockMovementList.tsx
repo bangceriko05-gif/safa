@@ -544,6 +544,18 @@ export default function StockMovementList() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* BID Preview Popup */}
+      {preview && (
+        <BidPreviewPopup
+          open={!!preview}
+          onClose={() => setPreview(null)}
+          type={preview.type}
+          refId={preview.refId}
+          bid={preview.bid}
+          onEdit={handlePreviewEdit}
+        />
+      )}
     </div>
   );
 }
