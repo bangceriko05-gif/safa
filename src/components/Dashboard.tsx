@@ -579,7 +579,11 @@ export default function Dashboard() {
                         isActive={activeTab === item.key}
                         onClick={() => setActiveTab(item.key)}
                         tooltip={item.label}
-                        className="gap-3"
+                        className={cn(
+                          "gap-3",
+                          activeTab === item.key &&
+                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                        )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
                         <span>{item.label}</span>
@@ -615,7 +619,11 @@ export default function Dashboard() {
                         isActive={activeTab === item.key}
                         onClick={() => setActiveTab(item.key)}
                         tooltip={item.label}
-                        className="gap-3"
+                        className={cn(
+                          "gap-3",
+                          activeTab === item.key &&
+                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                        )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
                         <span>{item.label}</span>
