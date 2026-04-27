@@ -579,7 +579,11 @@ export default function Dashboard() {
                         isActive={activeTab === item.key}
                         onClick={() => setActiveTab(item.key)}
                         tooltip={item.label}
-                        className="gap-3"
+                        className={cn(
+                          "gap-3",
+                          activeTab === item.key &&
+                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                        )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
                         <span>{item.label}</span>
@@ -615,7 +619,11 @@ export default function Dashboard() {
                         isActive={activeTab === item.key}
                         onClick={() => setActiveTab(item.key)}
                         tooltip={item.label}
-                        className="gap-3"
+                        className={cn(
+                          "gap-3",
+                          activeTab === item.key &&
+                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                        )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
                         <span>{item.label}</span>
@@ -1082,7 +1090,15 @@ function CollapsibleSidebarMenu({
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton isActive={isActive} tooltip={label} className="gap-3">
+            <SidebarMenuButton
+              isActive={isActive}
+              tooltip={label}
+              className={cn(
+                "gap-3",
+                isActive &&
+                  "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+              )}
+            >
               <Icon className="h-5 w-5 shrink-0" />
               <span className="flex-1 text-left">{label}</span>
             </SidebarMenuButton>
@@ -1113,7 +1129,15 @@ function CollapsibleSidebarMenu({
     <Collapsible defaultOpen={isActive} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton isActive={isActive} tooltip={label} className="gap-3">
+          <SidebarMenuButton
+            isActive={isActive}
+            tooltip={label}
+            className={cn(
+              "gap-3",
+              isActive &&
+                "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+            )}
+          >
             <Icon className="h-5 w-5 shrink-0" />
             <span className="flex-1 text-left">{label}</span>
             <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -1126,7 +1150,11 @@ function CollapsibleSidebarMenu({
                 <SidebarMenuSubButton
                   isActive={isActive && activeSubKey === sub.key}
                   onClick={() => onSelect(sub.key)}
-                  className="gap-2 cursor-pointer"
+                  className={cn(
+                    "gap-2 cursor-pointer",
+                    isActive && activeSubKey === sub.key &&
+                      "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                  )}
                 >
                   <sub.icon className="h-4 w-4 shrink-0" />
                   <span>{sub.label}</span>

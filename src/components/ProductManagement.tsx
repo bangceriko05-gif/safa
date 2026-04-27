@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ProductEditorModal from "./products/ProductEditorModal";
 
 interface Product {
   id: string;
@@ -43,17 +44,13 @@ interface Product {
 export default function ProductManagement() {
   const { currentStore, userRole, userStores } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorProductId, setEditorProductId] = useState<string | null>(null);
   const [isProductSectionExpanded, setIsProductSectionExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
-  const [formData, setFormData] = useState({
-    name: "",
-    price: "",
-  });
 
   useEffect(() => {
     if (currentStore) {
@@ -79,89 +76,14 @@ export default function ProductManagement() {
     }
   };
 
-  const formatPrice = (value: string): string => {
-    const numericValue = value.replace(/\D/g, '');
-    if (!numericValue) return '';
-    return parseInt(numericValue).toLocaleString('id-ID');
-  };
-
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatPrice(e.target.value);
-    setFormData({ ...formData, price: formattedValue });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Anda harus login terlebih dahulu");
-        return;
-      }
-
-      if (!currentStore) {
-        toast.error("Pilih cabang terlebih dahulu");
-        return;
-      }
-
-      const productData = {
-        name: formData.name.trim(),
-        price: parseFloat(formData.price.replace(/\./g, '')),
-      };
-
-      if (editingProduct) {
-        const { error } = await supabase
-          .from("products")
-          .update(productData)
-          .eq("id", editingProduct.id);
-
-        if (error) throw error;
-        
-        await logActivity({
-          actionType: 'updated',
-          entityType: 'Produk',
-          entityId: editingProduct.id,
-          description: `Mengubah produk ${productData.name} dengan harga Rp ${productData.price.toLocaleString('id-ID')}`,
-          storeId: currentStore?.id,
-        });
-        
-        toast.success("Produk berhasil diupdate");
-      } else {
-        const { data: newProduct, error } = await supabase
-          .from("products")
-          .insert([{ ...productData, created_by: user.id, store_id: currentStore.id }])
-          .select()
-          .single();
-
-        if (error) throw error;
-        
-        await logActivity({
-          actionType: 'created',
-          entityType: 'Produk',
-          entityId: newProduct.id,
-          description: `Menambahkan produk baru: ${productData.name} dengan harga Rp ${productData.price.toLocaleString('id-ID')}`,
-          storeId: currentStore?.id,
-        });
-        
-        toast.success("Produk berhasil ditambahkan");
-      }
-
-      fetchProducts();
-      handleCloseDialog();
-    } catch (error: any) {
-      toast.error(error.message || "Terjadi kesalahan");
-      console.error(error);
-    }
+  const openCreate = () => {
+    setEditorProductId(null);
+    setEditorOpen(true);
   };
 
   const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      price: product.price.toLocaleString('id-ID'),
-    });
-    setIsDialogOpen(true);
+    setEditorProductId(product.id);
+    setEditorOpen(true);
   };
 
   const handleDelete = async (product: Product) => {
@@ -191,13 +113,9 @@ export default function ProductManagement() {
     }
   };
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingProduct(null);
-    setFormData({
-      name: "",
-      price: "",
-    });
+  const handleCloseEditor = () => {
+    setEditorOpen(false);
+    setEditorProductId(null);
   };
 
   const handleToggleProduct = (productId: string) => {
@@ -298,7 +216,7 @@ export default function ProductManagement() {
                 Salin ke Cabang Lain ({selectedProducts.size})
               </Button>
             )}
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Tambah Produk
             </Button>
@@ -381,50 +299,15 @@ export default function ProductManagement() {
         </CardContent>
       )}
 
-      {/* Add/Edit Product Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Edit Produk" : "Tambah Produk Baru"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nama Produk</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Contoh: Kopi Latte"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Harga Jual</Label>
-              <Input
-                id="price"
-                type="text"
-                value={formData.price}
-                onChange={handlePriceChange}
-                placeholder="25000"
-                required
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
-                Batal
-              </Button>
-              <Button type="submit" className="flex-1">
-                {editingProduct ? "Update" : "Tambah"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Full Product Editor (Tabs: Edit / Varian / Tingkatan Harga / Kategori / Brand) */}
+      <ProductEditorModal
+        open={editorOpen}
+        productId={editorProductId}
+        onClose={handleCloseEditor}
+        onSaved={() => {
+          fetchProducts();
+        }}
+      />
 
       {/* Copy Products Dialog */}
       <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
