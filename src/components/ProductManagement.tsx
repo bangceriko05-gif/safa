@@ -202,6 +202,18 @@ export default function ProductManagement() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (editorOpen) {
+    return (
+      <ProductEditorModal
+        productId={editorProductId}
+        onClose={handleCloseEditor}
+        onSaved={() => {
+          fetchProducts();
+        }}
+      />
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -298,16 +310,6 @@ export default function ProductManagement() {
           </Table>
         </CardContent>
       )}
-
-      {/* Full Product Editor (Tabs: Edit / Varian / Tingkatan Harga / Kategori / Brand) */}
-      <ProductEditorModal
-        open={editorOpen}
-        productId={editorProductId}
-        onClose={handleCloseEditor}
-        onSaved={() => {
-          fetchProducts();
-        }}
-      />
 
       {/* Copy Products Dialog */}
       <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
