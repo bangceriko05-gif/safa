@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ProductEditorModal from "./products/ProductEditorModal";
 
 interface Product {
   id: string;
@@ -43,17 +44,13 @@ interface Product {
 export default function ProductManagement() {
   const { currentStore, userRole, userStores } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorProductId, setEditorProductId] = useState<string | null>(null);
   const [isProductSectionExpanded, setIsProductSectionExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
-  const [formData, setFormData] = useState({
-    name: "",
-    price: "",
-  });
 
   useEffect(() => {
     if (currentStore) {
