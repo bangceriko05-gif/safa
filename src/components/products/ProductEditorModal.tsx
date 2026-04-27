@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,13 +34,13 @@ export interface EditorProduct {
   stock_qty: number;
   min_stock: number;
   is_active: boolean;
+  tax_enabled: boolean;
   show_on_website: boolean;
   images: string[];
   description?: string;
 }
 
 interface Props {
-  open: boolean;
   productId: string | null;
   onClose: () => void;
   onSaved: () => void;
@@ -64,12 +58,13 @@ const empty: EditorProduct = {
   stock_qty: 0,
   min_stock: 0,
   is_active: true,
+  tax_enabled: false,
   show_on_website: false,
   images: [],
   description: "",
 };
 
-export default function ProductEditorModal({ open, productId, onClose, onSaved }: Props) {
+export default function ProductEditorModal({ productId, onClose, onSaved }: Props) {
   const { currentStore } = useStore();
   const [tab, setTab] = useState("edit");
   const [data, setData] = useState<EditorProduct>(empty);
@@ -106,6 +101,7 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
         stock_qty: Number(p.stock_qty ?? 0),
         min_stock: Number((p as any).min_stock ?? 0),
         is_active: (p as any).is_active ?? true,
+        tax_enabled: (p as any).tax_enabled ?? false,
         show_on_website: (p as any).show_on_website ?? false,
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
@@ -134,14 +130,12 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
   };
 
   useEffect(() => {
-    if (open) {
-      setTab("edit");
-      setSavedId(productId);
-      loadProduct();
-      loadOptions();
-    }
+    setTab("edit");
+    setSavedId(productId);
+    loadProduct();
+    loadOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, productId, currentStore?.id]);
+  }, [productId, currentStore?.id]);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0 || !currentStore) return;
@@ -216,6 +210,7 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
         stock_qty: Number(data.stock_qty) || 0,
         min_stock: Number(data.min_stock) || 0,
         is_active: data.is_active,
+        tax_enabled: data.tax_enabled,
         show_on_website: data.show_on_website,
         images: data.images,
         description: data.description?.trim() || null,
@@ -281,20 +276,19 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <DialogTitle className="text-xl">
-              {savedId ? `Edit Produk: ${data.name || "-"}` : "Tambah Produk Baru"}
-            </DialogTitle>
-          </div>
-        </DialogHeader>
+    <div className="w-full">
+      <div className="border-b bg-card sticky top-0 z-10">
+        <div className="flex items-center gap-3 px-6 py-4">
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="text-xl font-semibold">
+            {savedId ? `Edit Produk: ${data.name || "-"}` : "Tambah Produk Baru"}
+          </h2>
+        </div>
+      </div>
 
-        <div className="px-6 pb-6">
+      <div className="px-6 py-6">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-5 bg-muted">
               <TabsTrigger value="edit">Edit Produk</TabsTrigger>
@@ -516,7 +510,7 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <div>
                     <p className="font-medium text-sm">Produk Aktif</p>
@@ -525,6 +519,18 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
                   <Switch
                     checked={data.is_active}
                     onCheckedChange={(v) => setData({ ...data, is_active: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="font-medium text-sm">Aktifkan PPN</p>
+                    <p className="text-xs text-muted-foreground">
+                      Kenakan pajak PPN pada produk ini.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={data.tax_enabled}
+                    onCheckedChange={(v) => setData({ ...data, tax_enabled: v })}
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-md border p-3">
@@ -586,8 +592,7 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
               />
             </TabsContent>
           </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
