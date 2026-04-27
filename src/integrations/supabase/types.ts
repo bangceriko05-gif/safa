@@ -1586,15 +1586,13 @@ export type Database = {
           },
         ]
       }
-      products: {
+      product_brands: {
         Row: {
           created_at: string
           created_by: string
           id: string
           name: string
-          price: number
-          stock_qty: number
-          store_id: string | null
+          store_id: string
           updated_at: string
         }
         Insert: {
@@ -1602,9 +1600,7 @@ export type Database = {
           created_by: string
           id?: string
           name: string
-          price: number
-          stock_qty?: number
-          store_id?: string | null
+          store_id: string
           updated_at?: string
         }
         Update: {
@@ -1612,9 +1608,169 @@ export type Database = {
           created_by?: string
           id?: string
           name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_price_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          min_quantity: number
+          price: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          min_quantity?: number
           price?: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          min_quantity?: number
+          price?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          price: number
+          product_id: string
+          purchase_price: number
+          sku: string | null
+          stock: number
+          updated_at: string
+          variant_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price?: number
+          product_id: string
+          purchase_price?: number
+          sku?: string | null
+          stock?: number
+          updated_at?: string
+          variant_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price?: number
+          product_id?: string
+          purchase_price?: number
+          sku?: string | null
+          stock?: number
+          updated_at?: string
+          variant_name?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          barcode: string | null
+          brand_id: string | null
+          category_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          images: Json
+          is_active: boolean
+          min_stock: number
+          name: string
+          price: number
+          purchase_price: number
+          show_on_website: boolean
+          sku: string | null
+          stock_qty: number
+          store_id: string | null
+          track_inventory: boolean
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          images?: Json
+          is_active?: boolean
+          min_stock?: number
+          name: string
+          price: number
+          purchase_price?: number
+          show_on_website?: boolean
+          sku?: string | null
           stock_qty?: number
           store_id?: string | null
+          track_inventory?: boolean
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          images?: Json
+          is_active?: boolean
+          min_stock?: number
+          name?: string
+          price?: number
+          purchase_price?: number
+          show_on_website?: boolean
+          sku?: string | null
+          stock_qty?: number
+          store_id?: string | null
+          track_inventory?: boolean
           updated_at?: string
         }
         Relationships: [
