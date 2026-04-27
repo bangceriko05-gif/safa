@@ -510,7 +510,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <div>
                     <p className="font-medium text-sm">Produk Aktif</p>
@@ -519,6 +519,18 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                   <Switch
                     checked={data.is_active}
                     onCheckedChange={(v) => setData({ ...data, is_active: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="font-medium text-sm">Aktifkan PPN</p>
+                    <p className="text-xs text-muted-foreground">
+                      Kenakan pajak PPN pada produk ini.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={data.tax_enabled}
+                    onCheckedChange={(v) => setData({ ...data, tax_enabled: v })}
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-md border p-3">
@@ -580,8 +592,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
               />
             </TabsContent>
           </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
