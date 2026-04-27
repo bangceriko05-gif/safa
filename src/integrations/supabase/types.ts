@@ -1728,6 +1728,7 @@ export type Database = {
           sku: string | null
           stock_qty: number
           store_id: string | null
+          tax_enabled: boolean
           track_inventory: boolean
           updated_at: string
         }
@@ -1749,6 +1750,7 @@ export type Database = {
           sku?: string | null
           stock_qty?: number
           store_id?: string | null
+          tax_enabled?: boolean
           track_inventory?: boolean
           updated_at?: string
         }
@@ -1770,6 +1772,7 @@ export type Database = {
           sku?: string | null
           stock_qty?: number
           store_id?: string | null
+          tax_enabled?: boolean
           track_inventory?: boolean
           updated_at?: string
         }
