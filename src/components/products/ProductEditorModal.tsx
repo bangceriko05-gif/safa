@@ -526,16 +526,36 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-md border p-3">
-                  <div>
-                    <p className="font-medium text-sm">Aktifkan PPN</p>
-                    <p className="text-xs text-muted-foreground">
-                      Kenakan pajak PPN pada produk ini.
-                    </p>
+                  <div className="w-full space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Aktifkan PPN</p>
+                        <p className="text-xs text-muted-foreground">
+                          Kenakan pajak PPN pada produk ini.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={data.tax_enabled}
+                        onCheckedChange={(v) => setData({ ...data, tax_enabled: v })}
+                      />
+                    </div>
+                    {data.tax_enabled && (
+                      <Select
+                        value={data.tax_mode}
+                        onValueChange={(v) =>
+                          setData({ ...data, tax_mode: v as "include" | "exclude" })
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="include">Include (sudah termasuk harga)</SelectItem>
+                          <SelectItem value="exclude">Exclude (ditambahkan ke harga)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
-                  <Switch
-                    checked={data.tax_enabled}
-                    onCheckedChange={(v) => setData({ ...data, tax_enabled: v })}
-                  />
                 </div>
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <div>
