@@ -389,32 +389,47 @@ export type Database = {
         Row: {
           booking_id: string
           created_at: string
+          dpp_amount: number
           id: string
           product_id: string
           product_name: string
           product_price: number
           quantity: number
           subtotal: number
+          tax_amount: number
+          tax_enabled: boolean
+          tax_mode: string
+          tax_rate: number
         }
         Insert: {
           booking_id: string
           created_at?: string
+          dpp_amount?: number
           id?: string
           product_id: string
           product_name: string
           product_price: number
           quantity?: number
           subtotal: number
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
         }
         Update: {
           booking_id?: string
           created_at?: string
+          dpp_amount?: number
           id?: string
           product_id?: string
           product_name?: string
           product_price?: number
           quantity?: number
           subtotal?: number
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
         }
         Relationships: [
           {
@@ -568,6 +583,7 @@ export type Database = {
           discount_applies_to: string | null
           discount_type: string | null
           discount_value: number | null
+          dpp_amount: number
           dual_payment: boolean | null
           duration: number
           end_time: string
@@ -588,6 +604,10 @@ export type Database = {
           start_time: string
           status: string | null
           store_id: string | null
+          tax_amount: number
+          tax_enabled: boolean
+          tax_mode: string
+          tax_rate: number
           updated_at: string
           variant_id: string | null
         }
@@ -606,6 +626,7 @@ export type Database = {
           discount_applies_to?: string | null
           discount_type?: string | null
           discount_value?: number | null
+          dpp_amount?: number
           dual_payment?: boolean | null
           duration: number
           end_time: string
@@ -626,6 +647,10 @@ export type Database = {
           start_time: string
           status?: string | null
           store_id?: string | null
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
           updated_at?: string
           variant_id?: string | null
         }
@@ -644,6 +669,7 @@ export type Database = {
           discount_applies_to?: string | null
           discount_type?: string | null
           discount_value?: number | null
+          dpp_amount?: number
           dual_payment?: boolean | null
           duration?: number
           end_time?: string
@@ -664,6 +690,10 @@ export type Database = {
           start_time?: string
           status?: string | null
           store_id?: string | null
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
           updated_at?: string
           variant_id?: string | null
         }
@@ -939,6 +969,7 @@ export type Database = {
       income_products: {
         Row: {
           created_at: string
+          dpp_amount: number
           id: string
           income_id: string
           product_id: string
@@ -946,9 +977,14 @@ export type Database = {
           product_price: number
           quantity: number
           subtotal: number
+          tax_amount: number
+          tax_enabled: boolean
+          tax_mode: string
+          tax_rate: number
         }
         Insert: {
           created_at?: string
+          dpp_amount?: number
           id?: string
           income_id: string
           product_id: string
@@ -956,9 +992,14 @@ export type Database = {
           product_price: number
           quantity?: number
           subtotal: number
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
         }
         Update: {
           created_at?: string
+          dpp_amount?: number
           id?: string
           income_id?: string
           product_id?: string
@@ -966,6 +1007,10 @@ export type Database = {
           product_price?: number
           quantity?: number
           subtotal?: number
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
         }
         Relationships: [
           {
@@ -994,6 +1039,7 @@ export type Database = {
           customer_name: string | null
           date: string
           description: string | null
+          dpp_amount: number
           id: string
           paid_amount: number | null
           payment_method: string | null
@@ -1002,6 +1048,10 @@ export type Database = {
           reference_no: string | null
           status: string
           store_id: string | null
+          tax_amount: number
+          tax_enabled: boolean
+          tax_mode: string
+          tax_rate: number
           updated_at: string
           verification_status: string
         }
@@ -1014,6 +1064,7 @@ export type Database = {
           customer_name?: string | null
           date: string
           description?: string | null
+          dpp_amount?: number
           id?: string
           paid_amount?: number | null
           payment_method?: string | null
@@ -1022,6 +1073,10 @@ export type Database = {
           reference_no?: string | null
           status?: string
           store_id?: string | null
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
           updated_at?: string
           verification_status?: string
         }
@@ -1034,6 +1089,7 @@ export type Database = {
           customer_name?: string | null
           date?: string
           description?: string | null
+          dpp_amount?: number
           id?: string
           paid_amount?: number | null
           payment_method?: string | null
@@ -1042,6 +1098,10 @@ export type Database = {
           reference_no?: string | null
           status?: string
           store_id?: string | null
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_mode?: string
+          tax_rate?: number
           updated_at?: string
           verification_status?: string
         }
@@ -1729,6 +1789,7 @@ export type Database = {
           stock_qty: number
           store_id: string | null
           tax_enabled: boolean
+          tax_mode: string
           track_inventory: boolean
           updated_at: string
         }
@@ -1751,6 +1812,7 @@ export type Database = {
           stock_qty?: number
           store_id?: string | null
           tax_enabled?: boolean
+          tax_mode?: string
           track_inventory?: boolean
           updated_at?: string
         }
@@ -1773,6 +1835,7 @@ export type Database = {
           stock_qty?: number
           store_id?: string | null
           tax_enabled?: boolean
+          tax_mode?: string
           track_inventory?: boolean
           updated_at?: string
         }
@@ -2624,6 +2687,7 @@ export type Database = {
           slug: string
           subscription_end_date: string | null
           subscription_start_date: string | null
+          tax_rate: number
           updated_at: string
         }
         Insert: {
@@ -2639,6 +2703,7 @@ export type Database = {
           slug: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
+          tax_rate?: number
           updated_at?: string
         }
         Update: {
@@ -2654,6 +2719,7 @@ export type Database = {
           slug?: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
+          tax_rate?: number
           updated_at?: string
         }
         Relationships: []
