@@ -33,6 +33,7 @@ import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AccountingReport from "./reports/AccountingReport";
 import PaymentMethodReport from "./reports/PaymentMethodReport";
+import TaxReport from "./reports/TaxReport";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 
 interface ReportStats {
@@ -1134,7 +1135,7 @@ export default function Reports() {
         {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
           <TabsContent value="sales" className="mt-4">
             {isFeatureEnabled("reports.sales") ? (
-              <SalesReport />
+              <SalesSubMenu />
             ) : (
               <FeatureInactiveNotice featureName="Penjualan" icon={DollarSign} price={getFeatureInfo("reports.sales").price} description={getFeatureInfo("reports.sales").description} />
             )}
