@@ -36,7 +36,7 @@ interface TaxRow {
 
 export default function TaxReport() {
   const { currentStore } = useStore();
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("this_month");
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<TaxRow[]>([]);
