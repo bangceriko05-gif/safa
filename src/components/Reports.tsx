@@ -33,6 +33,7 @@ import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AccountingReport from "./reports/AccountingReport";
 import PaymentMethodReport from "./reports/PaymentMethodReport";
+import TaxReport from "./reports/TaxReport";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 
 interface ReportStats {
@@ -1134,7 +1135,7 @@ export default function Reports() {
         {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
           <TabsContent value="sales" className="mt-4">
             {isFeatureEnabled("reports.sales") ? (
-              <SalesReport />
+              <SalesSubMenu />
             ) : (
               <FeatureInactiveNotice featureName="Penjualan" icon={DollarSign} price={getFeatureInfo("reports.sales").price} description={getFeatureInfo("reports.sales").description} />
             )}
@@ -1530,6 +1531,42 @@ export default function Reports() {
           })()}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Sub-menu dropdown untuk Laporan Penjualan: Penjualan + PPN
+function SalesSubMenu() {
+  const [sub, setSub] = useState<"sales" | "tax">(() => {
+    const p = new URLSearchParams(window.location.search).get("salesTab");
+    return (p as "sales" | "tax") || "sales";
+  });
+  const onChange = (v: "sales" | "tax") => {
+    setSub(v);
+    const params = new URLSearchParams(window.location.search);
+    params.set("salesTab", v);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
+  return (
+    <div className="space-y-4">
+      <Select value={sub} onValueChange={(v) => onChange(v as "sales" | "tax")}>
+        <SelectTrigger className="w-[240px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="sales">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" /> Laporan Penjualan
+            </div>
+          </SelectItem>
+          <SelectItem value="tax">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" /> Laporan PPN
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      {sub === "sales" ? <SalesReport /> : <TaxReport />}
     </div>
   );
 }

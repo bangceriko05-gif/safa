@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark, ListTree, ShoppingCart, ClipboardList } from "lucide-react";
+import { Scale, TrendingUp, Wallet, BookOpen, CreditCard, HandCoins, Package, Landmark, ListTree, ShoppingCart, ClipboardList, Receipt } from "lucide-react";
 
 import BalanceSheet from "./accounting/BalanceSheet";
 import ProfitLoss from "./accounting/ProfitLoss";
@@ -13,8 +13,9 @@ import BankList from "./accounting/BankList";
 import ChartOfAccountsList from "./accounting/ChartOfAccountsList";
 import AccountingTransactions from "./accounting/AccountingTransactions";
 import AccountingActivityLog from "./accounting/AccountingActivityLog";
+import TaxReport from "./TaxReport";
 
-type AccountingTab = "transaksi" | "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa" | "log";
+type AccountingTab = "transaksi" | "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa" | "tax" | "log";
 
 const tabs: { key: AccountingTab; label: string; icon: React.ElementType }[] = [
   { key: "transaksi", label: "Transaksi", icon: ShoppingCart },
@@ -27,6 +28,7 @@ const tabs: { key: AccountingTab; label: string; icon: React.ElementType }[] = [
   { key: "assets", label: "Aset", icon: Package },
   { key: "bank", label: "List Bank", icon: Landmark },
   { key: "coa", label: "Daftar Akun", icon: ListTree },
+  { key: "tax", label: "Data PPN", icon: Receipt },
   { key: "log", label: "Log Aktivitas", icon: ClipboardList },
 ];
 
@@ -41,6 +43,7 @@ const COMPONENTS: Record<AccountingTab, React.ComponentType> = {
   assets: AssetManagement,
   bank: BankList,
   coa: ChartOfAccountsList,
+  tax: TaxReport,
   log: AccountingActivityLog,
 };
 

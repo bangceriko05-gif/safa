@@ -35,6 +35,7 @@ export interface EditorProduct {
   min_stock: number;
   is_active: boolean;
   tax_enabled: boolean;
+  tax_mode: "include" | "exclude";
   show_on_website: boolean;
   images: string[];
   description?: string;
@@ -59,6 +60,7 @@ const empty: EditorProduct = {
   min_stock: 0,
   is_active: true,
   tax_enabled: false,
+  tax_mode: "exclude",
   show_on_website: false,
   images: [],
   description: "",
@@ -102,6 +104,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         min_stock: Number((p as any).min_stock ?? 0),
         is_active: (p as any).is_active ?? true,
         tax_enabled: (p as any).tax_enabled ?? false,
+        tax_mode: ((p as any).tax_mode ?? "exclude") as "include" | "exclude",
         show_on_website: (p as any).show_on_website ?? false,
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
@@ -211,6 +214,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         min_stock: Number(data.min_stock) || 0,
         is_active: data.is_active,
         tax_enabled: data.tax_enabled,
+        tax_mode: data.tax_mode,
         show_on_website: data.show_on_website,
         images: data.images,
         description: data.description?.trim() || null,
@@ -522,16 +526,36 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-md border p-3">
-                  <div>
-                    <p className="font-medium text-sm">Aktifkan PPN</p>
-                    <p className="text-xs text-muted-foreground">
-                      Kenakan pajak PPN pada produk ini.
-                    </p>
+                  <div className="w-full space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Aktifkan PPN</p>
+                        <p className="text-xs text-muted-foreground">
+                          Kenakan pajak PPN pada produk ini.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={data.tax_enabled}
+                        onCheckedChange={(v) => setData({ ...data, tax_enabled: v })}
+                      />
+                    </div>
+                    {data.tax_enabled && (
+                      <Select
+                        value={data.tax_mode}
+                        onValueChange={(v) =>
+                          setData({ ...data, tax_mode: v as "include" | "exclude" })
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="include">Include (sudah termasuk harga)</SelectItem>
+                          <SelectItem value="exclude">Exclude (ditambahkan ke harga)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
-                  <Switch
-                    checked={data.tax_enabled}
-                    onCheckedChange={(v) => setData({ ...data, tax_enabled: v })}
-                  />
                 </div>
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <div>
