@@ -116,7 +116,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
         .order("name");
 
       if (error) throw error;
-      setCategories(data || []);
+      setCategories((data || []) as RoomCategory[]);
     } catch (error) {
       console.error("Error fetching categories:", error);
       toast.error("Gagal memuat data kategori");
