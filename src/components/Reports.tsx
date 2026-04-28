@@ -1534,3 +1534,39 @@ export default function Reports() {
     </div>
   );
 }
+
+// Sub-menu dropdown untuk Laporan Penjualan: Penjualan + PPN
+function SalesSubMenu() {
+  const [sub, setSub] = useState<"sales" | "tax">(() => {
+    const p = new URLSearchParams(window.location.search).get("salesTab");
+    return (p as "sales" | "tax") || "sales";
+  });
+  const onChange = (v: "sales" | "tax") => {
+    setSub(v);
+    const params = new URLSearchParams(window.location.search);
+    params.set("salesTab", v);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
+  return (
+    <div className="space-y-4">
+      <Select value={sub} onValueChange={(v) => onChange(v as "sales" | "tax")}>
+        <SelectTrigger className="w-[240px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="sales">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" /> Laporan Penjualan
+            </div>
+          </SelectItem>
+          <SelectItem value="tax">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" /> Laporan PPN
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      {sub === "sales" ? <SalesReport /> : <TaxReport />}
+    </div>
+  );
+}
