@@ -655,6 +655,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           </TabsContent>
         )}
 
+        {/* Tax (PPN) Settings */}
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+          <TabsContent value="tax" className="mt-4">
+            <TaxSettings />
+          </TabsContent>
+        )}
+
         {/* Outlet Management */}
         {userRole === "admin" && (
           <TabsContent value="outlet" className="mt-4">
