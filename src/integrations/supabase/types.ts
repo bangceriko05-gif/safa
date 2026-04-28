@@ -2687,6 +2687,8 @@ export type Database = {
           slug: string
           subscription_end_date: string | null
           subscription_start_date: string | null
+          tax_enabled: boolean
+          tax_modes_allowed: string[]
           tax_rate: number
           updated_at: string
         }
@@ -2703,6 +2705,8 @@ export type Database = {
           slug: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
+          tax_enabled?: boolean
+          tax_modes_allowed?: string[]
           tax_rate?: number
           updated_at?: string
         }
@@ -2719,6 +2723,8 @@ export type Database = {
           slug?: string
           subscription_end_date?: string | null
           subscription_start_date?: string | null
+          tax_enabled?: boolean
+          tax_modes_allowed?: string[]
           tax_rate?: number
           updated_at?: string
         }

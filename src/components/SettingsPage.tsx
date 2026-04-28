@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard } from "lucide-react";
+import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard, Receipt } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
 import OtaSourceManagement from "./OtaSourceManagement";
 import PaymentMethodSettings from "./PaymentMethodSettings";
+import TaxSettings from "./TaxSettings";
 
 interface StatusColor {
   id: string;
@@ -307,7 +308,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         {(() => {
           const settingsTabs = ["display", "colors", "notifications"];
           if (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") {
-            settingsTabs.push("print", "rooms", "ota", "payment-methods");
+            settingsTabs.push("print", "rooms", "ota", "payment-methods", "tax");
           }
           if (userRole === "admin" || userRole === "owner") settingsTabs.push("outlet");
           const cols = settingsTabs.length;
@@ -343,6 +344,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                   <TabsTrigger value="payment-methods" className="text-xs sm:text-sm">
                     <CreditCard className="mr-1 sm:mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Metode Bayar</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="tax" className="text-xs sm:text-sm">
+                    <Receipt className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">PPN</span>
                   </TabsTrigger>
                 </>
               )}
@@ -647,6 +652,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
           <TabsContent value="payment-methods" className="mt-4">
             <PaymentMethodSettings />
+          </TabsContent>
+        )}
+
+        {/* Tax (PPN) Settings */}
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+          <TabsContent value="tax" className="mt-4">
+            <TaxSettings />
           </TabsContent>
         )}
 
