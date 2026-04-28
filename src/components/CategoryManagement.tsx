@@ -32,9 +32,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Tags, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Tags, X, Receipt } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RoomCategory {
   id: string;
@@ -42,6 +49,8 @@ interface RoomCategory {
   name: string;
   description: string | null;
   is_active: boolean;
+  tax_enabled: boolean;
+  tax_mode: "include" | "exclude";
   created_at: string;
   updated_at: string;
 }
@@ -60,17 +69,41 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
   const [editingCategory, setEditingCategory] = useState<RoomCategory | null>(null);
   const [deleteCategory, setDeleteCategory] = useState<RoomCategory | null>(null);
   const [roomsUsingCategory, setRoomsUsingCategory] = useState(0);
+  const [storeTax, setStoreTax] = useState<{ enabled: boolean; modes: string[]; rate: number }>({
+    enabled: false,
+    modes: ["include", "exclude"],
+    rate: 11,
+  });
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     is_active: true,
+    tax_enabled: false,
+    tax_mode: "exclude" as "include" | "exclude",
   });
 
   useEffect(() => {
     if (isOpen && currentStore) {
       fetchCategories();
+      fetchStoreTax();
     }
   }, [isOpen, currentStore]);
+
+  const fetchStoreTax = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("stores")
+      .select("tax_enabled, tax_modes_allowed, tax_rate")
+      .eq("id", currentStore.id)
+      .maybeSingle();
+    if (data) {
+      setStoreTax({
+        enabled: !!(data as any).tax_enabled,
+        modes: ((data as any).tax_modes_allowed as string[]) || ["include", "exclude"],
+        rate: Number((data as any).tax_rate) || 11,
+      });
+    }
+  };
 
   const fetchCategories = async () => {
     if (!currentStore) return;
@@ -109,6 +142,8 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
             name: formData.name.trim(),
             description: formData.description.trim() || null,
             is_active: formData.is_active,
+            tax_enabled: formData.tax_enabled,
+            tax_mode: formData.tax_mode,
           })
           .eq("id", editingCategory.id);
 
@@ -131,6 +166,8 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
             name: formData.name.trim(),
             description: formData.description.trim() || null,
             is_active: formData.is_active,
+            tax_enabled: formData.tax_enabled,
+            tax_mode: formData.tax_mode,
           })
           .select()
           .single();
@@ -167,6 +204,8 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
       name: category.name,
       description: category.description || "",
       is_active: category.is_active,
+      tax_enabled: !!(category as any).tax_enabled,
+      tax_mode: ((category as any).tax_mode as "include" | "exclude") || "exclude",
     });
     setIsFormOpen(true);
   };
@@ -265,6 +304,8 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
       name: "",
       description: "",
       is_active: true,
+      tax_enabled: false,
+      tax_mode: "exclude",
     });
   };
 
@@ -303,6 +344,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                   <TableRow>
                     <TableHead>Nama Kategori</TableHead>
                     <TableHead>Deskripsi</TableHead>
+                    <TableHead>PPN</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
@@ -313,6 +355,16 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                       <TableCell className="font-medium">{category.name}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {category.description || "-"}
+                      </TableCell>
+                      <TableCell>
+                        {(category as any).tax_enabled ? (
+                          <Badge variant="outline" className="gap-1">
+                            <Receipt className="h-3 w-3" />
+                            {(category as any).tax_mode === "include" ? "Include" : "Exclude"}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -393,6 +445,55 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />
             </div>
+            {storeTax.enabled && (
+              <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="tax_enabled" className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4" />
+                      Aktifkan PPN ({storeTax.rate}%)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      PPN akan dihitung otomatis pada booking dengan kategori kamar ini.
+                    </p>
+                  </div>
+                  <Switch
+                    id="tax_enabled"
+                    checked={formData.tax_enabled}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, tax_enabled: checked })
+                    }
+                  />
+                </div>
+                {formData.tax_enabled && (
+                  <div className="space-y-2">
+                    <Label htmlFor="tax_mode">Mode PPN</Label>
+                    <Select
+                      value={formData.tax_mode}
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, tax_mode: v as "include" | "exclude" })
+                      }
+                    >
+                      <SelectTrigger id="tax_mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {storeTax.modes.includes("include") && (
+                          <SelectItem value="include">
+                            Include — harga sudah termasuk PPN
+                          </SelectItem>
+                        )}
+                        {storeTax.modes.includes("exclude") && (
+                          <SelectItem value="exclude">
+                            Exclude — PPN ditambahkan ke harga
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseForm}>
                 Batal
