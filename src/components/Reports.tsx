@@ -108,7 +108,7 @@ interface BookingPaymentDetail {
   type: 'booking' | 'booking_2';
 }
 
-type ReportTab = "overview" | "sales" | "income-expense" | "payment-method" | "purchase" | "employee" | "accounting";
+type ReportTab = "overview" | "sales" | "incomes" | "expenses" | "payment-method" | "purchase" | "employee" | "accounting";
 
 export default function Reports() {
   const { currentStore } = useStore();
