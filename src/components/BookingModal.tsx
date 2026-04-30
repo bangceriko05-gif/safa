@@ -120,6 +120,7 @@ export default function BookingModal({
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
+  const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
   
   // Deposit state
   const [enableDeposit, setEnableDeposit] = useState(false);
@@ -324,6 +325,7 @@ export default function BookingModal({
       });
       // Set payment proof URL from existing booking
       setPaymentProofUrl(editingBooking.payment_proof_url || null);
+      setPaymentProofUrl2((editingBooking as any).payment_proof_url_2 || null);
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
@@ -376,6 +378,7 @@ export default function BookingModal({
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
+      setPaymentProofUrl2(null);
 
       // For PMS mode, initialize check-in date from selected date
       if (isPMSMode) {
@@ -419,6 +422,7 @@ export default function BookingModal({
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
+      setPaymentProofUrl2(null);
       isPriceProtectedRef.current = false;
       
       // Reset check-in/out dates for PMS mode
@@ -921,6 +925,11 @@ export default function BookingModal({
           setLoading(false);
           return;
         }
+        if (!paymentProofUrl2) {
+          toast.error("Bukti Bayar Kedua wajib diupload saat Dual Payment aktif");
+          setLoading(false);
+          return;
+        }
       }
 
       // Validate duration/dates
@@ -1054,6 +1063,7 @@ export default function BookingModal({
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
         store_id: currentStore.id,
         payment_proof_url: paymentProofUrl,
+        payment_proof_url_2: formData.dual_payment ? paymentProofUrl2 : null,
         payment_status: (() => {
           const grandTotal = calculateGrandTotal();
           const totalPaid = parseFloat(parsePrice(formData.price)) + (formData.dual_payment && formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : 0);
@@ -2222,6 +2232,7 @@ export default function BookingModal({
             onChange={setPaymentProofUrl}
             required
             disabled={loading}
+            label={formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}
           />
 
           <div className="grid grid-cols-2 gap-4">
@@ -2347,6 +2358,17 @@ export default function BookingModal({
                     placeholder="Nomor referensi kedua (opsional)"
                   />
                 </div>
+              </div>
+
+              {/* Payment Proof Upload for second payment */}
+              <div>
+                <PaymentProofUpload
+                  value={paymentProofUrl2}
+                  onChange={setPaymentProofUrl2}
+                  required
+                  disabled={loading}
+                  label="Bukti Bayar Kedua"
+                />
               </div>
             </>
           )}

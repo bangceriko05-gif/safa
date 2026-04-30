@@ -69,6 +69,7 @@ interface BookingWithRoom {
   price: number;
   created_at: string;
   payment_proof_url: string | null;
+  payment_proof_url_2: string | null;
   payment_status: string;
 }
 
@@ -198,6 +199,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           price,
           created_at,
           payment_proof_url,
+          payment_proof_url_2,
           payment_status,
           rooms (name)
         `)
@@ -236,6 +238,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         price: b.price,
         created_at: b.created_at,
         payment_proof_url: b.payment_proof_url,
+        payment_proof_url_2: b.payment_proof_url_2,
         payment_status: b.payment_status || "belum_lunas",
       }));
 
@@ -601,20 +604,39 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                               </div>
                             </TableCell>
                             <TableCell>
-                              {booking.payment_proof_url ? (
-                                <a
-                                  href={booking.payment_proof_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
-                                  title="Lihat Bukti Bayar"
-                                >
-                                  <img
-                                    src={booking.payment_proof_url}
-                                    alt="Bukti Bayar"
-                                    className="w-6 h-6 rounded object-cover border"
-                                  />
-                                </a>
+                              {(booking.payment_proof_url || booking.payment_proof_url_2) ? (
+                                <div className="flex items-center gap-1">
+                                  {booking.payment_proof_url && (
+                                    <a
+                                      href={booking.payment_proof_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
+                                      title="Lihat Bukti Bayar Pertama"
+                                    >
+                                      <img
+                                        src={booking.payment_proof_url}
+                                        alt="Bukti Bayar 1"
+                                        className="w-6 h-6 rounded object-cover border"
+                                      />
+                                    </a>
+                                  )}
+                                  {booking.payment_proof_url_2 && (
+                                    <a
+                                      href={booking.payment_proof_url_2}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
+                                      title="Lihat Bukti Bayar Kedua"
+                                    >
+                                      <img
+                                        src={booking.payment_proof_url_2}
+                                        alt="Bukti Bayar 2"
+                                        className="w-6 h-6 rounded object-cover border"
+                                      />
+                                    </a>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-muted-foreground text-sm">-</span>
                               )}
