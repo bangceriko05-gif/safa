@@ -360,6 +360,15 @@ export default function Reports() {
           .lte("incomes.date", endDateStr)
       ]);
 
+      // Purchases (only proses + selesai)
+      const purchasesResult = await supabase
+        .from("purchases" as any)
+        .select("amount")
+        .eq("store_id", currentStore.id)
+        .in("process_status", ["proses", "selesai"])
+        .gte("date", startDateStr)
+        .lte("date", endDateStr);
+
       if (bookingsResult.error) throw bookingsResult.error;
       if (customersResult.error) throw customersResult.error;
       if (expensesResult.error) throw expensesResult.error;
@@ -491,9 +500,10 @@ export default function Reports() {
       const totalExpenses = expensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
       const totalAdditionalIncome = incomesData.reduce((sum, income) => sum + Number(income.amount), 0);
       
-      // Calculate purchase total from income_products
-      const totalPurchase = incomeProductsData.reduce((sum: number, ip: any) => sum + (Number(ip.subtotal) || 0), 0);
-      const purchaseTransactionCount = new Set(incomeProductsData.map((ip: any) => ip.income_id)).size;
+      // Calculate purchase total from purchases table (proses + selesai only)
+      const purchasesData = (purchasesResult.data || []) as any[];
+      const totalPurchase = purchasesData.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+      const purchaseTransactionCount = purchasesData.length;
 
       setStats({
         totalTransactions,
