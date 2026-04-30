@@ -120,6 +120,7 @@ export default function BookingModal({
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
+  const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
   
   // Deposit state
   const [enableDeposit, setEnableDeposit] = useState(false);
@@ -324,6 +325,7 @@ export default function BookingModal({
       });
       // Set payment proof URL from existing booking
       setPaymentProofUrl(editingBooking.payment_proof_url || null);
+      setPaymentProofUrl2((editingBooking as any).payment_proof_url_2 || null);
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
@@ -376,6 +378,7 @@ export default function BookingModal({
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
+      setPaymentProofUrl2(null);
 
       // For PMS mode, initialize check-in date from selected date
       if (isPMSMode) {
@@ -419,6 +422,7 @@ export default function BookingModal({
       setOriginalProducts([]);
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
+      setPaymentProofUrl2(null);
       isPriceProtectedRef.current = false;
       
       // Reset check-in/out dates for PMS mode
