@@ -49,9 +49,9 @@ export default function BankAccountDetailModal({ open, onClose, accountName, sto
         supabase.from("bookings").select("date, bid, customer_name, payment_method, price, dual_payment, payment_method_2, price_2")
           .eq("store_id", storeId).lte("date", endStr).in("status", ["CI", "CO"]),
         supabase.from("incomes").select("date, bid, description, customer_name, payment_method, amount")
-          .eq("store_id", storeId).lte("date", endStr),
+          .eq("store_id", storeId).eq("process_status", "selesai").lte("date", endStr),
         supabase.from("expenses").select("date, bid, description, payment_method, amount")
-          .eq("store_id", storeId).lte("date", endStr),
+          .eq("store_id", storeId).eq("process_status", "selesai").lte("date", endStr),
         supabase.from("investor_transfers" as any).select("transfer_date, investor_name, source_account, amount, description")
           .eq("store_id", storeId).lte("transfer_date", endStr),
       ]);

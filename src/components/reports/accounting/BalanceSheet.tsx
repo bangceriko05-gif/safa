@@ -92,12 +92,14 @@ export default function BalanceSheet() {
           .from("incomes")
           .select("amount")
           .eq("store_id", currentStore.id)
+          .eq("process_status", "selesai")
           .gte("date", startStr)
           .lte("date", endStr),
         supabase
           .from("expenses")
           .select("amount")
           .eq("store_id", currentStore.id)
+          .eq("process_status", "selesai")
           .gte("date", startStr)
           .lte("date", endStr),
         supabase

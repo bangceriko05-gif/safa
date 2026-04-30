@@ -179,9 +179,9 @@ export default function BankList() {
         supabase.from("bookings").select("payment_method, price, dual_payment, payment_method_2, price_2")
           .eq("store_id", currentStore.id).lte("date", endStr).in("status", ["CI", "CO"]),
         supabase.from("incomes").select("payment_method, amount")
-          .eq("store_id", currentStore.id).lte("date", endStr),
+          .eq("store_id", currentStore.id).eq("process_status", "selesai").lte("date", endStr),
         supabase.from("expenses").select("payment_method, amount")
-          .eq("store_id", currentStore.id).lte("date", endStr),
+          .eq("store_id", currentStore.id).eq("process_status", "selesai").lte("date", endStr),
         supabase.from("investor_transfers" as any).select("source_account, amount, transfer_date, investor_name, description, id, created_at")
           .eq("store_id", currentStore.id).lte("transfer_date", endStr),
       ]);

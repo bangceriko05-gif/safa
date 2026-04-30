@@ -223,12 +223,14 @@ export default function JournalEntries() {
           .from("incomes")
           .select("id, bid, date, description, customer_name, payment_method, amount")
           .eq("store_id", currentStore.id)
+          .eq("process_status", "selesai")
           .gte("date", startStr)
           .lte("date", endStr),
         supabase
           .from("expenses")
           .select("id, bid, date, description, category, payment_method, amount")
           .eq("store_id", currentStore.id)
+          .eq("process_status", "selesai")
           .gte("date", startStr)
           .lte("date", endStr),
       ]);
