@@ -26,6 +26,7 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import SalesReport from "./reports/SalesReport";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import PurchaseReport from "./reports/PurchaseReport";
+import PurchaseTransactionReport from "./reports/PurchaseTransactionReport";
 import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 import OccupancyChart from "./reports/OccupancyChart";
