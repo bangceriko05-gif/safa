@@ -1611,3 +1611,44 @@ function SalesSubMenu() {
     </div>
   );
 }
+
+function ExpenseSubMenu() {
+  const [sub, setSub] = useState<"active" | "tunda" | "batal">(() => {
+    const p = new URLSearchParams(window.location.search).get("expenseTab");
+    return (p as any) || "active";
+  });
+  const onChange = (v: "active" | "tunda" | "batal") => {
+    setSub(v);
+    const params = new URLSearchParams(window.location.search);
+    params.set("expenseTab", v);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
+  const filter = sub === "active" ? "active" : sub === "tunda" ? "proses" : "batal";
+  return (
+    <div className="space-y-4">
+      <Select value={sub} onValueChange={(v) => onChange(v as any)}>
+        <SelectTrigger className="w-[280px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" /> Laporan Pengeluaran
+            </div>
+          </SelectItem>
+          <SelectItem value="tunda">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Laporan Pengeluaran Tertunda
+            </div>
+          </SelectItem>
+          <SelectItem value="batal">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" /> Laporan Pengeluaran Dibatalkan
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <IncomeExpenseReport initialTab="expenses" lockSubView processStatusFilter={filter as any} />
+    </div>
+  );
+}
