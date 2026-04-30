@@ -2358,6 +2358,16 @@ export default function BookingModal({
                   />
                 </div>
               </div>
+
+              {/* Payment Proof Upload for second payment */}
+              <div>
+                <PaymentProofUpload
+                  value={paymentProofUrl2}
+                  onChange={setPaymentProofUrl2}
+                  required
+                  disabled={loading}
+                />
+              </div>
             </>
           )}
 
