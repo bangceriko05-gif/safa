@@ -69,6 +69,7 @@ interface BookingWithRoom {
   price: number;
   created_at: string;
   payment_proof_url: string | null;
+  payment_proof_url_2: string | null;
   payment_status: string;
 }
 
@@ -198,6 +199,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           price,
           created_at,
           payment_proof_url,
+          payment_proof_url_2,
           payment_status,
           rooms (name)
         `)
@@ -236,6 +238,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         price: b.price,
         created_at: b.created_at,
         payment_proof_url: b.payment_proof_url,
+        payment_proof_url_2: b.payment_proof_url_2,
         payment_status: b.payment_status || "belum_lunas",
       }));
 
