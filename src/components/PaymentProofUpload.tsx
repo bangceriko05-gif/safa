@@ -11,6 +11,7 @@ interface PaymentProofUploadProps {
   onChange: (url: string | null) => void;
   required?: boolean;
   disabled?: boolean;
+  label?: string;
 }
 
 export default function PaymentProofUpload({
@@ -18,6 +19,7 @@ export default function PaymentProofUpload({
   onChange,
   required = false,
   disabled = false,
+  label = "Bukti Bayar",
 }: PaymentProofUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -142,7 +144,7 @@ export default function PaymentProofUpload({
   return (
     <div className="space-y-2">
       <Label className="flex items-center gap-1">
-        Bukti Bayar {required && <span className="text-destructive">*</span>}
+        {label} {required && <span className="text-destructive">*</span>}
       </Label>
 
       {value ? (
