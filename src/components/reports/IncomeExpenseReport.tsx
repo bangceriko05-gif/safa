@@ -66,11 +66,15 @@ interface IncomeExpenseReportProps {
   initialTab?: "expenses" | "incomes";
   showAddButton?: boolean;
   hideDateFilter?: boolean;
+  /** Force a process_status filter (overrides internal tabs). */
+  processStatusFilter?: "proses" | "selesai" | "batal" | "dihapus" | "active";
+  /** Hide the Pemasukan/Pengeluaran sub-view selector. */
+  lockSubView?: boolean;
 }
 
 type SubView = "all" | "expenses" | "incomes";
 
-export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter }: IncomeExpenseReportProps = {}) {
+export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter, processStatusFilter, lockSubView }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
@@ -115,7 +119,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     fetchExpenseCategories();
     fetchProducts();
     fetchCustomers();
-  }, [timeRange, customDateRange, currentStore, processStatus]);
+  }, [timeRange, customDateRange, currentStore, processStatus, processStatusFilter]);
 
   const fetchProducts = async () => {
     if (!currentStore) return;
