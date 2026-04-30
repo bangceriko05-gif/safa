@@ -1107,10 +1107,16 @@ export default function Reports() {
               <span className="hidden sm:inline">Penjualan</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
-            <TabsTrigger value="income-expense" className="flex items-center gap-1.5 flex-1">
-              <Receipt className="h-4 w-4" />
-              <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
+          {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
+            <TabsTrigger value="incomes" className="flex items-center gap-1.5 flex-1">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Pemasukan</span>
+            </TabsTrigger>
+          )}
+          {hasAnyPermission(["report_expense_view", "report_expense_detail"]) && (
+            <TabsTrigger value="expenses" className="flex items-center gap-1.5 flex-1">
+              <TrendingDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Pengeluaran</span>
             </TabsTrigger>
           )}
           {isFeatureEnabled("reports.income_expense") && (
@@ -1167,12 +1173,22 @@ export default function Reports() {
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
-          <TabsContent value="income-expense" className="mt-4">
+        {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
+          <TabsContent value="incomes" className="mt-4">
             {isFeatureEnabled("reports.income_expense") ? (
-              <IncomeExpenseReport />
+              <IncomeExpenseReport initialTab="incomes" lockSubView />
             ) : (
-              <FeatureInactiveNotice featureName="Pemasukan/Pengeluaran" icon={Receipt} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
+              <FeatureInactiveNotice featureName="Pemasukan" icon={TrendingUp} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
+            )}
+          </TabsContent>
+        )}
+
+        {hasAnyPermission(["report_expense_view", "report_expense_detail"]) && (
+          <TabsContent value="expenses" className="mt-4">
+            {isFeatureEnabled("reports.income_expense") ? (
+              <ExpenseSubMenu />
+            ) : (
+              <FeatureInactiveNotice featureName="Pengeluaran" icon={TrendingDown} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
             )}
           </TabsContent>
         )}
@@ -1186,7 +1202,7 @@ export default function Reports() {
         {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
           <TabsContent value="purchase" className="mt-4">
             {isFeatureEnabled("reports.purchase") ? (
-              <PurchaseReport />
+              <PurchaseTransactionReport />
             ) : (
               <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("reports.purchase").price} description={getFeatureInfo("reports.purchase").description} />
             )}
