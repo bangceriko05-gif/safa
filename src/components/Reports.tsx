@@ -340,6 +340,7 @@ export default function Reports() {
           .from("expenses")
           .select("*, bid")
           .eq("store_id", currentStore.id)
+          .in("process_status", ["proses", "selesai"])
           .gte("date", startDateStr)
           .lte("date", endDateStr)
           .order("date", { ascending: false }),
@@ -347,6 +348,7 @@ export default function Reports() {
           .from("incomes")
           .select("*, bid")
           .eq("store_id", currentStore.id)
+          .in("process_status", ["proses", "selesai"])
           .gte("date", startDateStr)
           .lte("date", endDateStr)
           .order("date", { ascending: false }),
