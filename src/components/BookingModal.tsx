@@ -2366,6 +2366,7 @@ export default function BookingModal({
                   onChange={setPaymentProofUrl2}
                   required
                   disabled={loading}
+                  label="Bukti Bayar Kedua"
                 />
               </div>
             </>
