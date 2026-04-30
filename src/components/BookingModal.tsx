@@ -925,6 +925,11 @@ export default function BookingModal({
           setLoading(false);
           return;
         }
+        if (!paymentProofUrl2) {
+          toast.error("Bukti Bayar Kedua wajib diupload saat Dual Payment aktif");
+          setLoading(false);
+          return;
+        }
       }
 
       // Validate duration/dates
