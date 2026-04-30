@@ -209,6 +209,17 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
         (incomeQuery as any).eq("process_status", processStatus);
       }
 
+      // External process_status filter (Reports module)
+      if (processStatusFilter) {
+        if (processStatusFilter === "active") {
+          (expenseQuery as any).in("process_status", ["proses", "selesai"]);
+          (incomeQuery as any).in("process_status", ["proses", "selesai"]);
+        } else {
+          (expenseQuery as any).eq("process_status", processStatusFilter);
+          (incomeQuery as any).eq("process_status", processStatusFilter);
+        }
+      }
+
       const [expensesResult, incomesResult] = await Promise.all([
         expenseQuery,
         incomeQuery,
