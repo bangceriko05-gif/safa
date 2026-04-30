@@ -2232,6 +2232,7 @@ export default function BookingModal({
             onChange={setPaymentProofUrl}
             required
             disabled={loading}
+            label={formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}
           />
 
           <div className="grid grid-cols-2 gap-4">
