@@ -1613,17 +1613,19 @@ function SalesSubMenu() {
 }
 
 function ExpenseSubMenu() {
-  const [sub, setSub] = useState<"active" | "tunda" | "batal">(() => {
+  const [sub, setSub] = useState<"active" | "batal">(() => {
     const p = new URLSearchParams(window.location.search).get("expenseTab");
-    return (p as any) || "active";
+    const v = (p as any) || "active";
+    // Migrasi: 'tunda' lama digabungkan ke 'active'
+    return v === "tunda" ? "active" : v;
   });
-  const onChange = (v: "active" | "tunda" | "batal") => {
+  const onChange = (v: "active" | "batal") => {
     setSub(v);
     const params = new URLSearchParams(window.location.search);
     params.set("expenseTab", v);
     window.history.replaceState({}, "", `?${params.toString()}`);
   };
-  const filter = sub === "active" ? "active" : sub === "tunda" ? "proses" : "batal";
+  const filter = sub === "active" ? "active" : "batal";
   return (
     <div className="space-y-4">
       <Select value={sub} onValueChange={(v) => onChange(v as any)}>
@@ -1634,11 +1636,6 @@ function ExpenseSubMenu() {
           <SelectItem value="active">
             <div className="flex items-center gap-2">
               <TrendingDown className="h-4 w-4" /> Laporan Pengeluaran
-            </div>
-          </SelectItem>
-          <SelectItem value="tunda">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Laporan Pengeluaran Tertunda
             </div>
           </SelectItem>
           <SelectItem value="batal">
