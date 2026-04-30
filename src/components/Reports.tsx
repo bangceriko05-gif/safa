@@ -993,7 +993,7 @@ export default function Reports() {
     return (
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
         {/* Summary Cards - like reference image */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Penjualan */}
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
             <CardContent className="p-4">
@@ -1007,7 +1007,7 @@ export default function Reports() {
           </Card>
 
           {/* Pemasukan */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("incomes")}>
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <TrendingUp className="h-3.5 w-3.5 text-green-600" />
@@ -1019,7 +1019,7 @@ export default function Reports() {
           </Card>
 
           {/* Pengeluaran */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("expenses")}>
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <TrendingDown className="h-3.5 w-3.5 text-destructive" />
@@ -1027,6 +1027,18 @@ export default function Reports() {
               </div>
               <div className="text-base font-bold">{formatCurrency(stats.totalExpenses)}</div>
               <p className="text-xs text-muted-foreground">{stats.expenseTransactionCount} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Pembelian */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("purchase")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShoppingCart className="h-3.5 w-3.5 text-orange-600" />
+                <span className="text-xs font-medium text-orange-600">Pembelian</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalPurchase)}</div>
+              <p className="text-xs text-muted-foreground">{stats.purchaseTransactionCount} transaksi</p>
             </CardContent>
           </Card>
 
