@@ -714,7 +714,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
       )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          {!hideDateFilter && (
+          {!hideDateFilter && !lockSubView && (
             <Select value={subView} onValueChange={(v) => setSubView(v as SubView)}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
