@@ -1063,6 +1063,7 @@ export default function BookingModal({
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
         store_id: currentStore.id,
         payment_proof_url: paymentProofUrl,
+        payment_proof_url_2: formData.dual_payment ? paymentProofUrl2 : null,
         payment_status: (() => {
           const grandTotal = calculateGrandTotal();
           const totalPaid = parseFloat(parsePrice(formData.price)) + (formData.dual_payment && formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : 0);
