@@ -26,6 +26,7 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import SalesReport from "./reports/SalesReport";
 import IncomeExpenseReport from "./reports/IncomeExpenseReport";
 import PurchaseReport from "./reports/PurchaseReport";
+import PurchaseTransactionReport from "./reports/PurchaseTransactionReport";
 import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 import OccupancyChart from "./reports/OccupancyChart";
@@ -107,7 +108,7 @@ interface BookingPaymentDetail {
   type: 'booking' | 'booking_2';
 }
 
-type ReportTab = "overview" | "sales" | "income-expense" | "payment-method" | "purchase" | "employee" | "accounting";
+type ReportTab = "overview" | "sales" | "incomes" | "expenses" | "payment-method" | "purchase" | "employee" | "accounting";
 
 export default function Reports() {
   const { currentStore } = useStore();
@@ -339,6 +340,7 @@ export default function Reports() {
           .from("expenses")
           .select("*, bid")
           .eq("store_id", currentStore.id)
+          .in("process_status", ["proses", "selesai"])
           .gte("date", startDateStr)
           .lte("date", endDateStr)
           .order("date", { ascending: false }),
@@ -346,6 +348,7 @@ export default function Reports() {
           .from("incomes")
           .select("*, bid")
           .eq("store_id", currentStore.id)
+          .in("process_status", ["proses", "selesai"])
           .gte("date", startDateStr)
           .lte("date", endDateStr)
           .order("date", { ascending: false }),
@@ -356,6 +359,15 @@ export default function Reports() {
           .gte("incomes.date", startDateStr)
           .lte("incomes.date", endDateStr)
       ]);
+
+      // Purchases (only proses + selesai)
+      const purchasesResult = await supabase
+        .from("purchases" as any)
+        .select("amount")
+        .eq("store_id", currentStore.id)
+        .in("process_status", ["proses", "selesai"])
+        .gte("date", startDateStr)
+        .lte("date", endDateStr);
 
       if (bookingsResult.error) throw bookingsResult.error;
       if (customersResult.error) throw customersResult.error;
@@ -488,9 +500,10 @@ export default function Reports() {
       const totalExpenses = expensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
       const totalAdditionalIncome = incomesData.reduce((sum, income) => sum + Number(income.amount), 0);
       
-      // Calculate purchase total from income_products
-      const totalPurchase = incomeProductsData.reduce((sum: number, ip: any) => sum + (Number(ip.subtotal) || 0), 0);
-      const purchaseTransactionCount = new Set(incomeProductsData.map((ip: any) => ip.income_id)).size;
+      // Calculate purchase total from purchases table (proses + selesai only)
+      const purchasesData = (purchasesResult.data || []) as any[];
+      const totalPurchase = purchasesData.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+      const purchaseTransactionCount = purchasesData.length;
 
       setStats({
         totalTransactions,
@@ -980,7 +993,7 @@ export default function Reports() {
     return (
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
         {/* Summary Cards - like reference image */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Penjualan */}
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
             <CardContent className="p-4">
@@ -994,7 +1007,7 @@ export default function Reports() {
           </Card>
 
           {/* Pemasukan */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("incomes")}>
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <TrendingUp className="h-3.5 w-3.5 text-green-600" />
@@ -1006,7 +1019,7 @@ export default function Reports() {
           </Card>
 
           {/* Pengeluaran */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("income-expense")}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("expenses")}>
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <TrendingDown className="h-3.5 w-3.5 text-destructive" />
@@ -1014,6 +1027,18 @@ export default function Reports() {
               </div>
               <div className="text-base font-bold">{formatCurrency(stats.totalExpenses)}</div>
               <p className="text-xs text-muted-foreground">{stats.expenseTransactionCount} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Pembelian */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("purchase")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShoppingCart className="h-3.5 w-3.5 text-orange-600" />
+                <span className="text-xs font-medium text-orange-600">Pembelian</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalPurchase)}</div>
+              <p className="text-xs text-muted-foreground">{stats.purchaseTransactionCount} transaksi</p>
             </CardContent>
           </Card>
 
@@ -1082,10 +1107,16 @@ export default function Reports() {
               <span className="hidden sm:inline">Penjualan</span>
             </TabsTrigger>
           )}
-          {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
-            <TabsTrigger value="income-expense" className="flex items-center gap-1.5 flex-1">
-              <Receipt className="h-4 w-4" />
-              <span className="hidden sm:inline">Pemasukan/Pengeluaran</span>
+          {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
+            <TabsTrigger value="incomes" className="flex items-center gap-1.5 flex-1">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Pemasukan</span>
+            </TabsTrigger>
+          )}
+          {hasAnyPermission(["report_expense_view", "report_expense_detail"]) && (
+            <TabsTrigger value="expenses" className="flex items-center gap-1.5 flex-1">
+              <TrendingDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Pengeluaran</span>
             </TabsTrigger>
           )}
           {isFeatureEnabled("reports.income_expense") && (
@@ -1142,12 +1173,22 @@ export default function Reports() {
           </TabsContent>
         )}
 
-        {hasAnyPermission(["report_income_view", "report_income_detail", "report_expense_view", "report_expense_detail"]) && (
-          <TabsContent value="income-expense" className="mt-4">
+        {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
+          <TabsContent value="incomes" className="mt-4">
             {isFeatureEnabled("reports.income_expense") ? (
-              <IncomeExpenseReport />
+              <IncomeExpenseReport initialTab="incomes" lockSubView />
             ) : (
-              <FeatureInactiveNotice featureName="Pemasukan/Pengeluaran" icon={Receipt} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
+              <FeatureInactiveNotice featureName="Pemasukan" icon={TrendingUp} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
+            )}
+          </TabsContent>
+        )}
+
+        {hasAnyPermission(["report_expense_view", "report_expense_detail"]) && (
+          <TabsContent value="expenses" className="mt-4">
+            {isFeatureEnabled("reports.income_expense") ? (
+              <ExpenseSubMenu />
+            ) : (
+              <FeatureInactiveNotice featureName="Pengeluaran" icon={TrendingDown} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
             )}
           </TabsContent>
         )}
@@ -1161,7 +1202,7 @@ export default function Reports() {
         {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
           <TabsContent value="purchase" className="mt-4">
             {isFeatureEnabled("reports.purchase") ? (
-              <PurchaseReport />
+              <PurchaseTransactionReport />
             ) : (
               <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("reports.purchase").price} description={getFeatureInfo("reports.purchase").description} />
             )}
@@ -1567,6 +1608,47 @@ function SalesSubMenu() {
         </SelectContent>
       </Select>
       {sub === "sales" ? <SalesReport /> : <TaxReport />}
+    </div>
+  );
+}
+
+function ExpenseSubMenu() {
+  const [sub, setSub] = useState<"active" | "tunda" | "batal">(() => {
+    const p = new URLSearchParams(window.location.search).get("expenseTab");
+    return (p as any) || "active";
+  });
+  const onChange = (v: "active" | "tunda" | "batal") => {
+    setSub(v);
+    const params = new URLSearchParams(window.location.search);
+    params.set("expenseTab", v);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
+  const filter = sub === "active" ? "active" : sub === "tunda" ? "proses" : "batal";
+  return (
+    <div className="space-y-4">
+      <Select value={sub} onValueChange={(v) => onChange(v as any)}>
+        <SelectTrigger className="w-[280px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" /> Laporan Pengeluaran
+            </div>
+          </SelectItem>
+          <SelectItem value="tunda">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Laporan Pengeluaran Tertunda
+            </div>
+          </SelectItem>
+          <SelectItem value="batal">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" /> Laporan Pengeluaran Dibatalkan
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <IncomeExpenseReport initialTab="expenses" lockSubView processStatusFilter={filter as any} />
     </div>
   );
 }

@@ -240,11 +240,13 @@ export default function CashFlow() {
             .from("incomes")
             .select("amount")
             .eq("store_id", currentStore.id)
+            .eq("process_status", "selesai")
             .lte("date", beforeStartStr),
           supabase
             .from("expenses")
             .select("amount")
             .eq("store_id", currentStore.id)
+            .eq("process_status", "selesai")
             .lte("date", beforeStartStr),
           supabase
             .from("accounts_payable")
@@ -290,12 +292,14 @@ export default function CashFlow() {
             .from("incomes")
             .select("amount, category")
             .eq("store_id", currentStore.id)
+            .eq("process_status", "selesai")
             .gte("date", startStr)
             .lte("date", endStr),
           supabase
             .from("expenses")
             .select("amount, category")
             .eq("store_id", currentStore.id)
+            .eq("process_status", "selesai")
             .gte("date", startStr)
             .lte("date", endStr),
           supabase

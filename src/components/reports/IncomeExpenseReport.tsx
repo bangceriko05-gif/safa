@@ -66,11 +66,15 @@ interface IncomeExpenseReportProps {
   initialTab?: "expenses" | "incomes";
   showAddButton?: boolean;
   hideDateFilter?: boolean;
+  /** Force a process_status filter (overrides internal tabs). */
+  processStatusFilter?: "proses" | "selesai" | "batal" | "dihapus" | "active";
+  /** Hide the Pemasukan/Pengeluaran sub-view selector. */
+  lockSubView?: boolean;
 }
 
 type SubView = "all" | "expenses" | "incomes";
 
-export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter }: IncomeExpenseReportProps = {}) {
+export default function IncomeExpenseReport({ initialTab, showAddButton, hideDateFilter, processStatusFilter, lockSubView }: IncomeExpenseReportProps = {}) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions();
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
@@ -115,7 +119,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
     fetchExpenseCategories();
     fetchProducts();
     fetchCustomers();
-  }, [timeRange, customDateRange, currentStore, processStatus]);
+  }, [timeRange, customDateRange, currentStore, processStatus, processStatusFilter]);
 
   const fetchProducts = async () => {
     if (!currentStore) return;
@@ -203,6 +207,17 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
       if (showAddButton) {
         (expenseQuery as any).eq("process_status", processStatus);
         (incomeQuery as any).eq("process_status", processStatus);
+      }
+
+      // External process_status filter (Reports module)
+      if (processStatusFilter) {
+        if (processStatusFilter === "active") {
+          (expenseQuery as any).in("process_status", ["proses", "selesai"]);
+          (incomeQuery as any).in("process_status", ["proses", "selesai"]);
+        } else {
+          (expenseQuery as any).eq("process_status", processStatusFilter);
+          (incomeQuery as any).eq("process_status", processStatusFilter);
+        }
       }
 
       const [expensesResult, incomesResult] = await Promise.all([
@@ -699,7 +714,7 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
       )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          {!hideDateFilter && (
+          {!hideDateFilter && !lockSubView && (
             <Select value={subView} onValueChange={(v) => setSubView(v as SubView)}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue />

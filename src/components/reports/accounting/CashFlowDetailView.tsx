@@ -122,6 +122,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .from("incomes")
             .select("date, bid, description, customer_name, amount, category")
             .eq("store_id", storeId)
+            .eq("process_status", "selesai")
             .lte("date", beforeStartStr);
           (incomes || []).forEach((i: any) => {
             const amount = Number(i.amount) || 0;
@@ -141,6 +142,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .from("expenses")
             .select("date, bid, description, category, amount")
             .eq("store_id", storeId)
+            .eq("process_status", "selesai")
             .lte("date", beforeStartStr);
           (expenses || []).forEach((e: any) => {
             const amount = Number(e.amount) || 0;
@@ -220,6 +222,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .from("expenses")
             .select("date, bid, description, category, amount, payment_method")
             .eq("store_id", storeId)
+            .eq("process_status", "selesai")
             .gte("date", startStr)
             .lte("date", endStr);
           (data || []).forEach((e: any) => {
@@ -241,6 +244,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .from("expenses")
             .select("date, bid, description, category, amount, payment_method")
             .eq("store_id", storeId)
+            .eq("process_status", "selesai")
             .gte("date", startStr)
             .lte("date", endStr);
           (data || []).forEach((e: any) => {
@@ -262,6 +266,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .from("incomes")
             .select("date, bid, description, customer_name, amount, payment_method, category")
             .eq("store_id", storeId)
+            .eq("process_status", "selesai")
             .gte("date", startStr)
             .lte("date", endStr);
           (data || []).forEach((i: any) => {
@@ -280,6 +285,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
             .from("expenses")
             .select("date, bid, description, category, amount, payment_method")
             .eq("store_id", storeId)
+            .eq("process_status", "selesai")
             .gte("date", startStr)
             .lte("date", endStr);
           (data || []).forEach((e: any) => {
