@@ -20,6 +20,8 @@ import { logActivity } from "@/utils/activityLogger";
 import ProductCategoryManager from "./ProductCategoryManager";
 import ProductVariantsTab from "./ProductVariantsTab";
 import ProductPriceTiersTab from "./ProductPriceTiersTab";
+import ProductRecipeTab from "./ProductRecipeTab";
+import ProductUnitConversionTab from "./ProductUnitConversionTab";
 
 export interface EditorProduct {
   id?: string;
@@ -295,11 +297,11 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
       <div className="px-6 py-6">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-5 bg-muted">
-              <TabsTrigger value="edit">Edit Produk</TabsTrigger>
+              <TabsTrigger value="edit">Profil</TabsTrigger>
               <TabsTrigger value="variants">Varian</TabsTrigger>
+              <TabsTrigger value="recipe">Bahan/Resep</TabsTrigger>
               <TabsTrigger value="tiers">Tingkatan Harga</TabsTrigger>
-              <TabsTrigger value="categories">Kategori</TabsTrigger>
-              <TabsTrigger value="brands">Brand</TabsTrigger>
+              <TabsTrigger value="units">Satuan</TabsTrigger>
             </TabsList>
 
             {/* EDIT */}
@@ -596,24 +598,16 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
               <ProductVariantsTab productId={savedId} />
             </TabsContent>
 
+            <TabsContent value="recipe" className="mt-6">
+              <ProductRecipeTab productId={savedId} productPrice={data.price} />
+            </TabsContent>
+
             <TabsContent value="tiers" className="mt-6">
               <ProductPriceTiersTab productId={savedId} />
             </TabsContent>
 
-            <TabsContent value="categories" className="mt-6">
-              <ProductCategoryManager
-                table="product_categories"
-                searchPlaceholder="Cari kategori..."
-                onChanged={loadOptions}
-              />
-            </TabsContent>
-
-            <TabsContent value="brands" className="mt-6">
-              <ProductCategoryManager
-                table="product_brands"
-                searchPlaceholder="Cari brand..."
-                onChanged={loadOptions}
-              />
+            <TabsContent value="units" className="mt-6">
+              <ProductUnitConversionTab productId={savedId} />
             </TabsContent>
           </Tabs>
       </div>
