@@ -13,7 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Star, Trash2, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Star, Trash2, Upload, Loader2, Settings2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
@@ -29,7 +35,9 @@ export interface EditorProduct {
   sku: string;
   barcode: string;
   category_id: string | null;
+  collection_id: string | null;
   brand_id: string | null;
+  material_id: string | null;
   purchase_price: number;
   price: number;
   track_inventory: boolean;
@@ -54,7 +62,9 @@ const empty: EditorProduct = {
   sku: "",
   barcode: "",
   category_id: null,
+  collection_id: null,
   brand_id: null,
+  material_id: null,
   purchase_price: 0,
   price: 0,
   track_inventory: true,
@@ -77,7 +87,19 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+  const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
+  const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
   const [savedId, setSavedId] = useState<string | null>(productId);
+  const [managerTable, setManagerTable] = useState<
+    null | "product_categories" | "product_brands" | "product_collections" | "product_materials"
+  >(null);
+
+  const managerLabels: Record<string, string> = {
+    product_categories: "Kelola Kategori",
+    product_brands: "Kelola Brand",
+    product_collections: "Kelola Koleksi",
+    product_materials: "Kelola Jenis Bahan",
+  };
 
   const loadProduct = async () => {
     if (!productId) {
@@ -98,7 +120,9 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         sku: (p as any).sku ?? "",
         barcode: (p as any).barcode ?? "",
         category_id: (p as any).category_id ?? null,
+        collection_id: (p as any).collection_id ?? null,
         brand_id: (p as any).brand_id ?? null,
+        material_id: (p as any).material_id ?? null,
         purchase_price: Number((p as any).purchase_price ?? 0),
         price: Number(p.price ?? 0),
         track_inventory: (p as any).track_inventory ?? true,
@@ -118,7 +142,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
 
   const loadOptions = async () => {
     if (!currentStore) return;
-    const [{ data: cats }, { data: brs }] = await Promise.all([
+    const [{ data: cats }, { data: brs }, { data: cols }, { data: mats }] = await Promise.all([
       supabase
         .from("product_categories")
         .select("id, name")
@@ -129,9 +153,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         .select("id, name")
         .eq("store_id", currentStore.id)
         .order("name"),
+      supabase
+        .from("product_collections" as any)
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name"),
+      supabase
+        .from("product_materials" as any)
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name"),
     ]);
     setCategories(cats || []);
     setBrands(brs || []);
+    setCollections((cols as any) || []);
+    setMaterials((mats as any) || []);
   };
 
   useEffect(() => {
@@ -208,7 +244,9 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         sku: data.sku.trim() || null,
         barcode: data.barcode.trim() || null,
         category_id: data.category_id,
+        collection_id: data.collection_id,
         brand_id: data.brand_id,
+        material_id: data.material_id,
         purchase_price: Number(data.purchase_price) || 0,
         price: Number(data.price) || 0,
         track_inventory: data.track_inventory,
@@ -402,13 +440,14 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Kategori</Label>
+                  <div className="flex gap-2">
                   <Select
                     value={data.category_id ?? "none"}
                     onValueChange={(v) =>
                       setData({ ...data, category_id: v === "none" ? null : v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -420,16 +459,47 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_categories")} title="Kelola Kategori">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Koleksi</Label>
+                  <div className="flex gap-2">
+                  <Select
+                    value={data.collection_id ?? "none"}
+                    onValueChange={(v) =>
+                      setData({ ...data, collection_id: v === "none" ? null : v })
+                    }
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Pilih koleksi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Tidak ada —</SelectItem>
+                      {collections.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_collections")} title="Kelola Koleksi">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Brand</Label>
+                  <div className="flex gap-2">
                   <Select
                     value={data.brand_id ?? "none"}
                     onValueChange={(v) =>
                       setData({ ...data, brand_id: v === "none" ? null : v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Pilih brand" />
                     </SelectTrigger>
                     <SelectContent>
@@ -441,6 +511,36 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_brands")} title="Kelola Brand">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Jenis Bahan</Label>
+                  <div className="flex gap-2">
+                  <Select
+                    value={data.material_id ?? "none"}
+                    onValueChange={(v) =>
+                      setData({ ...data, material_id: v === "none" ? null : v })
+                    }
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Pilih jenis bahan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Tidak ada —</SelectItem>
+                      {materials.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_materials")} title="Kelola Jenis Bahan">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
                 </div>
               </div>
 
@@ -611,6 +711,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
             </TabsContent>
           </Tabs>
       </div>
+
+      <Dialog open={managerTable !== null} onOpenChange={(o) => !o && setManagerTable(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{managerTable ? managerLabels[managerTable] : ""}</DialogTitle>
+          </DialogHeader>
+          {managerTable && (
+            <ProductCategoryManager
+              table={managerTable}
+              searchPlaceholder={`Cari ${managerLabels[managerTable].replace("Kelola ", "").toLowerCase()}...`}
+              onChanged={loadOptions}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

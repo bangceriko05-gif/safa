@@ -12,7 +12,11 @@ interface Item {
 }
 
 interface Props {
-  table: "product_categories" | "product_brands";
+  table:
+    | "product_categories"
+    | "product_brands"
+    | "product_collections"
+    | "product_materials";
   searchPlaceholder: string;
   onChanged?: () => void;
 }
@@ -29,7 +33,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   const fetchItems = async () => {
     if (!currentStore) return;
     const { data, error } = await supabase
-      .from(table)
+      .from(table as any)
       .select("id, name")
       .eq("store_id", currentStore.id)
       .order("name");
@@ -37,7 +41,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       toast.error("Gagal memuat data");
       return;
     }
-    setItems(data || []);
+    setItems((data as any) || []);
   };
 
   useEffect(() => {
@@ -50,7 +54,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { error } = await supabase
-      .from(table)
+      .from(table as any)
       .insert([{ name: newName.trim(), store_id: currentStore.id, created_by: user.id }]);
     if (error) {
       toast.error(error.message);
@@ -66,7 +70,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   const handleUpdate = async (id: string) => {
     if (!editingName.trim()) return;
     const { error } = await supabase
-      .from(table)
+      .from(table as any)
       .update({ name: editingName.trim() })
       .eq("id", id);
     if (error) {
@@ -81,7 +85,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
 
   const handleDelete = async (item: Item) => {
     if (!confirm(`Hapus "${item.name}"?`)) return;
-    const { error } = await supabase.from(table).delete().eq("id", item.id);
+    const { error } = await supabase.from(table as any).delete().eq("id", item.id);
     if (error) {
       toast.error(error.message);
       return;
