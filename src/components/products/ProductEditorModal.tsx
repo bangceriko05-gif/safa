@@ -29,7 +29,9 @@ export interface EditorProduct {
   sku: string;
   barcode: string;
   category_id: string | null;
+  collection_id: string | null;
   brand_id: string | null;
+  material_id: string | null;
   purchase_price: number;
   price: number;
   track_inventory: boolean;
@@ -54,7 +56,9 @@ const empty: EditorProduct = {
   sku: "",
   barcode: "",
   category_id: null,
+  collection_id: null,
   brand_id: null,
+  material_id: null,
   purchase_price: 0,
   price: 0,
   track_inventory: true,
@@ -77,6 +81,8 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+  const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
+  const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
   const [savedId, setSavedId] = useState<string | null>(productId);
 
   const loadProduct = async () => {
@@ -98,7 +104,9 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         sku: (p as any).sku ?? "",
         barcode: (p as any).barcode ?? "",
         category_id: (p as any).category_id ?? null,
+        collection_id: (p as any).collection_id ?? null,
         brand_id: (p as any).brand_id ?? null,
+        material_id: (p as any).material_id ?? null,
         purchase_price: Number((p as any).purchase_price ?? 0),
         price: Number(p.price ?? 0),
         track_inventory: (p as any).track_inventory ?? true,
@@ -118,7 +126,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
 
   const loadOptions = async () => {
     if (!currentStore) return;
-    const [{ data: cats }, { data: brs }] = await Promise.all([
+    const [{ data: cats }, { data: brs }, { data: cols }, { data: mats }] = await Promise.all([
       supabase
         .from("product_categories")
         .select("id, name")
@@ -129,9 +137,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         .select("id, name")
         .eq("store_id", currentStore.id)
         .order("name"),
+      supabase
+        .from("product_collections" as any)
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name"),
+      supabase
+        .from("product_materials" as any)
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name"),
     ]);
     setCategories(cats || []);
     setBrands(brs || []);
+    setCollections((cols as any) || []);
+    setMaterials((mats as any) || []);
   };
 
   useEffect(() => {
@@ -208,7 +228,9 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         sku: data.sku.trim() || null,
         barcode: data.barcode.trim() || null,
         category_id: data.category_id,
+        collection_id: data.collection_id,
         brand_id: data.brand_id,
+        material_id: data.material_id,
         purchase_price: Number(data.purchase_price) || 0,
         price: Number(data.price) || 0,
         track_inventory: data.track_inventory,
@@ -422,6 +444,27 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>Koleksi</Label>
+                  <Select
+                    value={data.collection_id ?? "none"}
+                    onValueChange={(v) =>
+                      setData({ ...data, collection_id: v === "none" ? null : v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih koleksi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Tidak ada —</SelectItem>
+                      {collections.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Brand</Label>
                   <Select
                     value={data.brand_id ?? "none"}
@@ -437,6 +480,27 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       {brands.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Jenis Bahan</Label>
+                  <Select
+                    value={data.material_id ?? "none"}
+                    onValueChange={(v) =>
+                      setData({ ...data, material_id: v === "none" ? null : v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jenis bahan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Tidak ada —</SelectItem>
+                      {materials.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
