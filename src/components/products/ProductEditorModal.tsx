@@ -711,6 +711,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
             </TabsContent>
           </Tabs>
       </div>
+
+      <Dialog open={managerTable !== null} onOpenChange={(o) => !o && setManagerTable(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{managerTable ? managerLabels[managerTable] : ""}</DialogTitle>
+          </DialogHeader>
+          {managerTable && (
+            <ProductCategoryManager
+              table={managerTable}
+              searchPlaceholder={`Cari ${managerLabels[managerTable].replace("Kelola ", "").toLowerCase()}...`}
+              onChanged={loadOptions}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
