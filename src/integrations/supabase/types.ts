@@ -1733,6 +1733,135 @@ export type Database = {
         }
         Relationships: []
       }
+      product_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_product_id: string
+          product_id: string
+          qty: number
+          unit_factor: number
+          unit_from: string | null
+          unit_to: string | null
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_product_id: string
+          product_id: string
+          qty?: number
+          unit_factor?: number
+          unit_from?: string | null
+          unit_to?: string | null
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_product_id?: string
+          product_id?: string
+          qty?: number
+          unit_factor?: number
+          unit_from?: string | null
+          unit_to?: string | null
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_recipes_ingredient_product_id_fkey"
+            columns: ["ingredient_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_recipes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_recipes_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_unit_conversions: {
+        Row: {
+          created_at: string
+          factor: number
+          from_unit: string
+          id: string
+          is_active: boolean
+          price_per_from: number
+          product_id: string
+          to_unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          factor?: number
+          from_unit: string
+          id?: string
+          is_active?: boolean
+          price_per_from?: number
+          product_id: string
+          to_unit: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          factor?: number
+          from_unit?: string
+          id?: string
+          is_active?: boolean
+          price_per_from?: number
+          product_id?: string
+          to_unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_unit_conversions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_units: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_variants: {
         Row: {
           created_at: string
