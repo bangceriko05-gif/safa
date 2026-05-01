@@ -440,13 +440,14 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Kategori</Label>
+                  <div className="flex gap-2">
                   <Select
                     value={data.category_id ?? "none"}
                     onValueChange={(v) =>
                       setData({ ...data, category_id: v === "none" ? null : v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -458,16 +459,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_categories")} title="Kelola Kategori">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Koleksi</Label>
+                  <div className="flex gap-2">
                   <Select
                     value={data.collection_id ?? "none"}
                     onValueChange={(v) =>
                       setData({ ...data, collection_id: v === "none" ? null : v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Pilih koleksi" />
                     </SelectTrigger>
                     <SelectContent>
@@ -479,16 +485,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_collections")} title="Kelola Koleksi">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Brand</Label>
+                  <div className="flex gap-2">
                   <Select
                     value={data.brand_id ?? "none"}
                     onValueChange={(v) =>
                       setData({ ...data, brand_id: v === "none" ? null : v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Pilih brand" />
                     </SelectTrigger>
                     <SelectContent>
@@ -500,16 +511,21 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_brands")} title="Kelola Brand">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Jenis Bahan</Label>
+                  <div className="flex gap-2">
                   <Select
                     value={data.material_id ?? "none"}
                     onValueChange={(v) =>
                       setData({ ...data, material_id: v === "none" ? null : v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Pilih jenis bahan" />
                     </SelectTrigger>
                     <SelectContent>
@@ -521,6 +537,10 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_materials")} title="Kelola Jenis Bahan">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
                 </div>
               </div>
 
