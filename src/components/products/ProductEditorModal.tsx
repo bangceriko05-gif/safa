@@ -13,7 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Star, Trash2, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Star, Trash2, Upload, Loader2, Settings2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
@@ -84,6 +90,16 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
   const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
   const [savedId, setSavedId] = useState<string | null>(productId);
+  const [managerTable, setManagerTable] = useState<
+    null | "product_categories" | "product_brands" | "product_collections" | "product_materials"
+  >(null);
+
+  const managerLabels: Record<string, string> = {
+    product_categories: "Kelola Kategori",
+    product_brands: "Kelola Brand",
+    product_collections: "Kelola Koleksi",
+    product_materials: "Kelola Jenis Bahan",
+  };
 
   const loadProduct = async () => {
     if (!productId) {
