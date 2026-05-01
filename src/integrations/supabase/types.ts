@@ -1703,6 +1703,76 @@ export type Database = {
         }
         Relationships: []
       }
+      product_collections: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_collections_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_materials: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_materials_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_price_tiers: {
         Row: {
           created_at: string
@@ -1906,12 +1976,14 @@ export type Database = {
           barcode: string | null
           brand_id: string | null
           category_id: string | null
+          collection_id: string | null
           created_at: string
           created_by: string
           description: string | null
           id: string
           images: Json
           is_active: boolean
+          material_id: string | null
           min_stock: number
           name: string
           price: number
@@ -1929,12 +2001,14 @@ export type Database = {
           barcode?: string | null
           brand_id?: string | null
           category_id?: string | null
+          collection_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
           images?: Json
           is_active?: boolean
+          material_id?: string | null
           min_stock?: number
           name: string
           price: number
@@ -1952,12 +2026,14 @@ export type Database = {
           barcode?: string | null
           brand_id?: string | null
           category_id?: string | null
+          collection_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
           images?: Json
           is_active?: boolean
+          material_id?: string | null
           min_stock?: number
           name?: string
           price?: number
@@ -1972,6 +2048,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "products_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "product_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "product_materials"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_store_id_fkey"
             columns: ["store_id"]
