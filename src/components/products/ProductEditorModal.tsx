@@ -358,12 +358,31 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-semibold">
-            {savedId ? `Edit Produk: ${data.name || "-"}` : "Tambah Produk Baru"}
+            {copyMode
+              ? `Katalog Produk / Product Copy`
+              : savedId
+              ? `Edit Produk: ${data.name || "-"}`
+              : "Tambah Produk Baru"}
           </h2>
         </div>
       </div>
 
       <div className="px-6 py-6">
+          {copyMode && (
+            <div className="mb-4 flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+              <div className="flex-1">
+                <div className="font-medium">Salin Foto</div>
+                <div className="text-xs text-muted-foreground">
+                  Salin foto dari produk asli
+                </div>
+              </div>
+              <Switch
+                checked={copySyncImages}
+                onCheckedChange={setCopySyncImages}
+              />
+              <span className="text-sm w-8">{copySyncImages ? "Ya" : "Tidak"}</span>
+            </div>
+          )}
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-5 bg-muted">
               <TabsTrigger value="edit">Profil</TabsTrigger>
