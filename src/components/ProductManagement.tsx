@@ -712,6 +712,219 @@ export default function ProductManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Ubah Ketersediaan dialog */}
+      <Dialog open={!!availabilityProduct} onOpenChange={(o) => !o && setAvailabilityProduct(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+            <DialogTitle>Ketersediaan Produk</DialogTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setAvailabilityProduct(null)}>
+                Batal
+              </Button>
+              <Button
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                onClick={handleSaveAvailability}
+              >
+                Simpan
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="space-y-5 pt-2">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={availOnline}
+                onCheckedChange={(v) => setAvailOnline(v === true)}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-semibold">Tersedia Online</div>
+                <div className="text-sm text-muted-foreground">
+                  Produk ini tersedia di kanal Online seperti Toko Online dan Online Order
+                </div>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={availOfflineHidden}
+                onCheckedChange={(v) => setAvailOfflineHidden(v === true)}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-semibold">Tidak tersedia Offline (di POS)</div>
+                <div className="text-sm text-muted-foreground">
+                  Produk ini tidak tersedia di kasir Point Of Sale toko Anda
+                </div>
+              </div>
+            </label>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Stok dialog */}
+      <Dialog open={!!stockDetailProduct} onOpenChange={(o) => !o && setStockDetailProduct(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="flex flex-row items-center gap-3 space-y-0">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <DialogTitle>{stockDetailProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Stok produk berdasarkan tanggal pembelian</h3>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={stockOnlyEmpty}
+                  onCheckedChange={(v) => setStockOnlyEmpty(v === true)}
+                />
+                Stok habis
+              </label>
+            </div>
+            {(() => {
+              const filtered = stockOnlyEmpty
+                ? stockDetailRows.filter((r) => Number(r.quantity) === 0)
+                : stockDetailRows;
+              const pageSize = 10;
+              const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+              const page = Math.min(stockDetailPage, totalPages);
+              const slice = filtered.slice((page - 1) * pageSize, page * pageSize);
+              return (
+                <>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>BID</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead className="text-right">Harga Beli</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stockDetailLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              Memuat...
+                            </TableCell>
+                          </TableRow>
+                        ) : slice.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              Data tidak ditemukan
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          slice.map((r: any) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="text-sm">
+                                {r.stock_in?.date
+                                  ? new Date(r.stock_in.date).toLocaleDateString("id-ID")
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="text-sm">{r.stock_in?.bid || "-"}</TableCell>
+                              <TableCell className="text-sm">
+                                {r.stock_in?.supplier_name || "-"}
+                              </TableCell>
+                              <TableCell className="text-sm text-right">{r.quantity}</TableCell>
+                              <TableCell className="text-sm text-right tabular-nums">
+                                {formatRp(Number(r.unit_price) || 0)}
+                              </TableCell>
+                              <TableCell className="text-sm">{r.stock_in?.status || "-"}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={page <= 1}
+                      onClick={() => setStockDetailPage(page - 1)}
+                    >
+                      ‹
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={page >= totalPages}
+                      onClick={() => setStockDetailPage(page + 1)}
+                    >
+                      ›
+                    </Button>
+                    <span>Go to</span>
+                    <Input
+                      type="number"
+                      value={page}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value);
+                        if (!isNaN(v) && v >= 1 && v <= totalPages) setStockDetailPage(v);
+                      }}
+                      className="w-16 h-8"
+                    />
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Log dialog */}
+      <Dialog open={!!logProduct} onOpenChange={(o) => !o && setLogProduct(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-center">Product log</DialogTitle>
+          </DialogHeader>
+          <div className="border rounded-md overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Diproses Oleh</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      Memuat...
+                    </TableCell>
+                  </TableRow>
+                ) : logRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      Belum ada log
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  logRows.map((r: any) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-sm whitespace-nowrap align-top">
+                        {new Date(r.created_at).toLocaleString("id-ID", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-sm align-top">{r.user_name}</TableCell>
+                      <TableCell className="text-sm align-top">{r.description}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
