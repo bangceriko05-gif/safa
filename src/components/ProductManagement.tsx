@@ -65,6 +65,7 @@ interface Product {
   stock_qty: number;
   track_inventory: boolean;
   show_on_website: boolean;
+  is_available_offline?: boolean;
   category_id: string | null;
   brand_id: string | null;
   collection_id: string | null;
@@ -99,6 +100,7 @@ export default function ProductManagement() {
   const [collections, setCollections] = useState<RefItem[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorProductId, setEditorProductId] = useState<string | null>(null);
+  const [editorCopyMode, setEditorCopyMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
@@ -106,6 +108,19 @@ export default function ProductManagement() {
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
+
+  // dialogs
+  const [availabilityProduct, setAvailabilityProduct] = useState<Product | null>(null);
+  const [availOnline, setAvailOnline] = useState(false);
+  const [availOfflineHidden, setAvailOfflineHidden] = useState(false);
+  const [stockDetailProduct, setStockDetailProduct] = useState<Product | null>(null);
+  const [stockDetailRows, setStockDetailRows] = useState<any[]>([]);
+  const [stockDetailLoading, setStockDetailLoading] = useState(false);
+  const [stockDetailPage, setStockDetailPage] = useState(1);
+  const [stockOnlyEmpty, setStockOnlyEmpty] = useState(false);
+  const [logProduct, setLogProduct] = useState<Product | null>(null);
+  const [logRows, setLogRows] = useState<any[]>([]);
+  const [logLoading, setLogLoading] = useState(false);
 
   useEffect(() => {
     if (currentStore) fetchAll();
@@ -118,7 +133,7 @@ export default function ProductManagement() {
         supabase
           .from("products")
           .select(
-            "id,name,price,purchase_price,sku,barcode,stock_qty,track_inventory,show_on_website,category_id,brand_id,collection_id,images,store_id"
+            "id,name,price,purchase_price,sku,barcode,stock_qty,track_inventory,show_on_website,is_available_offline,category_id,brand_id,collection_id,images,store_id"
           )
           .eq("store_id", currentStore.id)
           .order("name"),
@@ -155,11 +170,13 @@ export default function ProductManagement() {
 
   const openCreate = () => {
     setEditorProductId(null);
+    setEditorCopyMode(false);
     setEditorOpen(true);
   };
 
   const handleEdit = (product: Product) => {
     setEditorProductId(product.id);
+    setEditorCopyMode(false);
     setEditorOpen(true);
   };
 
@@ -182,45 +199,94 @@ export default function ProductManagement() {
     }
   };
 
+  // "Salin" – open editor in copy mode (creates new product)
   const handleCopySingle = (product: Product) => {
-    setSelectedProducts(new Set([product.id]));
-    setIsCopyDialogOpen(true);
+    setEditorProductId(product.id);
+    setEditorCopyMode(true);
+    setEditorOpen(true);
   };
 
-  const handleToggleAvailability = async (product: Product) => {
+  // "Ubah ketersediaan"
+  const handleOpenAvailability = (product: Product) => {
+    setAvailabilityProduct(product);
+    setAvailOnline(!!product.show_on_website);
+    setAvailOfflineHidden(product.is_available_offline === false);
+  };
+
+  const handleSaveAvailability = async () => {
+    if (!availabilityProduct) return;
     try {
-      const newVal = !product.show_on_website;
       const { error } = await supabase
         .from("products")
-        .update({ show_on_website: newVal })
-        .eq("id", product.id);
+        .update({
+          show_on_website: availOnline,
+          is_available_offline: !availOfflineHidden,
+        } as any)
+        .eq("id", availabilityProduct.id);
       if (error) throw error;
       await logActivity({
         actionType: "updated",
         entityType: "Produk",
-        entityId: product.id,
-        description: `Mengubah ketersediaan online produk ${product.name} menjadi ${newVal ? "Ya" : "Tidak"}`,
+        entityId: availabilityProduct.id,
+        description: `Mengubah ketersediaan produk ${availabilityProduct.name} (Online: ${availOnline ? "Ya" : "Tidak"}, Offline POS: ${!availOfflineHidden ? "Ya" : "Tidak"})`,
         storeId: currentStore?.id,
       });
-      toast.success(`Ketersediaan online: ${newVal ? "Ya" : "Tidak"}`);
+      toast.success("Ketersediaan disimpan");
+      setAvailabilityProduct(null);
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.message || "Gagal mengubah ketersediaan");
+    } catch (e: any) {
+      toast.error(e.message || "Gagal menyimpan");
     }
   };
 
-  const handleShowLog = (product: Product) => {
-    toast.info(`Log produk "${product.name}" akan tersedia segera.`);
+  // "Detail Stok"
+  const handleOpenStockDetail = async (product: Product) => {
+    setStockDetailProduct(product);
+    setStockDetailRows([]);
+    setStockDetailLoading(true);
+    setStockDetailPage(1);
+    setStockOnlyEmpty(false);
+    try {
+      const { data, error } = await supabase
+        .from("stock_in_items")
+        .select("id, quantity, unit_price, stock_in:stock_in_id(id, bid, date, status, supplier_name)")
+        .eq("product_id", product.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setStockDetailRows((data as any) || []);
+    } catch (e: any) {
+      toast.error(e.message || "Gagal memuat stok");
+    } finally {
+      setStockDetailLoading(false);
+    }
   };
 
-  const handleShowStockDetail = (product: Product) => {
-    const stock = product.track_inventory ? `${product.stock_qty} pcs` : "Tidak terbatas";
-    toast.info(`Stok ${product.name}: ${stock}`);
+  // "Log"
+  const handleOpenLog = async (product: Product) => {
+    setLogProduct(product);
+    setLogRows([]);
+    setLogLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .select("id, created_at, user_name, description, action_type")
+        .eq("entity_id", product.id)
+        .eq("entity_type", "Produk")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      setLogRows((data as any) || []);
+    } catch (e: any) {
+      toast.error(e.message || "Gagal memuat log");
+    } finally {
+      setLogLoading(false);
+    }
   };
 
   const handleCloseEditor = () => {
     setEditorOpen(false);
     setEditorProductId(null);
+    setEditorCopyMode(false);
     fetchAll();
   };
 
