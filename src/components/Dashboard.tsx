@@ -672,11 +672,13 @@ export default function Dashboard() {
         <div className="flex-1 flex flex-col min-w-0">
           <div className="p-4 md:p-6">
             <div className="max-w-7xl mx-auto space-y-6">
+              {/* Sidebar toggle - Desktop (top) */}
+              <div className="hidden lg:flex">
+                <SidebarTrigger />
+              </div>
               {/* Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-start gap-3">
-                  {/* Sidebar toggle - Desktop */}
-                  <SidebarTrigger className="hidden lg:flex mt-1.5" />
                   <div className="space-y-2">
                     <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
                     <p className="text-muted-foreground">
