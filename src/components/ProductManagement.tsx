@@ -38,6 +38,10 @@ import {
   Pencil,
   Trash2,
   ImageIcon,
+  FileText,
+  Eye,
+  Package,
+  CheckCircle2,
 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
@@ -176,6 +180,42 @@ export default function ProductManagement() {
     } catch (error: any) {
       toast.error(error.message || "Gagal menghapus produk");
     }
+  };
+
+  const handleCopySingle = (product: Product) => {
+    setSelectedProducts(new Set([product.id]));
+    setIsCopyDialogOpen(true);
+  };
+
+  const handleToggleAvailability = async (product: Product) => {
+    try {
+      const newVal = !product.show_on_website;
+      const { error } = await supabase
+        .from("products")
+        .update({ show_on_website: newVal })
+        .eq("id", product.id);
+      if (error) throw error;
+      await logActivity({
+        actionType: "updated",
+        entityType: "Produk",
+        entityId: product.id,
+        description: `Mengubah ketersediaan online produk ${product.name} menjadi ${newVal ? "Ya" : "Tidak"}`,
+        storeId: currentStore?.id,
+      });
+      toast.success(`Ketersediaan online: ${newVal ? "Ya" : "Tidak"}`);
+      fetchAll();
+    } catch (error: any) {
+      toast.error(error.message || "Gagal mengubah ketersediaan");
+    }
+  };
+
+  const handleShowLog = (product: Product) => {
+    toast.info(`Log produk "${product.name}" akan tersedia segera.`);
+  };
+
+  const handleShowStockDetail = (product: Product) => {
+    const stock = product.track_inventory ? `${product.stock_qty} pcs` : "Tidak terbatas";
+    toast.info(`Stok ${product.name}: ${stock}`);
   };
 
   const handleCloseEditor = () => {
@@ -499,12 +539,36 @@ export default function ProductManagement() {
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-40 p-1">
+                        <PopoverContent align="end" className="w-48 p-1">
+                          <button
+                            onClick={() => handleCopySingle(product)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                          >
+                            <Copy className="h-4 w-4" /> Salin
+                          </button>
                           <button
                             onClick={() => handleEdit(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
-                            <Pencil className="h-4 w-4" /> Edit
+                            <Eye className="h-4 w-4" /> Detail
+                          </button>
+                          <button
+                            onClick={() => handleShowStockDetail(product)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                          >
+                            <Package className="h-4 w-4" /> Detail Stok
+                          </button>
+                          <button
+                            onClick={() => handleToggleAvailability(product)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                          >
+                            <CheckCircle2 className="h-4 w-4" /> Ubah ketersediaan
+                          </button>
+                          <button
+                            onClick={() => handleShowLog(product)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                          >
+                            <FileText className="h-4 w-4" /> Log
                           </button>
                           <button
                             onClick={() => handleDelete(product)}
