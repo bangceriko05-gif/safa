@@ -369,6 +369,7 @@ export default function ProductManagement() {
     return (
       <ProductEditorModal
         productId={editorProductId}
+        copyMode={editorCopyMode}
         onClose={handleCloseEditor}
         onSaved={fetchAll}
       />
@@ -619,19 +620,19 @@ export default function ProductManagement() {
                             <Eye className="h-4 w-4" /> Detail
                           </button>
                           <button
-                            onClick={() => handleShowStockDetail(product)}
+                            onClick={() => handleOpenStockDetail(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <Package className="h-4 w-4" /> Detail Stok
                           </button>
                           <button
-                            onClick={() => handleToggleAvailability(product)}
+                            onClick={() => handleOpenAvailability(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <CheckCircle2 className="h-4 w-4" /> Ubah ketersediaan
                           </button>
                           <button
-                            onClick={() => handleShowLog(product)}
+                            onClick={() => handleOpenLog(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <FileText className="h-4 w-4" /> Log
