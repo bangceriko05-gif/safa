@@ -1983,6 +1983,7 @@ export type Database = {
           id: string
           images: Json
           is_active: boolean
+          is_available_offline: boolean
           material_id: string | null
           min_stock: number
           name: string
@@ -2008,6 +2009,7 @@ export type Database = {
           id?: string
           images?: Json
           is_active?: boolean
+          is_available_offline?: boolean
           material_id?: string | null
           min_stock?: number
           name: string
@@ -2033,6 +2035,7 @@ export type Database = {
           id?: string
           images?: Json
           is_active?: boolean
+          is_available_offline?: boolean
           material_id?: string | null
           min_stock?: number
           name?: string
