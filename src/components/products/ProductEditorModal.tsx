@@ -53,6 +53,7 @@ export interface EditorProduct {
 
 interface Props {
   productId: string | null;
+  copyMode?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -78,7 +79,7 @@ const empty: EditorProduct = {
   description: "",
 };
 
-export default function ProductEditorModal({ productId, onClose, onSaved }: Props) {
+export default function ProductEditorModal({ productId, copyMode = false, onClose, onSaved }: Props) {
   const { currentStore } = useStore();
   const [tab, setTab] = useState("edit");
   const [data, setData] = useState<EditorProduct>(empty);
@@ -89,7 +90,8 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
-  const [savedId, setSavedId] = useState<string | null>(productId);
+  const [savedId, setSavedId] = useState<string | null>(copyMode ? null : productId);
+  const [copySyncImages, setCopySyncImages] = useState(true);
   const [managerTable, setManagerTable] = useState<
     null | "product_categories" | "product_brands" | "product_collections" | "product_materials"
   >(null);
@@ -115,7 +117,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
       .maybeSingle();
     if (p) {
       setData({
-        id: p.id,
+        id: copyMode ? undefined : p.id,
         name: p.name ?? "",
         sku: (p as any).sku ?? "",
         barcode: (p as any).barcode ?? "",
@@ -135,7 +137,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
       });
-      setSavedId(p.id);
+      setSavedId(copyMode ? null : p.id);
     }
     setLoading(false);
   };
@@ -172,11 +174,11 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
 
   useEffect(() => {
     setTab("edit");
-    setSavedId(productId);
+    setSavedId(copyMode ? null : productId);
     loadProduct();
     loadOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId, currentStore?.id]);
+  }, [productId, currentStore?.id, copyMode]);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0 || !currentStore) return;
@@ -234,6 +236,35 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
       toast.error("Harga beli wajib diisi");
       return;
     }
+    // Duplicate validation (same store)
+    {
+      const trimmedName = data.name.trim();
+      const trimmedSku = data.sku.trim();
+      let nameQ = supabase
+        .from("products")
+        .select("id, name, sku")
+        .eq("store_id", currentStore.id)
+        .ilike("name", trimmedName);
+      if (savedId) nameQ = nameQ.neq("id", savedId);
+      const { data: nameDup } = await nameQ.limit(1);
+      if (nameDup && nameDup.length > 0) {
+        toast.error(`Nama produk "${trimmedName}" sudah ada di cabang ini`);
+        return;
+      }
+      if (trimmedSku) {
+        let skuQ = supabase
+          .from("products")
+          .select("id, sku")
+          .eq("store_id", currentStore.id)
+          .eq("sku", trimmedSku);
+        if (savedId) skuQ = skuQ.neq("id", savedId);
+        const { data: skuDup } = await skuQ.limit(1);
+        if (skuDup && skuDup.length > 0) {
+          toast.error(`SKU "${trimmedSku}" sudah digunakan produk lain`);
+          return;
+        }
+      }
+    }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -256,7 +287,7 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
         tax_enabled: data.tax_enabled,
         tax_mode: data.tax_mode,
         show_on_website: data.show_on_website,
-        images: data.images,
+        images: copyMode && !copySyncImages ? [] : data.images,
         description: data.description?.trim() || null,
       };
 
@@ -327,12 +358,31 @@ export default function ProductEditorModal({ productId, onClose, onSaved }: Prop
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-semibold">
-            {savedId ? `Edit Produk: ${data.name || "-"}` : "Tambah Produk Baru"}
+            {copyMode
+              ? `Katalog Produk / Product Copy`
+              : savedId
+              ? `Edit Produk: ${data.name || "-"}`
+              : "Tambah Produk Baru"}
           </h2>
         </div>
       </div>
 
       <div className="px-6 py-6">
+          {copyMode && (
+            <div className="mb-4 flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+              <div className="flex-1">
+                <div className="font-medium">Salin Foto</div>
+                <div className="text-xs text-muted-foreground">
+                  Salin foto dari produk asli
+                </div>
+              </div>
+              <Switch
+                checked={copySyncImages}
+                onCheckedChange={setCopySyncImages}
+              />
+              <span className="text-sm w-8">{copySyncImages ? "Ya" : "Tidak"}</span>
+            </div>
+          )}
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-5 bg-muted">
               <TabsTrigger value="edit">Profil</TabsTrigger>

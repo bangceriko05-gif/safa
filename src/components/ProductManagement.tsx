@@ -65,6 +65,7 @@ interface Product {
   stock_qty: number;
   track_inventory: boolean;
   show_on_website: boolean;
+  is_available_offline?: boolean;
   category_id: string | null;
   brand_id: string | null;
   collection_id: string | null;
@@ -99,6 +100,7 @@ export default function ProductManagement() {
   const [collections, setCollections] = useState<RefItem[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorProductId, setEditorProductId] = useState<string | null>(null);
+  const [editorCopyMode, setEditorCopyMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
@@ -106,6 +108,19 @@ export default function ProductManagement() {
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
+
+  // dialogs
+  const [availabilityProduct, setAvailabilityProduct] = useState<Product | null>(null);
+  const [availOnline, setAvailOnline] = useState(false);
+  const [availOfflineHidden, setAvailOfflineHidden] = useState(false);
+  const [stockDetailProduct, setStockDetailProduct] = useState<Product | null>(null);
+  const [stockDetailRows, setStockDetailRows] = useState<any[]>([]);
+  const [stockDetailLoading, setStockDetailLoading] = useState(false);
+  const [stockDetailPage, setStockDetailPage] = useState(1);
+  const [stockOnlyEmpty, setStockOnlyEmpty] = useState(false);
+  const [logProduct, setLogProduct] = useState<Product | null>(null);
+  const [logRows, setLogRows] = useState<any[]>([]);
+  const [logLoading, setLogLoading] = useState(false);
 
   useEffect(() => {
     if (currentStore) fetchAll();
@@ -118,7 +133,7 @@ export default function ProductManagement() {
         supabase
           .from("products")
           .select(
-            "id,name,price,purchase_price,sku,barcode,stock_qty,track_inventory,show_on_website,category_id,brand_id,collection_id,images,store_id"
+            "id,name,price,purchase_price,sku,barcode,stock_qty,track_inventory,show_on_website,is_available_offline,category_id,brand_id,collection_id,images,store_id"
           )
           .eq("store_id", currentStore.id)
           .order("name"),
@@ -155,11 +170,13 @@ export default function ProductManagement() {
 
   const openCreate = () => {
     setEditorProductId(null);
+    setEditorCopyMode(false);
     setEditorOpen(true);
   };
 
   const handleEdit = (product: Product) => {
     setEditorProductId(product.id);
+    setEditorCopyMode(false);
     setEditorOpen(true);
   };
 
@@ -182,45 +199,94 @@ export default function ProductManagement() {
     }
   };
 
+  // "Salin" – open editor in copy mode (creates new product)
   const handleCopySingle = (product: Product) => {
-    setSelectedProducts(new Set([product.id]));
-    setIsCopyDialogOpen(true);
+    setEditorProductId(product.id);
+    setEditorCopyMode(true);
+    setEditorOpen(true);
   };
 
-  const handleToggleAvailability = async (product: Product) => {
+  // "Ubah ketersediaan"
+  const handleOpenAvailability = (product: Product) => {
+    setAvailabilityProduct(product);
+    setAvailOnline(!!product.show_on_website);
+    setAvailOfflineHidden(product.is_available_offline === false);
+  };
+
+  const handleSaveAvailability = async () => {
+    if (!availabilityProduct) return;
     try {
-      const newVal = !product.show_on_website;
       const { error } = await supabase
         .from("products")
-        .update({ show_on_website: newVal })
-        .eq("id", product.id);
+        .update({
+          show_on_website: availOnline,
+          is_available_offline: !availOfflineHidden,
+        } as any)
+        .eq("id", availabilityProduct.id);
       if (error) throw error;
       await logActivity({
         actionType: "updated",
         entityType: "Produk",
-        entityId: product.id,
-        description: `Mengubah ketersediaan online produk ${product.name} menjadi ${newVal ? "Ya" : "Tidak"}`,
+        entityId: availabilityProduct.id,
+        description: `Mengubah ketersediaan produk ${availabilityProduct.name} (Online: ${availOnline ? "Ya" : "Tidak"}, Offline POS: ${!availOfflineHidden ? "Ya" : "Tidak"})`,
         storeId: currentStore?.id,
       });
-      toast.success(`Ketersediaan online: ${newVal ? "Ya" : "Tidak"}`);
+      toast.success("Ketersediaan disimpan");
+      setAvailabilityProduct(null);
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.message || "Gagal mengubah ketersediaan");
+    } catch (e: any) {
+      toast.error(e.message || "Gagal menyimpan");
     }
   };
 
-  const handleShowLog = (product: Product) => {
-    toast.info(`Log produk "${product.name}" akan tersedia segera.`);
+  // "Detail Stok"
+  const handleOpenStockDetail = async (product: Product) => {
+    setStockDetailProduct(product);
+    setStockDetailRows([]);
+    setStockDetailLoading(true);
+    setStockDetailPage(1);
+    setStockOnlyEmpty(false);
+    try {
+      const { data, error } = await supabase
+        .from("stock_in_items")
+        .select("id, quantity, unit_price, stock_in:stock_in_id(id, bid, date, status, supplier_name)")
+        .eq("product_id", product.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setStockDetailRows((data as any) || []);
+    } catch (e: any) {
+      toast.error(e.message || "Gagal memuat stok");
+    } finally {
+      setStockDetailLoading(false);
+    }
   };
 
-  const handleShowStockDetail = (product: Product) => {
-    const stock = product.track_inventory ? `${product.stock_qty} pcs` : "Tidak terbatas";
-    toast.info(`Stok ${product.name}: ${stock}`);
+  // "Log"
+  const handleOpenLog = async (product: Product) => {
+    setLogProduct(product);
+    setLogRows([]);
+    setLogLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .select("id, created_at, user_name, description, action_type")
+        .eq("entity_id", product.id)
+        .eq("entity_type", "Produk")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      setLogRows((data as any) || []);
+    } catch (e: any) {
+      toast.error(e.message || "Gagal memuat log");
+    } finally {
+      setLogLoading(false);
+    }
   };
 
   const handleCloseEditor = () => {
     setEditorOpen(false);
     setEditorProductId(null);
+    setEditorCopyMode(false);
     fetchAll();
   };
 
@@ -303,6 +369,7 @@ export default function ProductManagement() {
     return (
       <ProductEditorModal
         productId={editorProductId}
+        copyMode={editorCopyMode}
         onClose={handleCloseEditor}
         onSaved={fetchAll}
       />
@@ -553,19 +620,19 @@ export default function ProductManagement() {
                             <Eye className="h-4 w-4" /> Detail
                           </button>
                           <button
-                            onClick={() => handleShowStockDetail(product)}
+                            onClick={() => handleOpenStockDetail(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <Package className="h-4 w-4" /> Detail Stok
                           </button>
                           <button
-                            onClick={() => handleToggleAvailability(product)}
+                            onClick={() => handleOpenAvailability(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <CheckCircle2 className="h-4 w-4" /> Ubah ketersediaan
                           </button>
                           <button
-                            onClick={() => handleShowLog(product)}
+                            onClick={() => handleOpenLog(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <FileText className="h-4 w-4" /> Log
@@ -642,6 +709,219 @@ export default function ProductManagement() {
                 Salin Produk
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ubah Ketersediaan dialog */}
+      <Dialog open={!!availabilityProduct} onOpenChange={(o) => !o && setAvailabilityProduct(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+            <DialogTitle>Ketersediaan Produk</DialogTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setAvailabilityProduct(null)}>
+                Batal
+              </Button>
+              <Button
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                onClick={handleSaveAvailability}
+              >
+                Simpan
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="space-y-5 pt-2">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={availOnline}
+                onCheckedChange={(v) => setAvailOnline(v === true)}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-semibold">Tersedia Online</div>
+                <div className="text-sm text-muted-foreground">
+                  Produk ini tersedia di kanal Online seperti Toko Online dan Online Order
+                </div>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={availOfflineHidden}
+                onCheckedChange={(v) => setAvailOfflineHidden(v === true)}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-semibold">Tidak tersedia Offline (di POS)</div>
+                <div className="text-sm text-muted-foreground">
+                  Produk ini tidak tersedia di kasir Point Of Sale toko Anda
+                </div>
+              </div>
+            </label>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Stok dialog */}
+      <Dialog open={!!stockDetailProduct} onOpenChange={(o) => !o && setStockDetailProduct(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="flex flex-row items-center gap-3 space-y-0">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <DialogTitle>{stockDetailProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Stok produk berdasarkan tanggal pembelian</h3>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={stockOnlyEmpty}
+                  onCheckedChange={(v) => setStockOnlyEmpty(v === true)}
+                />
+                Stok habis
+              </label>
+            </div>
+            {(() => {
+              const filtered = stockOnlyEmpty
+                ? stockDetailRows.filter((r) => Number(r.quantity) === 0)
+                : stockDetailRows;
+              const pageSize = 10;
+              const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+              const page = Math.min(stockDetailPage, totalPages);
+              const slice = filtered.slice((page - 1) * pageSize, page * pageSize);
+              return (
+                <>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>BID</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead className="text-right">Harga Beli</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stockDetailLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              Memuat...
+                            </TableCell>
+                          </TableRow>
+                        ) : slice.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              Data tidak ditemukan
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          slice.map((r: any) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="text-sm">
+                                {r.stock_in?.date
+                                  ? new Date(r.stock_in.date).toLocaleDateString("id-ID")
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="text-sm">{r.stock_in?.bid || "-"}</TableCell>
+                              <TableCell className="text-sm">
+                                {r.stock_in?.supplier_name || "-"}
+                              </TableCell>
+                              <TableCell className="text-sm text-right">{r.quantity}</TableCell>
+                              <TableCell className="text-sm text-right tabular-nums">
+                                {formatRp(Number(r.unit_price) || 0)}
+                              </TableCell>
+                              <TableCell className="text-sm">{r.stock_in?.status || "-"}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={page <= 1}
+                      onClick={() => setStockDetailPage(page - 1)}
+                    >
+                      ‹
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={page >= totalPages}
+                      onClick={() => setStockDetailPage(page + 1)}
+                    >
+                      ›
+                    </Button>
+                    <span>Go to</span>
+                    <Input
+                      type="number"
+                      value={page}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value);
+                        if (!isNaN(v) && v >= 1 && v <= totalPages) setStockDetailPage(v);
+                      }}
+                      className="w-16 h-8"
+                    />
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Log dialog */}
+      <Dialog open={!!logProduct} onOpenChange={(o) => !o && setLogProduct(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-center">Product log</DialogTitle>
+          </DialogHeader>
+          <div className="border rounded-md overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Diproses Oleh</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      Memuat...
+                    </TableCell>
+                  </TableRow>
+                ) : logRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      Belum ada log
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  logRows.map((r: any) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-sm whitespace-nowrap align-top">
+                        {new Date(r.created_at).toLocaleString("id-ID", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-sm align-top">{r.user_name}</TableCell>
+                      <TableCell className="text-sm align-top">{r.description}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </DialogContent>
       </Dialog>
