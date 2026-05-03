@@ -594,16 +594,49 @@ export default function ProductManagement() {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        {selectedProducts.size > 0 && availableStores.length > 0 && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsCopyDialogOpen(true)}
-            title={`Salin ke cabang lain (${selectedProducts.size})`}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+              title="Aksi produk"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectionMode((v) => !v);
+                if (selectionMode) setSelectedProducts(new Set());
+              }}
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              {selectionMode ? "Batal Pilih" : "Pilih"}
+              {selectedProducts.size > 0 && ` (${selectedProducts.size})`}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportProducts}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleImportProducts}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleOpenSalinProduk}>
+              <Copy className="h-4 w-4 mr-2" />
+              Salin Produk
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleOpenHapusProduk}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Hapus Produk
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <FilterChip
           label="Kategori"
