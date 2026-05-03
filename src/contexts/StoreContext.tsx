@@ -65,7 +65,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    let lastUserId: string | null = null;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only refetch when the user actually changes (sign in / sign out / different user).
+      // Ignore TOKEN_REFRESHED and INITIAL_SESSION events triggered when switching browser tabs,
+      // because they would cause an unwanted full reload of stores/role.
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
+        return;
+      }
+      const newUserId = session?.user?.id ?? null;
+      if (newUserId === lastUserId) return;
+      lastUserId = newUserId;
       if (session?.user) {
         fetchUserStoresAndRole(session.user);
       }
