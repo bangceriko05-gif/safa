@@ -125,6 +125,10 @@ export default function ProductManagement() {
   const [logRows, setLogRows] = useState<any[]>([]);
   const [logLoading, setLogLoading] = useState(false);
 
+  // Toolbar action menu
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
   useEffect(() => {
     if (currentStore) fetchAll();
   }, [currentStore]);
