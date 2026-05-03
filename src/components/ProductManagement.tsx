@@ -18,6 +18,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -42,6 +52,9 @@ import {
   Eye,
   Package,
   CheckCircle2,
+  CheckSquare,
+  Download,
+  Upload,
 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
@@ -121,6 +134,10 @@ export default function ProductManagement() {
   const [logProduct, setLogProduct] = useState<Product | null>(null);
   const [logRows, setLogRows] = useState<any[]>([]);
   const [logLoading, setLogLoading] = useState(false);
+
+  // Toolbar action menu
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (currentStore) fetchAll();
@@ -344,6 +361,171 @@ export default function ProductManagement() {
 
   const availableStores = userStores.filter((s) => s.id !== currentStore?.id);
 
+  // ==== Toolbar action menu handlers ====
+  const csvEscape = (v: any) => {
+    const s = v == null ? "" : String(v);
+    if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+
+  const handleExportProducts = () => {
+    const rows = filteredProducts;
+    if (rows.length === 0) {
+      toast.error("Tidak ada produk untuk diekspor");
+      return;
+    }
+    const catMap = new Map(categories.map((c) => [c.id, c.name]));
+    const brandMap = new Map(brands.map((b) => [b.id, b.name]));
+    const colMap = new Map(collections.map((c) => [c.id, c.name]));
+    const headers = [
+      "name","sku","barcode","price","purchase_price","stock_qty",
+      "track_inventory","show_on_website","is_available_offline",
+      "category","brand","collection",
+    ];
+    const lines = [headers.join(",")];
+    rows.forEach((p) => {
+      lines.push([
+        p.name, p.sku || "", p.barcode || "", p.price, p.purchase_price,
+        p.stock_qty, p.track_inventory ? "1" : "0",
+        p.show_on_website ? "1" : "0",
+        p.is_available_offline === false ? "0" : "1",
+        catMap.get(p.category_id || "") || "",
+        brandMap.get(p.brand_id || "") || "",
+        colMap.get(p.collection_id || "") || "",
+      ].map(csvEscape).join(","));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `produk-${currentStore?.name || "store"}-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${rows.length} produk diekspor`);
+  };
+
+  const handleImportProducts = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv,text/csv";
+    input.onchange = async (e: any) => {
+      const file: File | undefined = e.target.files?.[0];
+      if (!file || !currentStore) return;
+      try {
+        const text = await file.text();
+        const cleaned = text.replace(/^\uFEFF/, "");
+        const rows: string[][] = [];
+        let cur: string[] = [];
+        let val = "";
+        let inQ = false;
+        for (let i = 0; i < cleaned.length; i++) {
+          const c = cleaned[i];
+          if (inQ) {
+            if (c === '"' && cleaned[i+1] === '"') { val += '"'; i++; }
+            else if (c === '"') inQ = false;
+            else val += c;
+          } else {
+            if (c === '"') inQ = true;
+            else if (c === ",") { cur.push(val); val = ""; }
+            else if (c === "\n") { cur.push(val); rows.push(cur); cur = []; val = ""; }
+            else if (c === "\r") { /* skip */ }
+            else val += c;
+          }
+        }
+        if (val.length || cur.length) { cur.push(val); rows.push(cur); }
+        if (rows.length < 2) { toast.error("File CSV kosong"); return; }
+        const headers = rows[0].map((h) => h.trim().toLowerCase());
+        const idx = (k: string) => headers.indexOf(k);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const catMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+        const brandMap = new Map(brands.map((b) => [b.name.toLowerCase(), b.id]));
+        const colMap = new Map(collections.map((c) => [c.name.toLowerCase(), c.id]));
+        const payload: any[] = [];
+        for (let r = 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || row.every((v) => !v?.trim())) continue;
+          const name = (row[idx("name")] || "").trim();
+          if (!name) continue;
+          payload.push({
+            name,
+            sku: (row[idx("sku")] || "").trim() || null,
+            barcode: (row[idx("barcode")] || "").trim() || null,
+            price: Number(row[idx("price")] || 0) || 0,
+            purchase_price: Number(row[idx("purchase_price")] || 0) || 0,
+            stock_qty: Number(row[idx("stock_qty")] || 0) || 0,
+            track_inventory: (row[idx("track_inventory")] || "1") !== "0",
+            show_on_website: (row[idx("show_on_website")] || "0") === "1",
+            is_available_offline: (row[idx("is_available_offline")] || "1") !== "0",
+            category_id: catMap.get((row[idx("category")] || "").toLowerCase()) || null,
+            brand_id: brandMap.get((row[idx("brand")] || "").toLowerCase()) || null,
+            collection_id: colMap.get((row[idx("collection")] || "").toLowerCase()) || null,
+            store_id: currentStore.id,
+            created_by: user.id,
+          });
+        }
+        if (payload.length === 0) { toast.error("Tidak ada baris valid"); return; }
+        const { error } = await supabase.from("products").insert(payload);
+        if (error) throw error;
+        await logActivity({
+          actionType: "created",
+          entityType: "Produk",
+          description: `Mengimpor ${payload.length} produk dari CSV`,
+          storeId: currentStore.id,
+        });
+        toast.success(`${payload.length} produk diimpor`);
+        fetchAll();
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err.message || "Gagal mengimpor produk");
+      }
+    };
+    input.click();
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.size === 0) return;
+    try {
+      const ids = Array.from(selectedProducts);
+      const { error } = await supabase.from("products").delete().in("id", ids);
+      if (error) throw error;
+      await logActivity({
+        actionType: "deleted",
+        entityType: "Produk",
+        description: `Menghapus ${ids.length} produk`,
+        storeId: currentStore?.id,
+      });
+      toast.success(`${ids.length} produk dihapus`);
+      setSelectedProducts(new Set());
+      setBulkDeleteOpen(false);
+      fetchAll();
+    } catch (e: any) {
+      toast.error(e.message || "Gagal menghapus produk");
+    }
+  };
+
+  const handleOpenSalinProduk = () => {
+    if (selectedProducts.size === 0) {
+      toast.error("Pilih produk terlebih dahulu");
+      setSelectionMode(true);
+      return;
+    }
+    if (availableStores.length === 0) {
+      toast.error("Tidak ada cabang tujuan");
+      return;
+    }
+    setIsCopyDialogOpen(true);
+  };
+
+  const handleOpenHapusProduk = () => {
+    if (selectedProducts.size === 0) {
+      toast.error("Pilih produk terlebih dahulu");
+      setSelectionMode(true);
+      return;
+    }
+    setBulkDeleteOpen(true);
+  };
+
   const filteredProducts = products.filter((p) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -422,16 +604,49 @@ export default function ProductManagement() {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        {selectedProducts.size > 0 && availableStores.length > 0 && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsCopyDialogOpen(true)}
-            title={`Salin ke cabang lain (${selectedProducts.size})`}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+              title="Aksi produk"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectionMode((v) => !v);
+                if (selectionMode) setSelectedProducts(new Set());
+              }}
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              {selectionMode ? "Batal Pilih" : "Pilih"}
+              {selectedProducts.size > 0 && ` (${selectedProducts.size})`}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportProducts}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleImportProducts}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleOpenSalinProduk}>
+              <Copy className="h-4 w-4 mr-2" />
+              Salin Produk
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleOpenHapusProduk}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Hapus Produk
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <FilterChip
           label="Kategori"
@@ -925,6 +1140,27 @@ export default function ProductManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Produk Terpilih?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedProducts.size} produk akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
