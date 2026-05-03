@@ -42,6 +42,9 @@ import {
   Eye,
   Package,
   CheckCircle2,
+  CheckSquare,
+  Download,
+  Upload,
 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
