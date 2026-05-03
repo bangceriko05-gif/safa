@@ -10,6 +10,7 @@ import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileT
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SalesExportData, exportSalesSourceTab } from "@/utils/reportExport";
@@ -596,28 +597,45 @@ export default function SalesReport() {
 
           {/* Tabs for different reports */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
-            <TabsList className="grid w-full sm:w-auto grid-cols-5 mb-2">
-              <TabsTrigger value="details" className="text-xs sm:text-sm">
-                <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
-                Rincian
-              </TabsTrigger>
-              <TabsTrigger value="source" className="text-xs sm:text-sm">
-                <MapPin className="h-4 w-4 mr-1 hidden sm:inline" />
-                Sumber
-              </TabsTrigger>
-              <TabsTrigger value="profit-loss" className="text-xs sm:text-sm">
-                <TrendingDown className="h-4 w-4 mr-1 hidden sm:inline" />
-                Laba/Rugi
-              </TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
-                <XCircle className="h-4 w-4 mr-1 hidden sm:inline" />
-                Dibatalkan
-              </TabsTrigger>
-              <TabsTrigger value="items" className="text-xs sm:text-sm">
-                <ShoppingBag className="h-4 w-4 mr-1 hidden sm:inline" />
-                Item
-              </TabsTrigger>
-            </TabsList>
+            <div className="mb-3">
+              <Select value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
+                <SelectTrigger className="w-full sm:w-[280px] font-medium">
+                  <SelectValue placeholder="Pilih Laporan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="details">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Laporan Rincian Penjualan
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="source">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Laporan Sumber Penjualan
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="profit-loss">
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4" />
+                      Laporan Laba/Rugi
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cancelled">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4" />
+                      Laporan Dibatalkan
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="items">
+                    <div className="flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4" />
+                      Laporan Penjualan Item
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
 
             {/* Rincian Penjualan */}
