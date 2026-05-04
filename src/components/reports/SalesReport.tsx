@@ -117,6 +117,12 @@ export default function SalesReport() {
     fetchData();
   }, [timeRange, customDateRange, currentStore]);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id);
+    });
+  }, []);
+
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
