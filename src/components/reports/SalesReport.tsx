@@ -142,6 +142,7 @@ export default function SalesReport() {
           checked_in_at, checked_in_by, checked_out_at, checked_out_by,
           discount_type, discount_value, discount_applies_to,
           payment_proof_url, payment_proof_url_2, room_id, note,
+          reference_no, reference_no_2, dual_payment, ota_booking_id, ota_source,
           rooms (name, category_id, room_categories (name))
         `)
         .eq("store_id", currentStore.id)
@@ -254,6 +255,13 @@ export default function SalesReport() {
           payment_proof_url_2: b.payment_proof_url_2 || null,
           room_id: b.room_id,
           note: b.note || null,
+          ...( {
+            reference_no: b.reference_no,
+            reference_no_2: b.reference_no_2,
+            dual_payment: b.dual_payment,
+            ota_booking_id: b.ota_booking_id,
+            ota_source: b.ota_source,
+          } as any),
         };
       });
 
