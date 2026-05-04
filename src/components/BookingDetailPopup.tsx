@@ -30,6 +30,7 @@ interface BookingDetailPopupProps {
   bookingId: string | null;
   statusColors: Record<string, string>;
   onStatusChange?: () => void;
+  onEdit?: () => void;
 }
 
 interface BookingDetail {
@@ -94,6 +95,7 @@ export default function BookingDetailPopup({
   bookingId,
   statusColors,
   onStatusChange,
+  onEdit,
 }: BookingDetailPopupProps) {
   const { currentStore } = useStore();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
