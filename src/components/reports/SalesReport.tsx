@@ -86,6 +86,12 @@ export default function SalesReport() {
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [detailPopupOpen, setDetailPopupOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [proofPreview, setProofPreview] = useState<{ url: string; url2?: string | null } | null>(null);
   const [stats, setStats] = useState({
     totalBookings: 0,
     totalRevenue: 0,
