@@ -129,6 +129,7 @@ export default function SalesReport() {
           status, variant_id,
           checked_in_at, checked_in_by, checked_out_at, checked_out_by,
           discount_type, discount_value, discount_applies_to,
+          payment_proof_url, payment_proof_url_2, room_id, note,
           rooms (name, category_id, room_categories (name))
         `)
         .eq("store_id", currentStore.id)
@@ -237,6 +238,10 @@ export default function SalesReport() {
           checked_out_by_name: b.checked_out_by ? userNameMap[b.checked_out_by] || "-" : "-",
           booking_duration_type: variantData?.booking_duration_type || "hours",
           booking_duration_value: variantData?.booking_duration_value || b.duration,
+          payment_proof_url: b.payment_proof_url || null,
+          payment_proof_url_2: b.payment_proof_url_2 || null,
+          room_id: b.room_id,
+          note: b.note || null,
         };
       });
 
