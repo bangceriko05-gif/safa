@@ -18,6 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SalesExportData, exportSalesSourceTab } from "@/utils/reportExport";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
+import BookingDetailPopup from "@/components/BookingDetailPopup";
+import BookingModal from "@/components/BookingModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface BookingData {
   id: string;
@@ -48,6 +51,10 @@ interface BookingData {
   checked_out_by_name?: string;
   booking_duration_type?: string;
   booking_duration_value?: number;
+  payment_proof_url?: string | null;
+  payment_proof_url_2?: string | null;
+  room_id?: string;
+  note?: string | null;
 }
 
 interface BookingProductData {
