@@ -729,7 +729,16 @@ export default function SalesReport() {
                               <TableRow key={booking.id}>
                                 <TableCell>
                                   <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
-                                    <span className="underline">{booking.bid}</span>
+                                    <button
+                                      type="button"
+                                      className="underline hover:text-blue-800 text-left"
+                                      onClick={() => {
+                                        setSelectedBookingId(booking.id);
+                                        setDetailPopupOpen(true);
+                                      }}
+                                    >
+                                      {booking.bid}
+                                    </button>
                                     <button
                                       type="button"
                                       className="text-muted-foreground hover:text-foreground"
@@ -756,7 +765,17 @@ export default function SalesReport() {
                                 </TableCell>
                                 <TableCell className="text-xs">{booking.payment_method || "-"}</TableCell>
                                 <TableCell className="text-xs">
-                                  <a className="text-blue-600 underline" href="#" onClick={(e) => e.preventDefault()}>Lihat</a>
+                                  {booking.payment_proof_url || booking.payment_proof_url_2 ? (
+                                    <button
+                                      type="button"
+                                      className="text-blue-600 underline hover:text-blue-800"
+                                      onClick={() => setProofPreview({ url: booking.payment_proof_url || booking.payment_proof_url_2 || "", url2: booking.payment_proof_url_2 })}
+                                    >
+                                      Lihat
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right text-xs text-orange-600">{hpp > 0 ? formatCurrency(hpp) : "-"}</TableCell>
                                 <TableCell className="text-right text-xs text-blue-600 font-medium">{formatCurrency(laba)}</TableCell>
