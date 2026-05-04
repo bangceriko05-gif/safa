@@ -1111,6 +1111,67 @@ export default function SalesReport() {
           </Tabs>
         </>
       )}
+
+      {/* Detail Popup */}
+      {detailPopupOpen && selectedBookingId && (
+        <BookingDetailPopup
+          isOpen={detailPopupOpen}
+          onClose={() => {
+            setDetailPopupOpen(false);
+            setSelectedBookingId(null);
+          }}
+          bookingId={selectedBookingId}
+          statusColors={{ BO: "#87CEEB", CI: "#90EE90", CO: "#6B7280", BATAL: "#9CA3AF" }}
+          onStatusChange={() => fetchData()}
+          onEdit={() => {
+            const b = bookings.find((x) => x.id === selectedBookingId);
+            if (b) {
+              setEditingBooking({
+                ...b,
+                room_id: b.room_id,
+              });
+              setEditModalOpen(true);
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Booking Modal */}
+      {editModalOpen && editingBooking && currentUserId && (
+        <BookingModal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingBooking(null);
+            fetchData();
+          }}
+          selectedDate={new Date(editingBooking.date)}
+          selectedSlot={null}
+          editingBooking={editingBooking}
+          userId={currentUserId}
+        />
+      )}
+
+      {/* Payment Proof Preview */}
+      <Dialog open={!!proofPreview} onOpenChange={(o) => !o && setProofPreview(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Bukti Bayar</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {proofPreview?.url && (
+              <a href={proofPreview.url} target="_blank" rel="noopener noreferrer">
+                <img src={proofPreview.url} alt="Bukti Bayar 1" className="w-full rounded-lg border" />
+              </a>
+            )}
+            {proofPreview?.url2 && proofPreview.url2 !== proofPreview.url && (
+              <a href={proofPreview.url2} target="_blank" rel="noopener noreferrer">
+                <img src={proofPreview.url2} alt="Bukti Bayar 2" className="w-full rounded-lg border" />
+              </a>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
