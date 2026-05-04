@@ -30,6 +30,7 @@ interface BookingDetailPopupProps {
   bookingId: string | null;
   statusColors: Record<string, string>;
   onStatusChange?: () => void;
+  onEdit?: () => void;
 }
 
 interface BookingDetail {
@@ -94,6 +95,7 @@ export default function BookingDetailPopup({
   bookingId,
   statusColors,
   onStatusChange,
+  onEdit,
 }: BookingDetailPopupProps) {
   const { currentStore } = useStore();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
@@ -462,15 +464,28 @@ export default function BookingDetailPopup({
               )}
             </div>
             {booking && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrintReceipt}
-                className="gap-1"
-              >
-                <Printer className="h-4 w-4" />
-                Print
-              </Button>
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { onEdit(); onClose(); }}
+                    className="gap-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrintReceipt}
+                  className="gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+              </div>
             )}
           </DialogTitle>
         </DialogHeader>

@@ -18,6 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SalesExportData, exportSalesSourceTab } from "@/utils/reportExport";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
+import BookingDetailPopup from "@/components/BookingDetailPopup";
+import BookingModal from "@/components/BookingModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface BookingData {
   id: string;
@@ -48,6 +51,10 @@ interface BookingData {
   checked_out_by_name?: string;
   booking_duration_type?: string;
   booking_duration_value?: number;
+  payment_proof_url?: string | null;
+  payment_proof_url_2?: string | null;
+  room_id?: string;
+  note?: string | null;
 }
 
 interface BookingProductData {
@@ -79,6 +86,12 @@ export default function SalesReport() {
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [detailPopupOpen, setDetailPopupOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [proofPreview, setProofPreview] = useState<{ url: string; url2?: string | null } | null>(null);
   const [stats, setStats] = useState({
     totalBookings: 0,
     totalRevenue: 0,
@@ -104,6 +117,12 @@ export default function SalesReport() {
     fetchData();
   }, [timeRange, customDateRange, currentStore]);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id);
+    });
+  }, []);
+
   const fetchData = async () => {
     if (!currentStore) return;
     setLoading(true);
@@ -122,6 +141,8 @@ export default function SalesReport() {
           status, variant_id,
           checked_in_at, checked_in_by, checked_out_at, checked_out_by,
           discount_type, discount_value, discount_applies_to,
+          payment_proof_url, payment_proof_url_2, room_id, note,
+          reference_no, reference_no_2, dual_payment, ota_booking_id, ota_source,
           rooms (name, category_id, room_categories (name))
         `)
         .eq("store_id", currentStore.id)
@@ -230,6 +251,17 @@ export default function SalesReport() {
           checked_out_by_name: b.checked_out_by ? userNameMap[b.checked_out_by] || "-" : "-",
           booking_duration_type: variantData?.booking_duration_type || "hours",
           booking_duration_value: variantData?.booking_duration_value || b.duration,
+          payment_proof_url: b.payment_proof_url || null,
+          payment_proof_url_2: b.payment_proof_url_2 || null,
+          room_id: b.room_id,
+          note: b.note || null,
+          ...( {
+            reference_no: b.reference_no,
+            reference_no_2: b.reference_no_2,
+            dual_payment: b.dual_payment,
+            ota_booking_id: b.ota_booking_id,
+            ota_source: b.ota_source,
+          } as any),
         };
       });
 
@@ -705,7 +737,16 @@ export default function SalesReport() {
                               <TableRow key={booking.id}>
                                 <TableCell>
                                   <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
-                                    <span className="underline">{booking.bid}</span>
+                                    <button
+                                      type="button"
+                                      className="underline hover:text-blue-800 text-left"
+                                      onClick={() => {
+                                        setSelectedBookingId(booking.id);
+                                        setDetailPopupOpen(true);
+                                      }}
+                                    >
+                                      {booking.bid}
+                                    </button>
                                     <button
                                       type="button"
                                       className="text-muted-foreground hover:text-foreground"
@@ -732,7 +773,17 @@ export default function SalesReport() {
                                 </TableCell>
                                 <TableCell className="text-xs">{booking.payment_method || "-"}</TableCell>
                                 <TableCell className="text-xs">
-                                  <a className="text-blue-600 underline" href="#" onClick={(e) => e.preventDefault()}>Lihat</a>
+                                  {booking.payment_proof_url || booking.payment_proof_url_2 ? (
+                                    <button
+                                      type="button"
+                                      className="text-blue-600 underline hover:text-blue-800"
+                                      onClick={() => setProofPreview({ url: booking.payment_proof_url || booking.payment_proof_url_2 || "", url2: booking.payment_proof_url_2 })}
+                                    >
+                                      Lihat
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right text-xs text-orange-600">{hpp > 0 ? formatCurrency(hpp) : "-"}</TableCell>
                                 <TableCell className="text-right text-xs text-blue-600 font-medium">{formatCurrency(laba)}</TableCell>
@@ -1068,6 +1119,67 @@ export default function SalesReport() {
           </Tabs>
         </>
       )}
+
+      {/* Detail Popup */}
+      {detailPopupOpen && selectedBookingId && (
+        <BookingDetailPopup
+          isOpen={detailPopupOpen}
+          onClose={() => {
+            setDetailPopupOpen(false);
+            setSelectedBookingId(null);
+          }}
+          bookingId={selectedBookingId}
+          statusColors={{ BO: "#87CEEB", CI: "#90EE90", CO: "#6B7280", BATAL: "#9CA3AF" }}
+          onStatusChange={() => fetchData()}
+          onEdit={() => {
+            const b = bookings.find((x) => x.id === selectedBookingId);
+            if (b) {
+              setEditingBooking({
+                ...b,
+                room_id: b.room_id,
+              });
+              setEditModalOpen(true);
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Booking Modal */}
+      {editModalOpen && editingBooking && currentUserId && (
+        <BookingModal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingBooking(null);
+            fetchData();
+          }}
+          selectedDate={new Date(editingBooking.date)}
+          selectedSlot={null}
+          editingBooking={editingBooking}
+          userId={currentUserId}
+        />
+      )}
+
+      {/* Payment Proof Preview */}
+      <Dialog open={!!proofPreview} onOpenChange={(o) => !o && setProofPreview(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Bukti Bayar</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {proofPreview?.url && (
+              <a href={proofPreview.url} target="_blank" rel="noopener noreferrer">
+                <img src={proofPreview.url} alt="Bukti Bayar 1" className="w-full rounded-lg border" />
+              </a>
+            )}
+            {proofPreview?.url2 && proofPreview.url2 !== proofPreview.url && (
+              <a href={proofPreview.url2} target="_blank" rel="noopener noreferrer">
+                <img src={proofPreview.url2} alt="Bukti Bayar 2" className="w-full rounded-lg border" />
+              </a>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
