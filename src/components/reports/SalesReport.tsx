@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Download } from "lucide-react";
+import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Download, Search, Copy as CopyIcon, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast as toastSonner } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,6 +56,7 @@ interface BookingProductData {
   quantity: number;
   subtotal: number;
   booking_id: string;
+  purchase_price?: number;
 }
 
 interface ExpenseData {
@@ -75,6 +78,7 @@ export default function SalesReport() {
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [stats, setStats] = useState({
     totalBookings: 0,
     totalRevenue: 0,
@@ -89,6 +93,10 @@ export default function SalesReport() {
     productSalesCount: 0,
     productSalesRevenue: 0,
     paymentMethodTotals: [] as { method: string; total: number }[],
+    totalBiaya: 0,
+    jumlahBayar: 0,
+    totalHPP: 0,
+    totalLaba: 0,
   });
 
   useEffect(() => {
@@ -173,7 +181,7 @@ export default function SalesReport() {
       if (bookingIds.length > 0) {
         const { data: products, error: productsError } = await supabase
           .from("booking_products")
-          .select("id, product_name, quantity, subtotal, booking_id")
+          .select("id, product_name, quantity, subtotal, booking_id, product_id, products(purchase_price)")
           .in("booking_id", bookingIds);
         
         if (!productsError) {
@@ -231,6 +239,7 @@ export default function SalesReport() {
         quantity: p.quantity,
         subtotal: Number(p.subtotal) || 0,
         booking_id: p.booking_id,
+        purchase_price: Number(p.products?.purchase_price) || 0,
       }));
 
       const mappedExpenses: ExpenseData[] = (expensesData || []).map((e: any) => ({
@@ -273,6 +282,16 @@ export default function SalesReport() {
       const productSalesRevenue = mappedProducts.reduce((sum, p) => sum + p.subtotal, 0);
       const productSalesCount = mappedProducts.reduce((sum, p) => sum + p.quantity, 0);
 
+      // Hitung Total Biaya, Jumlah Bayar, HPP, Laba per booking
+      const totalBiaya = activeBookings.reduce((sum, b) => sum + b.price + b.price_2, 0);
+      const jumlahBayar = activeBookings.reduce((sum, b) => {
+        const paid1 = b.payment_method ? b.price : 0;
+        const paid2 = b.payment_method_2 ? b.price_2 : 0;
+        return sum + paid1 + paid2;
+      }, 0);
+      const totalHPP = mappedProducts.reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
+      const totalLaba = totalBiaya - totalHPP;
+
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
       setExpenses(mappedExpenses);
@@ -290,6 +309,10 @@ export default function SalesReport() {
         productSalesCount,
         productSalesRevenue,
         paymentMethodTotals: Object.entries(paymentTotals).map(([method, total]) => ({ method, total })),
+        totalBiaya,
+        jumlahBayar,
+        totalHPP,
+        totalLaba,
       });
     } catch (error) {
       console.error("Error fetching sales data:", error);
