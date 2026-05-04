@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Download } from "lucide-react";
+import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Download, Search, Copy as CopyIcon, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast as toastSonner } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,6 +56,7 @@ interface BookingProductData {
   quantity: number;
   subtotal: number;
   booking_id: string;
+  purchase_price?: number;
 }
 
 interface ExpenseData {
@@ -75,6 +78,7 @@ export default function SalesReport() {
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [stats, setStats] = useState({
     totalBookings: 0,
     totalRevenue: 0,
@@ -89,6 +93,10 @@ export default function SalesReport() {
     productSalesCount: 0,
     productSalesRevenue: 0,
     paymentMethodTotals: [] as { method: string; total: number }[],
+    totalBiaya: 0,
+    jumlahBayar: 0,
+    totalHPP: 0,
+    totalLaba: 0,
   });
 
   useEffect(() => {
@@ -173,7 +181,7 @@ export default function SalesReport() {
       if (bookingIds.length > 0) {
         const { data: products, error: productsError } = await supabase
           .from("booking_products")
-          .select("id, product_name, quantity, subtotal, booking_id")
+          .select("id, product_name, quantity, subtotal, booking_id, product_id, products(purchase_price)")
           .in("booking_id", bookingIds);
         
         if (!productsError) {
@@ -231,6 +239,7 @@ export default function SalesReport() {
         quantity: p.quantity,
         subtotal: Number(p.subtotal) || 0,
         booking_id: p.booking_id,
+        purchase_price: Number(p.products?.purchase_price) || 0,
       }));
 
       const mappedExpenses: ExpenseData[] = (expensesData || []).map((e: any) => ({
@@ -273,6 +282,16 @@ export default function SalesReport() {
       const productSalesRevenue = mappedProducts.reduce((sum, p) => sum + p.subtotal, 0);
       const productSalesCount = mappedProducts.reduce((sum, p) => sum + p.quantity, 0);
 
+      // Hitung Total Biaya, Jumlah Bayar, HPP, Laba per booking
+      const totalBiaya = activeBookings.reduce((sum, b) => sum + b.price + b.price_2, 0);
+      const jumlahBayar = activeBookings.reduce((sum, b) => {
+        const paid1 = b.payment_method ? b.price : 0;
+        const paid2 = b.payment_method_2 ? b.price_2 : 0;
+        return sum + paid1 + paid2;
+      }, 0);
+      const totalHPP = mappedProducts.reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
+      const totalLaba = totalBiaya - totalHPP;
+
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
       setExpenses(mappedExpenses);
@@ -290,6 +309,10 @@ export default function SalesReport() {
         productSalesCount,
         productSalesRevenue,
         paymentMethodTotals: Object.entries(paymentTotals).map(([method, total]) => ({ method, total })),
+        totalBiaya,
+        jumlahBayar,
+        totalHPP,
+        totalLaba,
       });
     } catch (error) {
       console.error("Error fetching sales data:", error);
@@ -528,182 +551,198 @@ export default function SalesReport() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">Laporan Penjualan</h3>
-          <p className="text-sm text-muted-foreground">
-            {getDateRangeDisplay(timeRange, customDateRange)}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ReportDateFilter
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
-        </div>
-      </div>
+  // Filtered list for details table by search query
+  const filteredDetailBookings = activeBookings.filter((b) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const items = (productsByBookingId[b.id] || []).map((p) => p.product_name).join(" ").toLowerCase();
+    return (
+      b.bid?.toLowerCase().includes(q) ||
+      b.customer_name?.toLowerCase().includes(q) ||
+      b.room_name?.toLowerCase().includes(q) ||
+      items.includes(q)
+    );
+  });
 
+  const getBookingHPP = (bookingId: string) => {
+    return bookingProducts
+      .filter((p) => p.booking_id === bookingId)
+      .reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
+  };
+
+  return (
+    <div className="space-y-4">
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-32" />
-              </CardContent>
+              <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
+              <CardContent><Skeleton className="h-8 w-32" /></CardContent>
             </Card>
           ))}
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Booking</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalBookings}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalBookings} transaksi</div>
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Tabs for different reports */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
-            <div className="mb-3">
+            {/* Toolbar: dropdown + search + date filter + export (matches mockup) */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
               <Select value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
-                <SelectTrigger className="w-full sm:w-[280px] font-medium">
+                <SelectTrigger className="w-full lg:w-[280px] font-semibold">
                   <SelectValue placeholder="Pilih Laporan" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="details">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Laporan Rincian Penjualan
-                    </div>
+                    <div className="flex items-center gap-2"><FileText className="h-4 w-4" />Laporan Rincian Penjualan</div>
                   </SelectItem>
                   <SelectItem value="source">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      Laporan Sumber Penjualan
-                    </div>
+                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />Laporan Sumber Penjualan</div>
                   </SelectItem>
                   <SelectItem value="profit-loss">
-                    <div className="flex items-center gap-2">
-                      <TrendingDown className="h-4 w-4" />
-                      Laporan Laba/Rugi
-                    </div>
+                    <div className="flex items-center gap-2"><TrendingDown className="h-4 w-4" />Laporan Laba/Rugi</div>
                   </SelectItem>
                   <SelectItem value="cancelled">
-                    <div className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4" />
-                      Laporan Dibatalkan
-                    </div>
+                    <div className="flex items-center gap-2"><XCircle className="h-4 w-4" />Laporan Dibatalkan</div>
                   </SelectItem>
                   <SelectItem value="items">
-                    <div className="flex items-center gap-2">
-                      <ShoppingBag className="h-4 w-4" />
-                      Laporan Penjualan Item
-                    </div>
+                    <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" />Laporan Penjualan Item</div>
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
 
+              <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 lg:justify-end">
+                <div className="relative w-full sm:w-[280px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari BID, pelanggan, item, room..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ReportDateFilter
+                  timeRange={timeRange}
+                  onTimeRangeChange={setTimeRange}
+                  customDateRange={customDateRange}
+                  onCustomDateRangeChange={setCustomDateRange}
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleExportBookings}
+                  disabled={loading || activeBookings.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </div>
+            </div>
 
             {/* Rincian Penjualan */}
             <TabsContent value="details" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">Breakdown per Metode Pembayaran</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {stats.paymentMethodTotals.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Tidak ada data</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {stats.paymentMethodTotals.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded">
-                          <span className="text-sm font-medium">{item.method}</span>
-                          <span className="text-sm font-bold">{formatCurrency(item.total)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* 5 stat cards */}
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Transaksi</CardTitle></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{stats.totalBookings}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Biaya</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(stats.totalBiaya)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Jumlah Bayar</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(stats.jumlahBayar)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total HPP</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-orange-600">{formatCurrency(stats.totalHPP)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Laba</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-blue-600">{formatCurrency(stats.totalLaba)}</div></CardContent>
+                </Card>
+              </div>
 
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Daftar Booking</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportBookings}
-                    disabled={loading || activeBookings.length === 0}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  {activeBookings.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Tidak ada booking</p>
-                  ) : (
-                    <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {activeBookings.map((booking) => (
-                        <div key={booking.id} className="flex justify-between items-start p-3 bg-muted/50 rounded">
-                          <div>
-                            <div className="font-medium flex items-center gap-2">
-                              {booking.customer_name}
-                              <Badge variant={booking.variant_id ? "default" : "secondary"} className="text-xs">
-                                {booking.variant_id ? "Walk-in" : "OTA"}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {booking.bid} • {booking.room_name} • {formatDuration(booking)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold">{formatCurrency(booking.price + booking.price_2)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {booking.payment_method || "Belum Diisi"}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>No. Booking</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Pelanggan</TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Room</TableHead>
+                          <TableHead>Durasi/Qty</TableHead>
+                          <TableHead className="text-right">Total Biaya</TableHead>
+                          <TableHead className="text-right">Jumlah Bayar</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Metode Bayar</TableHead>
+                          <TableHead>Bukti Bayar</TableHead>
+                          <TableHead className="text-right">HPP</TableHead>
+                          <TableHead className="text-right">Laba</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDetailBookings.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={13} className="text-center text-sm text-muted-foreground py-8">
+                              Tidak ada data
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredDetailBookings.map((booking) => {
+                            const totalBiaya = booking.price + booking.price_2;
+                            const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
+                            const hpp = getBookingHPP(booking.id);
+                            const laba = totalBiaya - hpp;
+                            const items = productsByBookingId[booking.id] || [];
+                            const itemsLabel = items.length === 0
+                              ? "-"
+                              : items.map((p) => `${p.product_name} (x${p.quantity})`).join(", ");
+                            return (
+                              <TableRow key={booking.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
+                                    <span className="underline">{booking.bid}</span>
+                                    <button
+                                      type="button"
+                                      className="text-muted-foreground hover:text-foreground"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(booking.bid);
+                                        toastSonner.success("BID disalin");
+                                      }}
+                                    >
+                                      <CopyIcon className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}</TableCell>
+                                <TableCell className="text-xs">{booking.customer_name}</TableCell>
+                                <TableCell className="text-xs max-w-[200px] truncate" title={itemsLabel}>{itemsLabel}</TableCell>
+                                <TableCell className="text-xs">{booking.room_name}</TableCell>
+                                <TableCell className="text-xs">{formatDuration(booking)}</TableCell>
+                                <TableCell className="text-right text-xs">{formatCurrency(totalBiaya)}</TableCell>
+                                <TableCell className="text-right text-xs">{formatCurrency(jumlahBayar)}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                    {booking.status === "Selesai" || booking.checked_out_at ? "Selesai" : (booking.status || "-")}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs">{booking.payment_method || "-"}</TableCell>
+                                <TableCell className="text-xs">
+                                  <a className="text-blue-600 underline" href="#" onClick={(e) => e.preventDefault()}>Lihat</a>
+                                </TableCell>
+                                <TableCell className="text-right text-xs text-orange-600">{hpp > 0 ? formatCurrency(hpp) : "-"}</TableCell>
+                                <TableCell className="text-right text-xs text-blue-600 font-medium">{formatCurrency(laba)}</TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
