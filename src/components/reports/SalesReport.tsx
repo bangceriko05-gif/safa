@@ -1128,6 +1128,8 @@ export default function SalesReport() {
                 </CardContent>
               </Card>
             </TabsContent>
+            </>
+            )}
           </Tabs>
         </>
       )}
