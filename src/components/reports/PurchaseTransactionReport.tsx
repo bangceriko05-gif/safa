@@ -28,6 +28,7 @@ interface PurchaseRow {
   payment_method: string | null;
   process_status: string;
   notes: string | null;
+  payment_proof_url?: string | null;
 }
 
 interface PurchaseItemRow {
@@ -66,7 +67,7 @@ export default function PurchaseTransactionReport() {
 
       const { data, error } = await supabase
         .from("purchases" as any)
-        .select("id, bid, date, supplier_name, amount, payment_method, process_status, notes")
+        .select("id, bid, date, supplier_name, amount, payment_method, process_status, notes, payment_proof_url")
         .eq("store_id", currentStore.id)
         .in("process_status", statusFilter)
         .gte("date", startStr)
