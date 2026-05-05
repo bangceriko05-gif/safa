@@ -1166,7 +1166,7 @@ export default function Reports() {
         {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
           <TabsContent value="sales" className="mt-4">
             {isFeatureEnabled("reports.sales") ? (
-              <SalesSubMenu />
+              <SalesReport />
             ) : (
               <FeatureInactiveNotice featureName="Penjualan" icon={DollarSign} price={getFeatureInfo("reports.sales").price} description={getFeatureInfo("reports.sales").description} />
             )}

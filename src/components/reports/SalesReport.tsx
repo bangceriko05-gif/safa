@@ -21,6 +21,8 @@ import * as XLSX from 'xlsx';
 import BookingDetailPopup from "@/components/BookingDetailPopup";
 import BookingModal from "@/components/BookingModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import TaxReport from "./TaxReport";
+import { Receipt } from "lucide-react";
 
 interface BookingData {
   id: string;
@@ -74,7 +76,7 @@ interface ExpenseData {
   date: string;
 }
 
-type SalesTab = "details" | "source" | "profit-loss" | "cancelled" | "items";
+type SalesTab = "details" | "source" | "profit-loss" | "cancelled" | "items" | "tax";
 
 export default function SalesReport() {
   const { currentStore } = useStore();
@@ -639,9 +641,13 @@ export default function SalesReport() {
                   <SelectItem value="items">
                     <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" />Laporan Penjualan Item</div>
                   </SelectItem>
+                  <SelectItem value="tax">
+                    <div className="flex items-center gap-2"><Receipt className="h-4 w-4" />Laporan PPN</div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
+              {activeTab !== "tax" && (
               <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 lg:justify-end">
                 <div className="relative w-full sm:w-[280px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -667,7 +673,13 @@ export default function SalesReport() {
                   Export
                 </Button>
               </div>
+              )}
             </div>
+
+            {activeTab === "tax" ? (
+              <TaxReport />
+            ) : (
+              <>
 
             {/* Rincian Penjualan */}
             <TabsContent value="details" className="space-y-4">
@@ -1116,6 +1128,8 @@ export default function SalesReport() {
                 </CardContent>
               </Card>
             </TabsContent>
+            </>
+            )}
           </Tabs>
         </>
       )}
