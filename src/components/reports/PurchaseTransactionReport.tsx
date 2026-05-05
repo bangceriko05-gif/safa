@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { ShoppingCart, Download, Search } from "lucide-react";
+import { ShoppingCart, Download, Search, Copy, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
@@ -27,6 +28,7 @@ interface PurchaseRow {
   payment_method: string | null;
   process_status: string;
   notes: string | null;
+  payment_proof_url?: string | null;
 }
 
 interface PurchaseItemRow {
@@ -46,6 +48,7 @@ export default function PurchaseTransactionReport() {
   const [rows, setRows] = useState<PurchaseRow[]>([]);
   const [items, setItems] = useState<Record<string, PurchaseItemRow[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -64,7 +67,7 @@ export default function PurchaseTransactionReport() {
 
       const { data, error } = await supabase
         .from("purchases" as any)
-        .select("id, bid, date, supplier_name, amount, payment_method, process_status, notes")
+        .select("id, bid, date, supplier_name, amount, payment_method, process_status, notes, payment_proof_url")
         .eq("store_id", currentStore.id)
         .in("process_status", statusFilter)
         .gte("date", startStr)
@@ -143,6 +146,11 @@ export default function PurchaseTransactionReport() {
     const reportType = subView === "cancelled" ? "Pembatalan_Pembelian" : "Pembelian";
     exportToExcel(data, "Pembelian", getExportFileName(reportType, currentStore.name, dateRangeStr));
     toast.success("Export berhasil");
+  };
+
+  const copyBid = (bid: string) => {
+    navigator.clipboard.writeText(bid);
+    toast.success("BID disalin");
   };
 
   return (
@@ -238,32 +246,56 @@ export default function PurchaseTransactionReport() {
                   <TableRow>
                     <TableHead>BID</TableHead>
                     <TableHead>Tanggal</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Produk</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-right">Jumlah</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>Metode Bayar</TableHead>
+                    <TableHead>Nota</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Tidak ada data pembelian
                       </TableCell>
                     </TableRow>
                   ) : (
                     filtered.map((r) => {
                       const it = items[r.id] || [];
-                      const productLabel = it.length > 0 ? it.map((i) => `${i.product_name} x${i.quantity}`).join(", ") : "-";
+                      const itemLabel = it.length > 0 ? it.map((i) => i.product_name).join(", ") : (r.supplier_name || "-");
+                      const totalQty = it.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
                       return (
                         <TableRow key={r.id}>
-                          <TableCell className="font-mono text-xs">{r.bid || "-"}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-primary">{r.bid || "-"}</span>
+                              {r.bid && (
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyBid(r.bid)}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{format(new Date(r.date), "d MMM yyyy", { locale: localeId })}</TableCell>
-                          <TableCell>{r.supplier_name || "-"}</TableCell>
-                          <TableCell className="max-w-[260px] truncate">{productLabel}</TableCell>
+                          <TableCell className="max-w-[260px] truncate" title={itemLabel}>{itemLabel}</TableCell>
+                          <TableCell className="text-right">{totalQty || "-"}</TableCell>
                           <TableCell className="text-right font-medium">{formatCurrency(Number(r.amount) || 0)}</TableCell>
                           <TableCell>{r.payment_method || "-"}</TableCell>
+                          <TableCell>
+                            {r.payment_proof_url ? (
+                              <button
+                                className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+                                onClick={() => setProofPreview(r.payment_proof_url!)}
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                Lihat Nota
+                              </button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -291,6 +323,17 @@ export default function PurchaseTransactionReport() {
           </Card>
         </>
       )}
+
+      <Dialog open={!!proofPreview} onOpenChange={() => setProofPreview(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Bukti Bayar / Nota</DialogTitle>
+          </DialogHeader>
+          {proofPreview && (
+            <img src={proofPreview} alt="Bukti" className="w-full max-h-[70vh] object-contain rounded-md" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
