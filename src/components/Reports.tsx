@@ -1107,6 +1107,12 @@ export default function Reports() {
               <span className="hidden sm:inline">Penjualan</span>
             </TabsTrigger>
           )}
+          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
+            <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Pembelian</span>
+            </TabsTrigger>
+          )}
           {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
             <TabsTrigger value="incomes" className="flex items-center gap-1.5 flex-1">
               <TrendingUp className="h-4 w-4" />
@@ -1123,12 +1129,6 @@ export default function Reports() {
             <TabsTrigger value="payment-method" className="flex items-center gap-1.5 flex-1">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Metode Payment</span>
-            </TabsTrigger>
-          )}
-          {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
-            <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline">Pembelian</span>
             </TabsTrigger>
           )}
           {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
