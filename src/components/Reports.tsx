@@ -1178,7 +1178,7 @@ export default function Reports() {
         {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
           <TabsContent value="incomes" className="mt-4">
             {isFeatureEnabled("reports.income_expense") ? (
-              <IncomeExpenseReport initialTab="incomes" lockSubView />
+              <IncomeSubMenu />
             ) : (
               <FeatureInactiveNotice featureName="Pemasukan" icon={TrendingUp} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
             )}
