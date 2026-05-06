@@ -1647,7 +1647,42 @@ function ExpenseSubMenu() {
           </SelectItem>
         </SelectContent>
       </Select>
-      <IncomeExpenseReport initialTab="expenses" lockSubView processStatusFilter={filter as any} />
+      <ExpenseReport processStatusFilter={filter} />
+    </div>
+  );
+}
+
+function IncomeSubMenu() {
+  const [sub, setSub] = useState<"active" | "batal">(() => {
+    const p = new URLSearchParams(window.location.search).get("incomeTab");
+    return (p as any) === "batal" ? "batal" : "active";
+  });
+  const onChange = (v: "active" | "batal") => {
+    setSub(v);
+    const params = new URLSearchParams(window.location.search);
+    params.set("incomeTab", v);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
+  return (
+    <div className="space-y-4">
+      <Select value={sub} onValueChange={(v) => onChange(v as any)}>
+        <SelectTrigger className="w-[280px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" /> Laporan Pemasukan
+            </div>
+          </SelectItem>
+          <SelectItem value="batal">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" /> Laporan Pemasukan Dibatalkan
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <IncomeReport processStatusFilter={sub} />
     </div>
   );
 }
