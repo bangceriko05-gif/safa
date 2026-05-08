@@ -1503,7 +1503,7 @@ export default function BookingModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={
-          fullscreen
+          fullscreen || editingBooking
             ? "max-w-none w-screen h-screen sm:rounded-none p-6 overflow-y-auto"
             : "max-w-md max-h-[90vh] overflow-y-auto"
         }
