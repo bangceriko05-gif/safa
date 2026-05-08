@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -47,20 +47,17 @@ import RoomSummary from "./RoomSummary";
 import ScheduleTable from "./ScheduleTable";
 import PMSCalendar from "./PMSCalendar";
 import BookingModal from "./BookingModal";
-import UserManagement from "./UserManagement";
-import RoomManagement from "./RoomManagement";
-import CustomerManagement from "./CustomerManagement";
-import SupplierManagement from "./suppliers/SupplierManagement";
-import { ActivityLog } from "./ActivityLog";
-import Reports from "./Reports";
-import PermissionManagement from "./PermissionManagement";
-import SettingsPage from "./SettingsPage";
 import StoreSelector from "./StoreSelector";
-import StoreManagement from "./StoreManagement";
-import BookingRequestsManagement from "./BookingRequestsManagement";
-import TransactionManagement from "./TransactionManagement";
-
-import DepositFormModal from "./deposit/DepositFormModal";
+const UserManagement = lazy(() => import("./UserManagement"));
+const RoomManagement = lazy(() => import("./RoomManagement"));
+const CustomerManagement = lazy(() => import("./CustomerManagement"));
+const SupplierManagement = lazy(() => import("./suppliers/SupplierManagement"));
+const ActivityLog = lazy(() => import("./ActivityLog").then(m => ({ default: m.ActivityLog })));
+const Reports = lazy(() => import("./Reports"));
+const PermissionManagement = lazy(() => import("./PermissionManagement"));
+const SettingsPage = lazy(() => import("./SettingsPage"));
+const TransactionManagement = lazy(() => import("./TransactionManagement"));
+const DepositFormModal = lazy(() => import("./deposit/DepositFormModal"));
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
@@ -741,6 +738,7 @@ export default function Dashboard() {
 
               {/* Tabs wrapper - keeps TabsContent working */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <Suspense fallback={<div className="flex items-center justify-center py-10 text-muted-foreground text-sm">Memuat...</div>}>
                 {/* Mobile: Dropdown */}
                 <div className="lg:hidden">
                   <Select value={activeTab} onValueChange={setActiveTab}>
@@ -842,7 +840,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
-            {isFeatureEnabled("transactions") ? (
+            {activeTab === "transactions" && (isFeatureEnabled("transactions") ? (
               <TransactionManagement 
                 userRole={userRole} 
                 onEditBooking={handleEditBooking} 
@@ -860,11 +858,11 @@ export default function Dashboard() {
               />
             ) : (
               <FeatureInactiveNotice featureName="Transaksi" icon={Receipt} price={getFeatureInfo("transactions").price} description={getFeatureInfo("transactions").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
-            {isFeatureEnabled("customers") ? (
+            {activeTab === "customers" && (isFeatureEnabled("customers") ? (
               customersSection === "suppliers" ? (
                 <SupplierManagement />
               ) : customersSection === "crm" ? (
@@ -880,27 +878,27 @@ export default function Dashboard() {
               )
             ) : (
               <FeatureInactiveNotice featureName="Pelanggan" icon={Users} price={getFeatureInfo("customers").price} description={getFeatureInfo("customers").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
-            {isFeatureEnabled("reports") ? (
+            {activeTab === "reports" && (isFeatureEnabled("reports") ? (
               <Reports />
             ) : (
               <FeatureInactiveNotice featureName="Laporan" icon={FileText} price={getFeatureInfo("reports").price} description={getFeatureInfo("reports").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="settings" forceMount className={`mt-6 ${activeTab !== "settings" ? "hidden" : ""}`}>
-            {isFeatureEnabled("settings") ? (
+            {activeTab === "settings" && (isFeatureEnabled("settings") ? (
               <SettingsPage userRole={userRole} />
             ) : (
               <FeatureInactiveNotice featureName="Pengaturan" icon={Settings} price={getFeatureInfo("settings").price} description={getFeatureInfo("settings").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
-            {isFeatureEnabled("products_inventory") ? (
+            {activeTab === "rooms" && (isFeatureEnabled("products_inventory") ? (
               hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
                 <RoomManagement section={roomsSection} />
               ) : (
@@ -908,7 +906,7 @@ export default function Dashboard() {
               )
             ) : (
               <FeatureInactiveNotice featureName="Produk & Inventori" icon={Package} price={getFeatureInfo("products_inventory").price} description={getFeatureInfo("products_inventory").description} />
-            )}
+            ))}
           </TabsContent>
 
 
@@ -916,15 +914,15 @@ export default function Dashboard() {
           {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
             <>
               <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
-                {isFeatureEnabled("activity_log") ? (
+                {activeTab === "activity" && (isFeatureEnabled("activity_log") ? (
                   <ActivityLog />
                 ) : (
                   <FeatureInactiveNotice featureName="Log Aktivitas" icon={History} price={getFeatureInfo("activity_log").price} description={getFeatureInfo("activity_log").description} />
-                )}
+                ))}
               </TabsContent>
 
               <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
-                {isFeatureEnabled("user_management") ? (
+                {activeTab === "users" && (isFeatureEnabled("user_management") ? (
                   <Tabs defaultValue="user-management" className="space-y-4">
                     <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: (userRole === "admin" || userRole === "owner") ? "1fr 1fr" : "1fr" }}>
                       <TabsTrigger value="user-management" className="flex items-center gap-2">
@@ -949,13 +947,15 @@ export default function Dashboard() {
                   </Tabs>
                 ) : (
                   <FeatureInactiveNotice featureName="Manajemen Pengguna" icon={UserCog} price={getFeatureInfo("user_management").price} description={getFeatureInfo("user_management").description} />
-                )}
+                ))}
               </TabsContent>
             </>
           )}
+                </Suspense>
         </Tabs>
 
         {/* Deposit Form Modal */}
+        <Suspense fallback={null}>
         <DepositFormModal
           open={showDepositFormModal}
           roomId={depositRoomId}
@@ -971,6 +971,7 @@ export default function Dashboard() {
             setDepositMode(false);
           }}
         />
+        </Suspense>
 
         {/* Booking Modal */}
         <BookingModal
