@@ -877,13 +877,13 @@ export default function SalesReport() {
                                 <CopyIcon className="h-3 w-3" />{booking.bid}
                               </button>
                               <span className="font-medium text-sm truncate">{booking.customer_name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                · CI: {booking.checked_in_at ? format(new Date(booking.checked_in_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : (booking.date ? format(new Date(booking.date), 'dd MMM yyyy', { locale: localeId }) : '-')}
+                                {' · '}
+                                CO: {booking.checked_out_at ? format(new Date(booking.checked_out_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
+                              </span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">{booking.room_name}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              CI: {booking.checked_in_at ? format(new Date(booking.checked_in_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
-                              {' · '}
-                              CO: {booking.checked_out_at ? format(new Date(booking.checked_out_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
-                            </div>
                           </div>
                           <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(booking.price + booking.price_2)}</span>
                         </div>
@@ -914,13 +914,13 @@ export default function SalesReport() {
                                 <CopyIcon className="h-3 w-3" />{booking.bid}
                               </button>
                               <span className="font-medium text-sm truncate">{booking.customer_name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                · CI: {booking.checked_in_at ? format(new Date(booking.checked_in_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : (booking.date ? format(new Date(booking.date), 'dd MMM yyyy', { locale: localeId }) : '-')}
+                                {' · '}
+                                CO: {booking.checked_out_at ? format(new Date(booking.checked_out_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
+                              </span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">{booking.room_name}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              CI: {booking.checked_in_at ? format(new Date(booking.checked_in_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
-                              {' · '}
-                              CO: {booking.checked_out_at ? format(new Date(booking.checked_out_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
-                            </div>
                           </div>
                           <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(booking.price + booking.price_2)}</span>
                         </div>
