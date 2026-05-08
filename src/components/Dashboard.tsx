@@ -971,6 +971,7 @@ export default function Dashboard() {
             setDepositMode(false);
           }}
         />
+        </Suspense>
 
         {/* Booking Modal */}
         <BookingModal
