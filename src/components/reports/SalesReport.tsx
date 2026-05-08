@@ -864,14 +864,28 @@ export default function SalesReport() {
                   {walkInBookings.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Tidak ada booking walk-in</p>
                   ) : (
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
                       {walkInBookings.map((booking) => (
-                        <div key={booking.id} className="flex justify-between items-center p-2 bg-muted/50 rounded">
-                          <div>
-                            <div className="font-medium text-sm">{booking.customer_name}</div>
-                            <div className="text-xs text-muted-foreground">{booking.room_name}</div>
+                        <div key={booking.id} className="flex justify-between items-start gap-3 p-2 bg-muted/50 rounded">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                onClick={() => { setSelectedBookingId(booking.id); setDetailPopupOpen(true); }}
+                                className="text-xs font-mono text-blue-600 hover:underline inline-flex items-center gap-1"
+                                title="Klik untuk detail / edit"
+                              >
+                                <CopyIcon className="h-3 w-3" />{booking.bid}
+                              </button>
+                              <span className="font-medium text-sm truncate">{booking.customer_name}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{booking.room_name}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              CI: {booking.checked_in_at ? format(new Date(booking.checked_in_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
+                              {' · '}
+                              CO: {booking.checked_out_at ? format(new Date(booking.checked_out_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
+                            </div>
                           </div>
-                          <span className="font-bold text-sm">{formatCurrency(booking.price + booking.price_2)}</span>
+                          <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(booking.price + booking.price_2)}</span>
                         </div>
                       ))}
                     </div>
@@ -887,14 +901,28 @@ export default function SalesReport() {
                   {otaBookings.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Tidak ada booking OTA</p>
                   ) : (
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
                       {otaBookings.map((booking) => (
-                        <div key={booking.id} className="flex justify-between items-center p-2 bg-muted/50 rounded">
-                          <div>
-                            <div className="font-medium text-sm">{booking.customer_name}</div>
-                            <div className="text-xs text-muted-foreground">{booking.room_name}</div>
+                        <div key={booking.id} className="flex justify-between items-start gap-3 p-2 bg-muted/50 rounded">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                onClick={() => { setSelectedBookingId(booking.id); setDetailPopupOpen(true); }}
+                                className="text-xs font-mono text-blue-600 hover:underline inline-flex items-center gap-1"
+                                title="Klik untuk detail / edit"
+                              >
+                                <CopyIcon className="h-3 w-3" />{booking.bid}
+                              </button>
+                              <span className="font-medium text-sm truncate">{booking.customer_name}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{booking.room_name}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              CI: {booking.checked_in_at ? format(new Date(booking.checked_in_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
+                              {' · '}
+                              CO: {booking.checked_out_at ? format(new Date(booking.checked_out_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
+                            </div>
                           </div>
-                          <span className="font-bold text-sm">{formatCurrency(booking.price + booking.price_2)}</span>
+                          <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(booking.price + booking.price_2)}</span>
                         </div>
                       ))}
                     </div>
