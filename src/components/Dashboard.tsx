@@ -738,6 +738,7 @@ export default function Dashboard() {
 
               {/* Tabs wrapper - keeps TabsContent working */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <Suspense fallback={<div className="flex items-center justify-center py-10 text-muted-foreground text-sm">Memuat...</div>}>
                 {/* Mobile: Dropdown */}
                 <div className="lg:hidden">
                   <Select value={activeTab} onValueChange={setActiveTab}>
