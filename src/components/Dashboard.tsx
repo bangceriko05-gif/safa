@@ -842,7 +842,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
-            {isFeatureEnabled("transactions") ? (
+            {activeTab === "transactions" && (isFeatureEnabled("transactions") ? (
               <TransactionManagement 
                 userRole={userRole} 
                 onEditBooking={handleEditBooking} 
@@ -860,11 +860,11 @@ export default function Dashboard() {
               />
             ) : (
               <FeatureInactiveNotice featureName="Transaksi" icon={Receipt} price={getFeatureInfo("transactions").price} description={getFeatureInfo("transactions").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="customers" forceMount className={`mt-6 ${activeTab !== "customers" ? "hidden" : ""}`}>
-            {isFeatureEnabled("customers") ? (
+            {activeTab === "customers" && (isFeatureEnabled("customers") ? (
               customersSection === "suppliers" ? (
                 <SupplierManagement />
               ) : customersSection === "crm" ? (
@@ -880,27 +880,27 @@ export default function Dashboard() {
               )
             ) : (
               <FeatureInactiveNotice featureName="Pelanggan" icon={Users} price={getFeatureInfo("customers").price} description={getFeatureInfo("customers").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
-            {isFeatureEnabled("reports") ? (
+            {activeTab === "reports" && (isFeatureEnabled("reports") ? (
               <Reports />
             ) : (
               <FeatureInactiveNotice featureName="Laporan" icon={FileText} price={getFeatureInfo("reports").price} description={getFeatureInfo("reports").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="settings" forceMount className={`mt-6 ${activeTab !== "settings" ? "hidden" : ""}`}>
-            {isFeatureEnabled("settings") ? (
+            {activeTab === "settings" && (isFeatureEnabled("settings") ? (
               <SettingsPage userRole={userRole} />
             ) : (
               <FeatureInactiveNotice featureName="Pengaturan" icon={Settings} price={getFeatureInfo("settings").price} description={getFeatureInfo("settings").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
-            {isFeatureEnabled("products_inventory") ? (
+            {activeTab === "rooms" && (isFeatureEnabled("products_inventory") ? (
               hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
                 <RoomManagement section={roomsSection} />
               ) : (
@@ -908,7 +908,7 @@ export default function Dashboard() {
               )
             ) : (
               <FeatureInactiveNotice featureName="Produk & Inventori" icon={Package} price={getFeatureInfo("products_inventory").price} description={getFeatureInfo("products_inventory").description} />
-            )}
+            ))}
           </TabsContent>
 
 
@@ -916,15 +916,15 @@ export default function Dashboard() {
           {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
             <>
               <TabsContent value="activity" forceMount className={`mt-6 ${activeTab !== "activity" ? "hidden" : ""}`}>
-                {isFeatureEnabled("activity_log") ? (
+                {activeTab === "activity" && (isFeatureEnabled("activity_log") ? (
                   <ActivityLog />
                 ) : (
                   <FeatureInactiveNotice featureName="Log Aktivitas" icon={History} price={getFeatureInfo("activity_log").price} description={getFeatureInfo("activity_log").description} />
-                )}
+                ))}
               </TabsContent>
 
               <TabsContent value="users" forceMount className={`mt-6 ${activeTab !== "users" ? "hidden" : ""}`}>
-                {isFeatureEnabled("user_management") ? (
+                {activeTab === "users" && (isFeatureEnabled("user_management") ? (
                   <Tabs defaultValue="user-management" className="space-y-4">
                     <TabsList className="grid w-full max-w-md" style={{ gridTemplateColumns: (userRole === "admin" || userRole === "owner") ? "1fr 1fr" : "1fr" }}>
                       <TabsTrigger value="user-management" className="flex items-center gap-2">
@@ -949,7 +949,7 @@ export default function Dashboard() {
                   </Tabs>
                 ) : (
                   <FeatureInactiveNotice featureName="Manajemen Pengguna" icon={UserCog} price={getFeatureInfo("user_management").price} description={getFeatureInfo("user_management").description} />
-                )}
+                ))}
               </TabsContent>
             </>
           )}
