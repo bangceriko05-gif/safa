@@ -951,9 +951,11 @@ export default function Dashboard() {
               </TabsContent>
             </>
           )}
+                </Suspense>
         </Tabs>
 
         {/* Deposit Form Modal */}
+        <Suspense fallback={null}>
         <DepositFormModal
           open={showDepositFormModal}
           roomId={depositRoomId}
