@@ -2149,8 +2149,10 @@ export type Database = {
           payment_proof_url: string | null
           process_status: string
           receipt_status: string
+          reff_no: string | null
           status: string
           store_id: string
+          supplier_description: string | null
           supplier_name: string
           updated_at: string
           verification_status: string
@@ -2167,8 +2169,10 @@ export type Database = {
           payment_proof_url?: string | null
           process_status?: string
           receipt_status?: string
+          reff_no?: string | null
           status?: string
           store_id: string
+          supplier_description?: string | null
           supplier_name?: string
           updated_at?: string
           verification_status?: string
@@ -2185,8 +2189,10 @@ export type Database = {
           payment_proof_url?: string | null
           process_status?: string
           receipt_status?: string
+          reff_no?: string | null
           status?: string
           store_id?: string
+          supplier_description?: string | null
           supplier_name?: string
           updated_at?: string
           verification_status?: string

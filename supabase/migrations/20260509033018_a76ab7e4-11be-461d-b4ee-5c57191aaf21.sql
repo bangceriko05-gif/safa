@@ -1,0 +1,1 @@
+ALTER TABLE public.purchases ADD COLUMN IF NOT EXISTS reff_no TEXT, ADD COLUMN IF NOT EXISTS supplier_description TEXT;
