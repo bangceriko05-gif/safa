@@ -15,8 +15,8 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
-import AddPurchaseModal from "./AddPurchaseModal";
 import PurchaseNoteDialog from "./PurchaseNoteDialog";
+import PurchaseForm from "./PurchaseForm";
 
 interface Purchase {
   id: string;
@@ -59,7 +59,7 @@ export default function PurchaseManagement() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [bidFilter, setBidFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [noteDialogPurchaseId, setNoteDialogPurchaseId] = useState<string | null>(null);
 
   const getDateRange = () => {
@@ -163,6 +163,18 @@ export default function PurchaseManagement() {
     return Array.from(methods);
   }, [purchases]);
 
+  if (showForm) {
+    return (
+      <PurchaseForm
+        onCancel={() => setShowForm(false)}
+        onSuccess={() => {
+          setShowForm(false);
+          fetchPurchases();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -171,7 +183,7 @@ export default function PurchaseManagement() {
             <CardTitle className="text-xl font-bold">Transaksi Pembelian</CardTitle>
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold text-red-500">Total: {formatCurrency(total)}</span>
-              <Button onClick={() => setShowAddModal(true)} className="bg-primary">
+              <Button onClick={() => setShowForm(true)} className="bg-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Pembelian
               </Button>
@@ -397,15 +409,6 @@ export default function PurchaseManagement() {
           )}
         </CardContent>
       </Card>
-
-      <AddPurchaseModal
-        open={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSuccess={() => {
-          setShowAddModal(false);
-          fetchPurchases();
-        }}
-      />
 
       <PurchaseNoteDialog
         purchaseId={noteDialogPurchaseId}
