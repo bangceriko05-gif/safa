@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -7,14 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Trash2, ChevronsUpDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { cn } from "@/lib/utils";
 
 interface PurchaseItem {
   product_name: string;
   quantity: number;
   unit_price: number;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  notes: string | null;
 }
 
 interface AddPurchaseModalProps {
@@ -28,10 +36,39 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
   const { methods: paymentMethods } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
   const [supplierName, setSupplierName] = useState("");
+  const [supplierDescription, setSupplierDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [reffNo, setReffNo] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([{ product_name: "", quantity: 1, unit_price: 0 }]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierOpen, setSupplierOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open || !currentStore) return;
+    (async () => {
+      const { data } = await supabase
+        .from("suppliers")
+        .select("id,name,notes")
+        .eq("store_id", currentStore.id)
+        .eq("is_active", true)
+        .order("name");
+      setSuppliers((data as Supplier[]) || []);
+    })();
+  }, [open, currentStore]);
+
+  const filteredSuppliers = useMemo(() => {
+    const q = supplierName.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter((s) => s.name.toLowerCase().includes(q));
+  }, [suppliers, supplierName]);
+
+  const selectSupplier = (s: Supplier) => {
+    setSupplierName(s.name);
+    setSupplierDescription(s.notes || "");
+    setSupplierOpen(false);
+  };
 
   const addItem = () => setItems([...items, { product_name: "", quantity: 1, unit_price: 0 }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
@@ -67,18 +104,19 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
         .insert({
           store_id: currentStore.id,
           supplier_name: supplierName,
+          supplier_description: supplierDescription || null,
           date,
           payment_method: paymentMethod,
+          reff_no: reffNo || null,
           notes: notes || null,
           amount: totalAmount,
           created_by: user.id,
-        })
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Insert items
       if (items.length > 0 && purchase) {
         const itemsData = items.map((item) => ({
           purchase_id: (purchase as any).id,
@@ -108,8 +146,10 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
 
   const resetForm = () => {
     setSupplierName("");
+    setSupplierDescription("");
     setDate(new Date().toISOString().split("T")[0]);
     setPaymentMethod("cash");
+    setReffNo("");
     setNotes("");
     setItems([{ product_name: "", quantity: 1, unit_price: 0 }]);
   };
@@ -121,10 +161,61 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
           <DialogTitle>Tambah Pembelian</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>Nama Supplier *</Label>
-              <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Masukkan nama supplier" />
+              <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+                <PopoverTrigger asChild>
+                  <div className="relative">
+                    <Input
+                      value={supplierName}
+                      onChange={(e) => {
+                        setSupplierName(e.target.value);
+                        if (!supplierOpen) setSupplierOpen(true);
+                      }}
+                      onFocus={() => setSupplierOpen(true)}
+                      placeholder="Masukkan nama supplier"
+                      className="pr-8"
+                    />
+                    <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0 w-[--radix-popover-trigger-width] max-h-64 overflow-y-auto"
+                  align="start"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                  {filteredSuppliers.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ada supplier</div>
+                  ) : (
+                    filteredSuppliers.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => selectSupplier(s)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-accent",
+                          supplierName === s.name && "bg-accent"
+                        )}
+                      >
+                        <div>
+                          <div className="font-medium">{s.name}</div>
+                          {s.notes && <div className="text-xs text-muted-foreground line-clamp-1">{s.notes}</div>}
+                        </div>
+                        {supplierName === s.name && <Check className="h-4 w-4" />}
+                      </button>
+                    ))
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label>Deskripsi Supplier</Label>
+              <Input
+                value={supplierDescription}
+                onChange={(e) => setSupplierDescription(e.target.value)}
+                placeholder="Deskripsi opsional"
+              />
             </div>
             <div>
               <Label>Tanggal</Label>
@@ -132,26 +223,36 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
             </div>
           </div>
 
-          <div>
-            <Label>Metode Pembayaran</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentMethods.length > 0
-                  ? paymentMethods.map((pm) => (
-                      <SelectItem key={pm.id} value={pm.name}>
-                        {pm.name}
-                      </SelectItem>
-                    ))
-                  : <>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="transfer">Transfer</SelectItem>
-                    </>
-                }
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Metode Pembayaran</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.length > 0
+                    ? paymentMethods.map((pm) => (
+                        <SelectItem key={pm.id} value={pm.name}>
+                          {pm.name}
+                        </SelectItem>
+                      ))
+                    : <>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="transfer">Transfer</SelectItem>
+                      </>
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>No. Reff</Label>
+              <Input
+                value={reffNo}
+                onChange={(e) => setReffNo(e.target.value)}
+                placeholder="No. referensi (opsional)"
+              />
+            </div>
           </div>
 
           <div>
