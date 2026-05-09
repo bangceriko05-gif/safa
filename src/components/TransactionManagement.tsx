@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, DollarSign, Search, CalendarIcon, Infinity } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Search, CalendarIcon, Infinity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import ListBooking from "./ListBooking";
 import ExpenseTransactionView from "./expense/ExpenseTransactionView";
 import IncomeTransactionView from "./income/IncomeTransactionView";
+import PurchaseManagement from "./purchase/PurchaseManagement";
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -31,6 +32,7 @@ interface TransactionManagementProps {
 
 const ALL_TABS = [
   { key: "list-booking", feature: "transactions.list_booking", label: "Penjualan", icon: TrendingUp },
+  { key: "purchases", feature: "transactions.purchases", label: "Pembelian", icon: ShoppingCart },
   { key: "expenses", feature: "transactions.expenses", label: "Pengeluaran", icon: TrendingDown },
   { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: DollarSign },
 ];
@@ -205,6 +207,9 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           )}
         </TabsContent>
 
+        <TabsContent value="purchases" className="mt-4">
+          <PurchaseManagement />
+        </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
           {isFeatureEnabled("transactions.expenses") ? (
