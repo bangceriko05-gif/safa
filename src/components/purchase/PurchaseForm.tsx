@@ -379,41 +379,6 @@ export default function PurchaseForm({
                 </tr>
                 <tr>
                   <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon All Transaksi</td>
-                  <td className="py-2 pr-2 text-right">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={discountAll}
-                      onChange={(e) => setDiscountAll(parseFloat(e.target.value) || 0)}
-                      className="h-8 text-right"
-                    />
-                  </td>
-                  <td></td>
-                </tr>
-                <tr className="border-t">
-                  <td colSpan={4} className="py-3 text-right font-bold">Grand Total</td>
-                  <td className="py-3 pr-2 text-right font-bold text-lg text-primary">{fmt(grandTotal)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-              <tfoot>
-                <tr className="border-b">
-                  <td className="py-2 text-right font-medium" colSpan={1}>Total Pesanan</td>
-                  <td className="py-2 pr-2 font-medium">{totalQty}</td>
-                  <td colSpan={4}></td>
-                </tr>
-                <tr>
-                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Subtotal</td>
-                  <td className="py-2 pr-2 text-right font-bold">{fmt(subtotal)}</td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon Item</td>
-                  <td className="py-2 pr-2 text-right font-bold">{fmt(discountItems)}</td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon All Transaksi</td>
                   <td className="py-2 pr-2 text-right font-bold">{fmt(discountAll)}</td>
                   <td className="py-2">
                     <Input
