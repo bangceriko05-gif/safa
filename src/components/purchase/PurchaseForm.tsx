@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import AddProductDialog, { PickedProduct } from "./AddProductDialog";
+import FileUploadGrid, { UploadedFile } from "./FileUploadGrid";
 
 interface Supplier {
   id: string;
@@ -50,6 +51,13 @@ export default function PurchaseForm({
   const [status, setStatus] = useState("tunda");
   const [items, setItems] = useState<Item[]>([]);
   const [discountAll, setDiscountAll] = useState(0);
+  const [paidAmount, setPaidAmount] = useState(0);
+  const [roundingMode, setRoundingMode] = useState<"none" | "up" | "down">("none");
+  const [roundingStep, setRoundingStep] = useState(100);
+  const [roundingAmount, setRoundingAmount] = useState(0);
+  const [roundingManual, setRoundingManual] = useState(false);
+  const [receiptFiles, setReceiptFiles] = useState<UploadedFile[]>([]);
+  const [paymentProofFiles, setPaymentProofFiles] = useState<UploadedFile[]>([]);
 
   const [productOpen, setProductOpen] = useState(false);
 
@@ -74,7 +82,29 @@ export default function PurchaseForm({
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const discountItems = items.reduce((s, i) => s + (i.discount || 0), 0);
-  const grandTotal = Math.max(0, subtotal - discountItems - discountAll);
+  const beforeRounding = Math.max(0, subtotal - discountItems - discountAll);
+
+  // Auto rounding (unless user manually overrode)
+  useEffect(() => {
+    if (roundingManual) return;
+    if (roundingMode === "none" || roundingStep <= 0) {
+      setRoundingAmount(0);
+      return;
+    }
+    const remainder = beforeRounding % roundingStep;
+    if (remainder === 0) {
+      setRoundingAmount(0);
+      return;
+    }
+    if (roundingMode === "up") {
+      setRoundingAmount(roundingStep - remainder);
+    } else {
+      setRoundingAmount(-remainder);
+    }
+  }, [beforeRounding, roundingMode, roundingStep, roundingManual]);
+
+  const grandTotal = Math.max(0, beforeRounding + roundingAmount);
+  const remainingPayment = Math.max(0, grandTotal - paidAmount);
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
 
   const fmt = (n: number) =>
@@ -103,6 +133,13 @@ export default function PurchaseForm({
           reff_no: reffNo || null,
           notes: notes || null,
           amount: grandTotal,
+          discount_all: discountAll,
+          rounding_amount: roundingAmount,
+          rounding_mode: roundingMode,
+          paid_amount: paidAmount,
+          receipt_files: receiptFiles as any,
+          payment_proof_files: paymentProofFiles as any,
+          payment_proof_url: paymentProofFiles[0]?.url || null,
           status,
           receipt_status: receiptStatus,
           created_by: user.id,
@@ -134,7 +171,7 @@ export default function PurchaseForm({
     }
   };
 
-  const isPaid = grandTotal > 0 && paymentMethod && paymentMethod.toLowerCase() !== "hutang";
+  const isPaid = grandTotal > 0 && paidAmount >= grandTotal;
 
   return (
     <div className="space-y-4">
@@ -342,20 +379,87 @@ export default function PurchaseForm({
                 </tr>
                 <tr>
                   <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon All Transaksi</td>
-                  <td className="py-2 pr-2 text-right">
+                  <td className="py-2 pr-2 text-right font-bold">{fmt(discountAll)}</td>
+                  <td className="py-2">
                     <Input
                       type="number"
                       min={0}
                       value={discountAll}
                       onChange={(e) => setDiscountAll(parseFloat(e.target.value) || 0)}
                       className="h-8 text-right"
+                      title="Diskon"
                     />
                   </td>
-                  <td></td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">
+                    Pembulatan
+                    <Select
+                      value={roundingMode}
+                      onValueChange={(v) => { setRoundingManual(false); setRoundingMode(v as any); }}
+                    >
+                      <SelectTrigger className="inline-flex h-7 w-32 ml-2 align-middle">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Tanpa</SelectItem>
+                        <SelectItem value="up">Ke Atas</SelectItem>
+                        <SelectItem value="down">Ke Bawah</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="py-2 pr-2 text-right">
+                    <Input
+                      type="number"
+                      value={roundingAmount}
+                      onChange={(e) => { setRoundingManual(true); setRoundingAmount(parseFloat(e.target.value) || 0); }}
+                      className="h-8 text-right"
+                    />
+                  </td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={roundingStep}
+                      onChange={(e) => { setRoundingManual(false); setRoundingStep(parseInt(e.target.value) || 100); }}
+                      className="h-8 text-right"
+                      title="Kelipatan pembulatan"
+                    />
+                  </td>
                 </tr>
                 <tr className="border-t">
-                  <td colSpan={4} className="py-3 text-right font-bold">Grand Total</td>
+                  <td colSpan={4} className="py-3 text-right font-bold">Total Ditagihkan</td>
                   <td className="py-3 pr-2 text-right font-bold text-lg text-primary">{fmt(grandTotal)}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Jumlah Terbayar</td>
+                  <td className="py-2 pr-2 text-right">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                      className="h-8 text-right"
+                    />
+                  </td>
+                  <td className="py-2">
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-7 px-1"
+                      onClick={() => setPaidAmount(grandTotal)}
+                    >
+                      Pembayaran
+                    </Button>
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Pembayaran yang belum lunas</td>
+                  <td className={`py-2 pr-2 text-right font-bold ${remainingPayment > 0 ? "text-destructive" : ""}`}>
+                    {fmt(remainingPayment)}
+                  </td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -363,6 +467,31 @@ export default function PurchaseForm({
           </div>
         </CardContent>
       </Card>
+
+      {/* File Lampiran */}
+      {currentStore && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">File Lampiran</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FileUploadGrid
+              label="Bukti Nota (opsional)"
+              files={receiptFiles}
+              onChange={setReceiptFiles}
+              storeId={currentStore.id}
+              folder="nota"
+            />
+            <FileUploadGrid
+              label="Bukti Pembayaran (opsional)"
+              files={paymentProofFiles}
+              onChange={setPaymentProofFiles}
+              storeId={currentStore.id}
+              folder="bukti-bayar"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Supplier picker dialog */}
       <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
