@@ -396,6 +396,108 @@ export default function PurchaseForm({
                   <td></td>
                 </tr>
               </tfoot>
+              <tfoot>
+                <tr className="border-b">
+                  <td className="py-2 text-right font-medium" colSpan={1}>Total Pesanan</td>
+                  <td className="py-2 pr-2 font-medium">{totalQty}</td>
+                  <td colSpan={4}></td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Subtotal</td>
+                  <td className="py-2 pr-2 text-right font-bold">{fmt(subtotal)}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon Item</td>
+                  <td className="py-2 pr-2 text-right font-bold">{fmt(discountItems)}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon All Transaksi</td>
+                  <td className="py-2 pr-2 text-right font-bold">{fmt(discountAll)}</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={discountAll}
+                      onChange={(e) => setDiscountAll(parseFloat(e.target.value) || 0)}
+                      className="h-8 text-right"
+                      title="Diskon"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">
+                    Pembulatan
+                    <Select
+                      value={roundingMode}
+                      onValueChange={(v) => { setRoundingManual(false); setRoundingMode(v as any); }}
+                    >
+                      <SelectTrigger className="inline-flex h-7 w-32 ml-2 align-middle">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Tanpa</SelectItem>
+                        <SelectItem value="up">Ke Atas</SelectItem>
+                        <SelectItem value="down">Ke Bawah</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="py-2 pr-2 text-right">
+                    <Input
+                      type="number"
+                      value={roundingAmount}
+                      onChange={(e) => { setRoundingManual(true); setRoundingAmount(parseFloat(e.target.value) || 0); }}
+                      className="h-8 text-right"
+                    />
+                  </td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={roundingStep}
+                      onChange={(e) => { setRoundingManual(false); setRoundingStep(parseInt(e.target.value) || 100); }}
+                      className="h-8 text-right"
+                      title="Kelipatan pembulatan"
+                    />
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td colSpan={4} className="py-3 text-right font-bold">Total Ditagihkan</td>
+                  <td className="py-3 pr-2 text-right font-bold text-lg text-primary">{fmt(grandTotal)}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Jumlah Terbayar</td>
+                  <td className="py-2 pr-2 text-right">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                      className="h-8 text-right"
+                    />
+                  </td>
+                  <td className="py-2">
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-7 px-1"
+                      onClick={() => setPaidAmount(grandTotal)}
+                    >
+                      Pembayaran
+                    </Button>
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Pembayaran yang belum lunas</td>
+                  <td className={`py-2 pr-2 text-right font-bold ${remainingPayment > 0 ? "text-destructive" : ""}`}>
+                    {fmt(remainingPayment)}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </CardContent>
