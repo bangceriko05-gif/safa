@@ -260,6 +260,15 @@ export default function PurchaseForm({
                   <SelectItem value="ditolak">Ditolak</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={verificationStatus} onValueChange={(v) => setVerificationStatus(v as any)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Unverified">Unverified</SelectItem>
+                  <SelectItem value="Verified">Verified</SelectItem>
+                </SelectContent>
+              </Select>
               <Button onClick={handleSubmit} disabled={loading}>
                 {loading ? "Menyimpan..." : "Simpan"}
               </Button>
