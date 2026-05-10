@@ -69,6 +69,36 @@ export default function PurchaseForm({
   const [activityLog, setActivityLog] = useState<
     { icon: any; label: string; user: string; at: string }[]
   >([]);
+  const [savedOnce, setSavedOnce] = useState(false);
+
+  const refreshActivityLog = async (id: string) => {
+    const { data } = await supabase
+      .from("purchases" as any)
+      .select("posted_by,posted_at,received_by,received_at,verified_by,verified_at")
+      .eq("id", id)
+      .single();
+    if (!data) return;
+    const d: any = data;
+    const ids = [d.posted_by, d.received_by, d.verified_by].filter(Boolean);
+    const nameMap = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id,name,email")
+        .in("id", ids as string[]);
+      (profs as any[])?.forEach((p) => nameMap.set(p.id, p.name || p.email || "Pengguna"));
+    }
+    const fmtAt = (iso: string) =>
+      format(new Date(iso), "dd MMM yyyy HH:mm", { locale: localeId });
+    const log: { icon: any; label: string; user: string; at: string }[] = [];
+    if (d.posted_at)
+      log.push({ icon: ClipboardList, label: "Diposting oleh", user: nameMap.get(d.posted_by) || "-", at: fmtAt(d.posted_at) });
+    if (d.received_at)
+      log.push({ icon: PackageCheck, label: "Diterima oleh", user: nameMap.get(d.received_by) || "-", at: fmtAt(d.received_at) });
+    if (d.verified_at)
+      log.push({ icon: ShieldCheck, label: "Diverifikasi oleh", user: nameMap.get(d.verified_by) || "-", at: fmtAt(d.verified_at) });
+    setActivityLog(log);
+  };
 
   // Auto-create draft purchase row when form opens to obtain a BID
   useEffect(() => {
@@ -220,7 +250,12 @@ export default function PurchaseForm({
       }
 
       toast.success("Pembelian berhasil disimpan!");
-      onSuccess();
+      setSavedOnce(true);
+      await refreshActivityLog(purchaseId);
+      // If verified -> finished, close form to return to list
+      if (verificationStatus === "Verified") {
+        onSuccess();
+      }
     } catch (e) {
       console.error(e);
       toast.error("Gagal menyimpan pembelian");
