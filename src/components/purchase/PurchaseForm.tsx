@@ -351,6 +351,22 @@ export default function PurchaseForm({
         </Card>
       </div>
 
+      {/* BID Card */}
+      <Card>
+        <CardContent className="pt-4 pb-4 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <div className="text-xs text-muted-foreground">BID Pembelian</div>
+              <div className="font-mono font-bold text-lg">
+                {creatingDraft ? "Membuat draft..." : bid || "-"}
+              </div>
+            </div>
+          </div>
+          <Badge variant="secondary" className="text-xs">Draft otomatis tersimpan</Badge>
+        </CardContent>
+      </Card>
+
       {/* Payment method */}
       <Card>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
