@@ -611,6 +611,42 @@ export default function PurchaseForm({
         </Card>
       )}
 
+      {/* Activity Log */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" /> Log Aktivitas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activityLog.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              {savedOnce
+                ? "Belum ada aktivitas tercatat."
+                : "Aktivitas akan tercatat setelah pembelian disimpan."}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {activityLog.map((e, i) => {
+                const Icon = e.icon;
+                return (
+                  <li key={i} className="flex items-start gap-3 text-sm border-l-2 border-primary pl-3 py-1">
+                    <Icon className="h-4 w-4 mt-0.5 text-primary" />
+                    <div className="flex-1">
+                      <div>
+                        <span className="text-muted-foreground">{e.label}</span>{" "}
+                        <span className="font-medium">{e.user}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{e.at}</div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Supplier picker dialog */}
       <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
         <DialogContent>
