@@ -468,6 +468,31 @@ export default function PurchaseForm({
         </CardContent>
       </Card>
 
+      {/* File Lampiran */}
+      {currentStore && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">File Lampiran</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FileUploadGrid
+              label="Bukti Nota (opsional)"
+              files={receiptFiles}
+              onChange={setReceiptFiles}
+              storeId={currentStore.id}
+              folder="nota"
+            />
+            <FileUploadGrid
+              label="Bukti Pembayaran (opsional)"
+              files={paymentProofFiles}
+              onChange={setPaymentProofFiles}
+              storeId={currentStore.id}
+              folder="bukti-bayar"
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Supplier picker dialog */}
       <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
         <DialogContent>
