@@ -93,6 +93,7 @@ export default function PurchaseManagement() {
         .select("*")
         .eq("store_id", currentStore.id)
         .eq("process_status", processTab)
+        .eq("is_draft", false)
         .gte("date", startStr)
         .lte("date", endStr)
         .order("date", { ascending: false });
