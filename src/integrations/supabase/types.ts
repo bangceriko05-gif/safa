@@ -2145,14 +2145,19 @@ export type Database = {
           date: string
           discount_all: number
           id: string
+          is_draft: boolean
           notes: string | null
           paid_amount: number
           payment_method: string | null
           payment_proof_files: Json
           payment_proof_url: string | null
+          posted_at: string | null
+          posted_by: string | null
           process_status: string
           receipt_files: Json
           receipt_status: string
+          received_at: string | null
+          received_by: string | null
           reff_no: string | null
           rounding_amount: number
           rounding_mode: string
@@ -2162,6 +2167,8 @@ export type Database = {
           supplier_name: string
           updated_at: string
           verification_status: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           amount?: number
@@ -2171,14 +2178,19 @@ export type Database = {
           date?: string
           discount_all?: number
           id?: string
+          is_draft?: boolean
           notes?: string | null
           paid_amount?: number
           payment_method?: string | null
           payment_proof_files?: Json
           payment_proof_url?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
           process_status?: string
           receipt_files?: Json
           receipt_status?: string
+          received_at?: string | null
+          received_by?: string | null
           reff_no?: string | null
           rounding_amount?: number
           rounding_mode?: string
@@ -2188,6 +2200,8 @@ export type Database = {
           supplier_name?: string
           updated_at?: string
           verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           amount?: number
@@ -2197,14 +2211,19 @@ export type Database = {
           date?: string
           discount_all?: number
           id?: string
+          is_draft?: boolean
           notes?: string | null
           paid_amount?: number
           payment_method?: string | null
           payment_proof_files?: Json
           payment_proof_url?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
           process_status?: string
           receipt_files?: Json
           receipt_status?: string
+          received_at?: string | null
+          received_by?: string | null
           reff_no?: string | null
           rounding_amount?: number
           rounding_mode?: string
@@ -2214,6 +2233,8 @@ export type Database = {
           supplier_name?: string
           updated_at?: string
           verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {

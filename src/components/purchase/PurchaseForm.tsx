@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -37,6 +37,9 @@ export default function PurchaseForm({
   const { currentStore } = useStore();
   const { methods: paymentMethods } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
+  const [purchaseId, setPurchaseId] = useState<string | null>(null);
+  const [bid, setBid] = useState<string>("");
+  const [creatingDraft, setCreatingDraft] = useState(true);
 
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -49,6 +52,7 @@ export default function PurchaseForm({
   const [reffNo, setReffNo] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("tunda");
+  const [verificationStatus, setVerificationStatus] = useState<"Unverified" | "Verified">("Unverified");
   const [items, setItems] = useState<Item[]>([]);
   const [discountAll, setDiscountAll] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
@@ -60,6 +64,77 @@ export default function PurchaseForm({
   const [paymentProofFiles, setPaymentProofFiles] = useState<UploadedFile[]>([]);
 
   const [productOpen, setProductOpen] = useState(false);
+
+  // Activity log entries (from saved record)
+  const [activityLog, setActivityLog] = useState<
+    { icon: any; label: string; user: string; at: string }[]
+  >([]);
+  const [savedOnce, setSavedOnce] = useState(false);
+
+  const refreshActivityLog = async (id: string) => {
+    const { data } = await supabase
+      .from("purchases" as any)
+      .select("posted_by,posted_at,received_by,received_at,verified_by,verified_at")
+      .eq("id", id)
+      .single();
+    if (!data) return;
+    const d: any = data;
+    const ids = [d.posted_by, d.received_by, d.verified_by].filter(Boolean);
+    const nameMap = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id,name,email")
+        .in("id", ids as string[]);
+      (profs as any[])?.forEach((p) => nameMap.set(p.id, p.name || p.email || "Pengguna"));
+    }
+    const fmtAt = (iso: string) =>
+      format(new Date(iso), "dd MMM yyyy HH:mm", { locale: localeId });
+    const log: { icon: any; label: string; user: string; at: string }[] = [];
+    if (d.posted_at)
+      log.push({ icon: ClipboardList, label: "Diposting oleh", user: nameMap.get(d.posted_by) || "-", at: fmtAt(d.posted_at) });
+    if (d.received_at)
+      log.push({ icon: PackageCheck, label: "Diterima oleh", user: nameMap.get(d.received_by) || "-", at: fmtAt(d.received_at) });
+    if (d.verified_at)
+      log.push({ icon: ShieldCheck, label: "Diverifikasi oleh", user: nameMap.get(d.verified_by) || "-", at: fmtAt(d.verified_at) });
+    setActivityLog(log);
+  };
+
+  // Auto-create draft purchase row when form opens to obtain a BID
+  useEffect(() => {
+    if (!currentStore) return;
+    if (purchaseId) return;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+        const { data, error } = await supabase
+          .from("purchases" as any)
+          .insert({
+            store_id: currentStore.id,
+            supplier_name: "",
+            date,
+            amount: 0,
+            status: "tunda",
+            process_status: "proses",
+            verification_status: "Unverified",
+            receipt_status: "Belum Diterima",
+            is_draft: true,
+            created_by: user.id,
+          } as any)
+          .select()
+          .single();
+        if (error) throw error;
+        setPurchaseId((data as any).id);
+        setBid((data as any).bid || "");
+      } catch (e) {
+        console.error(e);
+        toast.error("Gagal membuat draft pembelian");
+      } finally {
+        setCreatingDraft(false);
+      }
+    })();
+  }, [currentStore]);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -113,7 +188,7 @@ export default function PurchaseForm({
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
 
   const handleSubmit = async () => {
-    if (!currentStore) return;
+    if (!currentStore || !purchaseId) return;
     if (!supplier) return toast.error("Pilih supplier terlebih dahulu");
     if (items.length === 0) return toast.error("Tambahkan minimal 1 produk");
 
@@ -122,36 +197,49 @@ export default function PurchaseForm({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: purchase, error } = await supabase
-        .from("purchases" as any)
-        .insert({
-          store_id: currentStore.id,
-          supplier_name: supplier.name,
-          supplier_description: supplier.notes || null,
-          date,
-          payment_method: paymentMethod,
-          reff_no: reffNo || null,
-          notes: notes || null,
-          amount: grandTotal,
-          discount_all: discountAll,
-          rounding_amount: roundingAmount,
-          rounding_mode: roundingMode,
-          paid_amount: paidAmount,
-          receipt_files: receiptFiles as any,
-          payment_proof_files: paymentProofFiles as any,
-          payment_proof_url: paymentProofFiles[0]?.url || null,
-          status,
-          receipt_status: receiptStatus,
-          created_by: user.id,
-        } as any)
-        .select()
-        .single();
+      const update: any = {
+        supplier_name: supplier.name,
+        supplier_description: supplier.notes || null,
+        date,
+        payment_method: paymentMethod,
+        reff_no: reffNo || null,
+        notes: notes || null,
+        amount: grandTotal,
+        discount_all: discountAll,
+        rounding_amount: roundingAmount,
+        rounding_mode: roundingMode,
+        paid_amount: paidAmount,
+        receipt_files: receiptFiles as any,
+        payment_proof_files: paymentProofFiles as any,
+        payment_proof_url: paymentProofFiles[0]?.url || null,
+        status,
+        receipt_status: receiptStatus,
+        verification_status: verificationStatus,
+        is_draft: false,
+        posted_by: user.id,
+        posted_at: new Date().toISOString(),
+        process_status: verificationStatus === "Verified" ? "selesai" : "proses",
+      };
+      if (verificationStatus === "Verified") {
+        update.verified_by = user.id;
+        update.verified_at = new Date().toISOString();
+      }
+      if (receiptStatus === "Diterima") {
+        update.received_by = user.id;
+        update.received_at = new Date().toISOString();
+      }
 
+      const { error } = await supabase
+        .from("purchases" as any)
+        .update(update)
+        .eq("id", purchaseId);
       if (error) throw error;
 
-      if (items.length > 0 && purchase) {
+      // Replace items
+      await supabase.from("purchase_items" as any).delete().eq("purchase_id", purchaseId);
+      if (items.length > 0) {
         const itemsData = items.map((item) => ({
-          purchase_id: (purchase as any).id,
+          purchase_id: purchaseId,
           product_name: item.product_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
@@ -162,7 +250,12 @@ export default function PurchaseForm({
       }
 
       toast.success("Pembelian berhasil disimpan!");
-      onSuccess();
+      setSavedOnce(true);
+      await refreshActivityLog(purchaseId);
+      // If verified -> finished, close form to return to list
+      if (verificationStatus === "Verified") {
+        onSuccess();
+      }
     } catch (e) {
       console.error(e);
       toast.error("Gagal menyimpan pembelian");
@@ -200,6 +293,15 @@ export default function PurchaseForm({
                   <SelectItem value="tunda">Tunda</SelectItem>
                   <SelectItem value="disetujui">Disetujui</SelectItem>
                   <SelectItem value="ditolak">Ditolak</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={verificationStatus} onValueChange={(v) => setVerificationStatus(v as any)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Unverified">Unverified</SelectItem>
+                  <SelectItem value="Verified">Verified</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleSubmit} disabled={loading}>
@@ -283,6 +385,22 @@ export default function PurchaseForm({
           </CardContent>
         </Card>
       </div>
+
+      {/* BID Card */}
+      <Card>
+        <CardContent className="pt-4 pb-4 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <div className="text-xs text-muted-foreground">BID Pembelian</div>
+              <div className="font-mono font-bold text-lg">
+                {creatingDraft ? "Membuat draft..." : bid || "-"}
+              </div>
+            </div>
+          </div>
+          <Badge variant="secondary" className="text-xs">Draft otomatis tersimpan</Badge>
+        </CardContent>
+      </Card>
 
       {/* Payment method */}
       <Card>
@@ -492,6 +610,42 @@ export default function PurchaseForm({
           </CardContent>
         </Card>
       )}
+
+      {/* Activity Log */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" /> Log Aktivitas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activityLog.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              {savedOnce
+                ? "Belum ada aktivitas tercatat."
+                : "Aktivitas akan tercatat setelah pembelian disimpan."}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {activityLog.map((e, i) => {
+                const Icon = e.icon;
+                return (
+                  <li key={i} className="flex items-start gap-3 text-sm border-l-2 border-primary pl-3 py-1">
+                    <Icon className="h-4 w-4 mt-0.5 text-primary" />
+                    <div className="flex-1">
+                      <div>
+                        <span className="text-muted-foreground">{e.label}</span>{" "}
+                        <span className="font-medium">{e.user}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{e.at}</div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Supplier picker dialog */}
       <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
