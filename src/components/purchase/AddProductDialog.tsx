@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import DiscountDialog from "./DiscountDialog";
 
 export interface PickedProduct {
   product_id: string | null;
@@ -40,10 +41,14 @@ export default function AddProductDialog({
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [discount, setDiscount] = useState(0);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [discountMode, setDiscountMode] = useState<"rp" | "pct">("rp");
+  const [discountInput, setDiscountInput] = useState(0);
 
   useEffect(() => {
     if (!open || !currentStore) return;
     setSelected(null); setSearch(""); setQty(1); setUnitPrice(0); setDiscount(0);
+    setDiscountMode("rp"); setDiscountInput(0);
     (async () => {
       const { data } = await supabase
         .from("products")
@@ -140,12 +145,15 @@ export default function AddProductDialog({
               </div>
               <div>
                 <Label>Diskon (IDR)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => setDiscountOpen(true)}
+                >
+                  <span>{fmt(discount)}</span>
+                  <span className="text-xs text-muted-foreground">Atur</span>
+                </Button>
               </div>
               <div className="col-span-3 text-right text-sm">
                 Subtotal: <span className="font-bold">{fmt(qty * unitPrice - discount)}</span>
@@ -158,6 +166,18 @@ export default function AddProductDialog({
             <Button onClick={submit} disabled={!selected}>Tambahkan</Button>
           </div>
         </div>
+        <DiscountDialog
+          open={discountOpen}
+          onClose={() => setDiscountOpen(false)}
+          baseAmount={qty * unitPrice}
+          initialMode={discountMode}
+          initialValue={discountInput}
+          onApply={(abs, mode, value) => {
+            setDiscount(abs);
+            setDiscountMode(mode);
+            setDiscountInput(value);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

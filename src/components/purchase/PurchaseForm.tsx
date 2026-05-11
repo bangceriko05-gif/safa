@@ -16,6 +16,8 @@ import { id as localeId } from "date-fns/locale";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import AddProductDialog, { PickedProduct } from "./AddProductDialog";
 import FileUploadGrid, { UploadedFile } from "./FileUploadGrid";
+import DiscountDialog from "./DiscountDialog";
+import PaymentDialog from "./PaymentDialog";
 
 interface Supplier {
   id: string;
@@ -55,6 +57,10 @@ export default function PurchaseForm({
   const [verificationStatus, setVerificationStatus] = useState<"Unverified" | "Verified">("Unverified");
   const [items, setItems] = useState<Item[]>([]);
   const [discountAll, setDiscountAll] = useState(0);
+  const [discountAllMode, setDiscountAllMode] = useState<"rp" | "pct">("rp");
+  const [discountAllInput, setDiscountAllInput] = useState(0);
+  const [discountAllOpen, setDiscountAllOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [roundingMode, setRoundingMode] = useState<"none" | "up" | "down">("none");
   const [roundingStep, setRoundingStep] = useState(100);
@@ -508,14 +514,15 @@ export default function PurchaseForm({
                   <td colSpan={4} className="py-2 text-right text-muted-foreground">Diskon All Transaksi</td>
                   <td className="py-2 pr-2 text-right font-bold">{fmt(discountAll)}</td>
                   <td className="py-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={discountAll}
-                      onChange={(e) => setDiscountAll(parseFloat(e.target.value) || 0)}
-                      className="h-8 text-right"
-                      title="Diskon"
-                    />
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-7 px-1"
+                      onClick={() => setDiscountAllOpen(true)}
+                    >
+                      Diskon
+                    </Button>
                   </td>
                 </tr>
                 <tr>
@@ -562,13 +569,7 @@ export default function PurchaseForm({
                 <tr>
                   <td colSpan={4} className="py-2 text-right text-muted-foreground">Jumlah Terbayar</td>
                   <td className="py-2 pr-2 text-right">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={paidAmount}
-                      onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                      className="h-8 text-right"
-                    />
+                    <span className="font-bold">{fmt(paidAmount)}</span>
                   </td>
                   <td className="py-2">
                     <Button
@@ -576,7 +577,7 @@ export default function PurchaseForm({
                       variant="link"
                       size="sm"
                       className="h-7 px-1"
-                      onClick={() => setPaidAmount(grandTotal)}
+                      onClick={() => setPaymentDialogOpen(true)}
                     >
                       Pembayaran
                     </Button>
@@ -696,6 +697,35 @@ export default function PurchaseForm({
         open={productOpen}
         onClose={() => setProductOpen(false)}
         onAdd={(p) => setItems((prev) => [...prev, p])}
+      />
+
+      <DiscountDialog
+        open={discountAllOpen}
+        onClose={() => setDiscountAllOpen(false)}
+        baseAmount={Math.max(0, subtotal - discountItems)}
+        initialMode={discountAllMode}
+        initialValue={discountAllInput}
+        title="Diskon Semua Transaksi"
+        onApply={(abs, mode, value) => {
+          setDiscountAll(abs);
+          setDiscountAllMode(mode);
+          setDiscountAllInput(value);
+        }}
+      />
+
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        remaining={Math.max(0, grandTotal - paidAmount)}
+        paymentMethods={paymentMethods}
+        initialMethod={paymentMethod}
+        initialReff={reffNo}
+        initialAmount={Math.max(0, grandTotal - paidAmount)}
+        onApply={(method, reff, amount) => {
+          setPaymentMethod(method);
+          setReffNo(reff);
+          setPaidAmount((prev) => prev + amount);
+        }}
       />
     </div>
   );
