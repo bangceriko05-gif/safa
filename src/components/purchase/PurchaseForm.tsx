@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -279,6 +279,28 @@ export default function PurchaseForm({
               <div>
                 <h2 className="text-xl font-bold">Tambah Pembelian</h2>
                 <p className="text-sm text-muted-foreground">Pembelian baru</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">BID:</span>
+                  <span className="font-mono font-semibold text-sm">
+                    {creatingDraft ? "Membuat draft..." : bid || "-"}
+                  </span>
+                  {bid && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        navigator.clipboard.writeText(bid);
+                        toast.success("BID disalin");
+                      }}
+                      title="Salin BID"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  <Badge variant="secondary" className="text-[10px] h-5">Draft tersimpan</Badge>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -293,15 +315,6 @@ export default function PurchaseForm({
                   <SelectItem value="tunda">Tunda</SelectItem>
                   <SelectItem value="disetujui">Disetujui</SelectItem>
                   <SelectItem value="ditolak">Ditolak</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={verificationStatus} onValueChange={(v) => setVerificationStatus(v as any)}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Unverified">Unverified</SelectItem>
-                  <SelectItem value="Verified">Verified</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleSubmit} disabled={loading}>
@@ -375,32 +388,28 @@ export default function PurchaseForm({
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Catatan</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5" /> Verifikasi
+              </Label>
+              <Select value={verificationStatus} onValueChange={(v) => setVerificationStatus(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Unverified">Unverified</SelectItem>
+                  <SelectItem value="Verified">Verified</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Tidak ada"
-              rows={5}
+              rows={3}
             />
           </CardContent>
         </Card>
       </div>
-
-      {/* BID Card */}
-      <Card>
-        <CardContent className="pt-4 pb-4 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-primary" />
-            <div>
-              <div className="text-xs text-muted-foreground">BID Pembelian</div>
-              <div className="font-mono font-bold text-lg">
-                {creatingDraft ? "Membuat draft..." : bid || "-"}
-              </div>
-            </div>
-          </div>
-          <Badge variant="secondary" className="text-xs">Draft otomatis tersimpan</Badge>
-        </CardContent>
-      </Card>
 
       {/* Payment method */}
       <Card>
