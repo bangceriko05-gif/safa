@@ -32,10 +32,11 @@ export default function DiscountDialog({
     }
   }, [open, initialMode, initialValue]);
 
+  const clampedPct = Math.max(0, Math.min(100, value));
   const absolute =
     mode === "rp"
       ? Math.max(0, value)
-      : Math.max(0, Math.min(baseAmount, Math.round((baseAmount * value) / 100)));
+      : Math.max(0, Math.round((baseAmount * clampedPct) / 100));
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
@@ -63,15 +64,31 @@ export default function DiscountDialog({
             <Label className="text-xs text-muted-foreground">
               Nilai Diskon {mode === "pct" ? "(%)" : "(Rp)"}
             </Label>
-            <Input
-              type="number"
-              min={0}
-              max={mode === "pct" ? 100 : undefined}
-              value={value || ""}
-              onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
-              placeholder="0"
-              autoFocus
-            />
+            {mode === "rp" ? (
+              <Input
+                inputMode="numeric"
+                value={value ? new Intl.NumberFormat("id-ID").format(value) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^\d]/g, "");
+                  setValue(raw ? parseInt(raw, 10) : 0);
+                }}
+                placeholder="0"
+                autoFocus
+              />
+            ) : (
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={value || ""}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value) || 0;
+                  setValue(v > 100 ? 100 : v < 0 ? 0 : v);
+                }}
+                placeholder="0"
+                autoFocus
+              />
+            )}
           </div>
           <div className="rounded-md bg-muted px-3 py-2 text-sm flex items-center justify-between">
             <span className="text-muted-foreground">Diskon</span>
@@ -82,7 +99,7 @@ export default function DiscountDialog({
           <Button variant="outline" onClick={onClose}>Batal</Button>
           <Button
             onClick={() => {
-              onApply(absolute, mode, value);
+              onApply(absolute, mode, mode === "pct" ? clampedPct : value);
               onClose();
             }}
           >
