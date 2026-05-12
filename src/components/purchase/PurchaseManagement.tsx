@@ -360,14 +360,14 @@ export default function PurchaseManagement() {
                           value={purchase.receipt_status}
                           onValueChange={(val) => updateField(purchase.id, "receipt_status", val)}
                         >
-                          <SelectTrigger className="w-[150px] h-8">
+                          <SelectTrigger className="w-[170px] h-8">
                             <Badge
                               variant="outline"
-                              className={
+                              className={`whitespace-nowrap ${
                                 purchase.receipt_status === "Diterima"
                                   ? "bg-green-50 text-green-700 border-green-200"
                                   : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                              }
+                              }`}
                             >
                               {purchase.receipt_status === "Diterima" ? "✓" : "⏳"} {purchase.receipt_status}
                             </Badge>
@@ -386,11 +386,11 @@ export default function PurchaseManagement() {
                           <SelectTrigger className="w-[140px] h-8">
                             <Badge
                               variant="outline"
-                              className={
+                              className={`whitespace-nowrap ${
                                 purchase.verification_status === "Verified"
                                   ? "bg-green-50 text-green-700 border-green-200"
                                   : "bg-orange-50 text-orange-700 border-orange-200"
-                              }
+                              }`}
                             >
                               {purchase.verification_status === "Verified" ? "✓" : "⚠"} {purchase.verification_status}
                             </Badge>
