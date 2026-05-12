@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList, Copy } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList, Copy, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -32,16 +32,18 @@ interface Item extends PickedProduct {}
 export default function PurchaseForm({
   onCancel,
   onSuccess,
+  existingPurchaseId,
 }: {
   onCancel: () => void;
   onSuccess: () => void;
+  existingPurchaseId?: string | null;
 }) {
   const { currentStore } = useStore();
   const { methods: paymentMethods } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
-  const [purchaseId, setPurchaseId] = useState<string | null>(null);
+  const [purchaseId, setPurchaseId] = useState<string | null>(existingPurchaseId || null);
   const [bid, setBid] = useState<string>("");
-  const [creatingDraft, setCreatingDraft] = useState(true);
+  const [creatingDraft, setCreatingDraft] = useState(!existingPurchaseId);
 
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -80,12 +82,12 @@ export default function PurchaseForm({
   const refreshActivityLog = async (id: string) => {
     const { data } = await supabase
       .from("purchases" as any)
-      .select("posted_by,posted_at,received_by,received_at,verified_by,verified_at")
+      .select("created_by,created_at,posted_by,posted_at,received_by,received_at,verified_by,verified_at")
       .eq("id", id)
       .single();
     if (!data) return;
     const d: any = data;
-    const ids = [d.posted_by, d.received_by, d.verified_by].filter(Boolean);
+    const ids = [d.created_by, d.posted_by, d.received_by, d.verified_by].filter(Boolean);
     const nameMap = new Map<string, string>();
     if (ids.length > 0) {
       const { data: profs } = await supabase
@@ -97,6 +99,8 @@ export default function PurchaseForm({
     const fmtAt = (iso: string) =>
       format(new Date(iso), "dd MMM yyyy HH:mm", { locale: localeId });
     const log: { icon: any; label: string; user: string; at: string }[] = [];
+    if (d.created_at)
+      log.push({ icon: UserPlus, label: "Dibuat oleh", user: nameMap.get(d.created_by) || "-", at: fmtAt(d.created_at) });
     if (d.posted_at)
       log.push({ icon: ClipboardList, label: "Diposting oleh", user: nameMap.get(d.posted_by) || "-", at: fmtAt(d.posted_at) });
     if (d.received_at)
@@ -106,10 +110,70 @@ export default function PurchaseForm({
     setActivityLog(log);
   };
 
-  // Auto-create draft purchase row when form opens to obtain a BID
+  // Auto-create draft purchase row when form opens to obtain a BID,
+  // OR load an existing draft if existingPurchaseId is provided
   useEffect(() => {
     if (!currentStore) return;
-    if (purchaseId) return;
+    if (purchaseId && !existingPurchaseId) return;
+    if (existingPurchaseId) {
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from("purchases" as any)
+            .select("*")
+            .eq("id", existingPurchaseId)
+            .single();
+          if (error) throw error;
+          const d: any = data;
+          setBid(d.bid || "");
+          setDate(d.date || new Date().toISOString().split("T")[0]);
+          setPaymentMethod(d.payment_method || "cash");
+          setReffNo(d.reff_no || "");
+          setNotes(d.notes || "");
+          setStatus(d.status || "tunda");
+          setVerificationStatus(d.verification_status || "Unverified");
+          setReceiptStatus(d.receipt_status || "Belum Diterima");
+          setDiscountAll(Number(d.discount_all) || 0);
+          setRoundingAmount(Number(d.rounding_amount) || 0);
+          setRoundingMode(d.rounding_mode || "none");
+          setPaidAmount(Number(d.paid_amount) || 0);
+          setReceiptFiles((d.receipt_files as any) || []);
+          setPaymentProofFiles((d.payment_proof_files as any) || []);
+          if (d.supplier_name) {
+            setSupplier({
+              id: "",
+              name: d.supplier_name,
+              phone: null,
+              address: null,
+              notes: d.supplier_description || null,
+            });
+          }
+          // Load items
+          const { data: itemsData } = await supabase
+            .from("purchase_items" as any)
+            .select("*")
+            .eq("purchase_id", existingPurchaseId);
+          if (itemsData) {
+            setItems(
+              (itemsData as any[]).map((it) => ({
+                product_id: it.product_id || null,
+                product_name: it.product_name,
+                quantity: Number(it.quantity),
+                unit_price: Number(it.unit_price),
+                discount: Number(it.quantity) * Number(it.unit_price) - Number(it.subtotal),
+              }))
+            );
+          }
+          await refreshActivityLog(existingPurchaseId);
+        } catch (e) {
+          console.error(e);
+          toast.error("Gagal memuat draft pembelian");
+        } finally {
+          setCreatingDraft(false);
+        }
+      })();
+      return;
+    }
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -133,6 +197,7 @@ export default function PurchaseForm({
         if (error) throw error;
         setPurchaseId((data as any).id);
         setBid((data as any).bid || "");
+        await refreshActivityLog((data as any).id);
       } catch (e) {
         console.error(e);
         toast.error("Gagal membuat draft pembelian");
