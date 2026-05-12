@@ -226,6 +226,53 @@ export default function PurchaseForm({
     return suppliers.filter((s) => s.name.toLowerCase().includes(q));
   }, [suppliers, supplierSearch]);
 
+  // Autosave draft (debounced) so progress persists when user navigates away
+  useEffect(() => {
+    if (!purchaseId || creatingDraft) return;
+    const handle = setTimeout(async () => {
+      try {
+        await supabase
+          .from("purchases" as any)
+          .update({
+            supplier_name: supplier?.name || "",
+            supplier_description: supplier?.notes || null,
+            date,
+            payment_method: paymentMethod,
+            reff_no: reffNo || null,
+            notes: notes || null,
+            amount: Math.max(0, items.reduce((s, i) => s + i.quantity * i.unit_price, 0) - items.reduce((s, i) => s + (i.discount || 0), 0) - discountAll) + roundingAmount,
+            discount_all: discountAll,
+            rounding_amount: roundingAmount,
+            rounding_mode: roundingMode,
+            paid_amount: paidAmount,
+            receipt_files: receiptFiles as any,
+            payment_proof_files: paymentProofFiles as any,
+            status,
+            receipt_status: receiptStatus,
+            verification_status: verificationStatus,
+          })
+          .eq("id", purchaseId)
+          .eq("is_draft", true);
+        // Replace items
+        await supabase.from("purchase_items" as any).delete().eq("purchase_id", purchaseId);
+        if (items.length > 0) {
+          await supabase.from("purchase_items" as any).insert(
+            items.map((item) => ({
+              purchase_id: purchaseId,
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              subtotal: item.quantity * item.unit_price - (item.discount || 0),
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Autosave draft failed", e);
+      }
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [purchaseId, creatingDraft, supplier, date, paymentMethod, reffNo, notes, items, discountAll, roundingAmount, roundingMode, paidAmount, receiptFiles, paymentProofFiles, status, receiptStatus, verificationStatus]);
+
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const discountItems = items.reduce((s, i) => s + (i.discount || 0), 0);
   const beforeRounding = Math.max(0, subtotal - discountItems - discountAll);
