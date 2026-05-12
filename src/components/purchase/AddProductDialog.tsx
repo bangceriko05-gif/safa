@@ -137,10 +137,13 @@ export default function AddProductDialog({
               <div>
                 <Label>Harga (IDR)</Label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={unitPrice}
-                  onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                  inputMode="numeric"
+                  value={unitPrice ? new Intl.NumberFormat("id-ID").format(unitPrice) : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setUnitPrice(raw ? parseInt(raw, 10) : 0);
+                  }}
+                  placeholder="0"
                 />
               </div>
               <div>
