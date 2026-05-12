@@ -721,7 +721,7 @@ export default function PurchaseForm({
         initialMethod={paymentMethod}
         initialReff={reffNo}
         initialAmount={Math.max(0, grandTotal - paidAmount)}
-        onApply={(method, reff, amount) => {
+        onApply={({ method, reff, amount }) => {
           setPaymentMethod(method);
           setReffNo(reff);
           setPaidAmount((prev) => prev + amount);
