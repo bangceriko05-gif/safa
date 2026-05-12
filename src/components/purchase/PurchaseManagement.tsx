@@ -33,6 +33,7 @@ interface Purchase {
   process_status: string;
   store_id: string;
   created_by: string;
+  is_draft?: boolean;
 }
 
 const PROCESS_TABS = [
@@ -60,6 +61,7 @@ export default function PurchaseManagement() {
   const [bidFilter, setBidFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [noteDialogPurchaseId, setNoteDialogPurchaseId] = useState<string | null>(null);
 
   const getDateRange = () => {
@@ -88,15 +90,19 @@ export default function PurchaseManagement() {
       const startStr = format(start, "yyyy-MM-dd");
       const endStr = format(end, "yyyy-MM-dd");
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("purchases" as any)
         .select("*")
         .eq("store_id", currentStore.id)
         .eq("process_status", processTab)
-        .eq("is_draft", false)
         .gte("date", startStr)
         .lte("date", endStr)
         .order("date", { ascending: false });
+      // Only "proses" tab includes drafts so users can resume them
+      if (processTab !== "proses") {
+        query = query.eq("is_draft", false);
+      }
+      const { data, error } = await query;
 
       if (error) throw error;
       setPurchases((data as any[]) || []);
@@ -167,9 +173,11 @@ export default function PurchaseManagement() {
   if (showForm) {
     return (
       <PurchaseForm
-        onCancel={() => setShowForm(false)}
+        existingPurchaseId={editingPurchaseId}
+        onCancel={() => { setShowForm(false); setEditingPurchaseId(null); fetchPurchases(); }}
         onSuccess={() => {
           setShowForm(false);
+          setEditingPurchaseId(null);
           fetchPurchases();
         }}
       />
@@ -184,7 +192,7 @@ export default function PurchaseManagement() {
             <CardTitle className="text-xl font-bold">Transaksi Pembelian</CardTitle>
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold text-red-500">Total: {formatCurrency(total)}</span>
-              <Button onClick={() => setShowForm(true)} className="bg-primary">
+              <Button onClick={() => { setEditingPurchaseId(null); setShowForm(true); }} className="bg-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Pembelian
               </Button>
@@ -303,7 +311,11 @@ export default function PurchaseManagement() {
                 </TableHeader>
                 <TableBody>
                   {filteredPurchases.map((purchase) => (
-                    <TableRow key={purchase.id}>
+                    <TableRow
+                      key={purchase.id}
+                      className={purchase.is_draft ? "cursor-pointer hover:bg-accent/40" : ""}
+                      onClick={purchase.is_draft ? () => { setEditingPurchaseId(purchase.id); setShowForm(true); } : undefined}
+                    >
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(purchase.date), "dd/MM/yyyy")}
                       </TableCell>
@@ -312,9 +324,14 @@ export default function PurchaseManagement() {
                           <Badge variant="outline" className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200">
                             {purchase.bid}
                           </Badge>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyBid(purchase.bid)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); copyBid(purchase.bid); }}>
                             <Copy className="h-3 w-3" />
                           </Button>
+                          {purchase.is_draft && (
+                            <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-800 border-amber-200">
+                              Draft
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
