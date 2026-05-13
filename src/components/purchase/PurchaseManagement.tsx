@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Search, CalendarIcon, Copy, FileText } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -25,6 +26,7 @@ interface Purchase {
   date: string;
   notes: string | null;
   amount: number;
+  paid_amount?: number;
   payment_method: string;
   payment_proof_url: string | null;
   receipt_status: string;
@@ -40,7 +42,6 @@ const PROCESS_TABS = [
   { key: "proses", label: "Proses" },
   { key: "selesai", label: "Selesai" },
   { key: "batal", label: "Batal" },
-  { key: "dihapus", label: "Dihapus" },
 ];
 
 const TIME_RANGES = [
@@ -147,12 +148,22 @@ export default function PurchaseManagement() {
 
   const updateField = async (id: string, field: string, value: string) => {
     try {
+      const updates: any = { [field]: value };
+      // When status changes to "batal", also move process_status to "batal"
+      if (field === "status" && value === "batal") {
+        updates.process_status = "batal";
+      }
       const { error } = await supabase
         .from("purchases" as any)
-        .update({ [field]: value })
+        .update(updates)
         .eq("id", id);
       if (error) throw error;
-      setPurchases((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+      if (field === "status" && value === "batal") {
+        // remove from current view since it moves to batal tab
+        setPurchases((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        setPurchases((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+      }
       toast.success("Data berhasil diperbarui");
     } catch (error) {
       console.error("Error updating purchase:", error);
@@ -202,7 +213,7 @@ export default function PurchaseManagement() {
         <CardContent className="space-y-4">
           {/* Process status tabs */}
           <Tabs value={processTab} onValueChange={setProcessTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               {PROCESS_TABS.map((tab) => (
                 <TabsTrigger key={tab.key} value={tab.key}>
                   {tab.label}
@@ -412,12 +423,30 @@ export default function PurchaseManagement() {
                           <SelectContent>
                             <SelectItem value="tunda">tunda</SelectItem>
                             <SelectItem value="disetujui">disetujui</SelectItem>
-                            <SelectItem value="ditolak">ditolak</SelectItem>
+                            <SelectItem value="batal">batal</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="text-right font-bold text-primary whitespace-nowrap">
-                        {formatCurrency(Number(purchase.amount))}
+                      <TableCell className="text-right font-bold whitespace-nowrap">
+                        {(() => {
+                          const total = Number(purchase.amount) || 0;
+                          const paid = Number(purchase.paid_amount) || 0;
+                          const lunas = total > 0 && paid >= total;
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`cursor-help ${lunas ? "text-blue-600" : "text-red-600"}`}>
+                                    {formatCurrency(total)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {lunas ? "LUNAS" : "BELUM LUNAS"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}
