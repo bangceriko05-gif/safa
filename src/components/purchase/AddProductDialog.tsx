@@ -29,10 +29,12 @@ export default function AddProductDialog({
   open,
   onClose,
   onAdd,
+  editing,
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (p: PickedProduct) => void;
+  editing?: PickedProduct | null;
 }) {
   const { currentStore } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,7 +49,7 @@ export default function AddProductDialog({
 
   useEffect(() => {
     if (!open || !currentStore) return;
-    setSelected(null); setSearch(""); setQty(1); setUnitPrice(0); setDiscount(0);
+    setSearch("");
     setDiscountMode("rp"); setDiscountInput(0);
     (async () => {
       const { data } = await supabase
@@ -56,9 +58,19 @@ export default function AddProductDialog({
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
-      setProducts((data as Product[]) || []);
+      const list = (data as Product[]) || [];
+      setProducts(list);
+      if (editing) {
+        const found = list.find((p) => p.id === editing.product_id) || null;
+        setSelected(found || ({ id: editing.product_id || "", name: editing.product_name, purchase_price: editing.unit_price, price: 0, sku: null, stock_qty: 0 } as Product));
+        setQty(editing.quantity);
+        setUnitPrice(editing.unit_price);
+        setDiscount(editing.discount || 0);
+      } else {
+        setSelected(null); setQty(1); setUnitPrice(0); setDiscount(0);
+      }
     })();
-  }, [open, currentStore]);
+  }, [open, currentStore, editing]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -89,8 +101,8 @@ export default function AddProductDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Tambah Produk</DialogTitle>
+       <DialogHeader>
+          <DialogTitle>{editing ? "Ubah Produk" : "Tambah Produk"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="relative">
@@ -166,7 +178,7 @@ export default function AddProductDialog({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={onClose}>Batal</Button>
-            <Button onClick={submit} disabled={!selected}>Tambahkan</Button>
+            <Button onClick={submit} disabled={!selected}>{editing ? "Simpan" : "Tambahkan"}</Button>
           </div>
         </div>
         <DiscountDialog

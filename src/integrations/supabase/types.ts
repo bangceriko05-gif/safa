@@ -2151,6 +2151,7 @@ export type Database = {
           payment_method: string | null
           payment_proof_files: Json
           payment_proof_url: string | null
+          payments: Json
           posted_at: string | null
           posted_by: string | null
           process_status: string
@@ -2184,6 +2185,7 @@ export type Database = {
           payment_method?: string | null
           payment_proof_files?: Json
           payment_proof_url?: string | null
+          payments?: Json
           posted_at?: string | null
           posted_by?: string | null
           process_status?: string
@@ -2217,6 +2219,7 @@ export type Database = {
           payment_method?: string | null
           payment_proof_files?: Json
           payment_proof_url?: string | null
+          payments?: Json
           posted_at?: string | null
           posted_by?: string | null
           process_status?: string
