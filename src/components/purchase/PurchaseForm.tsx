@@ -367,6 +367,77 @@ export default function PurchaseForm({
         if (itemsError) throw itemsError;
       }
 
+      // If received, mirror items into Inventory > Stock Masuk using the same BID
+      if (receiptStatus === "Diterima") {
+        const validItems = items.filter((it) => it.product_id);
+        if (validItems.length === 0) {
+          toast.warning("Penerimaan dicatat, namun tidak ada produk dengan referensi inventori untuk dikirim ke stok masuk.");
+        } else {
+          // Find existing stock_in with same BID (idempotent)
+          const { data: existing } = await supabase
+            .from("stock_in" as any)
+            .select("id")
+            .eq("store_id", currentStore.id)
+            .eq("bid", bid)
+            .maybeSingle();
+
+          const totalAmount = validItems.reduce(
+            (s, it) => s + it.quantity * it.unit_price - (it.discount || 0),
+            0
+          );
+
+          let stockInId = (existing as any)?.id as string | undefined;
+
+          if (stockInId) {
+            await supabase
+              .from("stock_in" as any)
+              .update({
+                date,
+                supplier_name: supplier.name,
+                notes: notes || null,
+                total_amount: totalAmount,
+                status: "posted",
+                posted_at: new Date().toISOString(),
+                posted_by: user.id,
+              })
+              .eq("id", stockInId);
+            await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", stockInId);
+          } else {
+            const { data: created, error: siErr } = await supabase
+              .from("stock_in" as any)
+              .insert({
+                store_id: currentStore.id,
+                bid,
+                date,
+                supplier_name: supplier.name,
+                notes: notes || null,
+                total_amount: totalAmount,
+                status: "posted",
+                posted_at: new Date().toISOString(),
+                posted_by: user.id,
+                created_by: user.id,
+              })
+              .select("id")
+              .single();
+            if (siErr) throw siErr;
+            stockInId = (created as any).id;
+          }
+
+          const stockItems = validItems.map((it) => ({
+            stock_in_id: stockInId,
+            product_id: it.product_id,
+            product_name: it.product_name,
+            quantity: it.quantity,
+            unit_price: it.unit_price,
+            subtotal: it.quantity * it.unit_price - (it.discount || 0),
+          }));
+          const { error: siiErr } = await supabase
+            .from("stock_in_items" as any)
+            .insert(stockItems);
+          if (siiErr) throw siiErr;
+        }
+      }
+
       toast.success("Pembelian berhasil disimpan!");
       setSavedOnce(true);
       await refreshActivityLog(purchaseId);
