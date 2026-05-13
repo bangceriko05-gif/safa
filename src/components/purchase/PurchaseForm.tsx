@@ -367,6 +367,77 @@ export default function PurchaseForm({
         if (itemsError) throw itemsError;
       }
 
+      // If received, mirror items into Inventory > Stock Masuk using the same BID
+      if (receiptStatus === "Diterima") {
+        const validItems = items.filter((it) => it.product_id);
+        if (validItems.length === 0) {
+          toast.warning("Penerimaan dicatat, namun tidak ada produk dengan referensi inventori untuk dikirim ke stok masuk.");
+        } else {
+          // Find existing stock_in with same BID (idempotent)
+          const { data: existing } = await supabase
+            .from("stock_in" as any)
+            .select("id")
+            .eq("store_id", currentStore.id)
+            .eq("bid", bid)
+            .maybeSingle();
+
+          const totalAmount = validItems.reduce(
+            (s, it) => s + it.quantity * it.unit_price - (it.discount || 0),
+            0
+          );
+
+          let stockInId = (existing as any)?.id as string | undefined;
+
+          if (stockInId) {
+            await supabase
+              .from("stock_in" as any)
+              .update({
+                date,
+                supplier_name: supplier.name,
+                notes: notes || null,
+                total_amount: totalAmount,
+                status: "posted",
+                posted_at: new Date().toISOString(),
+                posted_by: user.id,
+              })
+              .eq("id", stockInId);
+            await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", stockInId);
+          } else {
+            const { data: created, error: siErr } = await supabase
+              .from("stock_in" as any)
+              .insert({
+                store_id: currentStore.id,
+                bid,
+                date,
+                supplier_name: supplier.name,
+                notes: notes || null,
+                total_amount: totalAmount,
+                status: "posted",
+                posted_at: new Date().toISOString(),
+                posted_by: user.id,
+                created_by: user.id,
+              })
+              .select("id")
+              .single();
+            if (siErr) throw siErr;
+            stockInId = (created as any).id;
+          }
+
+          const stockItems = validItems.map((it) => ({
+            stock_in_id: stockInId,
+            product_id: it.product_id,
+            product_name: it.product_name,
+            quantity: it.quantity,
+            unit_price: it.unit_price,
+            subtotal: it.quantity * it.unit_price - (it.discount || 0),
+          }));
+          const { error: siiErr } = await supabase
+            .from("stock_in_items" as any)
+            .insert(stockItems);
+          if (siiErr) throw siiErr;
+        }
+      }
+
       toast.success("Pembelian berhasil disimpan!");
       setSavedOnce(true);
       await refreshActivityLog(purchaseId);
@@ -529,40 +600,10 @@ export default function PurchaseForm({
         </Card>
       </div>
 
-      {/* Payment method */}
-      <Card>
-        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Metode Pembayaran</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-              <SelectContent>
-                {paymentMethods.length > 0
-                  ? paymentMethods.map((pm) => (
-                      <SelectItem key={pm.id} value={pm.name}>{pm.name}</SelectItem>
-                    ))
-                  : <>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="transfer">Transfer</SelectItem>
-                    </>}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>No. Reff</Label>
-            <Input
-              value={reffNo}
-              onChange={(e) => setReffNo(e.target.value)}
-              placeholder="No. referensi (opsional)"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Produk Pesanan */}
+      {/* List Produk Pesanan */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Produk Pesanan</CardTitle>
+          <CardTitle className="text-base">List Produk Pesanan</CardTitle>
           <Button onClick={() => setProductOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> Produk
           </Button>
@@ -591,9 +632,44 @@ export default function PurchaseForm({
                   items.map((it, i) => (
                     <tr key={i} className="border-b">
                       <td className="py-2 pr-2">{it.product_name}</td>
-                      <td className="py-2 pr-2">{it.quantity}</td>
-                      <td className="py-2 pr-2">{fmt(it.unit_price)}</td>
-                      <td className="py-2 pr-2">{fmt(it.discount || 0)}</td>
+                      <td className="py-2 pr-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={it.quantity}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value) || 0;
+                            setItems((prev) => prev.map((p, idx) => idx === i ? { ...p, quantity: v } : p));
+                          }}
+                          className="h-8 w-20"
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <Input
+                          inputMode="numeric"
+                          value={it.unit_price ? new Intl.NumberFormat("id-ID").format(it.unit_price) : ""}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            const v = raw ? parseInt(raw, 10) : 0;
+                            setItems((prev) => prev.map((p, idx) => idx === i ? { ...p, unit_price: v } : p));
+                          }}
+                          placeholder="0"
+                          className="h-8 w-28"
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <Input
+                          inputMode="numeric"
+                          value={it.discount ? new Intl.NumberFormat("id-ID").format(it.discount) : ""}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            const v = raw ? parseInt(raw, 10) : 0;
+                            setItems((prev) => prev.map((p, idx) => idx === i ? { ...p, discount: v } : p));
+                          }}
+                          placeholder="0"
+                          className="h-8 w-24"
+                        />
+                      </td>
                       <td className="py-2 pr-2 text-right font-medium">
                         {fmt(it.quantity * it.unit_price - (it.discount || 0))}
                       </td>
