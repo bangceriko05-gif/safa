@@ -152,6 +152,7 @@ export default function PurchaseManagement() {
       // When status changes to "batal", also move process_status to "batal"
       if (field === "status" && value === "batal") {
         updates.process_status = "batal";
+        updates.is_draft = false;
       }
       const { error } = await supabase
         .from("purchases" as any)
