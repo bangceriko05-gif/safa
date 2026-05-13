@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList, Copy, UserPlus } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Calendar as CalendarIcon, Check, FileText, ShieldCheck, PackageCheck, ClipboardList, Copy, UserPlus, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -72,6 +72,9 @@ export default function PurchaseForm({
   const [paymentProofFiles, setPaymentProofFiles] = useState<UploadedFile[]>([]);
 
   const [productOpen, setProductOpen] = useState(false);
+  const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
+  type PaymentEntry = { method: string; reff: string; amount: number; date: string };
+  const [payments, setPayments] = useState<PaymentEntry[]>([]);
 
   // Activity log entries (from saved record)
   const [activityLog, setActivityLog] = useState<
@@ -137,6 +140,7 @@ export default function PurchaseForm({
           setRoundingAmount(Number(d.rounding_amount) || 0);
           setRoundingMode(d.rounding_mode || "none");
           setPaidAmount(Number(d.paid_amount) || 0);
+          setPayments(((d.payments as any[]) || []) as PaymentEntry[]);
           setReceiptFiles((d.receipt_files as any) || []);
           setPaymentProofFiles((d.payment_proof_files as any) || []);
           if (d.supplier_name) {
@@ -245,6 +249,7 @@ export default function PurchaseForm({
             rounding_amount: roundingAmount,
             rounding_mode: roundingMode,
             paid_amount: paidAmount,
+            payments: payments as any,
             receipt_files: receiptFiles as any,
             payment_proof_files: paymentProofFiles as any,
             status,
@@ -271,7 +276,7 @@ export default function PurchaseForm({
       }
     }, 800);
     return () => clearTimeout(handle);
-  }, [purchaseId, creatingDraft, supplier, date, paymentMethod, reffNo, notes, items, discountAll, roundingAmount, roundingMode, paidAmount, receiptFiles, paymentProofFiles, status, receiptStatus, verificationStatus]);
+  }, [purchaseId, creatingDraft, supplier, date, paymentMethod, reffNo, notes, items, discountAll, roundingAmount, roundingMode, paidAmount, payments, receiptFiles, paymentProofFiles, status, receiptStatus, verificationStatus]);
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const discountItems = items.reduce((s, i) => s + (i.discount || 0), 0);
@@ -327,6 +332,7 @@ export default function PurchaseForm({
         rounding_amount: roundingAmount,
         rounding_mode: roundingMode,
         paid_amount: paidAmount,
+        payments: payments as any,
         receipt_files: receiptFiles as any,
         payment_proof_files: paymentProofFiles as any,
         payment_proof_url: paymentProofFiles[0]?.url || null,
@@ -632,51 +638,31 @@ export default function PurchaseForm({
                   items.map((it, i) => (
                     <tr key={i} className="border-b">
                       <td className="py-2 pr-2">{it.product_name}</td>
-                      <td className="py-2 pr-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={it.quantity}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value) || 0;
-                            setItems((prev) => prev.map((p, idx) => idx === i ? { ...p, quantity: v } : p));
-                          }}
-                          className="h-8 w-20"
-                        />
-                      </td>
-                      <td className="py-2 pr-2">
-                        <Input
-                          inputMode="numeric"
-                          value={it.unit_price ? new Intl.NumberFormat("id-ID").format(it.unit_price) : ""}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/\D/g, "");
-                            const v = raw ? parseInt(raw, 10) : 0;
-                            setItems((prev) => prev.map((p, idx) => idx === i ? { ...p, unit_price: v } : p));
-                          }}
-                          placeholder="0"
-                          className="h-8 w-28"
-                        />
-                      </td>
-                      <td className="py-2 pr-2">
-                        <Input
-                          inputMode="numeric"
-                          value={it.discount ? new Intl.NumberFormat("id-ID").format(it.discount) : ""}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/\D/g, "");
-                            const v = raw ? parseInt(raw, 10) : 0;
-                            setItems((prev) => prev.map((p, idx) => idx === i ? { ...p, discount: v } : p));
-                          }}
-                          placeholder="0"
-                          className="h-8 w-24"
-                        />
-                      </td>
+                      <td className="py-2 pr-2">{it.quantity}</td>
+                      <td className="py-2 pr-2">{fmt(it.unit_price)}</td>
+                      <td className="py-2 pr-2">{fmt(it.discount || 0)}</td>
                       <td className="py-2 pr-2 text-right font-medium">
                         {fmt(it.quantity * it.unit_price - (it.discount || 0))}
                       </td>
                       <td className="py-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(i)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-blue-600 hover:text-blue-700"
+                            onClick={() => { setEditingItemIdx(i); setProductOpen(true); }}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> Ubah
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-destructive hover:text-destructive"
+                            onClick={() => removeItem(i)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Hapus
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -778,6 +764,42 @@ export default function PurchaseForm({
                   </td>
                   <td></td>
                 </tr>
+                {payments.length > 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-3">
+                      <div className="flex flex-wrap gap-2 justify-end">
+                        {payments.map((p, idx) => (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-3 rounded-md bg-green-600 text-white px-3 py-2 text-xs shadow-sm"
+                          >
+                            <div className="flex flex-col leading-tight">
+                              <span className="font-semibold">{p.method}</span>
+                              <span className="opacity-90">{p.reff || "-"}</span>
+                            </div>
+                            <div className="flex flex-col leading-tight text-right">
+                              <span className="font-semibold">{fmt(p.amount)}</span>
+                              <span className="opacity-90">
+                                {format(new Date(p.date), "dd-MMM-yyyy", { locale: localeId })}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPayments((prev) => prev.filter((_, j) => j !== idx));
+                                setPaidAmount((prev) => Math.max(0, prev - p.amount));
+                              }}
+                              className="ml-1 rounded-full hover:bg-white/20 p-0.5"
+                              title="Hapus pembayaran"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tfoot>
             </table>
           </div>
@@ -883,8 +905,16 @@ export default function PurchaseForm({
 
       <AddProductDialog
         open={productOpen}
-        onClose={() => setProductOpen(false)}
-        onAdd={(p) => setItems((prev) => [...prev, p])}
+        onClose={() => { setProductOpen(false); setEditingItemIdx(null); }}
+        editing={editingItemIdx !== null ? items[editingItemIdx] : null}
+        onAdd={(p) => {
+          if (editingItemIdx !== null) {
+            setItems((prev) => prev.map((it, idx) => idx === editingItemIdx ? p : it));
+            setEditingItemIdx(null);
+          } else {
+            setItems((prev) => [...prev, p]);
+          }
+        }}
       />
 
       <DiscountDialog
@@ -913,6 +943,10 @@ export default function PurchaseForm({
           setPaymentMethod(method);
           setReffNo(reff);
           setPaidAmount((prev) => prev + amount);
+          setPayments((prev) => [
+            ...prev,
+            { method, reff, amount, date: new Date().toISOString() },
+          ]);
         }}
       />
     </div>
