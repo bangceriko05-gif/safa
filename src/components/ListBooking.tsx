@@ -93,6 +93,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   });
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [previewBooking, setPreviewBooking] = useState<any>(null);
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -556,17 +557,13 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   <>
                                     <button
                                       onClick={() => {
-                                        if (hasPermission("edit_bookings") && canEdit(booking)) {
-                                          onEditBooking(booking);
-                                        }
+                                        setPreviewBooking(booking);
                                       }}
                                       className={cn(
                                         "font-mono text-sm hover:underline",
-                                        hasPermission("edit_bookings") && canEdit(booking)
-                                          ? "cursor-pointer text-primary"
-                                          : "cursor-default"
+                                        "cursor-pointer text-primary",
                                       )}
-                                      title={hasPermission("edit_bookings") && canEdit(booking) ? "Klik untuk edit" : undefined}
+                                      title="Lihat preview"
                                     >
                                       {booking.bid}
                                     </button>
