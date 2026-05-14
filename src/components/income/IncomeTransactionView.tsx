@@ -1489,6 +1489,19 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           </div>
         </DialogContent>
       </Dialog>
+      <TransactionBidPopup
+        open={!!previewIncome}
+        onClose={() => setPreviewIncome(null)}
+        type="income"
+        data={previewIncome as any}
+        onEdit={() => {
+          if (previewIncome) {
+            const inc = previewIncome;
+            setPreviewIncome(null);
+            openDetailView(inc);
+          }
+        }}
+      />
     </div>
   );
 }
