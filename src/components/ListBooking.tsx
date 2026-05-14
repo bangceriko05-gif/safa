@@ -836,6 +836,21 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           </div>
         )}
     </Tabs>
+    <TransactionBidPopup
+      open={!!previewBooking}
+      onClose={() => setPreviewBooking(null)}
+      type="booking"
+      data={previewBooking}
+      onEdit={() => {
+        if (previewBooking && hasPermission("edit_bookings") && canEdit(previewBooking)) {
+          const b = previewBooking;
+          setPreviewBooking(null);
+          onEditBooking(b);
+        } else {
+          setPreviewBooking(null);
+        }
+      }}
+    />
   </div>
   );
 }
