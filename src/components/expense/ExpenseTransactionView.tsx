@@ -84,6 +84,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   // Detail/Edit expense inline state
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [previewExpense, setPreviewExpense] = useState<Expense | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "" });
@@ -1025,7 +1026,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => openDetailView(expense)}
+                            onClick={() => setPreviewExpense(expense)}
                           >
                             {expense.bid || '-'}
                           </Badge>
