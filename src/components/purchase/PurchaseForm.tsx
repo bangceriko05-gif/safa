@@ -312,8 +312,9 @@ export default function PurchaseForm({
 
   const handleSubmit = async () => {
     if (!currentStore || !purchaseId) return;
-    if (!supplier) return toast.error("Pilih supplier terlebih dahulu");
-    if (items.length === 0) return toast.error("Tambahkan minimal 1 produk");
+    const isCancelled = status === "batal" || status === "ditolak";
+    if (!isCancelled && !supplier) return toast.error("Pilih supplier terlebih dahulu");
+    if (!isCancelled && items.length === 0) return toast.error("Tambahkan minimal 1 produk");
 
     setLoading(true);
     try {
@@ -321,8 +322,8 @@ export default function PurchaseForm({
       if (!user) throw new Error("Not authenticated");
 
       const update: any = {
-        supplier_name: supplier.name,
-        supplier_description: supplier.notes || null,
+        supplier_name: supplier?.name || "",
+        supplier_description: supplier?.notes || null,
         date,
         payment_method: paymentMethod,
         reff_no: reffNo || null,
@@ -342,7 +343,11 @@ export default function PurchaseForm({
         is_draft: false,
         posted_by: user.id,
         posted_at: new Date().toISOString(),
-        process_status: verificationStatus === "Verified" ? "selesai" : "proses",
+        process_status: isCancelled
+          ? "batal"
+          : verificationStatus === "Verified"
+            ? "selesai"
+            : "proses",
       };
       if (verificationStatus === "Verified") {
         update.verified_by = user.id;
@@ -507,9 +512,9 @@ export default function PurchaseForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tunda">Tunda</SelectItem>
-                  <SelectItem value="disetujui">Disetujui</SelectItem>
-                  <SelectItem value="ditolak">Ditolak</SelectItem>
+              <SelectItem value="tunda">Tunda</SelectItem>
+              <SelectItem value="disetujui">Disetujui</SelectItem>
+              <SelectItem value="batal">Batal</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleSubmit} disabled={loading}>
