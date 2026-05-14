@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, ChevronLeft, ChevronRight, List, Printer, ImageIcon, Search, Copy, Infinity, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, addDays, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { DateRange } from "react-day-picker";
 import {
   Select,
