@@ -20,6 +20,7 @@ import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../reports/ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 
 interface Expense {
   id: string;
