@@ -1182,6 +1182,20 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         </DialogContent>
       </Dialog>
 
+      <TransactionBidPopup
+        open={!!previewExpense}
+        onClose={() => setPreviewExpense(null)}
+        type="expense"
+        data={previewExpense as any}
+        onEdit={() => {
+          if (previewExpense) {
+            const exp = previewExpense;
+            setPreviewExpense(null);
+            openDetailView(exp);
+          }
+        }}
+      />
+
     </div>
   );
 }
