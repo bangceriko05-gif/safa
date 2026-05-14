@@ -63,6 +63,7 @@ export default function PurchaseForm({
   const [discountAllInput, setDiscountAllInput] = useState(0);
   const [discountAllOpen, setDiscountAllOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editingPaymentIdx, setEditingPaymentIdx] = useState<number | null>(null);
   const [paidAmount, setPaidAmount] = useState(0);
   const [roundingMode, setRoundingMode] = useState<"none" | "up" | "down">("none");
   const [roundingStep, setRoundingStep] = useState(100);
@@ -756,7 +757,15 @@ export default function PurchaseForm({
                       variant="link"
                       size="sm"
                       className="h-7 px-1"
-                      onClick={() => setPaymentDialogOpen(true)}
+                      onClick={() => {
+                        // If a payment already exists, edit the most recent one
+                        if (payments.length > 0) {
+                          setEditingPaymentIdx(payments.length - 1);
+                        } else {
+                          setEditingPaymentIdx(null);
+                        }
+                        setPaymentDialogOpen(true);
+                      }}
                     >
                       Pembayaran
                     </Button>
@@ -938,20 +947,45 @@ export default function PurchaseForm({
 
       <PaymentDialog
         open={paymentDialogOpen}
-        onClose={() => setPaymentDialogOpen(false)}
-        remaining={Math.max(0, grandTotal - paidAmount)}
+        onClose={() => { setPaymentDialogOpen(false); setEditingPaymentIdx(null); }}
+        remaining={
+          editingPaymentIdx !== null
+            ? Math.max(0, grandTotal - paidAmount + (payments[editingPaymentIdx]?.amount || 0))
+            : Math.max(0, grandTotal - paidAmount)
+        }
         paymentMethods={paymentMethods}
-        initialMethod={paymentMethod}
-        initialReff={reffNo}
-        initialAmount={Math.max(0, grandTotal - paidAmount)}
+        initialMethod={
+          editingPaymentIdx !== null ? payments[editingPaymentIdx]?.method : paymentMethod
+        }
+        initialReff={
+          editingPaymentIdx !== null ? payments[editingPaymentIdx]?.reff : reffNo
+        }
+        initialAmount={
+          editingPaymentIdx !== null
+            ? payments[editingPaymentIdx]?.amount
+            : Math.max(0, grandTotal - paidAmount)
+        }
         onApply={({ method, reff, amount }) => {
           setPaymentMethod(method);
           setReffNo(reff);
-          setPaidAmount((prev) => prev + amount);
-          setPayments((prev) => [
-            ...prev,
-            { method, reff, amount, date: new Date().toISOString() },
-          ]);
+          if (editingPaymentIdx !== null) {
+            const oldAmount = payments[editingPaymentIdx]?.amount || 0;
+            setPaidAmount((prev) => Math.max(0, prev - oldAmount + amount));
+            setPayments((prev) =>
+              prev.map((p, j) =>
+                j === editingPaymentIdx
+                  ? { ...p, method, reff, amount, date: new Date().toISOString() }
+                  : p,
+              ),
+            );
+            setEditingPaymentIdx(null);
+          } else {
+            setPaidAmount((prev) => prev + amount);
+            setPayments((prev) => [
+              ...prev,
+              { method, reff, amount, date: new Date().toISOString() },
+            ]);
+          }
         }}
       />
     </div>
