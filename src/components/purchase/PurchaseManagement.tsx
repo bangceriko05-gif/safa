@@ -18,6 +18,7 @@ import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import PurchaseNoteDialog from "./PurchaseNoteDialog";
 import PurchaseForm from "./PurchaseForm";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 
 interface Purchase {
   id: string;
@@ -64,6 +65,7 @@ export default function PurchaseManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [noteDialogPurchaseId, setNoteDialogPurchaseId] = useState<string | null>(null);
+  const [previewPurchase, setPreviewPurchase] = useState<Purchase | null>(null);
 
   const getDateRange = () => {
     const now = new Date();
@@ -333,7 +335,11 @@ export default function PurchaseManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Badge variant="outline" className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setPreviewPurchase(purchase); }}
+                          >
                             {purchase.bid}
                           </Badge>
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); copyBid(purchase.bid); }}>
@@ -461,6 +467,20 @@ export default function PurchaseManagement() {
       <PurchaseNoteDialog
         purchaseId={noteDialogPurchaseId}
         onClose={() => setNoteDialogPurchaseId(null)}
+      />
+
+      <TransactionBidPopup
+        open={!!previewPurchase}
+        onClose={() => setPreviewPurchase(null)}
+        type="purchase"
+        data={previewPurchase as any}
+        onEdit={() => {
+          if (previewPurchase) {
+            setEditingPurchaseId(previewPurchase.id);
+            setShowForm(true);
+            setPreviewPurchase(null);
+          }
+        }}
       />
     </div>
   );

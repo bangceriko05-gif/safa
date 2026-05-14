@@ -20,6 +20,7 @@ import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../reports/ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 
 interface Expense {
   id: string;
@@ -84,6 +85,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   // Detail/Edit expense inline state
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [previewExpense, setPreviewExpense] = useState<Expense | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "" });
@@ -1025,7 +1027,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => openDetailView(expense)}
+                            onClick={() => setPreviewExpense(expense)}
                           >
                             {expense.bid || '-'}
                           </Badge>
@@ -1180,6 +1182,20 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           </div>
         </DialogContent>
       </Dialog>
+
+      <TransactionBidPopup
+        open={!!previewExpense}
+        onClose={() => setPreviewExpense(null)}
+        type="expense"
+        data={previewExpense as any}
+        onEdit={() => {
+          if (previewExpense) {
+            const exp = previewExpense;
+            setPreviewExpense(null);
+            openDetailView(exp);
+          }
+        }}
+      />
 
     </div>
   );

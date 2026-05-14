@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, ChevronLeft, ChevronRight, List, Printer, ImageIcon, Search, Copy, Infinity, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, addDays, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { DateRange } from "react-day-picker";
 import {
   Select,
@@ -92,6 +93,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   });
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [previewBooking, setPreviewBooking] = useState<any>(null);
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -555,17 +557,13 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   <>
                                     <button
                                       onClick={() => {
-                                        if (hasPermission("edit_bookings") && canEdit(booking)) {
-                                          onEditBooking(booking);
-                                        }
+                                        setPreviewBooking(booking);
                                       }}
                                       className={cn(
                                         "font-mono text-sm hover:underline",
-                                        hasPermission("edit_bookings") && canEdit(booking)
-                                          ? "cursor-pointer text-primary"
-                                          : "cursor-default"
+                                        "cursor-pointer text-primary",
                                       )}
-                                      title={hasPermission("edit_bookings") && canEdit(booking) ? "Klik untuk edit" : undefined}
+                                      title="Lihat preview"
                                     >
                                       {booking.bid}
                                     </button>
@@ -838,6 +836,21 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           </div>
         )}
     </Tabs>
+    <TransactionBidPopup
+      open={!!previewBooking}
+      onClose={() => setPreviewBooking(null)}
+      type="booking"
+      data={previewBooking}
+      onEdit={() => {
+        if (previewBooking && hasPermission("edit_bookings") && canEdit(previewBooking)) {
+          const b = previewBooking;
+          setPreviewBooking(null);
+          onEditBooking(b);
+        } else {
+          setPreviewBooking(null);
+        }
+      }}
+    />
   </div>
   );
 }
