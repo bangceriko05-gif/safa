@@ -22,6 +22,7 @@ import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../reports/ReportDateFilter";
 import { DateRange } from "react-day-picker";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 
 interface Income {
   id: string;
@@ -70,6 +71,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
 
   // Detail/Edit income inline state
   const [viewingIncome, setViewingIncome] = useState<Income | null>(null);
+  const [previewIncome, setPreviewIncome] = useState<Income | null>(null);
   const [isEditingIncome, setIsEditingIncome] = useState(false);
   const [editIncomeForm, setEditIncomeForm] = useState({ description: "", amount: "", customer_name: "", customer_phone: "", payment_method: "", reference_no: "", date: "" });
   const [editProducts, setEditProducts] = useState<{ product_id: string; product_name: string; product_price: number; quantity: number; subtotal: number; discount_type: "percentage" | "fixed"; discount_value: string }[]>([]);
@@ -1330,7 +1332,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => openDetailView(income)}
+                            onClick={() => setPreviewIncome(income)}
                           >
                             {income.bid || '-'}
                           </Badge>
