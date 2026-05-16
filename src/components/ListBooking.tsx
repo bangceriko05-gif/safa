@@ -449,7 +449,6 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     if (activeSubTab === "proses") return b.status === "BO" || b.status === "CI";
     if (activeSubTab === "selesai") return b.status === "CO";
     if (activeSubTab === "batal") return b.status === "BATAL";
-    if (activeSubTab === "dihapus") return b.status === "DIHAPUS";
     return b.status !== "BATAL" && b.status !== "DIHAPUS";
   });
 
@@ -481,11 +480,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList className="grid w-full max-w-lg grid-cols-4">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="proses">Proses</TabsTrigger>
           <TabsTrigger value="selesai">Selesai</TabsTrigger>
           <TabsTrigger value="batal">Batal</TabsTrigger>
-          <TabsTrigger value="dihapus">Dihapus</TabsTrigger>
         </TabsList>
 
         {/* Shared Date Filter & Search - visible for all tabs except batal */}
@@ -494,8 +492,8 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  {activeSubTab === "dihapus" ? <Trash2 className="h-5 w-5" /> : <CalendarIcon className="h-5 w-5" />}
-                  Penjualan - {activeSubTab === "proses" ? "Proses" : activeSubTab === "selesai" ? "Selesai" : "Dihapus"}
+                  <CalendarIcon className="h-5 w-5" />
+                  Penjualan - {activeSubTab === "proses" ? "Proses" : "Selesai"}
                 </CardTitle>
                 {activeSubTab === "proses" && onAddBooking && (
                   <Button onClick={onAddBooking} size="sm">
@@ -724,15 +722,6 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                     </DropdownMenuItem>
                                   )}
 
-                                  {hasPermission("delete_bookings") && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleDeleteBooking(booking.id)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Hapus
-                                    </DropdownMenuItem>
-                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
