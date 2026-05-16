@@ -402,19 +402,28 @@ export default function PurchaseForm({
           let stockInId = (existing as any)?.id as string | undefined;
 
           if (stockInId) {
-            await supabase
+            // Only sync items if the linked stock_in is still a draft.
+            // Once user has posted or cancelled it, don't overwrite.
+            const { data: cur } = await supabase
               .from("stock_in" as any)
-              .update({
-                date,
-                supplier_name: supplier.name,
-                notes: notes || null,
-                total_amount: totalAmount,
-                status: "posted",
-                posted_at: new Date().toISOString(),
-                posted_by: user.id,
-              })
-              .eq("id", stockInId);
-            await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", stockInId);
+              .select("status")
+              .eq("id", stockInId)
+              .maybeSingle();
+            if ((cur as any)?.status === "draft") {
+              await supabase
+                .from("stock_in" as any)
+                .update({
+                  date,
+                  supplier_name: supplier.name,
+                  notes: notes || null,
+                  total_amount: totalAmount,
+                })
+                .eq("id", stockInId);
+              await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", stockInId);
+            } else {
+              // Already posted/cancelled by a user — leave it alone.
+              stockInId = undefined;
+            }
           } else {
             const { data: created, error: siErr } = await supabase
               .from("stock_in" as any)
@@ -425,9 +434,7 @@ export default function PurchaseForm({
                 supplier_name: supplier.name,
                 notes: notes || null,
                 total_amount: totalAmount,
-                status: "posted",
-                posted_at: new Date().toISOString(),
-                posted_by: user.id,
+                status: "draft",
                 created_by: user.id,
               })
               .select("id")
@@ -436,18 +443,20 @@ export default function PurchaseForm({
             stockInId = (created as any).id;
           }
 
-          const stockItems = validItems.map((it) => ({
-            stock_in_id: stockInId,
-            product_id: it.product_id,
-            product_name: it.product_name,
-            quantity: it.quantity,
-            unit_price: it.unit_price,
-            subtotal: it.quantity * it.unit_price - (it.discount || 0),
-          }));
-          const { error: siiErr } = await supabase
-            .from("stock_in_items" as any)
-            .insert(stockItems);
-          if (siiErr) throw siiErr;
+          if (stockInId) {
+            const stockItems = validItems.map((it) => ({
+              stock_in_id: stockInId,
+              product_id: it.product_id,
+              product_name: it.product_name,
+              quantity: it.quantity,
+              unit_price: it.unit_price,
+              subtotal: it.quantity * it.unit_price - (it.discount || 0),
+            }));
+            const { error: siiErr } = await supabase
+              .from("stock_in_items" as any)
+              .insert(stockItems);
+            if (siiErr) throw siiErr;
+          }
         }
       }
 
