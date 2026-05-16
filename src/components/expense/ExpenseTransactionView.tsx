@@ -636,10 +636,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                   <Pencil className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleDeleteExpense}>
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Hapus
-                </Button>
               </div>
             </div>
 
