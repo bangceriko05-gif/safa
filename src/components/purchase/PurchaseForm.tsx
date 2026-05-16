@@ -509,7 +509,7 @@ export default function PurchaseForm({
               <Badge className={isPaid ? "bg-green-500" : "bg-red-500"}>
                 {isPaid ? "Lunas" : "Belum Bayar"}
               </Badge>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(v) => setStatus(v as "proses" | "selesai" | "batal")}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
