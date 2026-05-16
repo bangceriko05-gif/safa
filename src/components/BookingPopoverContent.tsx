@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield, Printer } from "lucide-react";
+import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield, Printer, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -430,16 +430,16 @@ export default function BookingPopoverContent({
               Edit
             </Button>
           )}
-        {hasPermission("delete_bookings") &&
-          (status !== "BATAL" || userRole === "admin" || userRole === "owner" || userRole === "akuntan") && (
+        {status !== "BATAL" &&
+          (userRole === "admin" || hasPermission("cancel_bookings") || (hasPermission("cancel_checkout_bookings") && status === "CO")) && (
             <Button
               size="sm"
               variant="destructive"
               className="flex-1"
-              onClick={() => onDeleteBooking(booking.id)}
+              onClick={() => onStatusChange(booking.id, "BATAL", booking)}
             >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Hapus
+              <XCircle className="h-3 w-3 mr-1" />
+              Batal
             </Button>
           )}
         {status === "BATAL" && userRole !== "admin" && userRole !== "owner" && userRole !== "akuntan" && (
