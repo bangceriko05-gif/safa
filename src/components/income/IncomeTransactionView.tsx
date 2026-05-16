@@ -779,10 +779,6 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                   <Pencil className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleDeleteIncome}>
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Hapus
-                </Button>
               </div>
             </div>
 
