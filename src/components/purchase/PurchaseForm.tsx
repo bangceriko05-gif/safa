@@ -409,11 +409,9 @@ export default function PurchaseForm({
                 supplier_name: supplier.name,
                 notes: notes || null,
                 total_amount: totalAmount,
-                status: "posted",
-                posted_at: new Date().toISOString(),
-                posted_by: user.id,
               })
-              .eq("id", stockInId);
+              .eq("id", stockInId)
+              .eq("status", "draft"); // only update if still a draft; don't overwrite posted/cancelled
             await supabase.from("stock_in_items" as any).delete().eq("stock_in_id", stockInId);
           } else {
             const { data: created, error: siErr } = await supabase
@@ -425,9 +423,7 @@ export default function PurchaseForm({
                 supplier_name: supplier.name,
                 notes: notes || null,
                 total_amount: totalAmount,
-                status: "posted",
-                posted_at: new Date().toISOString(),
-                posted_by: user.id,
+                status: "draft",
                 created_by: user.id,
               })
               .select("id")
