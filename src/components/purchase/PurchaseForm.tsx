@@ -55,7 +55,8 @@ export default function PurchaseForm({
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [reffNo, setReffNo] = useState("");
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState("tunda");
+  // UI status mirrors process_status: "proses" | "selesai" | "batal"
+  const [status, setStatus] = useState<"proses" | "selesai" | "batal">("proses");
   const [verificationStatus, setVerificationStatus] = useState<"Unverified" | "Verified">("Unverified");
   const [items, setItems] = useState<Item[]>([]);
   const [discountAll, setDiscountAll] = useState(0);
@@ -134,7 +135,10 @@ export default function PurchaseForm({
           setPaymentMethod(d.payment_method || "cash");
           setReffNo(d.reff_no || "");
           setNotes(d.notes || "");
-          setStatus(d.status || "tunda");
+          setStatus(
+            (d.process_status as "proses" | "selesai" | "batal") ||
+              (d.status === "batal" ? "batal" : d.status === "disetujui" ? "selesai" : "proses")
+          );
           setVerificationStatus(d.verification_status || "Unverified");
           setReceiptStatus(d.receipt_status || "Belum Diterima");
           setDiscountAll(Number(d.discount_all) || 0);
@@ -313,7 +317,8 @@ export default function PurchaseForm({
 
   const handleSubmit = async () => {
     if (!currentStore || !purchaseId) return;
-    const isCancelled = status === "batal" || status === "ditolak";
+    const isCancelled = status === "batal";
+    const isDone = status === "selesai";
     if (!isCancelled && !supplier) return toast.error("Pilih supplier terlebih dahulu");
     if (!isCancelled && items.length === 0) return toast.error("Tambahkan minimal 1 produk");
 
@@ -338,17 +343,13 @@ export default function PurchaseForm({
         receipt_files: receiptFiles as any,
         payment_proof_files: paymentProofFiles as any,
         payment_proof_url: paymentProofFiles[0]?.url || null,
-        status,
+        status: isCancelled ? "batal" : isDone ? "disetujui" : "tunda",
         receipt_status: receiptStatus,
         verification_status: verificationStatus,
         is_draft: false,
         posted_by: user.id,
         posted_at: new Date().toISOString(),
-        process_status: isCancelled
-          ? "batal"
-          : verificationStatus === "Verified"
-            ? "selesai"
-            : "proses",
+        process_status: status,
       };
       if (verificationStatus === "Verified") {
         update.verified_by = user.id;
@@ -453,8 +454,8 @@ export default function PurchaseForm({
       toast.success("Pembelian berhasil disimpan!");
       setSavedOnce(true);
       await refreshActivityLog(purchaseId);
-      // If verified -> finished, close form to return to list
-      if (verificationStatus === "Verified") {
+      // If user marked Selesai or Batal, return to transaction list
+      if (isDone || isCancelled) {
         onSuccess();
       }
     } catch (e) {
@@ -508,13 +509,13 @@ export default function PurchaseForm({
               <Badge className={isPaid ? "bg-green-500" : "bg-red-500"}>
                 {isPaid ? "Lunas" : "Belum Bayar"}
               </Badge>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(v) => setStatus(v as "proses" | "selesai" | "batal")}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-              <SelectItem value="tunda">Tunda</SelectItem>
-              <SelectItem value="disetujui">Disetujui</SelectItem>
+              <SelectItem value="proses">Proses</SelectItem>
+              <SelectItem value="selesai">Selesai</SelectItem>
               <SelectItem value="batal">Batal</SelectItem>
                 </SelectContent>
               </Select>
