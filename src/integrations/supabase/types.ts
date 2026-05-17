@@ -385,6 +385,128 @@ export type Database = {
           },
         ]
       }
+      booking_order_items: {
+        Row: {
+          booking_order_id: string
+          created_at: string
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          booking_order_id: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          booking_order_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_order_items_booking_order_id_fkey"
+            columns: ["booking_order_id"]
+            isOneToOne: false
+            referencedRelation: "booking_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_orders: {
+        Row: {
+          amount: number
+          amount_2: number
+          bid: string | null
+          booking_id: string
+          created_at: string
+          created_by: string | null
+          date: string
+          dual_payment: boolean
+          id: string
+          note: string | null
+          payment_method: string | null
+          payment_method_2: string | null
+          payment_proof_urls: string[]
+          payment_status: string
+          reference_no: string | null
+          reference_no_2: string | null
+          store_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          amount_2?: number
+          bid?: string | null
+          booking_id: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          dual_payment?: boolean
+          id?: string
+          note?: string | null
+          payment_method?: string | null
+          payment_method_2?: string | null
+          payment_proof_urls?: string[]
+          payment_status?: string
+          reference_no?: string | null
+          reference_no_2?: string | null
+          store_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          amount_2?: number
+          bid?: string | null
+          booking_id?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          dual_payment?: boolean
+          id?: string
+          note?: string | null
+          payment_method?: string | null
+          payment_method_2?: string | null
+          payment_proof_urls?: string[]
+          payment_status?: string
+          reference_no?: string | null
+          reference_no_2?: string | null
+          store_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_orders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_products: {
         Row: {
           booking_id: string
@@ -3228,6 +3350,10 @@ export type Database = {
             Args: { booking_date: string; is_ota?: boolean; p_store_id: string }
             Returns: string
           }
+      generate_booking_order_bid: {
+        Args: { p_date: string; p_store_id: string }
+        Returns: string
+      }
       generate_booking_request_bid: {
         Args: { p_store_id: string; request_date: string }
         Returns: string
