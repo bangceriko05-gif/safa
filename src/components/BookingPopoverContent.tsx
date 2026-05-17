@@ -13,6 +13,7 @@ import { id as idLocale } from "date-fns/locale";
 import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield, Printer, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import BookingOrdersSection from "./booking-orders/BookingOrdersSection";
 
 interface BookingPopoverContentProps {
   booking: any;
@@ -415,6 +416,14 @@ export default function BookingPopoverContent({
           </div>
         )}
       </div>
+
+      <Separator />
+
+      {/* Booking Orders */}
+      <BookingOrdersSection
+        booking={booking}
+        canEdit={status !== "BATAL" && hasPermission("edit_bookings")}
+      />
 
       {/* Action Buttons */}
       <div className="flex gap-2 pt-2 border-t">
