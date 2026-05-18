@@ -14,6 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, Plus, Minus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
+import DiscountDialog from "@/components/purchase/DiscountDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Product {
   id: string;
@@ -27,6 +29,9 @@ interface OrderItem {
   product_name: string;
   quantity: number;
   unit_price: number;
+  discount?: number;
+  discount_mode?: "rp" | "pct";
+  discount_value?: number;
 }
 
 interface AddOrderModalProps {
@@ -54,6 +59,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [discountFor, setDiscountFor] = useState<number | null>(null);
+  const [priceEditFor, setPriceEditFor] = useState<number | null>(null);
+  const [priceDraft, setPriceDraft] = useState<number>(0);
 
   useEffect(() => {
     if (!open || !currentStore) return;
@@ -90,6 +98,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               product_name: d.product_name,
               quantity: Number(d.quantity),
               unit_price: Number(d.unit_price),
+              discount: Number(d.discount) || 0,
+              discount_mode: (d.discount_mode as "rp" | "pct") || "rp",
+              discount_value: Number(d.discount_value) || 0,
             }))
           );
         });
@@ -109,7 +120,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   }, [open, order]);
 
   const total = useMemo(
-    () => items.reduce((s, it) => s + it.quantity * it.unit_price, 0),
+    () => items.reduce((s, it) => s + Math.max(0, it.quantity * it.unit_price - (it.discount || 0)), 0),
     [items]
   );
   const totalPaid = amount + (dualPayment ? amount2 : 0);
@@ -136,6 +147,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   };
   const updatePrice = (ix: number, price: number) => {
     setItems((prev) => prev.map((it, i) => (i === ix ? { ...it, unit_price: Math.max(0, price) } : it)));
+  };
+  const updateDiscount = (ix: number, absolute: number, mode: "rp" | "pct", value: number) => {
+    setItems((prev) => prev.map((it, i) => (i === ix ? { ...it, discount: absolute, discount_mode: mode, discount_value: value } : it)));
   };
   const removeItem = (ix: number) => setItems((prev) => prev.filter((_, i) => i !== ix));
 
@@ -194,7 +208,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         product_name: it.product_name,
         quantity: it.quantity,
         unit_price: it.unit_price,
-        subtotal: it.quantity * it.unit_price,
+        discount: it.discount || 0,
+        discount_mode: it.discount_mode || "rp",
+        discount_value: it.discount_value || 0,
+        subtotal: Math.max(0, it.quantity * it.unit_price - (it.discount || 0)),
       }));
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
       if (itemErr) throw itemErr;
@@ -282,35 +299,73 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {items.map((it, ix) => (
-                    <div key={ix} className="flex items-center gap-1 text-xs">
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate font-medium">{it.product_name}</div>
+                  {items.map((it, ix) => {
+                    const gross = it.quantity * it.unit_price;
+                    const sub = Math.max(0, gross - (it.discount || 0));
+                    return (
+                      <div key={ix} className="flex items-center gap-1 text-xs">
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate font-medium">{it.product_name}</div>
+                          <button
+                            type="button"
+                            onClick={() => setDiscountFor(ix)}
+                            className="mt-1 h-6 px-2 text-xs border rounded hover:bg-accent w-full text-left"
+                            title="Atur diskon (Rp / %)"
+                          >
+                            {it.discount
+                              ? `Diskon: ${it.discount_mode === "pct" ? `${it.discount_value}%` : fmt(it.discount)}`
+                              : "+ Diskon"}
+                          </button>
+                        </div>
+                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(ix, it.quantity - 1)}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
                         <Input
                           type="number"
-                          value={it.unit_price}
-                          onChange={(e) => updatePrice(ix, Number(e.target.value))}
-                          className="h-6 text-xs mt-1"
+                          value={it.quantity}
+                          onChange={(e) => updateQty(ix, Number(e.target.value))}
+                          className="h-6 w-12 text-xs text-center"
                         />
+                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(ix, it.quantity + 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Popover
+                          open={priceEditFor === ix}
+                          onOpenChange={(o) => {
+                            if (o) { setPriceDraft(it.unit_price); setPriceEditFor(ix); }
+                            else setPriceEditFor(null);
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="w-20 text-right font-medium hover:underline"
+                              title="Klik untuk atur harga"
+                            >
+                              {fmt(sub)}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-3" align="end">
+                            <Label className="text-xs">Harga Satuan</Label>
+                            <Input
+                              type="number"
+                              value={priceDraft}
+                              onChange={(e) => setPriceDraft(Number(e.target.value))}
+                              className="h-8 mt-1"
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                              <Button size="sm" variant="outline" onClick={() => setPriceEditFor(null)}>Batal</Button>
+                              <Button size="sm" onClick={() => { updatePrice(ix, priceDraft); setPriceEditFor(null); }}>OK</Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem(ix)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(ix, it.quantity - 1)}>
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Input
-                        type="number"
-                        value={it.quantity}
-                        onChange={(e) => updateQty(ix, Number(e.target.value))}
-                        className="h-6 w-12 text-xs text-center"
-                      />
-                      <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(ix, it.quantity + 1)}>
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <div className="w-20 text-right font-medium">{fmt(it.quantity * it.unit_price)}</div>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem(ix)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <Separator className="my-2" />
@@ -399,6 +454,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             Simpan
           </Button>
         </DialogFooter>
+        {discountFor !== null && items[discountFor] && (
+          <DiscountDialog
+            open={discountFor !== null}
+            onClose={() => setDiscountFor(null)}
+            baseAmount={items[discountFor].quantity * items[discountFor].unit_price}
+            initialMode={items[discountFor].discount_mode || "rp"}
+            initialValue={items[discountFor].discount_value || 0}
+            onApply={(abs, mode, val) => updateDiscount(discountFor, abs, mode, val)}
+            title="Diskon Item"
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
