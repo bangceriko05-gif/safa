@@ -389,6 +389,9 @@ export type Database = {
         Row: {
           booking_order_id: string
           created_at: string
+          discount: number
+          discount_mode: string
+          discount_value: number
           id: string
           product_id: string | null
           product_name: string
@@ -399,6 +402,9 @@ export type Database = {
         Insert: {
           booking_order_id: string
           created_at?: string
+          discount?: number
+          discount_mode?: string
+          discount_value?: number
           id?: string
           product_id?: string | null
           product_name: string
@@ -409,6 +415,9 @@ export type Database = {
         Update: {
           booking_order_id?: string
           created_at?: string
+          discount?: number
+          discount_mode?: string
+          discount_value?: number
           id?: string
           product_id?: string | null
           product_name?: string
