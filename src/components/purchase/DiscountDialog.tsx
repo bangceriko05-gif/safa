@@ -32,6 +32,11 @@ export default function DiscountDialog({
     }
   }, [open, initialMode, initialValue]);
 
+  useEffect(() => {
+    if (mode === "pct" && value > 100) setValue(100);
+    if (value < 0) setValue(0);
+  }, [mode, value]);
+
   const clampedPct = Math.max(0, Math.min(100, value));
   const absolute =
     mode === "rp"
