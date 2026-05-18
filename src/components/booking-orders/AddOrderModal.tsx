@@ -339,10 +339,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           <PopoverTrigger asChild>
                             <button
                               type="button"
-                              className="w-20 text-right font-medium hover:underline"
+                              className="w-24 text-right font-medium hover:underline leading-tight"
                               title="Klik untuk atur harga"
                             >
-                              {fmt(sub)}
+                              <div>{fmt(gross)}</div>
+                              {it.discount ? (
+                                <div className="text-[10px] text-destructive">-{fmt(it.discount)}</div>
+                              ) : null}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-56 p-3" align="end">
