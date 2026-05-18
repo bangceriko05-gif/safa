@@ -19,6 +19,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  images?: any;
 }
 
 interface OrderItem {
@@ -58,7 +59,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     if (!open || !currentStore) return;
     supabase
       .from("products")
-      .select("id, name, price")
+      .select("id, name, price, images")
       .eq("store_id", currentStore.id)
       .eq("is_active", true)
       .order("name")
@@ -215,9 +216,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           <DialogTitle>{order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto flex-1 pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden flex-1 pr-1">
           {/* Left: customer + product picker */}
-          <div className="space-y-3">
+          <div className="space-y-3 flex flex-col overflow-hidden">
             <div className="bg-muted/40 rounded p-3 text-sm space-y-1">
               <div className="font-semibold">{booking.customer_name}</div>
               <div className="text-muted-foreground text-xs">{booking.phone || "-"}</div>
@@ -237,19 +238,31 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
             </div>
 
-            <ScrollArea className="h-[280px] border rounded">
+            <ScrollArea className="flex-1 border rounded min-h-0">
               <div className="grid grid-cols-2 gap-2 p-2">
-                {filtered.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => addProduct(p)}
-                    className="text-left border rounded p-2 hover:bg-accent transition text-xs"
-                  >
-                    <div className="font-medium truncate">{p.name}</div>
-                    <div className="text-muted-foreground">{fmt(Number(p.price))}</div>
-                  </button>
-                ))}
+                {filtered.map((p) => {
+                  const img = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => addProduct(p)}
+                      className="text-left border rounded p-2 hover:bg-accent transition text-xs flex gap-2 items-center"
+                    >
+                      <div className="h-12 w-12 flex-shrink-0 rounded bg-muted overflow-hidden flex items-center justify-center">
+                        {img ? (
+                          <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground">No img</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{p.name}</div>
+                        <div className="text-muted-foreground">{fmt(Number(p.price))}</div>
+                      </div>
+                    </button>
+                  );
+                })}
                 {filtered.length === 0 && (
                   <div className="col-span-2 text-center text-muted-foreground text-xs py-6">
                     Tidak ada produk
@@ -260,7 +273,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           </div>
 
           {/* Right: nota + payment */}
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-y-auto pr-1">
             <div className="border rounded p-3">
               <div className="font-semibold text-sm mb-2">Nota Order Baru</div>
               {items.length === 0 ? (
