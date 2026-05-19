@@ -739,7 +739,9 @@ export default function ProductManagement() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProducts.map((product) => {
+              filteredProducts
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map((product) => {
                 const img = getImage(product.images);
                 const productVariants = variantsByProduct(product.id);
                 const recipe = hasRecipe(product.id);
