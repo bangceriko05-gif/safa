@@ -139,6 +139,14 @@ export default function ProductManagement() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
+  // Pagination for main product list
+  const [pageSize, setPageSize] = useState<number>(30);
+  const [page, setPage] = useState<number>(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterCategory, filterBrand, filterCollection, pageSize, currentStore?.id]);
+
   useEffect(() => {
     if (currentStore) fetchAll();
   }, [currentStore]);
@@ -548,12 +556,14 @@ export default function ProductManagement() {
 
   if (editorOpen) {
     return (
-      <ProductEditorModal
-        productId={editorProductId}
-        copyMode={editorCopyMode}
-        onClose={handleCloseEditor}
-        onSaved={fetchAll}
-      />
+      <div className="fixed inset-0 z-50 bg-background overflow-auto">
+        <ProductEditorModal
+          productId={editorProductId}
+          copyMode={editorCopyMode}
+          onClose={handleCloseEditor}
+          onSaved={fetchAll}
+        />
+      </div>
     );
   }
 
