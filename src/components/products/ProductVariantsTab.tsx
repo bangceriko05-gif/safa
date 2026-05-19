@@ -13,6 +13,13 @@ import {
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
+const formatThousand = (n: number) =>
+  n && n > 0 ? Number(n).toLocaleString("id-ID") : "";
+const parseThousand = (s: string) => {
+  const digits = String(s).replace(/\D/g, "");
+  return digits ? parseInt(digits, 10) : 0;
+};
+
 interface Variant {
   id?: string;
   variant_name: string;
@@ -171,16 +178,22 @@ export default function ProductVariantsTab({ productId }: Props) {
                   </TableCell>
                   <TableCell>
                     <Input
-                      type="number"
-                      value={v.purchase_price}
-                      onChange={(e) => updateRow(idx, { purchase_price: Number(e.target.value) })}
+                      inputMode="numeric"
+                      value={formatThousand(v.purchase_price)}
+                      onChange={(e) =>
+                        updateRow(idx, { purchase_price: parseThousand(e.target.value) })
+                      }
+                      placeholder="0"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
-                      type="number"
-                      value={v.price}
-                      onChange={(e) => updateRow(idx, { price: Number(e.target.value) })}
+                      inputMode="numeric"
+                      value={formatThousand(v.price)}
+                      onChange={(e) =>
+                        updateRow(idx, { price: parseThousand(e.target.value) })
+                      }
+                      placeholder="0"
                     />
                   </TableCell>
                   <TableCell>

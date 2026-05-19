@@ -139,6 +139,14 @@ export default function ProductManagement() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
+  // Pagination for main product list
+  const [pageSize, setPageSize] = useState<number>(30);
+  const [page, setPage] = useState<number>(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterCategory, filterBrand, filterCollection, pageSize, currentStore?.id]);
+
   useEffect(() => {
     if (currentStore) fetchAll();
   }, [currentStore]);
@@ -548,12 +556,14 @@ export default function ProductManagement() {
 
   if (editorOpen) {
     return (
-      <ProductEditorModal
-        productId={editorProductId}
-        copyMode={editorCopyMode}
-        onClose={handleCloseEditor}
-        onSaved={fetchAll}
-      />
+      <div className="fixed inset-0 z-50 bg-background overflow-auto">
+        <ProductEditorModal
+          productId={editorProductId}
+          copyMode={editorCopyMode}
+          onClose={handleCloseEditor}
+          onSaved={fetchAll}
+        />
+      </div>
     );
   }
 
@@ -729,7 +739,9 @@ export default function ProductManagement() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProducts.map((product) => {
+              filteredProducts
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map((product) => {
                 const img = getImage(product.images);
                 const productVariants = variantsByProduct(product.id);
                 const recipe = hasRecipe(product.id);
@@ -867,6 +879,77 @@ export default function ProductManagement() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination footer */}
+      {filteredProducts.length > 0 && (() => {
+        const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+        const currentPage = Math.min(page, totalPages);
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Tampilkan</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => setPageSize(Number(v) || 30)}
+              >
+                <SelectTrigger className="h-9 w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                min={1}
+                value={pageSize}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v) && v > 0) setPageSize(v);
+                }}
+                className="h-9 w-20"
+                placeholder="Custom"
+              />
+              <span className="text-muted-foreground">baris</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                ‹
+              </Button>
+              <span className="text-muted-foreground">
+                Hal {currentPage} / {totalPages} ({filteredProducts.length} produk)
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                ›
+              </Button>
+              <span className="text-muted-foreground ml-2">Ke halaman</span>
+              <Input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v) && v >= 1 && v <= totalPages) setPage(v);
+                }}
+                className="h-9 w-16"
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Copy dialog */}
       <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>

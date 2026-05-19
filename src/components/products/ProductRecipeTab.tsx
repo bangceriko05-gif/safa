@@ -188,11 +188,12 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     );
   }
 
-  // Always include "BIASA" (default, variant_id = null)
-  const groups: { id: string | null; name: string; price: number }[] = [
-    { id: null, name: "BIASA", price: productPrice },
-    ...variants.map((v) => ({ id: v.id, name: v.variant_name, price: v.price })),
-  ];
+  // Mengikuti produk asli: jika ada varian, gunakan varian saja (tanpa BIASA).
+  // Jika tidak ada varian, gunakan satu group "BIASA" sebagai default.
+  const groups: { id: string | null; name: string; price: number }[] =
+    variants.length > 0
+      ? variants.map((v) => ({ id: v.id, name: v.variant_name, price: v.price }))
+      : [{ id: null, name: "BIASA", price: productPrice }];
 
   const visibleGroups =
     filterVariant === "all"
