@@ -29,6 +29,13 @@ import ProductPriceTiersTab from "./ProductPriceTiersTab";
 import ProductRecipeTab from "./ProductRecipeTab";
 import ProductUnitConversionTab from "./ProductUnitConversionTab";
 
+const formatThousand = (n: number) =>
+  n && n > 0 ? Number(n).toLocaleString("id-ID") : "";
+const parseThousand = (s: string) => {
+  const digits = String(s).replace(/\D/g, "");
+  return digits ? parseInt(digits, 10) : 0;
+};
+
 export interface EditorProduct {
   id?: string;
   name: string;
