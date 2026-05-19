@@ -328,17 +328,14 @@ export default function ProductManagement() {
       toast.error("Pilih cabang tujuan");
       return;
     }
-    if (targetStoreId === currentStore?.id) {
-      toast.error("Tidak bisa menyalin ke cabang yang sama");
-      return;
-    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const toCopy = products.filter((p) => selectedProducts.has(p.id));
       const targetStore = userStores.find((s) => s.id === targetStoreId);
+      const sameStore = targetStoreId === currentStore?.id;
       const payload = toCopy.map((p) => ({
-        name: p.name,
+        name: sameStore ? `${p.name} (Salinan)` : p.name,
         price: p.price,
         created_by: user.id,
         store_id: targetStoreId,
@@ -348,7 +345,9 @@ export default function ProductManagement() {
       await logActivity({
         actionType: "created",
         entityType: "Produk",
-        description: `Menyalin ${toCopy.length} produk dari ${currentStore?.name} ke ${targetStore?.name}`,
+        description: sameStore
+          ? `Menyalin ${toCopy.length} produk di ${currentStore?.name}`
+          : `Menyalin ${toCopy.length} produk dari ${currentStore?.name} ke ${targetStore?.name}`,
       });
       toast.success(`${toCopy.length} produk berhasil disalin`);
       setIsCopyDialogOpen(false);
@@ -359,7 +358,7 @@ export default function ProductManagement() {
     }
   };
 
-  const availableStores = userStores.filter((s) => s.id !== currentStore?.id);
+  const availableStores = userStores;
 
   // ==== Toolbar action menu handlers ====
   const csvEscape = (v: any) => {
