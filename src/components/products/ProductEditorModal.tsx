@@ -607,19 +607,23 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                     Harga Beli <span className="text-destructive">*</span>
                   </Label>
                   <Input
-                    type="number"
-                    value={data.purchase_price}
+                    inputMode="numeric"
+                    value={formatThousand(data.purchase_price)}
                     onChange={(e) =>
-                      setData({ ...data, purchase_price: Number(e.target.value) })
+                      setData({ ...data, purchase_price: parseThousand(e.target.value) })
                     }
+                    placeholder="0"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Harga Jual</Label>
                   <Input
-                    type="number"
-                    value={data.price}
-                    onChange={(e) => setData({ ...data, price: Number(e.target.value) })}
+                    inputMode="numeric"
+                    value={formatThousand(data.price)}
+                    onChange={(e) =>
+                      setData({ ...data, price: parseThousand(e.target.value) })
+                    }
+                    placeholder="0"
                   />
                 </div>
               </div>
