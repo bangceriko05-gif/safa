@@ -9,6 +9,7 @@ import { useStore } from "@/contexts/StoreContext";
 interface Item {
   id: string;
   name: string;
+  is_default?: boolean;
 }
 
 interface Props {
@@ -32,9 +33,10 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
 
   const fetchItems = async () => {
     if (!currentStore) return;
+    const selectCols = table === "product_materials" ? "id, name, is_default" : "id, name";
     const { data, error } = await supabase
       .from(table as any)
-      .select("id, name")
+      .select(selectCols)
       .eq("store_id", currentStore.id)
       .order("name");
     if (error) {
@@ -84,6 +86,10 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   };
 
   const handleDelete = async (item: Item) => {
+    if (item.is_default) {
+      toast.error("Jenis bahan default tidak dapat dihapus");
+      return;
+    }
     if (!confirm(`Hapus "${item.name}"?`)) return;
     const { error } = await supabase.from(table as any).delete().eq("id", item.id);
     if (error) {
@@ -183,25 +189,34 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm">{item.name}</span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingId(item.id);
-                      setEditingName(item.name);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleDelete(item)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <span className="flex-1 text-sm">
+                    {item.name}
+                    {item.is_default && (
+                      <span className="ml-2 text-[10px] uppercase text-muted-foreground">(default)</span>
+                    )}
+                  </span>
+                  {!item.is_default && (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingId(item.id);
+                          setEditingName(item.name);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDelete(item)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </div>
