@@ -1874,6 +1874,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_default: boolean
           name: string
           store_id: string
           updated_at: string
@@ -1882,6 +1883,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_default?: boolean
           name: string
           store_id: string
           updated_at?: string
@@ -1890,6 +1892,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_default?: boolean
           name?: string
           store_id?: string
           updated_at?: string
