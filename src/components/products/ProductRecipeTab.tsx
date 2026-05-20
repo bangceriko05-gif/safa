@@ -9,6 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +81,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
 
   // form
   const [ingId, setIngId] = useState<string>("");
+  const [ingPopoverOpen, setIngPopoverOpen] = useState(false);
   const [qty, setQty] = useState<number>(1);
   const [unitFrom, setUnitFrom] = useState<string>("pcs");
   const [unitTo, setUnitTo] = useState<string>("pcs");
@@ -349,18 +361,56 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
           <div className="space-y-3">
             <div className="space-y-2">
               <Label>Bahan *</Label>
-              <Select value={ingId} onValueChange={setIngId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih bahan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ingredients.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name} (Rp {fmt(i.purchase_price)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={ingPopoverOpen} onOpenChange={setIngPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "w-full justify-between font-normal",
+                      !ingId && "text-muted-foreground"
+                    )}
+                  >
+                    {ingId
+                      ? (() => {
+                          const sel = ingredients.find((i) => i.id === ingId);
+                          return sel
+                            ? `${sel.name} (Rp ${fmt(sel.purchase_price)})`
+                            : "Pilih bahan";
+                        })()
+                      : "Pilih atau ketik nama bahan"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Ketik nama bahan..." />
+                    <CommandList>
+                      <CommandEmpty>Bahan tidak ditemukan.</CommandEmpty>
+                      <CommandGroup>
+                        {ingredients.map((i) => (
+                          <CommandItem
+                            key={i.id}
+                            value={i.name}
+                            onSelect={() => {
+                              setIngId(i.id);
+                              setIngPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                ingId === i.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {i.name} (Rp {fmt(i.purchase_price)})
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
