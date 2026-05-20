@@ -700,15 +700,17 @@ export default function ProductManagement() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={
-                    filteredProducts.length > 0 &&
-                    selectedProducts.size === filteredProducts.length
-                  }
-                  onCheckedChange={handleToggleAll}
-                />
-              </TableHead>
+              {selectionMode && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      filteredProducts.length > 0 &&
+                      selectedProducts.size === filteredProducts.length
+                    }
+                    onCheckedChange={handleToggleAll}
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-16">Foto</TableHead>
               <TableHead>Nama Produk</TableHead>
               <TableHead>Variant</TableHead>
@@ -727,7 +729,7 @@ export default function ProductManagement() {
             {filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={13}
+                  colSpan={selectionMode ? 13 : 12}
                   className="text-center text-muted-foreground py-12"
                 >
                   {searchQuery ||
@@ -747,12 +749,14 @@ export default function ProductManagement() {
                 const recipe = hasRecipe(product.id);
                 return (
                   <TableRow key={product.id} className="align-top">
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedProducts.has(product.id)}
-                        onCheckedChange={() => handleToggleProduct(product.id)}
-                      />
-                    </TableCell>
+                    {selectionMode && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedProducts.has(product.id)}
+                          onCheckedChange={() => handleToggleProduct(product.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="w-10 h-10 rounded-full bg-muted overflow-hidden flex items-center justify-center">
                         {img ? (
