@@ -9,16 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -81,7 +71,8 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
 
   // form
   const [ingId, setIngId] = useState<string>("");
-  const [ingPopoverOpen, setIngPopoverOpen] = useState(false);
+  const [ingSearch, setIngSearch] = useState<string>("");
+  const [ingFocused, setIngFocused] = useState(false);
   const [qty, setQty] = useState<number>(1);
   const [unitFrom, setUnitFrom] = useState<string>("pcs");
   const [unitTo, setUnitTo] = useState<string>("pcs");
@@ -110,10 +101,22 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
 
   const loadIngredients = async () => {
     if (!currentStore) return;
+    const { data: mats } = await supabase
+      .from("product_materials" as any)
+      .select("id, name")
+      .eq("store_id", currentStore.id);
+    const allowedIds = ((mats as any[]) || [])
+      .filter((m) => ["bahan mentah", "kemasan"].includes((m.name || "").toLowerCase()))
+      .map((m) => m.id);
+    if (allowedIds.length === 0) {
+      setIngredients([]);
+      return;
+    }
     const { data } = await supabase
       .from("products")
-      .select("id, name, purchase_price")
+      .select("id, name, purchase_price, material_id")
       .eq("store_id", currentStore.id)
+      .in("material_id", allowedIds)
       .order("name");
     setIngredients(((data as any) || []).filter((p: any) => p.id !== productId));
   };
@@ -128,6 +131,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     setEditing(null);
     setForVariantId(variantId);
     setIngId("");
+    setIngSearch("");
     setQty(1);
     setUnitFrom("pcs");
     setUnitTo("pcs");
@@ -139,6 +143,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     setEditing(r);
     setForVariantId(r.variant_id);
     setIngId(r.ingredient_product_id);
+    setIngSearch(r.ingredient?.name || "");
     setQty(Number(r.qty));
     setUnitFrom(r.unit_from || "pcs");
     setUnitTo(r.unit_to || "pcs");
@@ -361,56 +366,54 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
           <div className="space-y-3">
             <div className="space-y-2">
               <Label>Bahan *</Label>
-              <Popover open={ingPopoverOpen} onOpenChange={setIngPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className={cn(
-                      "w-full justify-between font-normal",
-                      !ingId && "text-muted-foreground"
-                    )}
-                  >
-                    {ingId
-                      ? (() => {
-                          const sel = ingredients.find((i) => i.id === ingId);
-                          return sel
-                            ? `${sel.name} (Rp ${fmt(sel.purchase_price)})`
-                            : "Pilih bahan";
-                        })()
-                      : "Pilih atau ketik nama bahan"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Ketik nama bahan..." />
-                    <CommandList>
-                      <CommandEmpty>Bahan tidak ditemukan.</CommandEmpty>
-                      <CommandGroup>
-                        {ingredients.map((i) => (
-                          <CommandItem
-                            key={i.id}
-                            value={i.name}
-                            onSelect={() => {
-                              setIngId(i.id);
-                              setIngPopoverOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                ingId === i.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {i.name} (Rp {fmt(i.purchase_price)})
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <div className="relative">
+                <Input
+                  value={ingSearch}
+                  placeholder="Ketik nama bahan..."
+                  onChange={(e) => {
+                    setIngSearch(e.target.value);
+                    setIngId("");
+                    setIngFocused(true);
+                  }}
+                  onFocus={() => setIngFocused(true)}
+                  onBlur={() => setTimeout(() => setIngFocused(false), 150)}
+                />
+                {ingFocused && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-auto border rounded-md bg-popover shadow-md">
+                    {(() => {
+                      const q = ingSearch.toLowerCase().trim();
+                      const list = ingredients.filter((i) =>
+                        !q || i.name.toLowerCase().includes(q)
+                      );
+                      if (list.length === 0) {
+                        return (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            Bahan tidak ditemukan.
+                          </div>
+                        );
+                      }
+                      return list.map((i) => (
+                        <button
+                          type="button"
+                          key={i.id}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-sm hover:bg-accent",
+                            ingId === i.id && "bg-accent"
+                          )}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setIngId(i.id);
+                            setIngSearch(i.name);
+                            setIngFocused(false);
+                          }}
+                        >
+                          {i.name} (Rp {fmt(i.purchase_price)})
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
