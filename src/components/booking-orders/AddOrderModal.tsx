@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Product {
   id: string;
@@ -228,14 +229,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden flex-1 pr-1">
-          {/* Left: customer + product picker */}
-          <div className="space-y-3 flex flex-col overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden rounded border">
+          <ResizablePanel defaultSize={50} minSize={25}>
+            <div className="space-y-3 flex flex-col overflow-hidden h-full p-2">
             <div className="bg-muted/40 rounded p-3 text-sm space-y-1">
               <div className="font-semibold">{booking.customer_name}</div>
               <div className="text-muted-foreground text-xs">{booking.phone || "-"}</div>
@@ -287,10 +288,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 )}
               </div>
             </ScrollArea>
-          </div>
-
-          {/* Right: nota + payment */}
-          <div className="space-y-3 overflow-y-auto pr-1">
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={50} minSize={25}>
+            <div className="space-y-3 overflow-y-auto p-2 h-full">
             <div className="border rounded p-3">
               <div className="font-semibold text-sm mb-2">Nota Order Baru</div>
               {items.length === 0 ? (
@@ -447,8 +449,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             }`}>
               {paymentStatus === "lunas" ? "✓ LUNAS" : "✕ BELUM LUNAS"}
             </div>
-          </div>
-        </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Batal</Button>
