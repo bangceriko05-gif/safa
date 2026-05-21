@@ -271,7 +271,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-4 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0">
         <DialogHeader>
           <DialogTitle>{order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"}</DialogTitle>
         </DialogHeader>
