@@ -25,6 +25,14 @@ interface Product {
   images?: any;
 }
 
+interface ProductVariant {
+  id: string;
+  product_id: string;
+  variant_name: string;
+  price: number;
+  is_active: boolean;
+}
+
 interface OrderItem {
   product_id: string | null;
   product_name: string;
@@ -47,6 +55,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const { currentStore } = useStore();
   const { methods } = usePaymentMethods();
   const [products, setProducts] = useState<Product[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [variantPickerFor, setVariantPickerFor] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -66,13 +76,26 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   useEffect(() => {
     if (!open || !currentStore) return;
-    supabase
-      .from("products")
-      .select("id, name, price, images")
-      .eq("store_id", currentStore.id)
-      .eq("is_active", true)
-      .order("name")
-      .then(({ data }) => setProducts(data || []));
+    (async () => {
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id, name, price, images")
+        .eq("store_id", currentStore.id)
+        .eq("is_active", true)
+        .order("name");
+      setProducts(prods || []);
+      const ids = (prods || []).map((p) => p.id);
+      if (ids.length) {
+        const { data: vars } = await supabase
+          .from("product_variants")
+          .select("id, product_id, variant_name, price, is_active")
+          .in("product_id", ids)
+          .eq("is_active", true);
+        setVariants(vars || []);
+      } else {
+        setVariants([]);
+      }
+    })();
   }, [open, currentStore]);
 
   useEffect(() => {
@@ -132,6 +155,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   );
 
   const addProduct = (p: Product) => {
+    const productVariants = variants.filter((v) => v.product_id === p.id);
+    if (productVariants.length > 0) {
+      setVariantPickerFor(p);
+      return;
+    }
     setItems((prev) => {
       const ix = prev.findIndex((i) => i.product_id === p.id);
       if (ix >= 0) {
@@ -141,6 +169,20 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }
       return [...prev, { product_id: p.id, product_name: p.name, quantity: 1, unit_price: Number(p.price) }];
     });
+  };
+
+  const addVariant = (p: Product, v: ProductVariant) => {
+    const composedName = `${p.name} - ${v.variant_name}`;
+    setItems((prev) => {
+      const ix = prev.findIndex((i) => i.product_id === v.id);
+      if (ix >= 0) {
+        const next = [...prev];
+        next[ix] = { ...next[ix], quantity: next[ix].quantity + 1 };
+        return next;
+      }
+      return [...prev, { product_id: v.id, product_name: composedName, quantity: 1, unit_price: Number(v.price) }];
+    });
+    setVariantPickerFor(null);
   };
 
   const updateQty = (ix: number, qty: number) => {
