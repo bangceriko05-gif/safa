@@ -513,6 +513,30 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             title="Diskon Item"
           />
         )}
+        {variantPickerFor && (
+          <Dialog open={!!variantPickerFor} onOpenChange={(o) => !o && setVariantPickerFor(null)}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Pilih Varian — {variantPickerFor.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {variants
+                  .filter((v) => v.product_id === variantPickerFor.id)
+                  .map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => addVariant(variantPickerFor, v)}
+                      className="w-full text-left border rounded p-3 hover:bg-accent flex justify-between items-center"
+                    >
+                      <span className="font-medium">{v.variant_name}</span>
+                      <span className="text-sm text-muted-foreground">{fmt(Number(v.price))}</span>
+                    </button>
+                  ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );
