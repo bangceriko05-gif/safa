@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Plus, Minus, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, X } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -271,108 +271,88 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-4 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0">
-        <DialogHeader>
-          <DialogTitle>{order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0">
+        {/* Top blue header bar */}
+        <div className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
+          <div className="font-semibold text-lg truncate">
+            {order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"} — {booking.customer_name}
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="p-2 hover:bg-white/10 rounded"
+            aria-label="Tutup"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-        <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden rounded border">
-          <ResizablePanel defaultSize={50} minSize={25}>
-            <div className="space-y-3 flex flex-col overflow-hidden h-full p-2">
-            <div className="bg-muted/40 rounded p-3 text-sm space-y-1">
-              <div className="font-semibold">{booking.customer_name}</div>
-              <div className="text-muted-foreground text-xs">{booking.phone || "-"}</div>
-              <div className="text-xs">BID Booking: <span className="font-mono">{booking.bid}</span></div>
+        <div className="flex-1 flex overflow-hidden bg-primary/95">
+          {/* LEFT — Nota / Pesanan Baru */}
+          <div className="w-[360px] shrink-0 bg-background flex flex-col border-r">
+            <div className="px-3 py-2 flex items-center justify-between border-b">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <div className="font-semibold text-sm">Pesanan Baru</div>
+              <button
+                type="button"
+                className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                title="Tambah catatan"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
 
-            <div>
-              <Label className="text-xs">Cari Produk</Label>
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  placeholder="Nama produk..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+            <div className="grid grid-cols-[1fr_50px_90px] gap-2 px-3 py-1.5 text-xs font-semibold bg-muted/60 border-b">
+              <span>Item</span>
+              <span className="text-center">Qty</span>
+              <span className="text-right">Jumlah</span>
             </div>
 
-            <ScrollArea className="flex-1 border rounded min-h-0">
-              <div className="grid grid-cols-2 gap-2 p-2">
-                {filtered.map((p) => {
-                  const img = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => addProduct(p)}
-                      className="text-left border rounded p-2 hover:bg-accent transition text-xs flex gap-2 items-center"
-                    >
-                      <div className="h-12 w-12 flex-shrink-0 rounded bg-muted overflow-hidden flex items-center justify-center">
-                        {img ? (
-                          <img src={img} alt={p.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="text-[9px] text-muted-foreground">No img</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{p.name}</div>
-                        <div className="text-muted-foreground">{fmt(Number(p.price))}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <div className="col-span-2 text-center text-muted-foreground text-xs py-6">
-                    Tidak ada produk
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-            </div>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={50} minSize={25}>
-            <div className="space-y-3 overflow-y-auto p-2 h-full">
-            <div className="border rounded p-3">
-              <div className="font-semibold text-sm mb-2">Nota Order Baru</div>
+            <div className="flex-1 overflow-y-auto">
               {items.length === 0 ? (
-                <div className="text-xs text-muted-foreground text-center py-4">
-                  Belum ada produk. Klik produk di kiri untuk menambah.
+                <div className="text-xs text-muted-foreground text-center py-6 px-3">
+                  Belum ada produk. Klik produk di kanan untuk menambah.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                <div className="divide-y">
                   {items.map((it, ix) => {
                     const gross = it.quantity * it.unit_price;
                     const sub = Math.max(0, gross - (it.discount || 0));
                     return (
-                      <div key={ix} className="flex items-center gap-1 text-xs">
-                        <div className="flex-1 min-w-0">
-                          <div className="truncate font-medium">{it.product_name}</div>
-                          <button
-                            type="button"
-                            onClick={() => setDiscountFor(ix)}
-                            className="mt-1 h-6 px-2 text-xs border rounded hover:bg-accent w-full text-left"
-                            title="Atur diskon (Rp / %)"
-                          >
-                            {it.discount
-                              ? `Diskon: ${it.discount_mode === "pct" ? `${it.discount_value}%` : fmt(it.discount)}`
-                              : "+ Diskon"}
-                          </button>
+                      <div key={ix} className="grid grid-cols-[1fr_50px_90px] gap-2 px-3 py-2 text-xs items-start">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{it.product_name}</div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Button size="icon" variant="outline" className="h-5 w-5" onClick={() => updateQty(ix, it.quantity - 1)}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Button size="icon" variant="outline" className="h-5 w-5" onClick={() => updateQty(ix, it.quantity + 1)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => setDiscountFor(ix)}
+                              className="h-5 px-1.5 text-[10px] border rounded hover:bg-accent"
+                              title="Diskon"
+                            >
+                              {it.discount
+                                ? (it.discount_mode === "pct" ? `${it.discount_value}%` : "Disc")
+                                : "+Disc"}
+                            </button>
+                            <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive ml-auto" onClick={() => removeItem(ix)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(ix, it.quantity - 1)}>
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          value={it.quantity}
-                          onChange={(e) => updateQty(ix, Number(e.target.value))}
-                          className="h-6 w-12 text-xs text-center"
-                        />
-                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(ix, it.quantity + 1)}>
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                        <div className="text-center pt-1">
+                          <Input
+                            type="number"
+                            value={it.quantity}
+                            onChange={(e) => updateQty(ix, Number(e.target.value))}
+                            className="h-6 w-full text-xs text-center px-1"
+                          />
+                          <div className="text-[10px] text-muted-foreground mt-0.5">x</div>
+                        </div>
                         <Popover
                           open={priceEditFor === ix}
                           onOpenChange={(o) => {
@@ -383,10 +363,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           <PopoverTrigger asChild>
                             <button
                               type="button"
-                              className="w-24 text-right font-medium hover:underline leading-tight"
+                              className="text-right font-medium hover:underline leading-tight"
                               title="Klik untuk atur harga"
                             >
-                              <div>{fmt(gross)}</div>
+                              <div>{fmt(sub)}</div>
                               {it.discount ? (
                                 <div className="text-[10px] text-destructive">-{fmt(it.discount)}</div>
                               ) : null}
@@ -407,30 +387,34 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             </div>
                           </PopoverContent>
                         </Popover>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem(ix)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
                       </div>
                     );
                   })}
                 </div>
               )}
-              <Separator className="my-2" />
-              <div className="flex justify-between font-bold text-sm">
-                <span>Total</span>
-                <span>{fmt(total)}</span>
+            </div>
+
+            {/* Customer + payment fields */}
+            <div className="border-t px-3 py-2 text-xs space-y-1 bg-muted/30">
+              <div>Jumlah Item: <span className="font-semibold">{items.reduce((s, i) => s + i.quantity, 0)}</span></div>
+              <div className="text-muted-foreground">
+                Pelanggan: <span className="font-medium text-foreground">{booking.customer_name}</span>
+              </div>
+              <div className="text-muted-foreground">
+                BID Booking: <span className="font-mono text-foreground">{booking.bid}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="border-t px-3 py-2 space-y-2 overflow-y-auto max-h-[40%]">
+              <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">Tanggal</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8" />
               </div>
               <div>
-                <Label className="text-xs">Metode Pembayaran</Label>
+                <Label className="text-xs">Metode</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {methods.map((m) => (
                       <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
@@ -440,11 +424,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
               <div>
                 <Label className="text-xs">Nominal Bayar</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="h-8" />
               </div>
               <div>
                 <Label className="text-xs">No. Referensi</Label>
-                <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
+                <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} className="h-8" />
               </div>
             </div>
 
@@ -458,7 +442,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 <div>
                   <Label className="text-xs">Metode 2</Label>
                   <Select value={paymentMethod2} onValueChange={setPaymentMethod2}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger className="h-8"><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent>
                       {methods.map((m) => (
                         <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
@@ -468,11 +452,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 </div>
                 <div>
                   <Label className="text-xs">Nominal 2</Label>
-                  <Input type="number" value={amount2} onChange={(e) => setAmount2(Number(e.target.value))} />
+                  <Input type="number" value={amount2} onChange={(e) => setAmount2(Number(e.target.value))} className="h-8" />
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs">No. Referensi 2</Label>
-                  <Input value={referenceNo2} onChange={(e) => setReferenceNo2(e.target.value)} />
+                  <Input value={referenceNo2} onChange={(e) => setReferenceNo2(e.target.value)} className="h-8" />
                 </div>
               </div>
             )}
@@ -481,10 +465,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
             <div>
               <Label className="text-xs">Catatan</Label>
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="text-xs" />
             </div>
 
-            <div className={`text-center py-1.5 rounded-md font-bold text-sm ${
+            <div className={`text-center py-1 rounded-md font-bold text-xs ${
               paymentStatus === "lunas"
                 ? "bg-emerald-100 text-emerald-700"
                 : "bg-red-100 text-red-700"
@@ -492,16 +476,75 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               {paymentStatus === "lunas" ? "✓ LUNAS" : "✕ BELUM LUNAS"}
             </div>
             </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Batal</Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Simpan
-          </Button>
-        </DialogFooter>
+            {/* Big green total / save bar */}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="mt-auto h-16 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-2xl font-bold flex items-center justify-center gap-3 shrink-0"
+            >
+              {saving && <Loader2 className="h-5 w-5 animate-spin" />}
+              {fmt(total)}
+            </button>
+          </div>
+
+          {/* RIGHT — Product grid */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-3 shrink-0">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9 h-10 bg-background"
+                  placeholder="Cari produk..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1 min-h-0 px-3 pb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+                {filtered.map((p) => {
+                  const img = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
+                  const hasVariant = variants.some((v) => v.product_id === p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => addProduct(p)}
+                      className="relative bg-background border rounded overflow-hidden text-left hover:ring-2 hover:ring-primary transition flex flex-col"
+                    >
+                      <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                        {img ? (
+                          <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">No img</span>
+                        )}
+                      </div>
+                      {hasVariant && (
+                        <span className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded-bl">
+                          VAR
+                        </span>
+                      )}
+                      <div className="px-1.5 py-1 text-[11px]">
+                        <div className="font-semibold truncate">{p.name}</div>
+                        <div className="text-right text-muted-foreground font-medium">
+                          {new Intl.NumberFormat("id-ID").format(Number(p.price) || 0)}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <div className="col-span-full text-center text-white/80 text-sm py-12">
+                    Tidak ada produk
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
         {discountFor !== null && items[discountFor] && (
           <DiscountDialog
             open={discountFor !== null}
