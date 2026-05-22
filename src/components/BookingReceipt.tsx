@@ -598,10 +598,10 @@ export default function BookingReceipt() {
           {/* Payment Status */}
           {(() => {
             const grandTotal = calculateGrandTotal();
-            const paid1 = booking.price || 0;
-            const paid2 = booking.dual_payment ? (booking.price_2 || 0) : 0;
-            const totalBayar = paid1 + paid2;
-            const isLunas = booking.payment_status === "lunas";
+            const paid1 = orderOnlyMode ? 0 : (booking.price || 0);
+            const paid2 = orderOnlyMode ? 0 : (booking.dual_payment ? (booking.price_2 || 0) : 0);
+            const totalBayar = paid1 + paid2 + (orderOnlyMode || combined ? orderExtraPaid : 0);
+            const isLunas = totalBayar >= grandTotal;
             const sisa = grandTotal - totalBayar;
 
             return (
