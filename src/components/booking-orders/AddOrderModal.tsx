@@ -197,6 +197,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const fmt = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
+  const fmtNum = (n: number) => (n ? new Intl.NumberFormat("id-ID").format(n) : "");
+  const parseNum = (s: string) => {
+    const d = s.replace(/\D/g, "");
+    return d ? parseInt(d, 10) : 0;
+  };
+
   const handleSave = async () => {
     if (!currentStore) return;
     if (items.length === 0) {
@@ -422,7 +428,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
               <div>
                 <Label className="text-xs">Nominal Bayar</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="h-8" />
+                <Input
+                  inputMode="numeric"
+                  value={fmtNum(amount)}
+                  onChange={(e) => setAmount(parseNum(e.target.value))}
+                  className="h-8"
+                  placeholder="0"
+                />
               </div>
               <div>
                 <Label className="text-xs">No. Referensi</Label>
@@ -450,7 +462,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 </div>
                 <div>
                   <Label className="text-xs">Nominal 2</Label>
-                  <Input type="number" value={amount2} onChange={(e) => setAmount2(Number(e.target.value))} className="h-8" />
+                  <Input
+                    inputMode="numeric"
+                    value={fmtNum(amount2)}
+                    onChange={(e) => setAmount2(parseNum(e.target.value))}
+                    className="h-8"
+                    placeholder="0"
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs">No. Referensi 2</Label>
@@ -459,7 +477,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
             )}
 
-            <PaymentProofUpload value={proofUrl} onChange={setProofUrl} required />
+            <PaymentProofUpload value={proofUrl} onChange={setProofUrl} required compact />
 
             <div>
               <Label className="text-xs">Catatan</Label>
