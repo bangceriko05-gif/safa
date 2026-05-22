@@ -59,6 +59,8 @@ interface BookingProduct {
 export default function BookingReceipt() {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get("id");
+  const orderId = searchParams.get("order");
+  const combined = searchParams.get("combined") === "1";
   
   const [isLoading, setIsLoading] = useState(true);
   const [booking, setBooking] = useState<BookingData | null>(null);
@@ -66,6 +68,10 @@ export default function BookingReceipt() {
   const [products, setProducts] = useState<BookingProduct[]>([]);
   const [storeName, setStoreName] = useState<string>("");
   const [deposit, setDeposit] = useState<{ deposit_type: string; amount: number | null; identity_type: string | null; identity_owner_name: string | null; notes: string | null } | null>(null);
+  const [orderOnlyMode, setOrderOnlyMode] = useState(false);
+  const [overrideBid, setOverrideBid] = useState<string | null>(null);
+  const [orderExtraTotal, setOrderExtraTotal] = useState(0);
+  const [orderExtraPaid, setOrderExtraPaid] = useState(0);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
