@@ -474,7 +474,7 @@ export default function BookingReceipt() {
         />
 
         {/* Booking Details */}
-        <div
+        {!orderOnlyMode && (<div
           className="mb-2"
           style={{
             fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
@@ -515,7 +515,7 @@ export default function BookingReceipt() {
               <span>{booking.variant_name}</span>
             </div>
           )}
-        </div>
+        </div>)}
 
         {/* Divider */}
         <div
@@ -530,10 +530,10 @@ export default function BookingReceipt() {
             fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
           }}
         >
-          <div className="flex justify-between mb-1">
+          {!orderOnlyMode && (<div className="flex justify-between mb-1">
             <span>Total Biaya</span>
             <span>{formatCurrency(getRoomSubtotal())}</span>
-          </div>
+          </div>)}
 
           {/* Products */}
           {products.length > 0 && (
