@@ -59,6 +59,8 @@ interface BookingProduct {
 export default function BookingReceipt() {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get("id");
+  const orderId = searchParams.get("order");
+  const combined = searchParams.get("combined") === "1";
   
   const [isLoading, setIsLoading] = useState(true);
   const [booking, setBooking] = useState<BookingData | null>(null);
@@ -66,6 +68,10 @@ export default function BookingReceipt() {
   const [products, setProducts] = useState<BookingProduct[]>([]);
   const [storeName, setStoreName] = useState<string>("");
   const [deposit, setDeposit] = useState<{ deposit_type: string; amount: number | null; identity_type: string | null; identity_owner_name: string | null; notes: string | null } | null>(null);
+  const [orderOnlyMode, setOrderOnlyMode] = useState(false);
+  const [overrideBid, setOverrideBid] = useState<string | null>(null);
+  const [orderExtraTotal, setOrderExtraTotal] = useState(0);
+  const [orderExtraPaid, setOrderExtraPaid] = useState(0);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -156,7 +162,61 @@ export default function BookingReceipt() {
         .select("product_name, quantity, product_price, subtotal")
         .eq("booking_id", bookingId);
 
-      setProducts(productsData || []);
+      let mergedProducts = (productsData || []) as BookingProduct[];
+
+      if (orderId) {
+        // Order-only receipt: replace products with this order's items
+        const { data: ord } = await supabase
+          .from("booking_orders")
+          .select("id, bid, total_amount, amount, amount_2, dual_payment")
+          .eq("id", orderId)
+          .maybeSingle();
+        const { data: oItems } = await supabase
+          .from("booking_order_items")
+          .select("product_name, quantity, unit_price, subtotal")
+          .eq("booking_order_id", orderId);
+        mergedProducts = (oItems || []).map((it: any) => ({
+          product_name: it.product_name,
+          quantity: Number(it.quantity),
+          product_price: Number(it.unit_price),
+          subtotal: Number(it.subtotal),
+        }));
+        setOrderOnlyMode(true);
+        if (ord?.bid) setOverrideBid(ord.bid);
+        setOrderExtraTotal(Number(ord?.total_amount || 0));
+        setOrderExtraPaid(Number(ord?.amount || 0) + (ord?.dual_payment ? Number(ord?.amount_2 || 0) : 0));
+      } else if (combined) {
+        // Combined: include all orders' items
+        const { data: ords } = await supabase
+          .from("booking_orders")
+          .select("id, total_amount, amount, amount_2, dual_payment")
+          .eq("booking_id", bookingId);
+        const ordIds = (ords || []).map((o: any) => o.id);
+        if (ordIds.length > 0) {
+          const { data: oItems } = await supabase
+            .from("booking_order_items")
+            .select("product_name, quantity, unit_price, subtotal")
+            .in("booking_order_id", ordIds);
+          mergedProducts = [
+            ...mergedProducts,
+            ...(oItems || []).map((it: any) => ({
+              product_name: it.product_name,
+              quantity: Number(it.quantity),
+              product_price: Number(it.unit_price),
+              subtotal: Number(it.subtotal),
+            })),
+          ];
+        }
+        const extraTotal = (ords || []).reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
+        const extraPaid = (ords || []).reduce(
+          (s: number, o: any) => s + Number(o.amount || 0) + (o.dual_payment ? Number(o.amount_2 || 0) : 0),
+          0
+        );
+        setOrderExtraTotal(extraTotal);
+        setOrderExtraPaid(extraPaid);
+      }
+
+      setProducts(mergedProducts);
 
       // Fetch active deposit for the room
       if (bookingData.room_id) {
@@ -194,6 +254,7 @@ export default function BookingReceipt() {
 
   const getRoomSubtotal = () => {
     if (!booking) return 0;
+    if (orderOnlyMode) return 0;
     // Match popup logic: variant_price * duration, fallback to price for OTA
     return booking.variant_price 
       ? booking.variant_price * booking.duration 
@@ -229,6 +290,7 @@ export default function BookingReceipt() {
     const roomSubtotal = getRoomSubtotal();
     const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
     const discount = calculateDiscount();
+    if (orderOnlyMode) return productsTotal;
     return roomSubtotal + productsTotal - discount;
   };
 
@@ -356,16 +418,16 @@ export default function BookingReceipt() {
               fontSize: printSettings?.paper_size === "58mm" ? "11px" : "13px",
             }}
           >
-            NOTA BOOKING
+            {orderOnlyMode ? "NOTA ORDER" : combined ? "NOTA GABUNGAN" : "NOTA BOOKING"}
           </p>
-          {booking.bid && (
+          {(overrideBid || booking.bid) && (
             <p
               className="font-mono"
               style={{
                 fontSize: printSettings?.paper_size === "58mm" ? "10px" : "12px",
               }}
             >
-              No: {booking.bid}
+              No: {overrideBid || booking.bid}
             </p>
           )}
           <p
@@ -412,7 +474,7 @@ export default function BookingReceipt() {
         />
 
         {/* Booking Details */}
-        <div
+        {!orderOnlyMode && (<div
           className="mb-2"
           style={{
             fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
@@ -453,7 +515,7 @@ export default function BookingReceipt() {
               <span>{booking.variant_name}</span>
             </div>
           )}
-        </div>
+        </div>)}
 
         {/* Divider */}
         <div
@@ -468,10 +530,10 @@ export default function BookingReceipt() {
             fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
           }}
         >
-          <div className="flex justify-between mb-1">
+          {!orderOnlyMode && (<div className="flex justify-between mb-1">
             <span>Total Biaya</span>
             <span>{formatCurrency(getRoomSubtotal())}</span>
-          </div>
+          </div>)}
 
           {/* Products */}
           {products.length > 0 && (
@@ -536,10 +598,10 @@ export default function BookingReceipt() {
           {/* Payment Status */}
           {(() => {
             const grandTotal = calculateGrandTotal();
-            const paid1 = booking.price || 0;
-            const paid2 = booking.dual_payment ? (booking.price_2 || 0) : 0;
-            const totalBayar = paid1 + paid2;
-            const isLunas = booking.payment_status === "lunas";
+            const paid1 = orderOnlyMode ? 0 : (booking.price || 0);
+            const paid2 = orderOnlyMode ? 0 : (booking.dual_payment ? (booking.price_2 || 0) : 0);
+            const totalBayar = paid1 + paid2 + (orderOnlyMode || combined ? orderExtraPaid : 0);
+            const isLunas = totalBayar >= grandTotal;
             const sisa = grandTotal - totalBayar;
 
             return (
