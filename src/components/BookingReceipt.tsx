@@ -254,6 +254,7 @@ export default function BookingReceipt() {
 
   const getRoomSubtotal = () => {
     if (!booking) return 0;
+    if (orderOnlyMode) return 0;
     // Match popup logic: variant_price * duration, fallback to price for OTA
     return booking.variant_price 
       ? booking.variant_price * booking.duration 
@@ -289,6 +290,7 @@ export default function BookingReceipt() {
     const roomSubtotal = getRoomSubtotal();
     const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
     const discount = calculateDiscount();
+    if (orderOnlyMode) return productsTotal;
     return roomSubtotal + productsTotal - discount;
   };
 
