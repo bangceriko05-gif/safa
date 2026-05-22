@@ -12,6 +12,7 @@ interface PaymentProofUploadProps {
   required?: boolean;
   disabled?: boolean;
   label?: string;
+  compact?: boolean;
 }
 
 export default function PaymentProofUpload({
@@ -20,6 +21,7 @@ export default function PaymentProofUpload({
   required = false,
   disabled = false,
   label = "Bukti Bayar",
+  compact = false,
 }: PaymentProofUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -143,11 +145,53 @@ export default function PaymentProofUpload({
 
   return (
     <div className="space-y-2">
-      <Label className="flex items-center gap-1">
+      <Label className={cn("flex items-center gap-1", compact && "text-xs")}>
         {label} {required && <span className="text-destructive">*</span>}
       </Label>
 
-      {value ? (
+      {compact ? (
+        <div className="flex items-center gap-2">
+          {value ? (
+            <>
+              <a href={value} target="_blank" rel="noreferrer" className="shrink-0">
+                <img src={value} alt="Bukti" className="h-8 w-8 object-cover rounded border" />
+              </a>
+              <span className="text-[11px] text-muted-foreground flex-1 truncate">Bukti terunggah</span>
+              {!disabled && (
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleRemove}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={disabled || uploading}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs flex-1"
+                onClick={() => !disabled && !uploading && fileInputRef.current?.click()}
+                onPaste={handlePaste as any}
+                disabled={disabled || uploading}
+              >
+                {uploading ? (
+                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Mengupload...</>
+                ) : (
+                  <><Upload className="h-3.5 w-3.5 mr-1.5" />Pilih / paste bukti bayar</>
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      ) : value ? (
         <div className="relative">
           <div className="border rounded-lg p-2 bg-muted/50">
             <div className="relative group">
