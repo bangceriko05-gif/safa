@@ -418,16 +418,16 @@ export default function BookingReceipt() {
               fontSize: printSettings?.paper_size === "58mm" ? "11px" : "13px",
             }}
           >
-            NOTA BOOKING
+            {orderOnlyMode ? "NOTA ORDER" : combined ? "NOTA GABUNGAN" : "NOTA BOOKING"}
           </p>
-          {booking.bid && (
+          {(overrideBid || booking.bid) && (
             <p
               className="font-mono"
               style={{
                 fontSize: printSettings?.paper_size === "58mm" ? "10px" : "12px",
               }}
             >
-              No: {booking.bid}
+              No: {overrideBid || booking.bid}
             </p>
           )}
           <p
