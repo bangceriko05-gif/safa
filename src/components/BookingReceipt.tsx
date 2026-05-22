@@ -162,7 +162,61 @@ export default function BookingReceipt() {
         .select("product_name, quantity, product_price, subtotal")
         .eq("booking_id", bookingId);
 
-      setProducts(productsData || []);
+      let mergedProducts = (productsData || []) as BookingProduct[];
+
+      if (orderId) {
+        // Order-only receipt: replace products with this order's items
+        const { data: ord } = await supabase
+          .from("booking_orders")
+          .select("id, bid, total_amount, amount, amount_2, dual_payment")
+          .eq("id", orderId)
+          .maybeSingle();
+        const { data: oItems } = await supabase
+          .from("booking_order_items")
+          .select("product_name, quantity, unit_price, subtotal")
+          .eq("booking_order_id", orderId);
+        mergedProducts = (oItems || []).map((it: any) => ({
+          product_name: it.product_name,
+          quantity: Number(it.quantity),
+          product_price: Number(it.unit_price),
+          subtotal: Number(it.subtotal),
+        }));
+        setOrderOnlyMode(true);
+        if (ord?.bid) setOverrideBid(ord.bid);
+        setOrderExtraTotal(Number(ord?.total_amount || 0));
+        setOrderExtraPaid(Number(ord?.amount || 0) + (ord?.dual_payment ? Number(ord?.amount_2 || 0) : 0));
+      } else if (combined) {
+        // Combined: include all orders' items
+        const { data: ords } = await supabase
+          .from("booking_orders")
+          .select("id, total_amount, amount, amount_2, dual_payment")
+          .eq("booking_id", bookingId);
+        const ordIds = (ords || []).map((o: any) => o.id);
+        if (ordIds.length > 0) {
+          const { data: oItems } = await supabase
+            .from("booking_order_items")
+            .select("product_name, quantity, unit_price, subtotal")
+            .in("booking_order_id", ordIds);
+          mergedProducts = [
+            ...mergedProducts,
+            ...(oItems || []).map((it: any) => ({
+              product_name: it.product_name,
+              quantity: Number(it.quantity),
+              product_price: Number(it.unit_price),
+              subtotal: Number(it.subtotal),
+            })),
+          ];
+        }
+        const extraTotal = (ords || []).reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
+        const extraPaid = (ords || []).reduce(
+          (s: number, o: any) => s + Number(o.amount || 0) + (o.dual_payment ? Number(o.amount_2 || 0) : 0),
+          0
+        );
+        setOrderExtraTotal(extraTotal);
+        setOrderExtraPaid(extraPaid);
+      }
+
+      setProducts(mergedProducts);
 
       // Fetch active deposit for the room
       if (bookingData.room_id) {
