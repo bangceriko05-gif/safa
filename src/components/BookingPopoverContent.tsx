@@ -61,9 +61,18 @@ export default function BookingPopoverContent({
   const [variantDurationType, setVariantDurationType] = useState<string | null>(null);
   const [variantDurationValue, setVariantDurationValue] = useState<number | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
+  const [orderBids, setOrderBids] = useState<{ id: string; bid: string | null }[]>([]);
 
   useEffect(() => {
     fetchPaymentDetails();
+    (async () => {
+      const { data } = await supabase
+        .from("booking_orders")
+        .select("id, bid")
+        .eq("booking_id", booking.id)
+        .order("created_at", { ascending: true });
+      setOrderBids(data || []);
+    })();
   }, [booking.id]);
 
   const fetchPaymentDetails = async () => {
