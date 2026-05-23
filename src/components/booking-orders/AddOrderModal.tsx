@@ -535,6 +535,33 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory("all")}
+                  className={`px-3 h-8 rounded-full text-xs font-medium whitespace-nowrap border transition ${
+                    activeCategory === "all"
+                      ? "bg-background text-foreground border-background"
+                      : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                  }`}
+                >
+                  Semua Kategori
+                </button>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setActiveCategory(c.id)}
+                    className={`px-3 h-8 rounded-full text-xs font-medium whitespace-nowrap border transition ${
+                      activeCategory === c.id
+                        ? "bg-background text-foreground border-background"
+                        : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <ScrollArea className="flex-1 min-h-0 px-3 pb-3">
