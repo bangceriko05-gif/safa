@@ -21,6 +21,8 @@ interface Product {
   name: string;
   price: number;
   images?: any;
+  category_id?: string | null;
+  dynamic_price?: boolean;
 }
 
 interface ProductVariant {
@@ -54,6 +56,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const { methods } = usePaymentMethods();
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [variantPickerFor, setVariantPickerFor] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -77,11 +81,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     (async () => {
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, images")
+        .select("id, name, price, images, category_id, dynamic_price")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
       setProducts(prods || []);
+      const { data: cats } = await supabase
+        .from("product_categories")
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name");
+      setCategories(cats || []);
       const ids = (prods || []).map((p) => p.id);
       if (ids.length) {
         const { data: vars } = await supabase
