@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS dynamic_price boolean NOT NULL DEFAULT false;

@@ -21,6 +21,8 @@ interface Product {
   name: string;
   price: number;
   images?: any;
+  category_id?: string | null;
+  dynamic_price?: boolean;
 }
 
 interface ProductVariant {
@@ -54,6 +56,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const { methods } = usePaymentMethods();
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [variantPickerFor, setVariantPickerFor] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -77,11 +81,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     (async () => {
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, images")
+        .select("id, name, price, images, category_id, dynamic_price")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
       setProducts(prods || []);
+      const { data: cats } = await supabase
+        .from("product_categories")
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name");
+      setCategories(cats || []);
       const ids = (prods || []).map((p) => p.id);
       if (ids.length) {
         const { data: vars } = await supabase
@@ -148,9 +158,22 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter((p) => {
+    if (activeCategory !== "all" && (p.category_id || "") !== activeCategory) return false;
+    return p.name.toLowerCase().includes(search.toLowerCase());
+  });
+
+  const isDynamicPriceItem = (productId: string | null) => {
+    if (!productId) return true;
+    const direct = products.find((p) => p.id === productId);
+    if (direct) return !!direct.dynamic_price;
+    const v = variants.find((x) => x.id === productId);
+    if (v) {
+      const parent = products.find((p) => p.id === v.product_id);
+      return !!parent?.dynamic_price;
+    }
+    return false;
+  };
 
   const addProduct = (p: Product) => {
     const productVariants = variants.filter((v) => v.product_id === p.id);
@@ -364,6 +387,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
+                        {isDynamicPriceItem(it.product_id) ? (
                         <Popover
                           open={priceEditFor === ix}
                           onOpenChange={(o) => {
@@ -398,6 +422,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             </div>
                           </PopoverContent>
                         </Popover>
+                        ) : (
+                          <div className="text-right font-medium leading-tight" title="Harga terkunci">
+                            <div>{fmt(gross)}</div>
+                            {it.discount ? (
+                              <div className="text-[10px] text-destructive">-{fmt(it.discount)}</div>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -523,6 +555,33 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
+              </div>
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory("all")}
+                  className={`px-3 h-8 rounded-full text-xs font-medium whitespace-nowrap border transition ${
+                    activeCategory === "all"
+                      ? "bg-background text-foreground border-background"
+                      : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                  }`}
+                >
+                  Semua Kategori
+                </button>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setActiveCategory(c.id)}
+                    className={`px-3 h-8 rounded-full text-xs font-medium whitespace-nowrap border transition ${
+                      activeCategory === c.id
+                        ? "bg-background text-foreground border-background"
+                        : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
               </div>
             </div>
 
