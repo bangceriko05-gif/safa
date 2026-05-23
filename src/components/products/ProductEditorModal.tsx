@@ -242,10 +242,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
       toast.error("Nama produk wajib diisi");
       return;
     }
-    if (!data.purchase_price || data.purchase_price <= 0) {
-      toast.error("Harga beli wajib diisi");
-      return;
-    }
+    // Harga beli tidak wajib
     // Duplicate validation (same store)
     {
       const trimmedName = data.name.trim();
@@ -607,9 +604,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>
-                    Harga Beli <span className="text-destructive">*</span>
-                  </Label>
+                  <Label>Harga Beli</Label>
                   <Input
                     inputMode="numeric"
                     value={formatThousand(data.purchase_price)}
@@ -653,10 +648,13 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                     <Input
                       type="number"
                       value={data.stock_qty}
-                      onChange={(e) =>
-                        setData({ ...data, stock_qty: Number(e.target.value) })
-                      }
+                      disabled
+                      readOnly
+                      title="Stok dihitung otomatis dari produk masuk & keluar"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Stok dihitung otomatis dari produk masuk & keluar.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Minimal Stok</Label>
@@ -681,20 +679,19 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-md border p-3">
-                <div>
-                  <p className="font-medium text-sm">Harga Dinamis</p>
-                  <p className="text-xs text-muted-foreground">
-                    Jika aktif, harga produk bisa diubah saat input order di POS.
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="font-medium text-sm">Harga Dinamis</p>
+                    <p className="text-xs text-muted-foreground">
+                      Harga bisa diubah di POS.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!data.dynamic_price}
+                    onCheckedChange={(v) => setData({ ...data, dynamic_price: v })}
+                  />
                 </div>
-                <Switch
-                  checked={!!data.dynamic_price}
-                  onCheckedChange={(v) => setData({ ...data, dynamic_price: v })}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <div>
                     <p className="font-medium text-sm">Produk Aktif</p>
