@@ -2114,6 +2114,7 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          dynamic_price: boolean
           id: string
           images: Json
           is_active: boolean
@@ -2140,6 +2141,7 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          dynamic_price?: boolean
           id?: string
           images?: Json
           is_active?: boolean
@@ -2166,6 +2168,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          dynamic_price?: boolean
           id?: string
           images?: Json
           is_active?: boolean
