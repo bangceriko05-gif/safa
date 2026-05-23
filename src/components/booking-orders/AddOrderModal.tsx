@@ -163,6 +163,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return p.name.toLowerCase().includes(search.toLowerCase());
   });
 
+  const isDynamicPriceItem = (productId: string | null) => {
+    if (!productId) return true;
+    const direct = products.find((p) => p.id === productId);
+    if (direct) return !!direct.dynamic_price;
+    const v = variants.find((x) => x.id === productId);
+    if (v) {
+      const parent = products.find((p) => p.id === v.product_id);
+      return !!parent?.dynamic_price;
+    }
+    return false;
+  };
+
   const addProduct = (p: Product) => {
     const productVariants = variants.filter((v) => v.product_id === p.id);
     if (productVariants.length > 0) {
