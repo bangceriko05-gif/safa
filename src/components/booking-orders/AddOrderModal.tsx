@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -281,6 +281,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           <div className="font-semibold text-lg truncate">
             {order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"} — {booking.customer_name}
           </div>
+          {order?.id && (
+            <button
+              type="button"
+              onClick={() => window.open(`/receipt?id=${booking.id}&order=${order.id}`, "_blank")}
+              className="ml-auto mr-10 inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
+              title="Cetak nota order"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </button>
+          )}
         </div>
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
@@ -366,7 +377,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                               className="text-right font-medium hover:underline leading-tight"
                               title="Klik untuk atur harga"
                             >
-                              <div>{fmt(sub)}</div>
+                              <div>{fmt(gross)}</div>
                               {it.discount ? (
                                 <div className="text-[10px] text-destructive">-{fmt(it.discount)}</div>
                               ) : null}
