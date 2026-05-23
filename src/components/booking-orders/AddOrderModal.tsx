@@ -387,6 +387,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
+                        {isDynamicPriceItem(it.product_id) ? (
                         <Popover
                           open={priceEditFor === ix}
                           onOpenChange={(o) => {
@@ -421,6 +422,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             </div>
                           </PopoverContent>
                         </Popover>
+                        ) : (
+                          <div className="text-right font-medium leading-tight" title="Harga terkunci">
+                            <div>{fmt(gross)}</div>
+                            {it.discount ? (
+                              <div className="text-[10px] text-destructive">-{fmt(it.discount)}</div>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
