@@ -56,6 +56,7 @@ export interface EditorProduct {
   show_on_website: boolean;
   images: string[];
   description?: string;
+  dynamic_price?: boolean;
 }
 
 interface Props {
@@ -84,6 +85,7 @@ const empty: EditorProduct = {
   show_on_website: false,
   images: [],
   description: "",
+  dynamic_price: false,
 };
 
 export default function ProductEditorModal({ productId, copyMode = false, onClose, onSaved }: Props) {
@@ -143,6 +145,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         show_on_website: (p as any).show_on_website ?? false,
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
+        dynamic_price: (p as any).dynamic_price ?? false,
       });
       setSavedId(copyMode ? null : p.id);
     }
@@ -296,6 +299,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         show_on_website: data.show_on_website,
         images: copyMode && !copySyncImages ? [] : data.images,
         description: data.description?.trim() || null,
+        dynamic_price: !!data.dynamic_price,
       };
 
       let id = savedId;
@@ -674,6 +678,19 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                   onChange={(e) => setData({ ...data, description: e.target.value })}
                   placeholder="Deskripsi produk (opsional)"
                   rows={3}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <p className="font-medium text-sm">Harga Dinamis</p>
+                  <p className="text-xs text-muted-foreground">
+                    Jika aktif, harga produk bisa diubah saat input order di POS.
+                  </p>
+                </div>
+                <Switch
+                  checked={!!data.dynamic_price}
+                  onCheckedChange={(v) => setData({ ...data, dynamic_price: v })}
                 />
               </div>
 
