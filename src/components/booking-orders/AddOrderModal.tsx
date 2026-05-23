@@ -158,9 +158,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter((p) => {
+    if (activeCategory !== "all" && (p.category_id || "") !== activeCategory) return false;
+    return p.name.toLowerCase().includes(search.toLowerCase());
+  });
 
   const addProduct = (p: Product) => {
     const productVariants = variants.filter((v) => v.product_id === p.id);
