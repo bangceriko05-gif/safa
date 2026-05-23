@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, X } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -281,14 +281,6 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           <div className="font-semibold text-lg truncate">
             {order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"} — {booking.customer_name}
           </div>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="p-2 hover:bg-white/10 rounded"
-            aria-label="Tutup"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
@@ -323,16 +315,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     const gross = it.quantity * it.unit_price;
                     const sub = Math.max(0, gross - (it.discount || 0));
                     return (
-                      <div key={ix} className="grid grid-cols-[1fr_50px_90px] gap-2 px-3 py-2 text-xs items-start">
+                      <div key={ix} className="grid grid-cols-[1fr_88px_90px] gap-2 px-3 py-2 text-xs items-center">
                         <div className="min-w-0">
-                          <div className="font-medium truncate">{it.product_name}</div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Button size="icon" variant="outline" className="h-5 w-5" onClick={() => updateQty(ix, it.quantity - 1)}>
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Button size="icon" variant="outline" className="h-5 w-5" onClick={() => updateQty(ix, it.quantity + 1)}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
+                          <div className="font-medium truncate leading-tight">{it.product_name}</div>
+                          <div className="flex items-center gap-1.5 mt-1">
                             <button
                               type="button"
                               onClick={() => setDiscountFor(ix)}
@@ -343,19 +329,29 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                                 ? (it.discount_mode === "pct" ? `${it.discount_value}%` : "Disc")
                                 : "+Disc"}
                             </button>
-                            <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive ml-auto" onClick={() => removeItem(ix)}>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(ix)}
+                              className="h-5 w-5 inline-flex items-center justify-center text-destructive hover:bg-destructive/10 rounded"
+                              title="Hapus"
+                            >
                               <Trash2 className="h-3 w-3" />
-                            </Button>
+                            </button>
                           </div>
                         </div>
-                        <div className="text-center pt-1">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button size="icon" variant="outline" className="h-6 w-6 shrink-0" onClick={() => updateQty(ix, it.quantity - 1)}>
+                            <Minus className="h-3 w-3" />
+                          </Button>
                           <Input
                             type="number"
                             value={it.quantity}
                             onChange={(e) => updateQty(ix, Number(e.target.value))}
-                            className="h-6 w-full text-xs text-center px-1"
+                            className="h-6 w-9 text-xs text-center px-0"
                           />
-                          <div className="text-[10px] text-muted-foreground mt-0.5">x</div>
+                          <Button size="icon" variant="outline" className="h-6 w-6 shrink-0" onClick={() => updateQty(ix, it.quantity + 1)}>
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
                         <Popover
                           open={priceEditFor === ix}
