@@ -46,12 +46,13 @@ interface OrderItem {
 interface AddOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: any;
+  booking: any | null;
   order?: any | null;
   onSaved: () => void;
+  posMode?: boolean;
 }
 
-export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved }: AddOrderModalProps) {
+export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false }: AddOrderModalProps) {
   const { currentStore } = useStore();
   const { methods } = usePaymentMethods();
   const [products, setProducts] = useState<Product[]>([]);
@@ -75,6 +76,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [discountFor, setDiscountFor] = useState<number | null>(null);
   const [priceEditFor, setPriceEditFor] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState<number>(0);
+
+  // POS-mode customer matching
+  const [posCustomerName, setPosCustomerName] = useState("");
+  const [activeBookings, setActiveBookings] = useState<any[]>([]);
+  const [matchedBooking, setMatchedBooking] = useState<any | null>(null);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const effectiveBooking = booking || matchedBooking;
 
   useEffect(() => {
     if (!open || !currentStore) return;
@@ -105,6 +113,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }
     })();
   }, [open, currentStore]);
+
+  useEffect(() => {
+    if (!open || !posMode || !currentStore) return;
+    (async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("id, bid, customer_name, phone, status, room_id, rooms(name)")
+        .eq("store_id", currentStore.id)
+        .in("status", ["checked_in", "confirmed", "in", "CI"])
+        .order("customer_name");
+      setActiveBookings(data || []);
+    })();
+  }, [open, posMode, currentStore]);
+
+  useEffect(() => {
+    if (!open) {
+      setPosCustomerName("");
+      setMatchedBooking(null);
+      setShowSuggest(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
