@@ -48,6 +48,7 @@ import ScheduleTable from "./ScheduleTable";
 import PMSCalendar from "./PMSCalendar";
 import BookingModal from "./BookingModal";
 import StoreSelector from "./StoreSelector";
+import AddOrderModal from "./booking-orders/AddOrderModal";
 const UserManagement = lazy(() => import("./UserManagement"));
 const RoomManagement = lazy(() => import("./RoomManagement"));
 const CustomerManagement = lazy(() => import("./CustomerManagement"));
@@ -117,6 +118,7 @@ export default function Dashboard() {
   const [profileData, setProfileData] = useState({ name: "", email: "", phone: "" });
   const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [profileSaving, setProfileSaving] = useState(false);
+  const [posOpen, setPosOpen] = useState(false);
   const navigate = useNavigate();
   const { hasPermission: checkPerm, hasAnyPermission } = usePermissions();
 
@@ -691,6 +693,16 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  {isFeatureEnabled("transactions") && (
+                    <Button
+                      onClick={() => setPosOpen(true)}
+                      variant="outline"
+                      size="default"
+                    >
+                      <ShoppingCart className="lg:mr-2 h-4 w-4" />
+                      <span className="hidden lg:inline">POS</span>
+                    </Button>
+                  )}
                   {isFeatureEnabled("deposit") && activeTab === "bookings" && (
                     <Button 
                       onClick={() => setDepositMode(!depositMode)} 
