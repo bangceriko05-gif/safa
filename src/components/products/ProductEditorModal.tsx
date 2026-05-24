@@ -641,33 +641,36 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                 />
               </div>
 
-              {data.track_inventory && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Stok</Label>
-                    <Input
-                      type="number"
-                      value={data.stock_qty}
-                      disabled
-                      readOnly
-                      title="Stok dihitung otomatis dari produk masuk & keluar"
-                    />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Qty Stok</Label>
+                  <Input
+                    type="number"
+                    value={data.stock_qty}
+                    disabled={data.track_inventory}
+                    readOnly={data.track_inventory}
+                    onChange={(e) =>
+                      setData({ ...data, stock_qty: Number(e.target.value) })
+                    }
+                    title={data.track_inventory ? "Stok dihitung otomatis dari produk masuk & keluar" : undefined}
+                  />
+                  {data.track_inventory && (
                     <p className="text-xs text-muted-foreground">
                       Stok dihitung otomatis dari produk masuk & keluar.
                     </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Minimal Stok</Label>
-                    <Input
-                      type="number"
-                      value={data.min_stock}
-                      onChange={(e) =>
-                        setData({ ...data, min_stock: Number(e.target.value) })
-                      }
-                    />
-                  </div>
+                  )}
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label>Peringatan Stok</Label>
+                  <Input
+                    type="number"
+                    value={data.min_stock}
+                    onChange={(e) =>
+                      setData({ ...data, min_stock: Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label>Deskripsi</Label>
