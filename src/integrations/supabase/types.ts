@@ -440,7 +440,7 @@ export type Database = {
           amount: number
           amount_2: number
           bid: string | null
-          booking_id: string
+          booking_id: string | null
           created_at: string
           created_by: string | null
           date: string
@@ -461,7 +461,7 @@ export type Database = {
           amount?: number
           amount_2?: number
           bid?: string | null
-          booking_id: string
+          booking_id?: string | null
           created_at?: string
           created_by?: string | null
           date?: string
@@ -482,7 +482,7 @@ export type Database = {
           amount?: number
           amount_2?: number
           bid?: string | null
-          booking_id?: string
+          booking_id?: string | null
           created_at?: string
           created_by?: string | null
           date?: string

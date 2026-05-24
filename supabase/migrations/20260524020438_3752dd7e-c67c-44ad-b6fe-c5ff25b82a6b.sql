@@ -1,0 +1,1 @@
+ALTER TABLE public.booking_orders ALTER COLUMN booking_id DROP NOT NULL;

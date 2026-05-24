@@ -46,12 +46,13 @@ interface OrderItem {
 interface AddOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: any;
+  booking: any | null;
   order?: any | null;
   onSaved: () => void;
+  posMode?: boolean;
 }
 
-export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved }: AddOrderModalProps) {
+export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false }: AddOrderModalProps) {
   const { currentStore } = useStore();
   const { methods } = usePaymentMethods();
   const [products, setProducts] = useState<Product[]>([]);
@@ -75,6 +76,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [discountFor, setDiscountFor] = useState<number | null>(null);
   const [priceEditFor, setPriceEditFor] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState<number>(0);
+
+  // POS-mode customer matching
+  const [posCustomerName, setPosCustomerName] = useState("");
+  const [activeBookings, setActiveBookings] = useState<any[]>([]);
+  const [matchedBooking, setMatchedBooking] = useState<any | null>(null);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const effectiveBooking = booking || matchedBooking;
 
   useEffect(() => {
     if (!open || !currentStore) return;
@@ -105,6 +113,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }
     })();
   }, [open, currentStore]);
+
+  useEffect(() => {
+    if (!open || !posMode || !currentStore) return;
+    (async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("id, bid, customer_name, phone, status, room_id, rooms(name)")
+        .eq("store_id", currentStore.id)
+        .in("status", ["checked_in", "confirmed", "in", "CI"])
+        .order("customer_name");
+      setActiveBookings(data || []);
+    })();
+  }, [open, posMode, currentStore]);
+
+  useEffect(() => {
+    if (!open) {
+      setPosCustomerName("");
+      setMatchedBooking(null);
+      setShowSuggest(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -240,7 +269,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const payload: any = {
-        booking_id: booking.id,
+        booking_id: effectiveBooking ? effectiveBooking.id : null,
         store_id: currentStore.id,
         date,
         payment_method: paymentMethod,
@@ -302,7 +331,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         {/* Top blue header bar */}
         <div className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           <div className="font-semibold text-lg truncate">
-            {order ? `Ubah Order ${order.bid || ""}` : "Tambah Order"} — {booking.customer_name}
+            {order
+              ? `Ubah Order ${order.bid || ""}`
+              : posMode
+              ? "POS Kasir"
+              : "Tambah Order"}
+            {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
           {order?.id && (
             <button
@@ -440,12 +474,73 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {/* Customer + payment fields */}
             <div className="border-t px-3 py-2 text-xs space-y-1 bg-muted/30">
               <div>Jumlah Item: <span className="font-semibold">{items.reduce((s, i) => s + i.quantity, 0)}</span></div>
-              <div className="text-muted-foreground">
-                Pelanggan: <span className="font-medium text-foreground">{booking.customer_name}</span>
-              </div>
-              <div className="text-muted-foreground">
-                BID Booking: <span className="font-mono text-foreground">{booking.bid}</span>
-              </div>
+              {posMode && !booking ? (
+                <div className="relative">
+                  <Label className="text-[11px]">Pelanggan (opsional)</Label>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Ketik nama pelanggan di kamar..."
+                    value={posCustomerName}
+                    onChange={(e) => {
+                      setPosCustomerName(e.target.value);
+                      setShowSuggest(true);
+                      const exact = activeBookings.find(
+                        (b) => b.customer_name?.toLowerCase() === e.target.value.toLowerCase()
+                      );
+                      setMatchedBooking(exact || null);
+                    }}
+                    onFocus={() => setShowSuggest(true)}
+                    onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+                  />
+                  {showSuggest && posCustomerName.trim() && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                      {activeBookings
+                        .filter((b) =>
+                          b.customer_name?.toLowerCase().includes(posCustomerName.toLowerCase())
+                        )
+                        .slice(0, 8)
+                        .map((b) => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => {
+                              setMatchedBooking(b);
+                              setPosCustomerName(b.customer_name);
+                              setShowSuggest(false);
+                            }}
+                            className="w-full text-left px-2 py-1.5 hover:bg-accent text-[11px]"
+                          >
+                            <div className="font-medium">{b.customer_name}</div>
+                            <div className="text-muted-foreground font-mono">
+                              {b.bid} · {b.rooms?.name || ""}
+                            </div>
+                          </button>
+                        ))}
+                      {activeBookings.filter((b) =>
+                        b.customer_name?.toLowerCase().includes(posCustomerName.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                          Tidak ada kecocokan — akan disimpan sebagai POS walk-in
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {matchedBooking && (
+                    <div className="text-[11px] text-emerald-700 mt-1">
+                      ✓ Terhubung ke BID <span className="font-mono">{matchedBooking.bid}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="text-muted-foreground">
+                    Pelanggan: <span className="font-medium text-foreground">{effectiveBooking?.customer_name || "—"}</span>
+                  </div>
+                  <div className="text-muted-foreground">
+                    BID Booking: <span className="font-mono text-foreground">{effectiveBooking?.bid || "—"}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="border-t px-3 py-2 space-y-2 overflow-y-auto max-h-[40%]">
