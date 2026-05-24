@@ -986,6 +986,14 @@ export default function Dashboard() {
         </Suspense>
 
         {/* Booking Modal */}
+        <AddOrderModal
+          open={posOpen}
+          onOpenChange={setPosOpen}
+          booking={null}
+          posMode
+          onSaved={() => {}}
+        />
+
         <BookingModal
           isOpen={isModalOpen}
           onClose={() => {
