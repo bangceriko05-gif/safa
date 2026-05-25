@@ -82,6 +82,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [activeBookings, setActiveBookings] = useState<any[]>([]);
   const [matchedBooking, setMatchedBooking] = useState<any | null>(null);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  const [dbCustomers, setDbCustomers] = useState<any[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [manualCustomerName, setManualCustomerName] = useState("");
+
+  // Transaction-wide discount
+  const [txDiscountMode, setTxDiscountMode] = useState<"rp" | "pct">("rp");
+  const [txDiscountValue, setTxDiscountValue] = useState<number>(0);
   const effectiveBooking = booking || matchedBooking;
 
   useEffect(() => {
@@ -124,6 +132,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         .in("status", ["checked_in", "confirmed", "in", "CI"])
         .order("customer_name");
       setActiveBookings(data || []);
+      const { data: cust } = await supabase
+        .from("customers")
+        .select("id, name, phone")
+        .eq("store_id", currentStore.id)
+        .order("name");
+      setDbCustomers(cust || []);
     })();
   }, [open, posMode, currentStore]);
 
@@ -132,6 +146,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setPosCustomerName("");
       setMatchedBooking(null);
       setShowSuggest(false);
+      setManualCustomerName("");
+      setTxDiscountMode("rp");
+      setTxDiscountValue(0);
     }
   }, [open]);
 
@@ -180,10 +197,16 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     }
   }, [open, order]);
 
-  const total = useMemo(
+  const itemsSubtotal = useMemo(
     () => items.reduce((s, it) => s + Math.max(0, it.quantity * it.unit_price - (it.discount || 0)), 0),
     [items]
   );
+  const txDiscountAmount = useMemo(() => {
+    if (!txDiscountValue) return 0;
+    if (txDiscountMode === "pct") return Math.round((itemsSubtotal * txDiscountValue) / 100);
+    return Math.min(itemsSubtotal, txDiscountValue);
+  }, [itemsSubtotal, txDiscountMode, txDiscountValue]);
+  const total = Math.max(0, itemsSubtotal - txDiscountAmount);
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
 
@@ -268,6 +291,16 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const discountNote =
+        txDiscountAmount > 0
+          ? `[Diskon Transaksi: ${
+              txDiscountMode === "pct" ? `${txDiscountValue}% = ` : ""
+            }${fmt(txDiscountAmount)}]`
+          : "";
+      const customerDisplayName = effectiveBooking?.customer_name || manualCustomerName || null;
+      const customerNote =
+        customerDisplayName && !effectiveBooking ? `(Pelanggan: ${customerDisplayName})` : "";
+      const finalNote = [discountNote, customerNote, note].filter(Boolean).join(" ").trim();
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : null,
         store_id: currentStore.id,
@@ -282,7 +315,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         total_amount: total,
         payment_status: paymentStatus,
         payment_proof_urls: proofUrl ? [proofUrl] : [],
-        note: note || null,
+        note: finalNote || null,
       };
 
       let orderId = order?.id;
@@ -355,7 +388,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           {/* LEFT — Nota / Pesanan Baru */}
           <div className="w-[360px] shrink-0 bg-background flex flex-col border-r">
             <div className="px-3 py-2 flex items-center justify-between border-b">
-              <User className="h-4 w-4 text-muted-foreground" />
+              {posMode && !booking ? (
+                <button
+                  type="button"
+                  onClick={() => setCustomerPickerOpen(true)}
+                  className="h-7 w-7 rounded-full hover:bg-accent flex items-center justify-center"
+                  title="Pilih pelanggan"
+                >
+                  <User className={`h-4 w-4 ${effectiveBooking || manualCustomerName ? "text-primary" : "text-muted-foreground"}`} />
+                </button>
+              ) : (
+                <User className="h-4 w-4 text-muted-foreground" />
+              )}
               <div className="font-semibold text-sm">Pesanan Baru</div>
               <button
                 type="button"
@@ -475,62 +519,19 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             <div className="border-t px-3 py-2 text-xs space-y-1 bg-muted/30">
               <div>Jumlah Item: <span className="font-semibold">{items.reduce((s, i) => s + i.quantity, 0)}</span></div>
               {posMode && !booking ? (
-                <div className="relative">
-                  <Label className="text-[11px]">Pelanggan (opsional)</Label>
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder="Ketik nama pelanggan di kamar..."
-                    value={posCustomerName}
-                    onChange={(e) => {
-                      setPosCustomerName(e.target.value);
-                      setShowSuggest(true);
-                      const exact = activeBookings.find(
-                        (b) => b.customer_name?.toLowerCase() === e.target.value.toLowerCase()
-                      );
-                      setMatchedBooking(exact || null);
-                    }}
-                    onFocus={() => setShowSuggest(true)}
-                    onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
-                  />
-                  {showSuggest && posCustomerName.trim() && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-                      {activeBookings
-                        .filter((b) =>
-                          b.customer_name?.toLowerCase().includes(posCustomerName.toLowerCase())
-                        )
-                        .slice(0, 8)
-                        .map((b) => (
-                          <button
-                            key={b.id}
-                            type="button"
-                            onClick={() => {
-                              setMatchedBooking(b);
-                              setPosCustomerName(b.customer_name);
-                              setShowSuggest(false);
-                            }}
-                            className="w-full text-left px-2 py-1.5 hover:bg-accent text-[11px]"
-                          >
-                            <div className="font-medium">{b.customer_name}</div>
-                            <div className="text-muted-foreground font-mono">
-                              {b.bid} · {b.rooms?.name || ""}
-                            </div>
-                          </button>
-                        ))}
-                      {activeBookings.filter((b) =>
-                        b.customer_name?.toLowerCase().includes(posCustomerName.toLowerCase())
-                      ).length === 0 && (
-                        <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
-                          Tidak ada kecocokan — akan disimpan sebagai POS walk-in
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {matchedBooking && (
-                    <div className="text-[11px] text-emerald-700 mt-1">
-                      ✓ Terhubung ke BID <span className="font-mono">{matchedBooking.bid}</span>
-                    </div>
-                  )}
-                </div>
+                (effectiveBooking || manualCustomerName) && (
+                  <div className="text-muted-foreground">
+                    Pelanggan:{" "}
+                    <span className="font-medium text-foreground">
+                      {effectiveBooking?.customer_name || manualCustomerName}
+                    </span>
+                    {matchedBooking && (
+                      <span className="ml-1 text-emerald-700">
+                        (BID <span className="font-mono">{matchedBooking.bid}</span>)
+                      </span>
+                    )}
+                  </div>
+                )
               ) : (
                 <>
                   <div className="text-muted-foreground">
@@ -541,6 +542,32 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   </div>
                 </>
               )}
+              <div className="pt-1">
+                <Label className="text-[11px]">Diskon</Label>
+                <div className="flex gap-1">
+                  <Select value={txDiscountMode} onValueChange={(v) => setTxDiscountMode(v as "rp" | "pct")}>
+                    <SelectTrigger className="h-8 w-[70px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rp">Rp</SelectItem>
+                      <SelectItem value="pct">%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    inputMode="numeric"
+                    className="h-8 text-xs"
+                    placeholder="0"
+                    value={txDiscountValue ? fmtNum(txDiscountValue) : ""}
+                    onChange={(e) => {
+                      const v = parseNum(e.target.value);
+                      if (txDiscountMode === "pct") setTxDiscountValue(Math.min(100, v));
+                      else setTxDiscountValue(v);
+                    }}
+                  />
+                </div>
+                {txDiscountAmount > 0 && (
+                  <div className="text-[11px] text-destructive mt-0.5">- {fmt(txDiscountAmount)}</div>
+                )}
+              </div>
             </div>
 
             <div className="border-t px-3 py-2 space-y-2 overflow-y-auto max-h-[40%]">
@@ -753,6 +780,107 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       <span className="text-sm text-muted-foreground">{fmt(Number(v.price))}</span>
                     </button>
                   ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+        {customerPickerOpen && (
+          <Dialog open={customerPickerOpen} onOpenChange={setCustomerPickerOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Pilih Pelanggan</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Cari nama pelanggan..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="h-9"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Atau ketik manual (tidak tersimpan)"
+                    value={manualCustomerName}
+                    onChange={(e) => setManualCustomerName(e.target.value)}
+                    className="h-9"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setMatchedBooking(null);
+                      setPosCustomerName("");
+                      setCustomerPickerOpen(false);
+                    }}
+                    disabled={!manualCustomerName.trim()}
+                  >
+                    Pakai
+                  </Button>
+                </div>
+                <div className="max-h-[50vh] overflow-y-auto border rounded divide-y">
+                  {activeBookings.length > 0 && (
+                    <div className="px-2 py-1 text-[10px] uppercase font-semibold bg-muted text-muted-foreground">
+                      Pelanggan di Kamar (BID)
+                    </div>
+                  )}
+                  {activeBookings
+                    .filter((b) => !customerSearch || b.customer_name?.toLowerCase().includes(customerSearch.toLowerCase()))
+                    .map((b) => (
+                      <button
+                        key={`bk-${b.id}`}
+                        type="button"
+                        onClick={() => {
+                          setMatchedBooking(b);
+                          setPosCustomerName(b.customer_name || "");
+                          setManualCustomerName("");
+                          setCustomerPickerOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
+                      >
+                        <div className="font-medium">{b.customer_name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {b.bid} · {b.rooms?.name || ""}
+                        </div>
+                      </button>
+                    ))}
+                  {dbCustomers.length > 0 && (
+                    <div className="px-2 py-1 text-[10px] uppercase font-semibold bg-muted text-muted-foreground">
+                      Database Pelanggan
+                    </div>
+                  )}
+                  {dbCustomers
+                    .filter((c) => !customerSearch || c.name?.toLowerCase().includes(customerSearch.toLowerCase()))
+                    .slice(0, 50)
+                    .map((c) => (
+                      <button
+                        key={`cu-${c.id}`}
+                        type="button"
+                        onClick={() => {
+                          setMatchedBooking(null);
+                          setManualCustomerName(c.name);
+                          setPosCustomerName("");
+                          setCustomerPickerOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
+                      >
+                        <div className="font-medium">{c.name}</div>
+                        {c.phone && <div className="text-xs text-muted-foreground">{c.phone}</div>}
+                      </button>
+                    ))}
+                </div>
+                {(effectiveBooking || manualCustomerName) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setMatchedBooking(null);
+                      setManualCustomerName("");
+                      setPosCustomerName("");
+                      setCustomerPickerOpen(false);
+                    }}
+                  >
+                    Hapus pilihan pelanggan
+                  </Button>
+                )}
               </div>
             </DialogContent>
           </Dialog>
