@@ -349,6 +349,7 @@ export default function BookingReceipt() {
       {/* Receipt */}
       <div
         ref={receiptRef}
+        data-receipt
         className="bg-white mx-auto shadow-lg print:shadow-none"
         style={{
           width: getPaperWidth(),
@@ -740,13 +741,30 @@ export default function BookingReceipt() {
             size: ${getPaperWidth()} auto;
             margin: 0;
           }
-          body {
-            margin: 0;
-            padding: 0;
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            height: auto !important;
+            min-height: 0 !important;
           }
-          .print\\:hidden {
-            display: none !important;
+          body * { visibility: hidden !important; }
+          [data-receipt], [data-receipt] * { visibility: visible !important; }
+          [data-receipt] {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-shadow: none !important;
+            margin: 0 !important;
           }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          .print\\:hidden { display: none !important; }
         }
       `}</style>
     </div>
