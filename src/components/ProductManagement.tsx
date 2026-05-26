@@ -82,6 +82,7 @@ interface Product {
   category_id: string | null;
   brand_id: string | null;
   collection_id: string | null;
+  material_id: string | null;
   images: any;
   store_id?: string | null;
 }
@@ -111,6 +112,7 @@ export default function ProductManagement() {
   const [categories, setCategories] = useState<RefItem[]>([]);
   const [brands, setBrands] = useState<RefItem[]>([]);
   const [collections, setCollections] = useState<RefItem[]>([]);
+  const [materials, setMaterials] = useState<RefItem[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorProductId, setEditorProductId] = useState<string | null>(null);
   const [editorCopyMode, setEditorCopyMode] = useState(false);
@@ -118,6 +120,7 @@ export default function ProductManagement() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
   const [filterCollection, setFilterCollection] = useState<string | null>(null);
+  const [filterMaterial, setFilterMaterial] = useState<string | null>(null);
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
@@ -145,7 +148,7 @@ export default function ProductManagement() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, filterCategory, filterBrand, filterCollection, pageSize, currentStore?.id]);
+  }, [searchQuery, filterCategory, filterBrand, filterCollection, filterMaterial, pageSize, currentStore?.id]);
 
   useEffect(() => {
     if (currentStore) fetchAll();
@@ -154,11 +157,11 @@ export default function ProductManagement() {
   const fetchAll = async () => {
     if (!currentStore) return;
     try {
-      const [pRes, vRes, rRes, cRes, bRes, kRes] = await Promise.all([
+      const [pRes, vRes, rRes, cRes, bRes, kRes, mRes] = await Promise.all([
         supabase
           .from("products")
           .select(
-            "id,name,price,purchase_price,sku,barcode,stock_qty,track_inventory,show_on_website,is_available_offline,category_id,brand_id,collection_id,images,store_id"
+            "id,name,price,purchase_price,sku,barcode,stock_qty,track_inventory,show_on_website,is_available_offline,category_id,brand_id,collection_id,material_id,images,store_id"
           )
           .eq("store_id", currentStore.id)
           .order("name"),
@@ -179,6 +182,11 @@ export default function ProductManagement() {
           .select("id, name")
           .eq("store_id", currentStore.id)
           .order("name"),
+        supabase
+          .from("product_materials" as any)
+          .select("id, name")
+          .eq("store_id", currentStore.id)
+          .order("name"),
       ]);
       if (pRes.error) throw pRes.error;
       setProducts((pRes.data as any) || []);
@@ -187,6 +195,7 @@ export default function ProductManagement() {
       setCategories((cRes.data as any) || []);
       setBrands((bRes.data as any) || []);
       setCollections((kRes.data as any) || []);
+      setMaterials((mRes.data as any) || []);
     } catch (e) {
       console.error(e);
       toast.error("Gagal memuat data produk");
@@ -545,6 +554,7 @@ export default function ProductManagement() {
     if (filterCategory && p.category_id !== filterCategory) return false;
     if (filterBrand && p.brand_id !== filterBrand) return false;
     if (filterCollection && p.collection_id !== filterCollection) return false;
+    if (filterMaterial && p.material_id !== filterMaterial) return false;
     return true;
   });
 
@@ -674,6 +684,12 @@ export default function ProductManagement() {
           value={filterCollection}
           onChange={setFilterCollection}
           options={collections}
+        />
+        <FilterChip
+          label="Jenis Bahan"
+          value={filterMaterial}
+          onChange={setFilterMaterial}
+          options={materials}
         />
 
         <div className="relative flex-1 min-w-[240px]">
