@@ -2045,21 +2045,27 @@ export type Database = {
       product_units: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
+          is_default: boolean
           name: string
           store_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
+          is_default?: boolean
           name: string
           store_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
+          is_default?: boolean
           name?: string
           store_id?: string
           updated_at?: string
