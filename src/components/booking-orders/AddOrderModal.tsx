@@ -360,7 +360,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0">
+      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 [&>button.absolute]:hidden">
         {/* Top blue header bar */}
         <div className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           <div className="font-semibold text-lg truncate">
@@ -371,17 +371,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               : "Tambah Order"}
             {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
-          {order?.id && (
+          <div className="ml-auto flex items-center gap-2">
+            {order?.id && (
+              <button
+                type="button"
+                onClick={() => window.open(`/receipt?id=${booking.id}&order=${order.id}`, "_blank")}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
+                title="Cetak nota order"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => window.open(`/receipt?id=${booking.id}&order=${order.id}`, "_blank")}
-              className="ml-auto mr-10 inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
-              title="Cetak nota order"
+              onClick={() => onOpenChange(false)}
+              className="inline-flex items-center px-3 h-8 rounded bg-white text-red-600 font-bold text-sm hover:bg-red-50"
+              title="Tutup"
             >
-              <Printer className="h-4 w-4" />
-              Print
+              Close
             </button>
-          )}
+          </div>
         </div>
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
