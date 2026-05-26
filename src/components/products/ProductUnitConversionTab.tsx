@@ -26,7 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Pencil, ArrowLeftRight } from "lucide-react";
+import { Plus, Pencil, ArrowLeftRight, Settings2, Check, X, Trash2 } from "lucide-react";
+import { useStore } from "@/contexts/StoreContext";
 
 interface Conversion {
   id: string;
@@ -42,7 +43,11 @@ interface Props {
   productId: string | null;
 }
 
-const COMMON_UNITS = ["pcs", "kg", "gram", "liter", "ml", "dus", "lusin", "kodi"];
+interface UnitOption {
+  id: string;
+  name: string;
+  is_default: boolean;
+}
 
 const fmt = (n: number) =>
   n.toLocaleString("id-ID", {
@@ -51,6 +56,7 @@ const fmt = (n: number) =>
   });
 
 export default function ProductUnitConversionTab({ productId }: Props) {
+  const { currentStore } = useStore();
   const [items, setItems] = useState<Conversion[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Conversion | null>(null);
@@ -60,6 +66,67 @@ export default function ProductUnitConversionTab({ productId }: Props) {
   const [factor, setFactor] = useState<number>(0);
   const [pricePerFrom, setPricePerFrom] = useState<number>(0);
   const [isActive, setIsActive] = useState(true);
+
+  const [units, setUnits] = useState<UnitOption[]>([]);
+  const [unitsOpen, setUnitsOpen] = useState(false);
+  const [newUnitName, setNewUnitName] = useState("");
+  const [editUnitId, setEditUnitId] = useState<string | null>(null);
+  const [editUnitName, setEditUnitName] = useState("");
+
+  const loadUnits = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("product_units" as any)
+      .select("id, name, is_default")
+      .eq("store_id", currentStore.id)
+      .order("name");
+    setUnits((data as any) || []);
+  };
+
+  useEffect(() => {
+    loadUnits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStore?.id]);
+
+  const addUnit = async () => {
+    const name = newUnitName.trim();
+    if (!name || !currentStore) return;
+    const { error } = await supabase
+      .from("product_units" as any)
+      .insert([{ name, store_id: currentStore.id, is_default: false }]);
+    if (error) return toast.error(error.message);
+    setNewUnitName("");
+    toast.success("Satuan ditambahkan");
+    loadUnits();
+  };
+
+  const updateUnit = async (id: string) => {
+    const name = editUnitName.trim();
+    if (!name) return;
+    const { error } = await supabase
+      .from("product_units" as any)
+      .update({ name })
+      .eq("id", id);
+    if (error) return toast.error(error.message);
+    setEditUnitId(null);
+    toast.success("Satuan diperbarui");
+    loadUnits();
+  };
+
+  const deleteUnit = async (u: UnitOption) => {
+    if (u.is_default) {
+      toast.error("Satuan default tidak dapat dihapus");
+      return;
+    }
+    if (!confirm(`Hapus satuan "${u.name}"?`)) return;
+    const { error } = await supabase
+      .from("product_units" as any)
+      .delete()
+      .eq("id", u.id);
+    if (error) return toast.error(error.message);
+    toast.success("Satuan dihapus");
+    loadUnits();
+  };
 
   const load = async () => {
     if (!productId) {
@@ -154,9 +221,14 @@ export default function ProductUnitConversionTab({ productId }: Props) {
             Atur konversi antar satuan untuk produk ini
           </p>
         </div>
-        <Button onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Tambah Konversi
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setUnitsOpen(true)}>
+            <Settings2 className="mr-2 h-4 w-4" /> Kelola Satuan
+          </Button>
+          <Button onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" /> Tambah Konversi
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-lg p-4 space-y-3">
@@ -268,9 +340,9 @@ export default function ProductUnitConversionTab({ productId }: Props) {
                     <SelectValue placeholder="Pilih satuan" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COMMON_UNITS.map((u) => (
-                      <SelectItem key={u} value={u}>
-                        {u}
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.name}>
+                        {u.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -285,9 +357,9 @@ export default function ProductUnitConversionTab({ productId }: Props) {
                     <SelectValue placeholder="Pilih satuan" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COMMON_UNITS.map((u) => (
-                      <SelectItem key={u} value={u}>
-                        {u}
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.name}>
+                        {u.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -332,6 +404,93 @@ export default function ProductUnitConversionTab({ productId }: Props) {
               <Button className="flex-1" onClick={save}>
                 {editing ? "Simpan" : "Tambah"}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={unitsOpen} onOpenChange={setUnitsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kelola Pilihan Satuan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={newUnitName}
+                onChange={(e) => setNewUnitName(e.target.value)}
+                placeholder="Nama satuan baru (cth: botol, pack)"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addUnit();
+                }}
+              />
+              <Button onClick={addUnit}>
+                <Plus className="h-4 w-4 mr-1" /> Tambah
+              </Button>
+            </div>
+            <div className="border rounded-md divide-y max-h-80 overflow-y-auto">
+              {units.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Belum ada satuan
+                </div>
+              ) : (
+                units.map((u) => (
+                  <div key={u.id} className="flex items-center gap-2 p-2">
+                    {editUnitId === u.id ? (
+                      <>
+                        <Input
+                          autoFocus
+                          value={editUnitName}
+                          onChange={(e) => setEditUnitName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") updateUnit(u.id);
+                            if (e.key === "Escape") setEditUnitId(null);
+                          }}
+                          className="flex-1 h-8"
+                        />
+                        <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateUnit(u.id)}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setEditUnitId(null)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm">
+                          {u.name}
+                          {u.is_default && (
+                            <span className="ml-2 text-[10px] uppercase text-muted-foreground">(default)</span>
+                          )}
+                        </span>
+                        {!u.is_default && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setEditUnitId(u.id);
+                                setEditUnitName(u.name);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => deleteUnit(u)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </DialogContent>
