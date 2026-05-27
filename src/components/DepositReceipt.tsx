@@ -146,7 +146,8 @@ export default function DepositReceipt() {
       {/* Receipt */}
       <div
         ref={receiptRef}
-        className="bg-white mx-auto shadow-lg print:shadow-none"
+        data-receipt
+        className="print-area bg-white mx-auto shadow-lg print:shadow-none"
         style={{
           width: getPaperWidth(),
           maxWidth: "100%",
@@ -309,7 +310,21 @@ export default function DepositReceipt() {
             size: ${getPaperWidth()} auto;
             margin: 0;
           }
-          body { margin: 0; padding: 0; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            height: auto !important;
+            min-height: 0 !important;
+          }
+          [data-receipt] {
+            left: 0 !important;
+            top: 0 !important;
+            width: ${getPaperWidth()} !important;
+            max-width: ${getPaperWidth()} !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+          }
           .print\\:hidden { display: none !important; }
         }
       `}</style>
