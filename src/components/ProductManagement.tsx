@@ -67,6 +67,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ProductEditorModal from "./products/ProductEditorModal";
+import ImportProductsDialog from "./products/ImportProductsDialog";
 
 interface Product {
   id: string;
@@ -141,6 +142,7 @@ export default function ProductManagement() {
   // Toolbar action menu
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Pagination for main product list
   const [pageSize, setPageSize] = useState<number>(30);
