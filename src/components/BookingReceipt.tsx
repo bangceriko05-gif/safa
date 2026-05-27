@@ -350,7 +350,7 @@ export default function BookingReceipt() {
       <div
         ref={receiptRef}
         data-receipt
-        className="bg-white mx-auto shadow-lg print:shadow-none"
+        className="print-area bg-white mx-auto shadow-lg print:shadow-none"
         style={{
           width: getPaperWidth(),
           maxWidth: "100%",
@@ -754,8 +754,8 @@ export default function BookingReceipt() {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
+            width: ${getPaperWidth()} !important;
+            max-width: ${getPaperWidth()} !important;
             box-shadow: none !important;
             margin: 0 !important;
           }

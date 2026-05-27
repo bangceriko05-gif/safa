@@ -109,41 +109,44 @@ All colors MUST be HSL.
   }
 }
 
-/* ===== Print: only show elements marked .print-area ===== */
+/* ===== Print: isolate .print-area when present, otherwise print the current page normally ===== */
 @media print {
-  /* Hide everything by default */
-  body * {
+  body:has(.print-area) * {
     visibility: hidden;
   }
-  /* Show the print area and all its descendants */
-  .print-area,
-  .print-area * {
+
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
     visibility: visible;
   }
-  /* Position print area at the top of the page */
-  .print-area {
+
+  body:has(.print-area) .print-area {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
-    padding: 16px;
     background: white !important;
   }
-  /* Hide elements explicitly marked as no-print, even inside .print-area */
+
+  body:has(.print-area) .print-area:not([data-receipt]) {
+    width: 100%;
+    padding: 16px;
+  }
+
   .no-print,
-  .no-print * {
+  .no-print *,
+  .print\:hidden {
     display: none !important;
   }
-  /* Remove sticky/fixed positioning from headers in print */
+
   .print-area .sticky,
   .print-area .fixed {
     position: static !important;
   }
-  /* Avoid breaking inside cards/tables */
+
   .print-area table { page-break-inside: auto; }
   .print-area tr { page-break-inside: avoid; page-break-after: auto; }
-  /* Ensure colors print */
+
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  /* Remove browser-injected header (date/title) and footer (URL/page number) */
+
   @page { margin: 10mm; size: auto; }
 }

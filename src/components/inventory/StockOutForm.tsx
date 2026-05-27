@@ -534,15 +534,15 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 print-area">
       {/* Back */}
-      <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
+      <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2 no-print">
         <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar
       </Button>
 
       {/* Warning */}
       {isDraft && (
-        <div className="flex items-start gap-3 bg-muted/60 border rounded-lg p-4">
+        <div className="flex items-start gap-3 bg-muted/60 border rounded-lg p-4 no-print">
           <AlertCircle className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground">
             Pastikan data sudah benar sebelum diposting. Setelah terposting, data tidak diperbolehkan diubah.
@@ -561,7 +561,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
               <p className="text-sm text-muted-foreground">No. Stok Keluar</p>
               <p className="text-2xl font-bold">{bid || "(akan di-generate)"}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 no-print">
               {(isPosted || isDraft) && (
                 <Button variant="default" className="bg-blue-500 hover:bg-blue-600 gap-2" onClick={() => window.print()}>
                   <Printer className="h-4 w-4" /> Cetak
@@ -625,11 +625,11 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       {/* Three columns */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Tanggal */}
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card no-print">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Tanggal</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditDateOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1 no-print" onClick={() => setEditDateOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
@@ -647,11 +647,11 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         </div>
 
         {/* Penerima / Tujuan */}
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card no-print">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Penerima / Tujuan</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditRecipientOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1 no-print" onClick={() => setEditRecipientOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
@@ -675,7 +675,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Catatan</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditNotesOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1 no-print" onClick={() => setEditNotesOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
@@ -855,7 +855,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                   <th className="text-left px-3 py-2 font-medium">Qty</th>
                   <th className="text-left px-3 py-2 font-medium">Rata-rata Harga Beli</th>
                   <th className="text-left px-3 py-2 font-medium">Total</th>
-                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-32">Aksi</th>}
+                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-32 no-print">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
@@ -907,7 +907,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                       <td className="px-3 py-3 text-primary">{formatCurrency(avgPrice)}</td>
                       <td className="px-3 py-3">{formatCurrency(isEditing ? editPrice * editQty : it.subtotal)}</td>
                       {!isReadOnly && (
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-3 no-print">
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -967,7 +967,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                 <tr className="border-t bg-muted/30 font-bold">
                   <td colSpan={5} className="px-3 py-3 text-right">Total</td>
                   <td className="px-3 py-3">{formatCurrency(totalAmount)}</td>
-                  {!isReadOnly && <td />}
+                  {!isReadOnly && <td className="no-print" />}
                 </tr>
               </tbody>
             </table>
