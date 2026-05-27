@@ -647,7 +647,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         </div>
 
         {/* Penerima / Tujuan */}
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card no-print">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Penerima / Tujuan</h3>
             {!isReadOnly && (
@@ -841,7 +841,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
 
       {/* Items table */}
       {items.length > 0 && (
-        <div className="border rounded-lg bg-card overflow-hidden no-print">
+        <div className="border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-3 border-b">
             <h3 className="font-semibold">Daftar Produk</h3>
           </div>
