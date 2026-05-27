@@ -855,7 +855,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                   <th className="text-left px-3 py-2 font-medium">Qty</th>
                   <th className="text-left px-3 py-2 font-medium">Rata-rata Harga Beli</th>
                   <th className="text-left px-3 py-2 font-medium">Total</th>
-                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-32">Aksi</th>}
+                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-32 no-print">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
@@ -907,7 +907,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                       <td className="px-3 py-3 text-primary">{formatCurrency(avgPrice)}</td>
                       <td className="px-3 py-3">{formatCurrency(isEditing ? editPrice * editQty : it.subtotal)}</td>
                       {!isReadOnly && (
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-3 no-print">
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -967,7 +967,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                 <tr className="border-t bg-muted/30 font-bold">
                   <td colSpan={5} className="px-3 py-3 text-right">Total</td>
                   <td className="px-3 py-3">{formatCurrency(totalAmount)}</td>
-                  {!isReadOnly && <td />}
+                  {!isReadOnly && <td className="no-print" />}
                 </tr>
               </tbody>
             </table>
