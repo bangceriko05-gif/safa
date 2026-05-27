@@ -423,14 +423,13 @@ export default function ProductManagement() {
   };
 
   const handleImportProducts = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".csv,text/csv";
-    input.onchange = async (e: any) => {
-      const file: File | undefined = e.target.files?.[0];
-      if (!file || !currentStore) return;
-      try {
-        const text = await file.text();
+    setImportOpen(true);
+  };
+
+  const _legacyCsvImport = async (file: File) => {
+    if (!file || !currentStore) return;
+    try {
+      const text = await file.text();
         const cleaned = text.replace(/^\uFEFF/, "");
         const rows: string[][] = [];
         let cur: string[] = [];
