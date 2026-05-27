@@ -841,7 +841,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
 
       {/* Items table */}
       {items.length > 0 && (
-        <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="border rounded-lg bg-card overflow-hidden no-print">
           <div className="px-4 py-3 border-b">
             <h3 className="font-semibold">Daftar Produk</h3>
           </div>
