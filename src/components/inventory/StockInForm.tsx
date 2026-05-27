@@ -656,7 +656,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Tanggal</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditDateOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1 no-print" onClick={() => setEditDateOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
@@ -678,7 +678,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Supplier</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditSupplierOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1 no-print" onClick={() => setEditSupplierOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
@@ -697,7 +697,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold">Catatan</h3>
             {!isReadOnly && (
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1" onClick={() => setEditNotesOpen(true)}>
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 gap-1 no-print" onClick={() => setEditNotesOpen(true)}>
                 <Pencil className="h-3 w-3" /> Ubah
               </Button>
             )}
