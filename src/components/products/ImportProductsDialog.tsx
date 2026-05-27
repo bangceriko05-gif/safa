@@ -193,7 +193,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
               .insert({
                 name: catName,
                 store_id: currentStore.id,
-                is_active: true,
+                created_by: user.id,
               })
               .select("id")
               .single();
