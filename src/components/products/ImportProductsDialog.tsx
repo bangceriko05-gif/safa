@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Download, Upload, FileSpreadsheet, X } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, X, Trash2 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Props {
@@ -301,8 +301,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         onOpenChange(v);
       }}
     >
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             Import Produk & Varian dari Excel
@@ -315,7 +315,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-6 py-4 overflow-y-auto flex-1 min-h-0">
           <div>
             <div className="text-sm font-medium mb-2">File Excel</div>
             <div className="flex gap-2 items-stretch">
@@ -340,11 +340,23 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
               >
                 <Upload className="h-5 w-5 text-muted-foreground" />
                 {file ? (
-                  <div className="text-center">
+                  <div className="text-center flex flex-col items-center gap-2">
                     <div className="font-medium">{file.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {(file.size / 1024).toFixed(1)} KB · klik untuk ganti, atau drag & drop file lain
                     </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        reset();
+                        if (inputRef.current) inputRef.current.value = "";
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Hapus File
+                    </Button>
                   </div>
                 ) : (
                   <>
@@ -382,17 +394,9 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                 <div className="text-sm font-medium">
                   Preview ({rows.length} baris, menampilkan {Math.min(10, rows.length)})
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={reset}
-                >
-                  <X className="h-3 w-3 mr-1" /> Hapus
-                </Button>
               </div>
-              <div className="border rounded-md max-h-64 overflow-auto">
-                <Table>
+              <div className="border rounded-md max-h-64 overflow-auto w-full">
+                <Table className="text-xs">
                   <TableHeader className="sticky top-0 bg-muted">
                     <TableRow>
                       {headers.map((h) => (
@@ -419,7 +423,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Batal
           </Button>
