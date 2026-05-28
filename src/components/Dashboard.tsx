@@ -82,7 +82,7 @@ export default function Dashboard() {
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
-  const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms" | null>(null);
+  const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
   const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
@@ -96,8 +96,7 @@ export default function Dashboard() {
   };
   const goToRoomsSection = (section: "products" | "inventory" | "rooms") => {
     setActiveTab("rooms");
-    setRoomsSection(null);
-    requestAnimationFrame(() => setRoomsSection(section));
+    setRoomsSection(section);
   };
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
