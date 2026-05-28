@@ -1,0 +1,1 @@
+ALTER TABLE public.product_recipes ADD COLUMN IF NOT EXISTS note text;

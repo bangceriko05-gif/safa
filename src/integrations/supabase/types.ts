@@ -1942,6 +1942,7 @@ export type Database = {
           created_at: string
           id: string
           ingredient_product_id: string
+          note: string | null
           product_id: string
           qty: number
           unit_factor: number
@@ -1954,6 +1955,7 @@ export type Database = {
           created_at?: string
           id?: string
           ingredient_product_id: string
+          note?: string | null
           product_id: string
           qty?: number
           unit_factor?: number
@@ -1966,6 +1968,7 @@ export type Database = {
           created_at?: string
           id?: string
           ingredient_product_id?: string
+          note?: string | null
           product_id?: string
           qty?: number
           unit_factor?: number
