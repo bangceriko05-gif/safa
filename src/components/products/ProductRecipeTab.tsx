@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Package } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
@@ -30,6 +31,7 @@ interface Recipe {
   unit_from: string | null;
   unit_to: string | null;
   unit_factor: number;
+  note?: string | null;
   ingredient?: { name: string; purchase_price: number };
 }
 
@@ -43,6 +45,8 @@ interface IngredientOpt {
   id: string;
   name: string;
   purchase_price: number;
+  stock_qty?: number;
+  material_name?: string | null;
 }
 
 interface Props {
@@ -64,6 +68,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [ingredients, setIngredients] = useState<IngredientOpt[]>([]);
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   const [filterVariant, setFilterVariant] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
@@ -73,10 +78,9 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
   const [ingId, setIngId] = useState<string>("");
   const [ingSearch, setIngSearch] = useState<string>("");
   const [ingFocused, setIngFocused] = useState(false);
-  const [qty, setQty] = useState<number>(1);
-  const [unitFrom, setUnitFrom] = useState<string>("pcs");
-  const [unitTo, setUnitTo] = useState<string>("pcs");
-  const [unitFactor, setUnitFactor] = useState<number>(1);
+  const [measureValue, setMeasureValue] = useState<number>(1);
+  const [satuan, setSatuan] = useState<string>("gram");
+  const [note, setNote] = useState<string>("");
 
   const load = async () => {
     if (!productId) {
@@ -105,6 +109,9 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
       .from("product_materials" as any)
       .select("id, name")
       .eq("store_id", currentStore.id);
+    const matMap = new Map<string, string>(
+      ((mats as any[]) || []).map((m) => [m.id, m.name])
+    );
     const allowedIds = ((mats as any[]) || [])
       .filter((m) => ["bahan mentah", "kemasan"].includes((m.name || "").toLowerCase()))
       .map((m) => m.id);
@@ -114,16 +121,37 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     }
     const { data } = await supabase
       .from("products")
-      .select("id, name, purchase_price, material_id")
+      .select("id, name, purchase_price, material_id, stock_qty")
       .eq("store_id", currentStore.id)
       .in("material_id", allowedIds)
       .order("name");
-    setIngredients(((data as any) || []).filter((p: any) => p.id !== productId));
+    setIngredients(
+      ((data as any) || [])
+        .filter((p: any) => p.id !== productId)
+        .map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          purchase_price: p.purchase_price,
+          stock_qty: p.stock_qty,
+          material_name: matMap.get(p.material_id) || null,
+        }))
+    );
+  };
+
+  const loadUnits = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("product_units" as any)
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .order("name");
+    setUnits(((data as any) || []) as any);
   };
 
   useEffect(() => {
     load();
     loadIngredients();
+    loadUnits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, currentStore?.id]);
 
@@ -132,10 +160,9 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     setForVariantId(variantId);
     setIngId("");
     setIngSearch("");
-    setQty(1);
-    setUnitFrom("pcs");
-    setUnitTo("pcs");
-    setUnitFactor(1);
+    setMeasureValue(1);
+    setSatuan(units[0]?.name || "gram");
+    setNote("");
     setDialogOpen(true);
   };
 
@@ -144,35 +171,36 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     setForVariantId(r.variant_id);
     setIngId(r.ingredient_product_id);
     setIngSearch(r.ingredient?.name || "");
-    setQty(Number(r.qty));
-    setUnitFrom(r.unit_from || "pcs");
-    setUnitTo(r.unit_to || "pcs");
-    setUnitFactor(Number(r.unit_factor) || 1);
+    setMeasureValue(Number(r.unit_factor) || Number(r.qty) || 1);
+    setSatuan(r.unit_from || units[0]?.name || "gram");
+    setNote(r.note || "");
     setDialogOpen(true);
   };
 
   const save = async () => {
     if (!productId || !ingId) {
-      toast.error("Pilih bahan terlebih dahulu");
+      toast.error("Pilih item inventori terlebih dahulu");
       return;
     }
+    const v = Number(measureValue) || 0;
     const payload = {
       product_id: productId,
       variant_id: forVariantId,
       ingredient_product_id: ingId,
-      qty: Number(qty) || 0,
-      unit_from: unitFrom,
-      unit_to: unitTo,
-      unit_factor: Number(unitFactor) || 1,
+      qty: v,
+      unit_from: satuan,
+      unit_to: "pcs",
+      unit_factor: v || 1,
+      note: note || null,
     };
     if (editing) {
       const { error } = await supabase
         .from("product_recipes")
-        .update(payload)
+        .update(payload as any)
         .eq("id", editing.id);
       if (error) return toast.error(error.message);
     } else {
-      const { error } = await supabase.from("product_recipes").insert([payload]);
+      const { error } = await supabase.from("product_recipes").insert([payload as any]);
       if (error) return toast.error(error.message);
     }
     toast.success("Bahan disimpan");
