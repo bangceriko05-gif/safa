@@ -388,16 +388,37 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit Bahan" : "Tambah Bahan"}
+              {editing ? "Edit Bahan" : "Tambah Bahan Baru"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Bahan *</Label>
+              <Label>Untuk Varian</Label>
+              <Select
+                value={forVariantId ?? "biasa"}
+                onValueChange={(v) => setForVariantId(v === "biasa" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {variants.length === 0 && (
+                    <SelectItem value="biasa">BIASA</SelectItem>
+                  )}
+                  {variants.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.variant_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Pilih dari Inventori *</Label>
               <div className="relative">
                 <Input
                   value={ingSearch}
-                  placeholder="Ketik nama bahan..."
+                  placeholder="Ketik untuk mencari item inventori..."
                   onChange={(e) => {
                     setIngSearch(e.target.value);
                     setIngId("");
@@ -407,7 +428,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                   onBlur={() => setTimeout(() => setIngFocused(false), 150)}
                 />
                 {ingFocused && (
-                  <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-auto border rounded-md bg-popover shadow-md">
+                  <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-auto border rounded-md bg-popover shadow-md">
                     {(() => {
                       const q = ingSearch.toLowerCase().trim();
                       const list = ingredients.filter((i) =>
@@ -416,7 +437,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                       if (list.length === 0) {
                         return (
                           <div className="px-3 py-2 text-sm text-muted-foreground">
-                            Bahan tidak ditemukan.
+                            Item inventori tidak ditemukan.
                           </div>
                         );
                       }
@@ -425,7 +446,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                           type="button"
                           key={i.id}
                           className={cn(
-                            "w-full text-left px-3 py-2 text-sm hover:bg-accent",
+                            "w-full text-left px-3 py-2 text-sm hover:bg-accent border-b last:border-b-0",
                             ingId === i.id && "bg-accent"
                           )}
                           onMouseDown={(e) => {
@@ -435,7 +456,17 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                             setIngFocused(false);
                           }}
                         >
-                          {i.name} (Rp {fmt(i.purchase_price)})
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{i.name}</span>
+                            {i.material_name && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-50 text-blue-700 border border-blue-200">
+                                {i.material_name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Stok: {i.stock_qty ?? 0} pcs
+                          </div>
                         </button>
                       ));
                     })()}
@@ -443,41 +474,56 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Qty</Label>
-                <Input
-                  type="number"
-                  value={qty}
-                  onChange={(e) => setQty(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Faktor</Label>
-                <Input
-                  type="number"
-                  value={unitFactor}
-                  onChange={(e) => setUnitFactor(Number(e.target.value))}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Nama Bahan *</Label>
+              <Input
+                value={ingSearch}
+                readOnly
+                placeholder="Otomatis terisi dari inventori"
+                className="bg-muted/50"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Unit Asal</Label>
+                <Label>Unit Pengukuran (per pcs) *</Label>
                 <Input
-                  value={unitFrom}
-                  onChange={(e) => setUnitFrom(e.target.value)}
-                  placeholder="pcs"
+                  type="number"
+                  value={measureValue}
+                  onChange={(e) => setMeasureValue(Number(e.target.value))}
+                  placeholder="80"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Unit Tujuan</Label>
-                <Input
-                  value={unitTo}
-                  onChange={(e) => setUnitTo(e.target.value)}
-                  placeholder="pcs"
-                />
+                <Label>Satuan</Label>
+                <Select value={satuan} onValueChange={setSatuan}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih satuan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.length === 0 ? (
+                      <SelectItem value="gram">gram</SelectItem>
+                    ) : (
+                      units.map((u) => (
+                        <SelectItem key={u.id} value={u.name}>
+                          {u.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Contoh: {measureValue || 80} = {measureValue || 80}{satuan} per pcs
+            </p>
+            <div className="space-y-2">
+              <Label>Catatan</Label>
+              <Textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Catatan tambahan..."
+                rows={3}
+              />
             </div>
             <div className="flex gap-2 pt-2">
               <Button
