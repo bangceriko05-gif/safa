@@ -383,9 +383,13 @@ export default function ProductUnitConversionTab({ productId }: Props) {
             <div className="space-y-2">
               <Label>Harga per satuan asal</Label>
               <Input
-                type="number"
-                value={pricePerFrom || ""}
-                onChange={(e) => setPricePerFrom(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                value={pricePerFrom ? pricePerFrom.toLocaleString("id-ID") : ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  setPricePerFrom(raw ? Number(raw) : 0);
+                }}
                 placeholder="Contoh: 24000 (harga per dus)"
               />
             </div>
