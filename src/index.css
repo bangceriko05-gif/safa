@@ -149,4 +149,14 @@ All colors MUST be HSL.
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
   @page { margin: 10mm; size: auto; }
+
+  /* Receipts: force solid black + bold for max printer legibility */
+  .print-area[data-receipt],
+  .print-area[data-receipt] * {
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+    image-rendering: -webkit-optimize-contrast;
+  }
 }
