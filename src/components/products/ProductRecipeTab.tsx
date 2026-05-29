@@ -69,6 +69,8 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [ingredients, setIngredients] = useState<IngredientOpt[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
+  // ingredient_product_id -> unit price (per to_unit, typically pcs)
+  const [ingUnitPrice, setIngUnitPrice] = useState<Record<string, number>>({});
   const [filterVariant, setFilterVariant] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
@@ -136,6 +138,27 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
           material_name: matMap.get(p.material_id) || null,
         }))
     );
+    // Load unit conversions to derive per-unit (e.g. per pcs) price
+    const ingIds = ((data as any) || []).map((p: any) => p.id);
+    if (ingIds.length > 0) {
+      const { data: convs } = await supabase
+        .from("product_unit_conversions")
+        .select("product_id, factor, price_per_from, is_active")
+        .in("product_id", ingIds);
+      const map: Record<string, number> = {};
+      ((convs as any[]) || [])
+        .filter((c) => c.is_active && Number(c.factor) > 0 && Number(c.price_per_from) > 0)
+        .forEach((c) => {
+          const perTo = Number(c.price_per_from) / Number(c.factor);
+          // keep the lowest per-unit price if multiple conversions exist
+          if (map[c.product_id] === undefined || perTo < map[c.product_id]) {
+            map[c.product_id] = perTo;
+          }
+        });
+      setIngUnitPrice(map);
+    } else {
+      setIngUnitPrice({});
+    }
   };
 
   const loadUnits = async () => {
@@ -214,14 +237,19 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     load();
   };
 
-  // HPP per variant = sum(qty * (ingredient.purchase_price / unit_factor))
+  // Effective unit price: prefer satuan (unit conversion) price, fallback to purchase price
+  const unitPriceOf = (r: Recipe) => {
+    const fromConv = ingUnitPrice[r.ingredient_product_id];
+    if (fromConv && fromConv > 0) return fromConv;
+    return (r.ingredient?.purchase_price || 0) / (Number(r.unit_factor) || 1);
+  };
+
+  // HPP per variant = sum(qty * effective unit price)
   const hppForVariant = (variantId: string | null) => {
     return recipes
       .filter((r) => (r.variant_id ?? null) === variantId)
       .reduce((sum, r) => {
-        const unitPrice =
-          (r.ingredient?.purchase_price || 0) / (Number(r.unit_factor) || 1);
-        return sum + Number(r.qty) * unitPrice;
+        return sum + Number(r.qty) * unitPriceOf(r);
       }, 0);
   };
 
@@ -309,10 +337,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {groupRecipes.map((r) => {
-                    const unitPrice =
-                      (r.ingredient?.purchase_price || 0) /
-                      (Number(r.unit_factor) || 1);
-                    const itemHpp = Number(r.qty) * unitPrice;
+                    const itemHpp = Number(r.qty) * unitPriceOf(r);
                     return (
                       <div
                         key={r.id}
