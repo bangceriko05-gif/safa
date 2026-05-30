@@ -454,17 +454,29 @@ export default function ProductManagement() {
 
   const handleBulkDelete = async () => {
     if (selectedProducts.size === 0) return;
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     try {
       const ids = Array.from(selectedProducts);
-      const { error } = await supabase.from("products").delete().in("id", ids);
+      const { data: deleted, error } = await supabase
+        .from("products")
+        .delete()
+        .in("id", ids)
+        .select("id");
       if (error) throw error;
+      const deletedCount = deleted?.length || 0;
+      if (deletedCount === 0) {
+        throw new Error("Produk tidak terhapus. Periksa permission hapus produk dan akses toko.");
+      }
       await logActivity({
         actionType: "deleted",
         entityType: "Produk",
-        description: `Menghapus ${ids.length} produk`,
+        description: `Menghapus ${deletedCount} produk`,
         storeId: currentStore?.id,
       });
-      toast.success(`${ids.length} produk dihapus`);
+      toast.success(`${deletedCount} produk dihapus`);
       setSelectedProducts(new Set());
       setBulkDeleteOpen(false);
       fetchAll();
@@ -487,6 +499,10 @@ export default function ProductManagement() {
   };
 
   const handleOpenHapusProduk = () => {
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     if (selectedProducts.size === 0) {
       toast.error("Pilih produk terlebih dahulu");
       setSelectionMode(true);
@@ -606,17 +622,21 @@ export default function ProductManagement() {
               <Upload className="h-4 w-4 mr-2" />
               Import
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleOpenSalinProduk}>
-              <Copy className="h-4 w-4 mr-2" />
-              Salin Produk
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleOpenHapusProduk}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Hapus Produk
-            </DropdownMenuItem>
+            {canCreate && (
+              <DropdownMenuItem onClick={handleOpenSalinProduk}>
+                <Copy className="h-4 w-4 mr-2" />
+                Salin Produk
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <DropdownMenuItem
+                onClick={handleOpenHapusProduk}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus Produk
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
