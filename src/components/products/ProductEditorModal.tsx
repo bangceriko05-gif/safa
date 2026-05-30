@@ -91,7 +91,7 @@ const empty: EditorProduct = {
 
 export default function ProductEditorModal({ productId, copyMode = false, onClose, onSaved }: Props) {
   const { currentStore } = useStore();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, loading: permissionLoading } = usePermissions();
   const [tab, setTab] = useState("edit");
   const [data, setData] = useState<EditorProduct>(empty);
   const [loading, setLoading] = useState(false);
@@ -113,9 +113,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
     product_collections: "Kelola Koleksi",
     product_materials: "Kelola Jenis Bahan",
   };
-  const canCreate = hasPermission("create_products");
-  const canUpdate = hasPermission("manage_products");
-  const canDelete = hasPermission("delete_products");
+  const canCreate = permissionLoading || hasPermission("create_products");
+  const canUpdate = permissionLoading || hasPermission("manage_products");
+  const canDelete = permissionLoading || hasPermission("delete_products");
   const canSaveCurrent = savedId ? canUpdate : canCreate;
 
   const loadProduct = async () => {
@@ -783,7 +783,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
               {/* Footer */}
               <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-2 pt-4 border-t">
                 <div>
-                  {savedId && (
+                  {savedId && canDelete && (
                     <Button variant="destructive" onClick={handleDelete}>
                       <Trash2 className="mr-2 h-4 w-4" /> Hapus Produk
                     </Button>
@@ -793,7 +793,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                   <Button variant="outline" onClick={onClose}>
                     Batal
                   </Button>
-                  <Button onClick={handleSave} disabled={saving || loading}>
+                  <Button onClick={handleSave} disabled={saving || loading || permissionLoading || !canSaveCurrent}>
                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Simpan
                   </Button>
