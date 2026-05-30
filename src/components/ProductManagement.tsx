@@ -111,6 +111,8 @@ export default function ProductManagement() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission("create_products");
   const canDelete = hasPermission("delete_products");
+  const canUpdate = hasPermission("manage_products");
+  const canViewDetail = hasPermission("view_product_detail") || canUpdate;
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<{ product_id: string }[]>([]);
@@ -215,16 +217,32 @@ export default function ProductManagement() {
   };
 
   const handleEdit = (product: Product) => {
+    if (!canViewDetail) {
+      toast.error("Anda tidak memiliki permission detail produk");
+      return;
+    }
     setEditorProductId(product.id);
     setEditorCopyMode(false);
     setEditorOpen(true);
   };
 
   const handleDelete = async (product: Product) => {
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     if (!confirm(`Yakin ingin menghapus produk "${product.name}"?`)) return;
     try {
-      const { error } = await supabase.from("products").delete().eq("id", product.id);
+      const { data: deleted, error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", product.id)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!deleted) {
+        throw new Error("Produk tidak terhapus. Periksa permission hapus produk dan akses toko.");
+      }
       await logActivity({
         actionType: "deleted",
         entityType: "Produk",
@@ -241,6 +259,10 @@ export default function ProductManagement() {
 
   // "Salin" – open editor in copy mode (creates new product)
   const handleCopySingle = (product: Product) => {
+    if (!canCreate) {
+      toast.error("Anda tidak memiliki permission tambah produk");
+      return;
+    }
     setEditorProductId(product.id);
     setEditorCopyMode(true);
     setEditorOpen(true);
