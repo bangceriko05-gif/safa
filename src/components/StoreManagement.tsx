@@ -258,10 +258,12 @@ export default function StoreManagement() {
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>Kelola Outlet</CardTitle>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Outlet
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Outlet
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -322,14 +324,16 @@ export default function StoreManagement() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(store)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(store)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
