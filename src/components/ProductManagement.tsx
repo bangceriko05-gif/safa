@@ -111,6 +111,8 @@ export default function ProductManagement() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission("create_products");
   const canDelete = hasPermission("delete_products");
+  const canUpdate = hasPermission("manage_products");
+  const canViewDetail = hasPermission("view_product_detail") || canUpdate;
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<{ product_id: string }[]>([]);
@@ -215,16 +217,32 @@ export default function ProductManagement() {
   };
 
   const handleEdit = (product: Product) => {
+    if (!canViewDetail) {
+      toast.error("Anda tidak memiliki permission detail produk");
+      return;
+    }
     setEditorProductId(product.id);
     setEditorCopyMode(false);
     setEditorOpen(true);
   };
 
   const handleDelete = async (product: Product) => {
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     if (!confirm(`Yakin ingin menghapus produk "${product.name}"?`)) return;
     try {
-      const { error } = await supabase.from("products").delete().eq("id", product.id);
+      const { data: deleted, error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", product.id)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!deleted) {
+        throw new Error("Produk tidak terhapus. Periksa permission hapus produk dan akses toko.");
+      }
       await logActivity({
         actionType: "deleted",
         entityType: "Produk",
@@ -241,6 +259,10 @@ export default function ProductManagement() {
 
   // "Salin" – open editor in copy mode (creates new product)
   const handleCopySingle = (product: Product) => {
+    if (!canCreate) {
+      toast.error("Anda tidak memiliki permission tambah produk");
+      return;
+    }
     setEditorProductId(product.id);
     setEditorCopyMode(true);
     setEditorOpen(true);
@@ -248,6 +270,10 @@ export default function ProductManagement() {
 
   // "Ubah ketersediaan"
   const handleOpenAvailability = (product: Product) => {
+    if (!canUpdate) {
+      toast.error("Anda tidak memiliki permission ubah produk");
+      return;
+    }
     setAvailabilityProduct(product);
     setAvailOnline(!!product.show_on_website);
     setAvailOfflineHidden(product.is_available_offline === false);
@@ -255,6 +281,10 @@ export default function ProductManagement() {
 
   const handleSaveAvailability = async () => {
     if (!availabilityProduct) return;
+    if (!canUpdate) {
+      toast.error("Anda tidak memiliki permission ubah produk");
+      return;
+    }
     try {
       const { error } = await supabase
         .from("products")
@@ -432,17 +462,29 @@ export default function ProductManagement() {
 
   const handleBulkDelete = async () => {
     if (selectedProducts.size === 0) return;
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     try {
       const ids = Array.from(selectedProducts);
-      const { error } = await supabase.from("products").delete().in("id", ids);
+      const { data: deleted, error } = await supabase
+        .from("products")
+        .delete()
+        .in("id", ids)
+        .select("id");
       if (error) throw error;
+      const deletedCount = deleted?.length || 0;
+      if (deletedCount === 0) {
+        throw new Error("Produk tidak terhapus. Periksa permission hapus produk dan akses toko.");
+      }
       await logActivity({
         actionType: "deleted",
         entityType: "Produk",
-        description: `Menghapus ${ids.length} produk`,
+        description: `Menghapus ${deletedCount} produk`,
         storeId: currentStore?.id,
       });
-      toast.success(`${ids.length} produk dihapus`);
+      toast.success(`${deletedCount} produk dihapus`);
       setSelectedProducts(new Set());
       setBulkDeleteOpen(false);
       fetchAll();
@@ -452,6 +494,10 @@ export default function ProductManagement() {
   };
 
   const handleOpenSalinProduk = () => {
+    if (!canCreate) {
+      toast.error("Anda tidak memiliki permission tambah produk");
+      return;
+    }
     if (selectedProducts.size === 0) {
       toast.error("Pilih produk terlebih dahulu");
       setSelectionMode(true);
@@ -465,6 +511,10 @@ export default function ProductManagement() {
   };
 
   const handleOpenHapusProduk = () => {
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     if (selectedProducts.size === 0) {
       toast.error("Pilih produk terlebih dahulu");
       setSelectionMode(true);
@@ -584,17 +634,21 @@ export default function ProductManagement() {
               <Upload className="h-4 w-4 mr-2" />
               Import
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleOpenSalinProduk}>
-              <Copy className="h-4 w-4 mr-2" />
-              Salin Produk
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleOpenHapusProduk}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Hapus Produk
-            </DropdownMenuItem>
+            {canCreate && (
+              <DropdownMenuItem onClick={handleOpenSalinProduk}>
+                <Copy className="h-4 w-4 mr-2" />
+                Salin Produk
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <DropdownMenuItem
+                onClick={handleOpenHapusProduk}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus Produk
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -720,12 +774,16 @@ export default function ProductManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="text-primary font-semibold hover:underline text-left"
-                      >
-                        {product.name}
-                      </button>
+                      {canViewDetail ? (
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-primary font-semibold hover:underline text-left"
+                        >
+                          {product.name}
+                        </button>
+                      ) : (
+                        <span className="font-semibold text-left">{product.name}</span>
+                      )}
                       <div className="text-xs text-muted-foreground mt-1">
                         {product.name}
                       </div>
@@ -786,30 +844,36 @@ export default function ProductManagement() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-48 p-1">
-                          <button
-                            onClick={() => handleCopySingle(product)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
-                          >
-                            <Copy className="h-4 w-4" /> Salin
-                          </button>
-                          <button
-                            onClick={() => handleEdit(product)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
-                          >
-                            <Eye className="h-4 w-4" /> Detail
-                          </button>
+                          {canCreate && (
+                            <button
+                              onClick={() => handleCopySingle(product)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                            >
+                              <Copy className="h-4 w-4" /> Salin
+                            </button>
+                          )}
+                          {canViewDetail && (
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                            >
+                              <Eye className="h-4 w-4" /> Detail
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenStockDetail(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
                           >
                             <Package className="h-4 w-4" /> Detail Stok
                           </button>
-                          <button
-                            onClick={() => handleOpenAvailability(product)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
-                          >
-                            <CheckCircle2 className="h-4 w-4" /> Ubah ketersediaan
-                          </button>
+                          {canUpdate && (
+                            <button
+                              onClick={() => handleOpenAvailability(product)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"
+                            >
+                              <CheckCircle2 className="h-4 w-4" /> Ubah ketersediaan
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenLog(product)}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-left"

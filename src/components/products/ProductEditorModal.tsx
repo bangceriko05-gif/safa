@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logActivity } from "@/utils/activityLogger";
 import ProductCategoryManager from "./ProductCategoryManager";
 import ProductVariantsTab from "./ProductVariantsTab";
@@ -90,6 +91,7 @@ const empty: EditorProduct = {
 
 export default function ProductEditorModal({ productId, copyMode = false, onClose, onSaved }: Props) {
   const { currentStore } = useStore();
+  const { hasPermission, loading: permissionLoading } = usePermissions();
   const [tab, setTab] = useState("edit");
   const [data, setData] = useState<EditorProduct>(empty);
   const [loading, setLoading] = useState(false);
@@ -111,6 +113,10 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
     product_collections: "Kelola Koleksi",
     product_materials: "Kelola Jenis Bahan",
   };
+  const canCreate = hasPermission("create_products");
+  const canUpdate = hasPermission("manage_products");
+  const canDelete = hasPermission("delete_products");
+  const canSaveCurrent = savedId ? canUpdate : canCreate;
 
   const loadProduct = async () => {
     if (!productId) {
@@ -234,6 +240,10 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   };
 
   const handleSave = async () => {
+    if (!canSaveCurrent) {
+      toast.error(savedId ? "Anda tidak memiliki permission ubah produk" : "Anda tidak memiliki permission tambah produk");
+      return;
+    }
     if (!currentStore) {
       toast.error("Pilih cabang terlebih dahulu");
       return;
@@ -301,8 +311,14 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
 
       let id = savedId;
       if (id) {
-        const { error } = await supabase.from("products").update(payload).eq("id", id);
+        const { data: updated, error } = await supabase
+          .from("products")
+          .update(payload)
+          .eq("id", id)
+          .select("id")
+          .maybeSingle();
         if (error) throw error;
+        if (!updated) throw new Error("Produk tidak diperbarui. Periksa permission ubah produk dan akses toko.");
         await logActivity({
           actionType: "updated",
           entityType: "Produk",
@@ -340,10 +356,23 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
 
   const handleDelete = async () => {
     if (!savedId) return;
+    if (!canDelete) {
+      toast.error("Anda tidak memiliki permission hapus produk");
+      return;
+    }
     if (!confirm(`Hapus produk "${data.name}"?`)) return;
-    const { error } = await supabase.from("products").delete().eq("id", savedId);
+    const { data: deleted, error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", savedId)
+      .select("id")
+      .maybeSingle();
     if (error) {
       toast.error(error.message);
+      return;
+    }
+    if (!deleted) {
+      toast.error("Produk tidak terhapus. Periksa permission hapus produk dan akses toko.");
       return;
     }
     await logActivity({
@@ -754,7 +783,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
               {/* Footer */}
               <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-2 pt-4 border-t">
                 <div>
-                  {savedId && (
+                  {savedId && canDelete && (
                     <Button variant="destructive" onClick={handleDelete}>
                       <Trash2 className="mr-2 h-4 w-4" /> Hapus Produk
                     </Button>
@@ -764,7 +793,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                   <Button variant="outline" onClick={onClose}>
                     Batal
                   </Button>
-                  <Button onClick={handleSave} disabled={saving || loading}>
+                  <Button onClick={handleSave} disabled={saving || loading || permissionLoading || !canSaveCurrent}>
                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Simpan
                   </Button>
