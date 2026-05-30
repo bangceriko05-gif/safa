@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -107,6 +108,9 @@ const formatRp = (n: number) =>
 
 export default function ProductManagement() {
   const { currentStore, userStores } = useStore();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("create_products");
+  const canDelete = hasPermission("delete_products");
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<{ product_id: string }[]>([]);
@@ -629,13 +633,15 @@ export default function ProductManagement() {
           />
         </div>
 
-        <Button
-          onClick={openCreate}
-          className="h-10 bg-emerald-500 hover:bg-emerald-600 text-white"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah
-        </Button>
+        {canCreate && (
+          <Button
+            onClick={openCreate}
+            className="h-10 bg-emerald-500 hover:bg-emerald-600 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -810,12 +816,14 @@ export default function ProductManagement() {
                           >
                             <FileText className="h-4 w-4" /> Log
                           </button>
-                          <button
-                            onClick={() => handleDelete(product)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-destructive text-left"
-                          >
-                            <Trash2 className="h-4 w-4" /> Hapus
-                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(product)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-destructive text-left"
+                            >
+                              <Trash2 className="h-4 w-4" /> Hapus
+                            </button>
+                          )}
                         </PopoverContent>
                       </Popover>
                     </TableCell>

@@ -73,7 +73,7 @@ export default function AddProductDialog({
     (async () => {
       const { data } = await supabase
         .from("products")
-        .select("id,name,purchase_price,price,sku,stock_qty,unit")
+        .select("id,name,purchase_price,price,sku,stock_qty")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");

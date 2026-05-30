@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Store {
   id: string;
@@ -37,6 +38,9 @@ interface Store {
 
 export default function StoreManagement() {
   const { refreshStores } = useStore();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("create_stores");
+  const canDelete = hasPermission("delete_stores");
   const [stores, setStores] = useState<Store[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
@@ -254,10 +258,12 @@ export default function StoreManagement() {
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>Kelola Outlet</CardTitle>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Outlet
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Outlet
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -318,14 +324,16 @@ export default function StoreManagement() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(store)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(store)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
