@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2 } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Store {
   id: string;
@@ -37,6 +38,9 @@ interface Store {
 
 export default function StoreManagement() {
   const { refreshStores } = useStore();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("create_stores");
+  const canDelete = hasPermission("delete_stores");
   const [stores, setStores] = useState<Store[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
