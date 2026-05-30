@@ -633,13 +633,15 @@ export default function ProductManagement() {
           />
         </div>
 
-        <Button
-          onClick={openCreate}
-          className="h-10 bg-emerald-500 hover:bg-emerald-600 text-white"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah
-        </Button>
+        {canCreate && (
+          <Button
+            onClick={openCreate}
+            className="h-10 bg-emerald-500 hover:bg-emerald-600 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -814,12 +816,14 @@ export default function ProductManagement() {
                           >
                             <FileText className="h-4 w-4" /> Log
                           </button>
-                          <button
-                            onClick={() => handleDelete(product)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-destructive text-left"
-                          >
-                            <Trash2 className="h-4 w-4" /> Hapus
-                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDelete(product)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-muted text-destructive text-left"
+                            >
+                              <Trash2 className="h-4 w-4" /> Hapus
+                            </button>
+                          )}
                         </PopoverContent>
                       </Popover>
                     </TableCell>
