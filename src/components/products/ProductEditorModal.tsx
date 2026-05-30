@@ -113,9 +113,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
     product_collections: "Kelola Koleksi",
     product_materials: "Kelola Jenis Bahan",
   };
-  const canCreate = permissionLoading || hasPermission("create_products");
-  const canUpdate = permissionLoading || hasPermission("manage_products");
-  const canDelete = permissionLoading || hasPermission("delete_products");
+  const canCreate = hasPermission("create_products");
+  const canUpdate = hasPermission("manage_products");
+  const canDelete = hasPermission("delete_products");
   const canSaveCurrent = savedId ? canUpdate : canCreate;
 
   const loadProduct = async () => {

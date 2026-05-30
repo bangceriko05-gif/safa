@@ -494,6 +494,10 @@ export default function ProductManagement() {
   };
 
   const handleOpenSalinProduk = () => {
+    if (!canCreate) {
+      toast.error("Anda tidak memiliki permission tambah produk");
+      return;
+    }
     if (selectedProducts.size === 0) {
       toast.error("Pilih produk terlebih dahulu");
       setSelectionMode(true);
