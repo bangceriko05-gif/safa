@@ -79,8 +79,8 @@ const permissionMatrix: MatrixCategory[] = [
   {
     label: "Produk & Toko",
     items: [
-      { label: "Produk", actions: { Lihat: "view_products", Ubah: "manage_products" } },
-      { label: "Toko", actions: { Lihat: "view_stores", Ubah: "manage_stores" } },
+      { label: "Produk", actions: { Lihat: "view_products", Detail: "view_product_detail", Tambah: "create_products", Ubah: "manage_products", Hapus: "delete_products" } },
+      { label: "Toko", actions: { Lihat: "view_stores", Detail: "view_store_detail", Tambah: "create_stores", Ubah: "manage_stores", Hapus: "delete_stores" } },
     ],
   },
   {
