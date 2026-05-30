@@ -108,6 +108,9 @@ const formatRp = (n: number) =>
 
 export default function ProductManagement() {
   const { currentStore, userStores } = useStore();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("create_products");
+  const canDelete = hasPermission("delete_products");
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<{ product_id: string }[]>([]);
