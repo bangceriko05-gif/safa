@@ -46,6 +46,7 @@ export interface EditorProduct {
   collection_id: string | null;
   brand_id: string | null;
   material_id: string | null;
+  storage_id: string | null;
   purchase_price: number;
   price: number;
   track_inventory: boolean;
@@ -75,6 +76,7 @@ const empty: EditorProduct = {
   collection_id: null,
   brand_id: null,
   material_id: null,
+  storage_id: null,
   purchase_price: 0,
   price: 0,
   track_inventory: true,
@@ -101,10 +103,11 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
+  const [storages, setStorages] = useState<{ id: string; name: string }[]>([]);
   const [savedId, setSavedId] = useState<string | null>(copyMode ? null : productId);
   const [copySyncImages, setCopySyncImages] = useState(true);
   const [managerTable, setManagerTable] = useState<
-    null | "product_categories" | "product_brands" | "product_collections" | "product_materials"
+    null | "product_categories" | "product_brands" | "product_collections" | "product_materials" | "product_storages"
   >(null);
 
   const managerLabels: Record<string, string> = {
@@ -112,6 +115,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
     product_brands: "Kelola Brand",
     product_collections: "Kelola Koleksi",
     product_materials: "Kelola Jenis Bahan",
+    product_storages: "Kelola Penyimpanan",
   };
   const canCreate = hasPermission("create_products");
   const canUpdate = hasPermission("manage_products");
@@ -140,6 +144,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         collection_id: (p as any).collection_id ?? null,
         brand_id: (p as any).brand_id ?? null,
         material_id: (p as any).material_id ?? null,
+        storage_id: (p as any).storage_id ?? null,
         purchase_price: Number((p as any).purchase_price ?? 0),
         price: Number(p.price ?? 0),
         track_inventory: (p as any).track_inventory ?? true,
