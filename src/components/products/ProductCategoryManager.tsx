@@ -17,7 +17,8 @@ interface Props {
     | "product_categories"
     | "product_brands"
     | "product_collections"
-    | "product_materials";
+    | "product_materials"
+    | "product_storages";
   searchPlaceholder: string;
   onChanged?: () => void;
 }

@@ -46,6 +46,7 @@ export interface EditorProduct {
   collection_id: string | null;
   brand_id: string | null;
   material_id: string | null;
+  storage_id: string | null;
   purchase_price: number;
   price: number;
   track_inventory: boolean;
@@ -75,6 +76,7 @@ const empty: EditorProduct = {
   collection_id: null,
   brand_id: null,
   material_id: null,
+  storage_id: null,
   purchase_price: 0,
   price: 0,
   track_inventory: true,
@@ -101,10 +103,11 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
+  const [storages, setStorages] = useState<{ id: string; name: string }[]>([]);
   const [savedId, setSavedId] = useState<string | null>(copyMode ? null : productId);
   const [copySyncImages, setCopySyncImages] = useState(true);
   const [managerTable, setManagerTable] = useState<
-    null | "product_categories" | "product_brands" | "product_collections" | "product_materials"
+    null | "product_categories" | "product_brands" | "product_collections" | "product_materials" | "product_storages"
   >(null);
 
   const managerLabels: Record<string, string> = {
@@ -112,6 +115,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
     product_brands: "Kelola Brand",
     product_collections: "Kelola Koleksi",
     product_materials: "Kelola Jenis Bahan",
+    product_storages: "Kelola Penyimpanan",
   };
   const canCreate = hasPermission("create_products");
   const canUpdate = hasPermission("manage_products");
@@ -140,6 +144,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         collection_id: (p as any).collection_id ?? null,
         brand_id: (p as any).brand_id ?? null,
         material_id: (p as any).material_id ?? null,
+        storage_id: (p as any).storage_id ?? null,
         purchase_price: Number((p as any).purchase_price ?? 0),
         price: Number(p.price ?? 0),
         track_inventory: (p as any).track_inventory ?? true,
@@ -160,7 +165,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
 
   const loadOptions = async () => {
     if (!currentStore) return;
-    const [{ data: cats }, { data: brs }, { data: cols }, { data: mats }] = await Promise.all([
+    const [{ data: cats }, { data: brs }, { data: cols }, { data: mats }, { data: stos }] = await Promise.all([
       supabase
         .from("product_categories")
         .select("id, name")
@@ -181,11 +186,17 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         .select("id, name")
         .eq("store_id", currentStore.id)
         .order("name"),
+      supabase
+        .from("product_storages" as any)
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name"),
     ]);
     setCategories(cats || []);
     setBrands(brs || []);
     setCollections((cols as any) || []);
     setMaterials((mats as any) || []);
+    setStorages((stos as any) || []);
   };
 
   useEffect(() => {
@@ -295,6 +306,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         collection_id: data.collection_id,
         brand_id: data.brand_id,
         material_id: data.material_id,
+        storage_id: data.storage_id,
         purchase_price: Number(data.purchase_price) || 0,
         price: Number(data.price) || 0,
         track_inventory: data.track_inventory,
@@ -625,6 +637,32 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                     </SelectContent>
                   </Select>
                   <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_materials")} title="Kelola Jenis Bahan">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Penyimpanan</Label>
+                  <div className="flex gap-2">
+                  <Select
+                    value={data.storage_id ?? "none"}
+                    onValueChange={(v) =>
+                      setData({ ...data, storage_id: v === "none" ? null : v })
+                    }
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Pilih lokasi penyimpanan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Tidak ada —</SelectItem>
+                      {storages.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_storages")} title="Kelola Penyimpanan">
                     <Settings2 className="h-4 w-4" />
                   </Button>
                   </div>

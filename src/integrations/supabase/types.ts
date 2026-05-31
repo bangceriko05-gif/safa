@@ -2001,6 +2001,41 @@ export type Database = {
           },
         ]
       }
+      product_storages: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_storages_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_unit_conversions: {
         Row: {
           created_at: string
@@ -2136,6 +2171,7 @@ export type Database = {
           show_on_website: boolean
           sku: string | null
           stock_qty: number
+          storage_id: string | null
           store_id: string | null
           tax_enabled: boolean
           tax_mode: string
@@ -2163,6 +2199,7 @@ export type Database = {
           show_on_website?: boolean
           sku?: string | null
           stock_qty?: number
+          storage_id?: string | null
           store_id?: string | null
           tax_enabled?: boolean
           tax_mode?: string
@@ -2190,6 +2227,7 @@ export type Database = {
           show_on_website?: boolean
           sku?: string | null
           stock_qty?: number
+          storage_id?: string | null
           store_id?: string | null
           tax_enabled?: boolean
           tax_mode?: string
@@ -2209,6 +2247,13 @@ export type Database = {
             columns: ["material_id"]
             isOneToOne: false
             referencedRelation: "product_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_storage_id_fkey"
+            columns: ["storage_id"]
+            isOneToOne: false
+            referencedRelation: "product_storages"
             referencedColumns: ["id"]
           },
           {
