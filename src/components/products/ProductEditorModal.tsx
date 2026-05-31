@@ -165,7 +165,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
 
   const loadOptions = async () => {
     if (!currentStore) return;
-    const [{ data: cats }, { data: brs }, { data: cols }, { data: mats }] = await Promise.all([
+    const [{ data: cats }, { data: brs }, { data: cols }, { data: mats }, { data: stos }] = await Promise.all([
       supabase
         .from("product_categories")
         .select("id, name")
@@ -186,11 +186,17 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         .select("id, name")
         .eq("store_id", currentStore.id)
         .order("name"),
+      supabase
+        .from("product_storages" as any)
+        .select("id, name")
+        .eq("store_id", currentStore.id)
+        .order("name"),
     ]);
     setCategories(cats || []);
     setBrands(brs || []);
     setCollections((cols as any) || []);
     setMaterials((mats as any) || []);
+    setStorages((stos as any) || []);
   };
 
   useEffect(() => {
@@ -300,6 +306,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         collection_id: data.collection_id,
         brand_id: data.brand_id,
         material_id: data.material_id,
+        storage_id: data.storage_id,
         purchase_price: Number(data.purchase_price) || 0,
         price: Number(data.price) || 0,
         track_inventory: data.track_inventory,
