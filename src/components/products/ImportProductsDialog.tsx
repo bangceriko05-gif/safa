@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Download, Upload, FileSpreadsheet, X, Trash2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Props {
@@ -34,12 +37,19 @@ const BASE_COLUMNS = [
   "Nama Produk",
   "SKU Produk",
   "Kategori",
+  "Koleksi",
+  "Brand",
+  "Jenis Bahan",
+  "Penyimpanan",
   "Nama Varian",
   "SKU Varian",
   "Harga Modal",
   "Harga Jual",
   "Stok",
   "Lacak Inventori",
+  "Harga Dinamis",
+  "PPN Aktif",
+  "Produk Aktif",
   "Aktifkan di Website",
 ];
 
@@ -55,6 +65,8 @@ const truthy = (v: any) => {
   return ["1", "true", "ya", "yes", "y", "aktif"].includes(s);
 };
 
+type ImportMode = "create" | "update";
+
 export default function ImportProductsDialog({ open, onOpenChange, onImported }: Props) {
   const { currentStore } = useStore();
   const [file, setFile] = useState<File | null>(null);
@@ -62,12 +74,15 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const [headers, setHeaders] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [mode, setMode] = useState<ImportMode>("create");
+  const [progress, setProgress] = useState({ current: 0, total: 0, label: "" });
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setFile(null);
     setRows([]);
     setHeaders([]);
+    setProgress({ current: 0, total: 0, label: "" });
   };
 
   const handleFiles = async (f: File | null) => {
@@ -98,12 +113,19 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         "Nama Produk": "Kaos Polos",
         "SKU Produk": "KP-001",
         "Kategori": "Pakaian",
+        "Koleksi": "Summer 2025",
+        "Brand": "Brand A",
+        "Jenis Bahan": "Cotton",
+        "Penyimpanan": "Gudang Utama - Rak A1",
         "Nama Varian": "Merah - L",
         "SKU Varian": "KP-001-RD-L",
         "Harga Modal": 30000,
         "Harga Jual": 75000,
         "Stok": 10,
         "Lacak Inventori": 1,
+        "Harga Dinamis": 0,
+        "PPN Aktif": 0,
+        "Produk Aktif": 1,
         "Aktifkan di Website": 1,
         "Tipe Pelanggan 1": "Grosir",
         "Qty Order 1": 12,
@@ -116,12 +138,19 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         "Nama Produk": "Kaos Polos",
         "SKU Produk": "KP-001",
         "Kategori": "Pakaian",
+        "Koleksi": "Summer 2025",
+        "Brand": "Brand A",
+        "Jenis Bahan": "Cotton",
+        "Penyimpanan": "Gudang Utama - Rak A1",
         "Nama Varian": "Biru - M",
         "SKU Varian": "KP-001-BL-M",
         "Harga Modal": 30000,
         "Harga Jual": 75000,
         "Stok": 5,
         "Lacak Inventori": 1,
+        "Harga Dinamis": 0,
+        "PPN Aktif": 0,
+        "Produk Aktif": 1,
         "Aktifkan di Website": 1,
         "Tipe Pelanggan 1": "",
         "Qty Order 1": "",
@@ -147,6 +176,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     }
     setImporting(true);
     let createdProducts = 0;
+    let updatedProducts = 0;
     let createdVariants = 0;
     let createdTiers = 0;
     const errors: string[] = [];
@@ -158,14 +188,40 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         return;
       }
 
-      // Existing categories
-      const { data: catData } = await supabase
-        .from("product_categories")
-        .select("id,name")
-        .eq("store_id", currentStore.id);
-      const catMap = new Map<string, string>(
-        (catData || []).map((c) => [c.name.toLowerCase(), c.id])
-      );
+      setProgress({ current: 0, total: 0, label: "Memuat data referensi..." });
+
+      // Existing references
+      const [{ data: catData }, { data: colData }, { data: brData }, { data: matData }, { data: stoData }] = await Promise.all([
+        supabase.from("product_categories").select("id,name").eq("store_id", currentStore.id),
+        supabase.from("product_collections" as any).select("id,name").eq("store_id", currentStore.id),
+        supabase.from("product_brands").select("id,name").eq("store_id", currentStore.id),
+        supabase.from("product_materials" as any).select("id,name").eq("store_id", currentStore.id),
+        supabase.from("product_storages" as any).select("id,name").eq("store_id", currentStore.id),
+      ]);
+      const catMap = new Map<string, string>((catData || []).map((c: any) => [c.name.toLowerCase(), c.id]));
+      const colMap = new Map<string, string>(((colData as any) || []).map((c: any) => [c.name.toLowerCase(), c.id]));
+      const brMap = new Map<string, string>((brData || []).map((b: any) => [b.name.toLowerCase(), b.id]));
+      const matMap = new Map<string, string>(((matData as any) || []).map((m: any) => [m.name.toLowerCase(), m.id]));
+      const stoMap = new Map<string, string>(((stoData as any) || []).map((s: any) => [s.name.toLowerCase(), s.id]));
+
+      const ensureRef = async (
+        table: "product_categories" | "product_collections" | "product_brands" | "product_materials" | "product_storages",
+        map: Map<string, string>,
+        name: string
+      ): Promise<string | null> => {
+        const n = name.trim();
+        if (!n) return null;
+        const existing = map.get(n.toLowerCase());
+        if (existing) return existing;
+        const { data: created, error } = await supabase
+          .from(table as any)
+          .insert({ name: n, store_id: currentStore.id, created_by: user.id })
+          .select("id")
+          .single();
+        if (error || !created) return null;
+        map.set(n.toLowerCase(), (created as any).id);
+        return (created as any).id;
+      };
 
       // Group rows by product (Nama Produk + SKU Produk)
       const groups = new Map<string, Row[]>();
@@ -178,57 +234,107 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         groups.get(key)!.push(r);
       }
 
-      for (const [key, gRows] of groups) {
+      const totalGroups = groups.size;
+      setProgress({ current: 0, total: totalGroups, label: "Memulai import..." });
+      let processed = 0;
+
+      for (const [, gRows] of groups) {
         const first = gRows[0];
         const name = String(first["Nama Produk"] || "").trim();
         const sku = String(first["SKU Produk"] || "").trim() || null;
-        const catName = String(first["Kategori"] || "").trim();
-        let categoryId: string | null = null;
-        if (catName) {
-          const existing = catMap.get(catName.toLowerCase());
-          if (existing) categoryId = existing;
-          else {
-            const { data: newCat, error: cErr } = await supabase
-              .from("product_categories")
-              .insert({
-                name: catName,
-                store_id: currentStore.id,
-                created_by: user.id,
-              })
-              .select("id")
-              .single();
-            if (!cErr && newCat) {
-              categoryId = newCat.id;
-              catMap.set(catName.toLowerCase(), newCat.id);
-            }
-          }
-        }
+        processed++;
+        setProgress({
+          current: processed,
+          total: totalGroups,
+          label: `${mode === "create" ? "Menambahkan" : "Memperbarui"} ${processed}/${totalGroups}: ${name}`,
+        });
+
+        const categoryId = await ensureRef("product_categories", catMap, String(first["Kategori"] || ""));
+        const collectionId = await ensureRef("product_collections", colMap, String(first["Koleksi"] || ""));
+        const brandId = await ensureRef("product_brands", brMap, String(first["Brand"] || ""));
+        const materialId = await ensureRef("product_materials", matMap, String(first["Jenis Bahan"] || ""));
+        const storageId = await ensureRef("product_storages", stoMap, String(first["Penyimpanan"] || ""));
 
         const price = Number(first["Harga Jual"]) || 0;
         const purchase = Number(first["Harga Modal"]) || 0;
         const stock = Number(first["Stok"]) || 0;
-        const track = truthy(first["Lacak Inventori"]);
-        const website = truthy(first["Aktifkan di Website"]);
+        const hasCol = (k: string) => Object.prototype.hasOwnProperty.call(first, k) && first[k] !== "" && first[k] !== null && first[k] !== undefined;
+        const track = hasCol("Lacak Inventori") ? truthy(first["Lacak Inventori"]) : true;
+        const website = hasCol("Aktifkan di Website") ? truthy(first["Aktifkan di Website"]) : false;
+        const dynamicPrice = hasCol("Harga Dinamis") ? truthy(first["Harga Dinamis"]) : false;
+        const taxEnabled = hasCol("PPN Aktif") ? truthy(first["PPN Aktif"]) : false;
+        const isActive = hasCol("Produk Aktif") ? truthy(first["Produk Aktif"]) : true;
 
         try {
-          const { data: prod, error: pErr } = await supabase
-            .from("products")
-            .insert({
-              name,
-              sku,
-              price,
-              purchase_price: purchase,
-              stock_qty: stock,
-              track_inventory: track,
-              show_on_website: website,
-              category_id: categoryId,
-              store_id: currentStore.id,
-              created_by: user.id,
-            })
-            .select("id")
-            .single();
-          if (pErr) throw pErr;
-          createdProducts++;
+          const payload: any = {
+            name,
+            sku,
+            price,
+            purchase_price: purchase,
+            stock_qty: stock,
+            track_inventory: track,
+            show_on_website: website,
+            is_active: isActive,
+            tax_enabled: taxEnabled,
+            dynamic_price: dynamicPrice,
+            category_id: categoryId,
+            collection_id: collectionId,
+            brand_id: brandId,
+            material_id: materialId,
+            storage_id: storageId,
+          };
+
+          let productId: string | null = null;
+
+          if (mode === "update") {
+            // Match by SKU first, then name
+            let existing: any = null;
+            if (sku) {
+              const { data } = await supabase
+                .from("products")
+                .select("id")
+                .eq("store_id", currentStore.id)
+                .eq("sku", sku)
+                .maybeSingle();
+              existing = data;
+            }
+            if (!existing) {
+              const { data } = await supabase
+                .from("products")
+                .select("id")
+                .eq("store_id", currentStore.id)
+                .ilike("name", name)
+                .maybeSingle();
+              existing = data;
+            }
+            if (existing) {
+              const { error: uErr } = await supabase
+                .from("products")
+                .update(payload)
+                .eq("id", existing.id);
+              if (uErr) throw uErr;
+              productId = existing.id;
+              updatedProducts++;
+            } else {
+              const { data: prod, error: pErr } = await supabase
+                .from("products")
+                .insert({ ...payload, store_id: currentStore.id, created_by: user.id })
+                .select("id")
+                .single();
+              if (pErr) throw pErr;
+              productId = prod.id;
+              createdProducts++;
+            }
+          } else {
+            const { data: prod, error: pErr } = await supabase
+              .from("products")
+              .insert({ ...payload, store_id: currentStore.id, created_by: user.id })
+              .select("id")
+              .single();
+            if (pErr) throw pErr;
+            productId = prod.id;
+            createdProducts++;
+          }
 
           // Variants
           for (const r of gRows) {
@@ -238,7 +344,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
             const { error: vErr } = await supabase
               .from("product_variants")
               .insert({
-                product_id: prod.id,
+                product_id: productId,
                 variant_name: vName,
                 sku: vSku,
               } as any);
@@ -255,7 +361,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
             const { error: tErr } = await supabase
               .from("product_price_tiers")
               .insert({
-                product_id: prod.id,
+                product_id: productId,
                 min_quantity: qty || 1,
                 price: tprice,
                 label: label || null,
@@ -267,15 +373,15 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         }
       }
 
-      if (createdProducts > 0) {
+      if (createdProducts > 0 || updatedProducts > 0) {
         await logActivity({
-          actionType: "created",
+          actionType: mode === "update" ? "updated" : "created",
           entityType: "Produk",
-          description: `Mengimpor ${createdProducts} produk, ${createdVariants} varian, ${createdTiers} tingkatan harga`,
+          description: `Import (${mode === "update" ? "ubah/tambah" : "tambah"}): ${createdProducts} baru, ${updatedProducts} diperbarui, ${createdVariants} varian, ${createdTiers} tingkatan harga`,
           storeId: currentStore.id,
         });
         toast.success(
-          `${createdProducts} produk, ${createdVariants} varian, ${createdTiers} tingkatan harga`
+          `${createdProducts} baru, ${updatedProducts} diperbarui, ${createdVariants} varian, ${createdTiers} tingkatan harga`
         );
         onImported();
         reset();
@@ -290,6 +396,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       toast.error(e.message || "Gagal mengimpor");
     } finally {
       setImporting(false);
+      setProgress({ current: 0, total: 0, label: "" });
     }
   };
 
@@ -308,14 +415,51 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
             Import Produk & Varian dari Excel
           </DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
-            Format: Nama Produk, SKU Produk, Kategori, Nama Varian, SKU Varian,
-            Harga Modal, Harga Jual, Stok, Lacak Inventori, Aktifkan di Website,
-            lalu triplet (Tipe Pelanggan #N, Qty Order #N, Harga Jual #N) untuk
-            tingkatan harga
+            Kolom: Nama Produk, SKU Produk, Kategori, Koleksi, Brand, Jenis Bahan,
+            Penyimpanan, Nama Varian, SKU Varian, Harga Modal, Harga Jual, Stok,
+            Lacak Inventori, Harga Dinamis, PPN Aktif, Produk Aktif, Aktifkan di
+            Website, lalu triplet (Tipe Pelanggan #N, Qty Order #N, Harga Jual #N)
+            untuk tingkatan harga.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 px-6 py-4 overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Mode Import</Label>
+            <RadioGroup
+              value={mode}
+              onValueChange={(v) => setMode(v as ImportMode)}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+            >
+              <label
+                className={`flex items-start gap-3 border rounded-md p-3 cursor-pointer transition ${
+                  mode === "create" ? "border-primary bg-primary/5" : "hover:bg-muted/30"
+                }`}
+              >
+                <RadioGroupItem value="create" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium">Tambah Produk Baru</div>
+                  <div className="text-xs text-muted-foreground">
+                    Setiap baris dibuat sebagai produk baru.
+                  </div>
+                </div>
+              </label>
+              <label
+                className={`flex items-start gap-3 border rounded-md p-3 cursor-pointer transition ${
+                  mode === "update" ? "border-primary bg-primary/5" : "hover:bg-muted/30"
+                }`}
+              >
+                <RadioGroupItem value="update" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium">Edit / Perbarui Produk</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cocokkan dengan SKU/Nama; bila tidak ada akan dibuat baru.
+                  </div>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+
           <div>
             <div className="text-sm font-medium mb-2">File Excel</div>
             <div className="flex gap-2 items-stretch">
@@ -419,6 +563,18 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                   </TableBody>
                 </Table>
               </div>
+            </div>
+          )}
+
+          {importing && progress.total > 0 && (
+            <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+              <div className="flex justify-between text-xs">
+                <span className="font-medium truncate">{progress.label}</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {progress.current}/{progress.total} ({Math.round((progress.current / progress.total) * 100)}%)
+                </span>
+              </div>
+              <Progress value={(progress.current / progress.total) * 100} />
             </div>
           )}
         </div>
