@@ -641,6 +641,32 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                   </Button>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Penyimpanan</Label>
+                  <div className="flex gap-2">
+                  <Select
+                    value={data.storage_id ?? "none"}
+                    onValueChange={(v) =>
+                      setData({ ...data, storage_id: v === "none" ? null : v })
+                    }
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Pilih lokasi penyimpanan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Tidak ada —</SelectItem>
+                      {storages.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setManagerTable("product_storages")} title="Kelola Penyimpanan">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
