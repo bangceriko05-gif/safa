@@ -179,6 +179,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     let updatedProducts = 0;
     let createdVariants = 0;
     let createdTiers = 0;
+    let skippedProducts = 0;
     const errors: string[] = [];
 
     try {
@@ -316,14 +317,9 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
               productId = existing.id;
               updatedProducts++;
             } else {
-              const { data: prod, error: pErr } = await supabase
-                .from("products")
-                .insert({ ...payload, store_id: currentStore.id, created_by: user.id })
-                .select("id")
-                .single();
-              if (pErr) throw pErr;
-              productId = prod.id;
-              createdProducts++;
+              skippedProducts++;
+              errors.push(`${name}${sku ? ` (SKU: ${sku})` : ""}: produk tidak ditemukan, dilewati (mode Edit/Perbarui)`);
+              continue;
             }
           } else {
             const { data: prod, error: pErr } = await supabase
@@ -377,18 +373,22 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         await logActivity({
           actionType: mode === "update" ? "updated" : "created",
           entityType: "Produk",
-          description: `Import (${mode === "update" ? "ubah/tambah" : "tambah"}): ${createdProducts} baru, ${updatedProducts} diperbarui, ${createdVariants} varian, ${createdTiers} tingkatan harga`,
+          description: `Import (${mode === "update" ? "perbarui" : "tambah"}): ${createdProducts} baru, ${updatedProducts} diperbarui, ${skippedProducts} dilewati, ${createdVariants} varian, ${createdTiers} tingkatan harga`,
           storeId: currentStore.id,
         });
         toast.success(
-          `${createdProducts} baru, ${updatedProducts} diperbarui, ${createdVariants} varian, ${createdTiers} tingkatan harga`
+          mode === "update"
+            ? `${updatedProducts} diperbarui${skippedProducts ? `, ${skippedProducts} dilewati (tidak ditemukan)` : ""}, ${createdVariants} varian, ${createdTiers} tingkatan harga`
+            : `${createdProducts} baru, ${createdVariants} varian, ${createdTiers} tingkatan harga`
         );
         onImported();
         reset();
         onOpenChange(false);
+      } else if (mode === "update" && skippedProducts > 0) {
+        toast.error(`${skippedProducts} produk tidak ditemukan di database — tidak ada yang diperbarui`);
       }
       if (errors.length > 0) {
-        toast.error(`${errors.length} baris gagal`);
+        toast.error(`${errors.length} baris gagal/dilewati`);
         console.error("Import errors:", errors);
       }
     } catch (e: any) {
