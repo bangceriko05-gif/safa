@@ -267,7 +267,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     toast.success("Template diunduh");
   };
 
-  const doImport = async () => {
+  const runImport = async (overwriteVariants: boolean) => {
     if (!currentStore) return;
     if (rows.length === 0) {
       toast.error("Pilih file terlebih dahulu");
@@ -277,6 +277,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     let createdProducts = 0;
     let updatedProducts = 0;
     let createdVariants = 0;
+    let updatedVariants = 0;
+    let skippedVariants = 0;
     let createdTiers = 0;
     let skippedProducts = 0;
     const errors: string[] = [];
@@ -436,14 +438,59 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
             const vName = String(r["Nama Varian"] || "").trim();
             if (!vName) continue;
             const vSku = String(r["SKU Varian"] || "").trim() || null;
-            const { error: vErr } = await supabase
-              .from("product_variants")
-              .insert({
-                product_id: productId,
-                variant_name: vName,
-                sku: vSku,
-              } as any);
-            if (!vErr) createdVariants++;
+            const vPrice = Number(r["Harga Jual"]) || 0;
+            const vPurchase = Number(r["Harga Modal"]) || 0;
+            const vStock = Number(r["Stok"]) || 0;
+            const vPayload: any = {
+              product_id: productId,
+              variant_name: vName,
+              sku: vSku,
+              price: vPrice,
+              purchase_price: vPurchase,
+              stock: vStock,
+            };
+
+            // In update mode, try to match existing variant by SKU first, then by name
+            let existingVariant: any = null;
+            if (mode === "update") {
+              if (vSku) {
+                const { data } = await supabase
+                  .from("product_variants")
+                  .select("id")
+                  .eq("product_id", productId)
+                  .eq("sku", vSku)
+                  .maybeSingle();
+                existingVariant = data;
+              }
+              if (!existingVariant) {
+                const { data } = await supabase
+                  .from("product_variants")
+                  .select("id")
+                  .eq("product_id", productId)
+                  .ilike("variant_name", vName)
+                  .maybeSingle();
+                existingVariant = data;
+              }
+            }
+
+            if (existingVariant) {
+              if (!overwriteVariants) {
+                skippedVariants++;
+                continue;
+              }
+              const { error: vErr } = await supabase
+                .from("product_variants")
+                .update(vPayload)
+                .eq("id", existingVariant.id);
+              if (!vErr) updatedVariants++;
+              else errors.push(`Varian ${vName}: ${vErr.message}`);
+            } else {
+              const { error: vErr } = await supabase
+                .from("product_variants")
+                .insert(vPayload);
+              if (!vErr) createdVariants++;
+              else errors.push(`Varian ${vName}: ${vErr.message}`);
+            }
           }
 
           // Tiers from first row only (product-level)
@@ -472,12 +519,12 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         await logActivity({
           actionType: mode === "update" ? "updated" : "created",
           entityType: "Produk",
-          description: `Import (${mode === "update" ? "perbarui" : "tambah"}): ${createdProducts} baru, ${updatedProducts} diperbarui, ${skippedProducts} dilewati, ${createdVariants} varian, ${createdTiers} tingkatan harga`,
+          description: `Import (${mode === "update" ? "perbarui" : "tambah"}): ${createdProducts} produk baru, ${updatedProducts} diperbarui, ${skippedProducts} dilewati, ${createdVariants} varian baru, ${updatedVariants} varian diperbarui, ${createdTiers} tingkatan harga`,
           storeId: currentStore.id,
         });
         toast.success(
           mode === "update"
-            ? `${updatedProducts} diperbarui${skippedProducts ? `, ${skippedProducts} dilewati (tidak ditemukan)` : ""}, ${createdVariants} varian, ${createdTiers} tingkatan harga`
+            ? `${updatedProducts} produk diperbarui${skippedProducts ? `, ${skippedProducts} dilewati` : ""}, ${updatedVariants} varian diperbarui, ${createdVariants} varian baru${skippedVariants ? `, ${skippedVariants} varian dilewati` : ""}`
             : `${createdProducts} baru, ${createdVariants} varian, ${createdTiers} tingkatan harga`
         );
         onImported();
@@ -498,6 +545,135 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       setProgress({ current: 0, total: 0, label: "" });
     }
   };
+
+  // Scan for variant conflicts (only relevant in update mode)
+  const scanConflicts = async (): Promise<VariantConflict[]> => {
+    if (!currentStore || mode !== "update") return [];
+    const found: VariantConflict[] = [];
+    for (const r of rows) {
+      const pName = String(r["Nama Produk"] || "").trim();
+      if (!pName) continue;
+      const pSku = String(r["SKU Produk"] || "").trim();
+      const vName = String(r["Nama Varian"] || "").trim();
+      if (!vName) continue;
+      const vSku = String(r["SKU Varian"] || "").trim();
+
+      // find product
+      let product: any = null;
+      if (pSku) {
+        const { data } = await supabase
+          .from("products")
+          .select("id,name,sku")
+          .eq("store_id", currentStore.id)
+          .eq("sku", pSku)
+          .maybeSingle();
+        product = data;
+      }
+      if (!product) {
+        const { data } = await supabase
+          .from("products")
+          .select("id,name,sku")
+          .eq("store_id", currentStore.id)
+          .ilike("name", pName)
+          .maybeSingle();
+        product = data;
+      }
+      if (!product) continue;
+
+      // find variant
+      let variant: any = null;
+      let matchedBy: "sku_varian" | "nama_varian" = "sku_varian";
+      if (vSku) {
+        const { data } = await supabase
+          .from("product_variants")
+          .select("id,variant_name,sku,price,purchase_price,stock")
+          .eq("product_id", product.id)
+          .eq("sku", vSku)
+          .maybeSingle();
+        variant = data;
+      }
+      if (!variant) {
+        const { data } = await supabase
+          .from("product_variants")
+          .select("id,variant_name,sku,price,purchase_price,stock")
+          .eq("product_id", product.id)
+          .ilike("variant_name", vName)
+          .maybeSingle();
+        if (data) {
+          variant = data;
+          matchedBy = "nama_varian";
+        }
+      }
+      if (!variant) continue;
+
+      const newData = {
+        variant_name: vName,
+        sku: vSku || null,
+        price: Number(r["Harga Jual"]) || 0,
+        purchase_price: Number(r["Harga Modal"]) || 0,
+        stock: Number(r["Stok"]) || 0,
+      };
+      const oldData = {
+        variant_name: variant.variant_name,
+        sku: variant.sku,
+        price: Number(variant.price) || 0,
+        purchase_price: Number(variant.purchase_price) || 0,
+        stock: Number(variant.stock) || 0,
+      };
+      const diffFields: string[] = [];
+      (["variant_name", "sku", "price", "purchase_price", "stock"] as const).forEach((k) => {
+        if (String(oldData[k] ?? "") !== String(newData[k] ?? "")) diffFields.push(k);
+      });
+      if (diffFields.length === 0) continue;
+
+      found.push({
+        productName: product.name,
+        productSku: product.sku || "",
+        matchedBy,
+        oldData,
+        newData,
+        diffFields,
+      });
+    }
+    return found;
+  };
+
+  const doImport = async () => {
+    if (!currentStore) return;
+    if (rows.length === 0) {
+      toast.error("Pilih file terlebih dahulu");
+      return;
+    }
+    if (mode === "update") {
+      setImporting(true);
+      setProgress({ current: 0, total: 1, label: "Memeriksa perubahan varian..." });
+      try {
+        const found = await scanConflicts();
+        if (found.length > 0) {
+          setConflicts(found);
+          setConflictDialogOpen(true);
+          setImporting(false);
+          setProgress({ current: 0, total: 0, label: "" });
+          return;
+        }
+      } finally {
+        // continue
+      }
+      setImporting(false);
+    }
+    await runImport(true);
+  };
+
+  const fieldLabel = (k: string) =>
+    ({
+      variant_name: "Nama Varian",
+      sku: "SKU Varian",
+      price: "Harga Jual",
+      purchase_price: "Harga Modal",
+      stock: "Stok",
+    } as Record<string, string>)[k] || k;
+
+  const fmt = (v: any) => (v === null || v === undefined || v === "" ? "—" : String(v));
 
   return (
     <Dialog
