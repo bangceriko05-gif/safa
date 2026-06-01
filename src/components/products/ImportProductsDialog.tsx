@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
@@ -76,6 +76,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const [importing, setImporting] = useState(false);
   const [mode, setMode] = useState<ImportMode>("create");
   const [progress, setProgress] = useState({ current: 0, total: 0, label: "" });
+  const [missingKeys, setMissingKeys] = useState<Set<string>>(new Set());
+  const [checkingMissing, setCheckingMissing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -83,6 +85,66 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     setRows([]);
     setHeaders([]);
     setProgress({ current: 0, total: 0, label: "" });
+    setMissingKeys(new Set());
+  };
+
+  // Unique product keys (name||sku) from rows
+  const uniqueProducts = useMemo(() => {
+    const m = new Map<string, { name: string; sku: string }>();
+    for (const r of rows) {
+      const name = String(r["Nama Produk"] || "").trim();
+      if (!name) continue;
+      const sku = String(r["SKU Produk"] || "").trim();
+      const key = `${name.toLowerCase()}||${sku.toLowerCase()}`;
+      if (!m.has(key)) m.set(key, { name, sku });
+    }
+    return m;
+  }, [rows]);
+
+  // Check existence on preview when mode = update
+  useEffect(() => {
+    if (mode !== "update" || !currentStore || uniqueProducts.size === 0) {
+      setMissingKeys(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setCheckingMissing(true);
+      const missing = new Set<string>();
+      for (const [key, { name, sku }] of uniqueProducts) {
+        let found: any = null;
+        if (sku) {
+          const { data } = await supabase
+            .from("products")
+            .select("id")
+            .eq("store_id", currentStore.id)
+            .eq("sku", sku)
+            .maybeSingle();
+          found = data;
+        }
+        if (!found) {
+          const { data } = await supabase
+            .from("products")
+            .select("id")
+            .eq("store_id", currentStore.id)
+            .ilike("name", name)
+            .maybeSingle();
+          found = data;
+        }
+        if (!found) missing.add(key);
+      }
+      if (!cancelled) setMissingKeys(missing);
+      setCheckingMissing(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, uniqueProducts, currentStore]);
+
+  const rowKey = (r: Row) => {
+    const name = String(r["Nama Produk"] || "").trim().toLowerCase();
+    const sku = String(r["SKU Produk"] || "").trim().toLowerCase();
+    return `${name}||${sku}`;
   };
 
   const handleFiles = async (f: File | null) => {
@@ -453,7 +515,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                 <div className="space-y-0.5">
                   <div className="text-sm font-medium">Edit / Perbarui Produk</div>
                   <div className="text-xs text-muted-foreground">
-                    Cocokkan dengan SKU/Nama; bila tidak ada akan dibuat baru.
+                    Cocokkan dengan SKU/Nama; produk yang tidak ada akan dilewati.
                   </div>
                 </div>
               </label>
