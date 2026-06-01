@@ -23,6 +23,16 @@ import { Download, Upload, FileSpreadsheet, X, Trash2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { logActivity } from "@/utils/activityLogger";
 
 interface Props {
@@ -67,6 +77,27 @@ const truthy = (v: any) => {
 
 type ImportMode = "create" | "update";
 
+interface VariantConflict {
+  productName: string;
+  productSku: string;
+  matchedBy: "sku_varian" | "nama_varian";
+  oldData: {
+    variant_name: string;
+    sku: string | null;
+    price: number;
+    purchase_price: number;
+    stock: number;
+  };
+  newData: {
+    variant_name: string;
+    sku: string | null;
+    price: number;
+    purchase_price: number;
+    stock: number;
+  };
+  diffFields: string[];
+}
+
 export default function ImportProductsDialog({ open, onOpenChange, onImported }: Props) {
   const { currentStore } = useStore();
   const [file, setFile] = useState<File | null>(null);
@@ -78,6 +109,9 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const [progress, setProgress] = useState({ current: 0, total: 0, label: "" });
   const [missingKeys, setMissingKeys] = useState<Set<string>>(new Set());
   const [checkingMissing, setCheckingMissing] = useState(false);
+  const [conflicts, setConflicts] = useState<VariantConflict[]>([]);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const overwriteConfirmedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -86,6 +120,9 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     setHeaders([]);
     setProgress({ current: 0, total: 0, label: "" });
     setMissingKeys(new Set());
+    setConflicts([]);
+    setConflictDialogOpen(false);
+    overwriteConfirmedRef.current = false;
   };
 
   // Unique product keys (name||sku) from rows
