@@ -904,6 +904,84 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
           </Button>
         </div>
       </DialogContent>
+
+      <AlertDialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
+        <AlertDialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Perubahan Varian</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ditemukan {conflicts.length} varian yang cocok (berdasarkan SKU Varian
+              / Nama Varian) dengan data berbeda. Apakah Anda ingin mengganti data
+              lama dengan data baru?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="overflow-y-auto flex-1 border rounded-md">
+            <Table className="text-xs">
+              <TableHeader className="sticky top-0 bg-muted">
+                <TableRow>
+                  <TableHead>Produk</TableHead>
+                  <TableHead>Cocok via</TableHead>
+                  <TableHead>Field</TableHead>
+                  <TableHead>Data Lama</TableHead>
+                  <TableHead>Data Baru</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {conflicts.flatMap((c, ci) =>
+                  c.diffFields.map((f, fi) => (
+                    <TableRow key={`${ci}-${fi}`}>
+                      {fi === 0 ? (
+                        <>
+                          <TableCell rowSpan={c.diffFields.length} className="align-top">
+                            <div className="font-medium">{c.productName}</div>
+                            {c.productSku && (
+                              <div className="text-muted-foreground text-[10px]">
+                                SKU: {c.productSku}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell rowSpan={c.diffFields.length} className="align-top">
+                            <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                              {c.matchedBy === "sku_varian" ? "SKU Varian" : "Nama Varian"}
+                            </span>
+                          </TableCell>
+                        </>
+                      ) : null}
+                      <TableCell className="font-medium">{fieldLabel(f)}</TableCell>
+                      <TableCell className="text-destructive line-through">
+                        {fmt((c.oldData as any)[f])}
+                      </TableCell>
+                      <TableCell className="text-emerald-600 font-medium">
+                        {fmt((c.newData as any)[f])}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setConflictDialogOpen(false);
+                await runImport(false);
+              }}
+            >
+              Lewati Varian Konflik
+            </Button>
+            <AlertDialogAction
+              onClick={async () => {
+                setConflictDialogOpen(false);
+                await runImport(true);
+              }}
+            >
+              Ya, Ganti dengan Data Baru
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
