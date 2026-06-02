@@ -918,7 +918,7 @@ export default function PurchaseForm({
                 >
                   <div>
                     <div className="font-medium">{s.name}</div>
-                    {s.notes && <div className="text-xs text-muted-foreground line-clamp-1">{s.notes}</div>}
+                    {s.no_rek && <div className="text-xs text-muted-foreground line-clamp-1">{s.no_rek}</div>}
                   </div>
                   {supplier?.id === s.id && <Check className="h-4 w-4" />}
                 </button>
