@@ -186,6 +186,25 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     return `${name}||${sku}`;
   };
 
+  // Auto-open conflict dialog when all products found in update mode
+  useEffect(() => {
+    if (mode !== "update") return;
+    if (checkingMissing) return;
+    if (rows.length === 0) return;
+    if (missingKeys.size > 0) return;
+    const sig = `${file?.name || ""}|${rows.length}`;
+    if (autoTriggeredRef.current === sig) return;
+    autoTriggeredRef.current = sig;
+    (async () => {
+      const found = await scanConflicts();
+      if (found.length > 0) {
+        setConflicts(found);
+        setConflictDialogOpen(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkingMissing, missingKeys, mode, rows, file]);
+
   const handleFiles = async (f: File | null) => {
     if (!f) return;
     setFile(f);
