@@ -305,6 +305,10 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       toast.error("Pilih file terlebih dahulu");
       return;
     }
+    cancelRef.current = false;
+    createdProductIdsRef.current = [];
+    createdVariantIdsRef.current = [];
+    createdTierIdsRef.current = [];
     setImporting(true);
     let createdProducts = 0;
     let updatedProducts = 0;
@@ -373,6 +377,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       let processed = 0;
 
       for (const [, gRows] of groups) {
+        if (cancelRef.current) break;
         const first = gRows[0];
         const name = String(first["Nama Produk"] || "").trim();
         const sku = String(first["SKU Produk"] || "").trim() || null;
@@ -462,11 +467,13 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
               .single();
             if (pErr) throw pErr;
             productId = prod.id;
+            createdProductIdsRef.current.push(prod.id);
             createdProducts++;
           }
 
           // Variants
           for (const r of gRows) {
+            if (cancelRef.current) break;
             const vName = String(r["Nama Varian"] || "").trim();
             if (!vName) continue;
             const vSku = String(r["SKU Varian"] || "").trim() || null;
@@ -517,34 +524,77 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
               if (!vErr) updatedVariants++;
               else errors.push(`Varian ${vName}: ${vErr.message}`);
             } else {
-              const { error: vErr } = await supabase
+              const { data: insertedVariant, error: vErr } = await supabase
                 .from("product_variants")
-                .insert(vPayload);
-              if (!vErr) createdVariants++;
+                .insert(vPayload)
+                .select("id")
+                .single();
+              if (!vErr && insertedVariant) {
+                createdVariants++;
+                createdVariantIdsRef.current.push(insertedVariant.id);
+              }
               else errors.push(`Varian ${vName}: ${vErr.message}`);
             }
           }
 
           // Tiers from first row only (product-level)
           for (let n = 1; n <= 20; n++) {
+            if (cancelRef.current) break;
             const label = String(first[`Tipe Pelanggan ${n}`] || "").trim();
             const qty = Number(first[`Qty Order ${n}`]) || 0;
             const tprice = Number(first[`Harga Jual ${n}`]) || 0;
             if (!label && !qty && !tprice) continue;
             if (qty <= 0 && tprice <= 0) continue;
-            const { error: tErr } = await supabase
+            const { data: insertedTier, error: tErr } = await supabase
               .from("product_price_tiers")
               .insert({
                 product_id: productId,
                 min_quantity: qty || 1,
                 price: tprice,
                 label: label || null,
-              });
-            if (!tErr) createdTiers++;
+              })
+              .select("id")
+              .single();
+            if (!tErr && insertedTier) {
+              createdTiers++;
+              createdTierIdsRef.current.push(insertedTier.id);
+            }
           }
         } catch (e: any) {
           errors.push(`${name}: ${e.message || e}`);
         }
+      }
+
+      // If cancelled, rollback all newly-created records from this run
+      if (cancelRef.current) {
+        setProgress({ current: 0, total: 1, label: "Membatalkan & menghapus data yang sudah terimport..." });
+        const tierIds = createdTierIdsRef.current;
+        const variantIds = createdVariantIdsRef.current;
+        const productIds = createdProductIdsRef.current;
+        try {
+          if (tierIds.length > 0) {
+            await supabase.from("product_price_tiers").delete().in("id", tierIds);
+          }
+          if (variantIds.length > 0) {
+            await supabase.from("product_variants").delete().in("id", variantIds);
+          }
+          if (productIds.length > 0) {
+            await supabase.from("products").delete().in("id", productIds);
+          }
+        } catch (delErr) {
+          console.error("Rollback error:", delErr);
+        }
+        toast.warning(
+          `Import dibatalkan. ${productIds.length} produk baru, ${variantIds.length} varian baru, ${tierIds.length} tingkatan harga telah dihapus.${
+            updatedProducts > 0 || updatedVariants > 0
+              ? ` Catatan: ${updatedProducts} produk & ${updatedVariants} varian yang sudah terlanjur diperbarui tidak dapat dikembalikan.`
+              : ""
+          }`
+        );
+        onImported();
+        reset();
+        onOpenChange(false);
+        return;
       }
 
       if (createdProducts > 0 || updatedProducts > 0) {
