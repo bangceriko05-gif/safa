@@ -114,6 +114,11 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const overwriteConfirmedRef = useRef(false);
   const autoTriggeredRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef(false);
+  const createdProductIdsRef = useRef<string[]>([]);
+  const createdVariantIdsRef = useRef<string[]>([]);
+  const createdTierIdsRef = useRef<string[]>([]);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const reset = () => {
     setFile(null);
@@ -125,6 +130,11 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     setConflictDialogOpen(false);
     overwriteConfirmedRef.current = false;
     autoTriggeredRef.current = null;
+    cancelRef.current = false;
+    createdProductIdsRef.current = [];
+    createdVariantIdsRef.current = [];
+    createdTierIdsRef.current = [];
+    setCancelConfirmOpen(false);
   };
 
   // Unique product keys (name||sku) from rows
