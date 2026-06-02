@@ -23,6 +23,7 @@ interface Supplier {
   id: string;
   name: string;
   notes: string | null;
+  no_rek?: string | null;
 }
 
 interface AddPurchaseModalProps {
@@ -50,7 +51,7 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
     (async () => {
       const { data } = await supabase
         .from("suppliers")
-        .select("id,name,notes")
+        .select("id,name,notes,no_rek")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
@@ -66,7 +67,7 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
 
   const selectSupplier = (s: Supplier) => {
     setSupplierName(s.name);
-    setSupplierDescription(s.notes || "");
+    setSupplierDescription(s.no_rek || "");
     setSupplierOpen(false);
   };
 
@@ -200,7 +201,7 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
                       >
                         <div>
                           <div className="font-medium">{s.name}</div>
-                          {s.notes && <div className="text-xs text-muted-foreground line-clamp-1">{s.notes}</div>}
+                          {s.no_rek && <div className="text-xs text-muted-foreground line-clamp-1">{s.no_rek}</div>}
                         </div>
                         {supplierName === s.name && <Check className="h-4 w-4" />}
                       </button>
@@ -210,11 +211,11 @@ export default function AddPurchaseModal({ open, onClose, onSuccess }: AddPurcha
               </Popover>
             </div>
             <div>
-              <Label>Deskripsi Supplier</Label>
+              <Label>No Rek Supplier</Label>
               <Input
                 value={supplierDescription}
                 onChange={(e) => setSupplierDescription(e.target.value)}
-                placeholder="Deskripsi opsional"
+                placeholder="BCA 1234567890 a/n Nama"
               />
             </div>
             <div>
