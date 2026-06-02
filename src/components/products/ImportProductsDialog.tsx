@@ -984,15 +984,6 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                setConflictDialogOpen(false);
-                await runImport(false);
-              }}
-            >
-              Lewati Varian Konflik
-            </Button>
             <AlertDialogAction
               onClick={async () => {
                 setConflictDialogOpen(false);
