@@ -761,7 +761,14 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (!v) reset();
+        if (!v) {
+          if (importing) {
+            // Block accidental close while importing — ask via cancel dialog
+            setCancelConfirmOpen(true);
+            return;
+          }
+          reset();
+        }
         onOpenChange(v);
       }}
     >
@@ -974,7 +981,16 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (importing) {
+                setCancelConfirmOpen(true);
+              } else {
+                onOpenChange(false);
+              }
+            }}
+          >
             Batal
           </Button>
           <Button
@@ -986,6 +1002,32 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
           </Button>
         </div>
       </DialogContent>
+
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan import?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Proses import sedang berjalan ({progress.current}/{progress.total}). Jika
+              dibatalkan, semua produk, varian, dan tingkatan harga yang sudah berhasil
+              dibuat dalam proses ini akan dihapus. Produk/varian yang sudah terlanjur
+              <strong> diperbarui</strong> (mode Edit) tidak dapat dikembalikan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Lanjutkan Import</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                cancelRef.current = true;
+                setCancelConfirmOpen(false);
+              }}
+            >
+              Ya, Batalkan & Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
         <AlertDialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
