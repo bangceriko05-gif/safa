@@ -204,6 +204,17 @@ export default function ProductUnitConversionTab({ productId }: Props) {
     load();
   };
 
+  const deleteConversion = async (c: Conversion) => {
+    if (!confirm(`Hapus konversi "${c.from_unit} → ${c.to_unit}"?`)) return;
+    const { error } = await supabase
+      .from("product_unit_conversions")
+      .delete()
+      .eq("id", c.id);
+    if (error) return toast.error(error.message);
+    toast.success("Konversi dihapus");
+    load();
+  };
+
   if (!productId) {
     return (
       <div className="text-sm text-muted-foreground p-6 text-center border-2 border-dashed rounded-md">
@@ -312,6 +323,14 @@ export default function ProductUnitConversionTab({ productId }: Props) {
                         onClick={() => openEdit(c)}
                       >
                         <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 ml-2 text-destructive hover:text-destructive"
+                        onClick={() => deleteConversion(c)}
+                      >
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
