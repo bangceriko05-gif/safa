@@ -112,6 +112,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const [conflicts, setConflicts] = useState<VariantConflict[]>([]);
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
   const overwriteConfirmedRef = useRef(false);
+  const autoTriggeredRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -123,6 +124,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     setConflicts([]);
     setConflictDialogOpen(false);
     overwriteConfirmedRef.current = false;
+    autoTriggeredRef.current = null;
   };
 
   // Unique product keys (name||sku) from rows
@@ -187,6 +189,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const handleFiles = async (f: File | null) => {
     if (!f) return;
     setFile(f);
+    autoTriggeredRef.current = null;
     try {
       const buf = await f.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
