@@ -25,6 +25,7 @@ interface Supplier {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  no_rek?: string | null;
 }
 
 interface Item extends PickedProduct {}
@@ -221,7 +222,7 @@ export default function PurchaseForm({
     (async () => {
       const { data } = await supabase
         .from("suppliers")
-        .select("id,name,phone,address,notes")
+        .select("id,name,phone,address,notes,no_rek")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
@@ -552,9 +553,9 @@ export default function PurchaseForm({
               <div className="text-muted-foreground">{supplier?.name || "-"}</div>
             </div>
             <div>
-              <div className="text-primary font-medium">Deskripsi</div>
+              <div className="text-primary font-medium">No Rek</div>
               <div className="text-muted-foreground whitespace-pre-wrap">
-                {supplier?.notes || "-"}
+                {supplier?.no_rek || "-"}
               </div>
             </div>
             <div>
@@ -917,7 +918,7 @@ export default function PurchaseForm({
                 >
                   <div>
                     <div className="font-medium">{s.name}</div>
-                    {s.notes && <div className="text-xs text-muted-foreground line-clamp-1">{s.notes}</div>}
+                    {s.no_rek && <div className="text-xs text-muted-foreground line-clamp-1">{s.no_rek}</div>}
                   </div>
                   {supplier?.id === s.id && <Check className="h-4 w-4" />}
                 </button>
