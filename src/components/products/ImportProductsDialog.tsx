@@ -112,6 +112,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const [conflicts, setConflicts] = useState<VariantConflict[]>([]);
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
   const overwriteConfirmedRef = useRef(false);
+  const autoTriggeredRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -123,6 +124,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     setConflicts([]);
     setConflictDialogOpen(false);
     overwriteConfirmedRef.current = false;
+    autoTriggeredRef.current = null;
   };
 
   // Unique product keys (name||sku) from rows
@@ -184,9 +186,29 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     return `${name}||${sku}`;
   };
 
+  // Auto-open conflict dialog when all products found in update mode
+  useEffect(() => {
+    if (mode !== "update") return;
+    if (checkingMissing) return;
+    if (rows.length === 0) return;
+    if (missingKeys.size > 0) return;
+    const sig = `${file?.name || ""}|${rows.length}`;
+    if (autoTriggeredRef.current === sig) return;
+    autoTriggeredRef.current = sig;
+    (async () => {
+      const found = await scanConflicts();
+      if (found.length > 0) {
+        setConflicts(found);
+        setConflictDialogOpen(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkingMissing, missingKeys, mode, rows, file]);
+
   const handleFiles = async (f: File | null) => {
     if (!f) return;
     setFile(f);
+    autoTriggeredRef.current = null;
     try {
       const buf = await f.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
@@ -962,15 +984,6 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                setConflictDialogOpen(false);
-                await runImport(false);
-              }}
-            >
-              Lewati Varian Konflik
-            </Button>
             <AlertDialogAction
               onClick={async () => {
                 setConflictDialogOpen(false);

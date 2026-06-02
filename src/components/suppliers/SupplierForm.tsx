@@ -42,6 +42,7 @@ export default function SupplierForm({ supplierId, onClose, onSaved }: Props) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [noRek, setNoRek] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [country, setCountry] = useState("Indonesia");
   const [province, setProvince] = useState("");
@@ -68,6 +69,7 @@ export default function SupplierForm({ supplierId, onClose, onSaved }: Props) {
         setEmail(r.email || "");
         setPhone(r.phone || "");
         setNotes(r.notes || "");
+        setNoRek(r.no_rek || "");
         setPhotoUrl(r.photo_url || null);
         setCountry(r.country || "Indonesia");
         setProvince(r.province || "");
@@ -116,6 +118,7 @@ export default function SupplierForm({ supplierId, onClose, onSaved }: Props) {
         email: email.trim() || null,
         phone: phone.trim() || null,
         notes: notes.trim() || null,
+        no_rek: noRek.trim() || null,
         photo_url: photoUrl,
         country: country || null,
         province: province || null,
@@ -223,11 +226,11 @@ export default function SupplierForm({ supplierId, onClose, onSaved }: Props) {
           </div>
 
           <div>
-            <Label className="text-sm">Catatan</Label>
+            <Label className="text-sm">No Rek</Label>
             <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Masukkan Catatan"
+              value={noRek}
+              onChange={(e) => setNoRek(e.target.value)}
+              placeholder="Contoh: BCA 1234567890 a/n Nama"
               className="mt-1.5"
             />
           </div>
@@ -323,6 +326,17 @@ export default function SupplierForm({ supplierId, onClose, onSaved }: Props) {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Masukkan Alamat"
+              rows={2}
+              className="mt-1.5"
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm">Catatan</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Masukkan Catatan"
               rows={2}
               className="mt-1.5"
             />
