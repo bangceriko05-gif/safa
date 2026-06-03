@@ -308,6 +308,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       return;
     }
     cancelRef.current = false;
+    pauseRef.current = false;
     createdProductIdsRef.current = [];
     createdVariantIdsRef.current = [];
     createdTierIdsRef.current = [];
@@ -379,6 +380,10 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       let processed = 0;
 
       for (const [, gRows] of groups) {
+        // Wait while paused (user opened cancel confirmation)
+        while (pauseRef.current && !cancelRef.current) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
         if (cancelRef.current) break;
         const first = gRows[0];
         const name = String(first["Nama Produk"] || "").trim();
