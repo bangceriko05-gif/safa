@@ -115,6 +115,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const autoTriggeredRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cancelRef = useRef(false);
+  const pauseRef = useRef(false);
   const createdProductIdsRef = useRef<string[]>([]);
   const createdVariantIdsRef = useRef<string[]>([]);
   const createdTierIdsRef = useRef<string[]>([]);
@@ -131,6 +132,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     overwriteConfirmedRef.current = false;
     autoTriggeredRef.current = null;
     cancelRef.current = false;
+    pauseRef.current = false;
     createdProductIdsRef.current = [];
     createdVariantIdsRef.current = [];
     createdTierIdsRef.current = [];
