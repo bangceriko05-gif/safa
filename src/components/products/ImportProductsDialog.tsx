@@ -120,6 +120,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const createdVariantIdsRef = useRef<string[]>([]);
   const createdTierIdsRef = useRef<string[]>([]);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  // Duplicate detection (create mode): row index -> reasons
+  const [duplicateRows, setDuplicateRows] = useState<Map<number, string[]>>(new Map());
 
   const reset = () => {
     setFile(null);
@@ -137,6 +139,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     createdVariantIdsRef.current = [];
     createdTierIdsRef.current = [];
     setCancelConfirmOpen(false);
+    setDuplicateRows(new Map());
   };
 
   // Unique product keys (name||sku) from rows
