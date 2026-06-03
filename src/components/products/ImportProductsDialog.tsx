@@ -857,7 +857,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       onOpenChange={(v) => {
         if (!v) {
           if (importing) {
-            // Block accidental close while importing — ask via cancel dialog
+            // Pause and ask via cancel dialog
+            pauseRef.current = true;
             setCancelConfirmOpen(true);
             return;
           }
@@ -1079,6 +1080,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
             variant="outline"
             onClick={() => {
               if (importing) {
+                pauseRef.current = true;
                 setCancelConfirmOpen(true);
               } else {
                 onOpenChange(false);
@@ -1097,23 +1099,37 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         </div>
       </DialogContent>
 
-      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+      <AlertDialog
+        open={cancelConfirmOpen}
+        onOpenChange={(v) => {
+          setCancelConfirmOpen(v);
+          // Closing dialog without explicit action → resume import
+          if (!v && !cancelRef.current) pauseRef.current = false;
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Batalkan import?</AlertDialogTitle>
             <AlertDialogDescription>
-              Proses import sedang berjalan ({progress.current}/{progress.total}). Jika
+              Proses import dijeda sementara ({progress.current}/{progress.total}). Jika
               dibatalkan, semua produk, varian, dan tingkatan harga yang sudah berhasil
               dibuat dalam proses ini akan dihapus. Produk/varian yang sudah terlanjur
               <strong> diperbarui</strong> (mode Edit) tidak dapat dikembalikan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Lanjutkan Import</AlertDialogCancel>
+            <AlertDialogCancel
+              onClick={() => {
+                pauseRef.current = false;
+              }}
+            >
+              Lanjutkan Import
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 cancelRef.current = true;
+                pauseRef.current = false;
                 setCancelConfirmOpen(false);
               }}
             >
