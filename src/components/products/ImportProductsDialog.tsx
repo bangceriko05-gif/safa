@@ -201,6 +201,122 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     return `${name}||${sku}`;
   };
 
+  // Detect duplicates (create mode only)
+  useEffect(() => {
+    if (mode !== "create" || !currentStore || rows.length === 0) {
+      setDuplicateRows(new Map());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const nameCount = new Map<string, number[]>();
+      const skuCount = new Map<string, number[]>();
+      const vSkuCount = new Map<string, number[]>();
+      rows.forEach((r, i) => {
+        const n = String(r["Nama Produk"] || "").trim().toLowerCase();
+        const s = String(r["SKU Produk"] || "").trim().toLowerCase();
+        const vs = String(r["SKU Varian"] || "").trim().toLowerCase();
+        if (n) {
+          if (!nameCount.has(n)) nameCount.set(n, []);
+          nameCount.get(n)!.push(i);
+        }
+        if (s) {
+          if (!skuCount.has(s)) skuCount.set(s, []);
+          skuCount.get(s)!.push(i);
+        }
+        if (vs) {
+          if (!vSkuCount.has(vs)) vSkuCount.set(vs, []);
+          vSkuCount.get(vs)!.push(i);
+        }
+      });
+
+      // For Nama Produk + SKU Produk, multiple rows for the same product
+      // (same product with multiple variants) are NOT duplicates by themselves.
+      // Treat as intra-file duplicate only when the SAME variant SKU
+      // appears more than once, OR when Nama Produk maps to multiple distinct
+      // SKU Produk (conflicting product identity).
+      const dup = new Map<number, string[]>();
+      const add = (idx: number, reason: string) => {
+        if (!dup.has(idx)) dup.set(idx, []);
+        const arr = dup.get(idx)!;
+        if (!arr.includes(reason)) arr.push(reason);
+      };
+
+      // duplicate variant SKU within file
+      vSkuCount.forEach((idxs, vs) => {
+        if (idxs.length > 1) idxs.forEach((i) => add(i, `SKU Varian duplikat di file: "${vs}"`));
+      });
+
+      // same Nama Produk but different SKU Produk
+      nameCount.forEach((idxs, n) => {
+        const skus = new Set(idxs.map((i) => String(rows[i]["SKU Produk"] || "").trim().toLowerCase()));
+        if (skus.size > 1) idxs.forEach((i) => add(i, `Nama Produk "${n}" memiliki SKU berbeda di file`));
+      });
+
+      // same SKU Produk but different Nama Produk
+      skuCount.forEach((idxs, s) => {
+        const names = new Set(idxs.map((i) => String(rows[i]["Nama Produk"] || "").trim().toLowerCase()));
+        if (names.size > 1) idxs.forEach((i) => add(i, `SKU Produk "${s}" memiliki Nama berbeda di file`));
+      });
+
+      // DB existence checks
+      try {
+        const names = Array.from(nameCount.keys());
+        const skus = Array.from(skuCount.keys());
+        const vSkus = Array.from(vSkuCount.keys());
+        const dbNames = new Set<string>();
+        const dbSkus = new Set<string>();
+        const dbVSkus = new Set<string>();
+        if (names.length > 0) {
+          const { data } = await supabase
+            .from("products")
+            .select("name")
+            .eq("store_id", currentStore.id)
+            .in("name", names);
+          (data || []).forEach((p: any) => dbNames.add(String(p.name).toLowerCase()));
+        }
+        if (skus.length > 0) {
+          const { data } = await supabase
+            .from("products")
+            .select("sku")
+            .eq("store_id", currentStore.id)
+            .in("sku", skus);
+          (data || []).forEach((p: any) => p.sku && dbSkus.add(String(p.sku).toLowerCase()));
+        }
+        if (vSkus.length > 0) {
+          const { data: prodIds } = await supabase
+            .from("products")
+            .select("id")
+            .eq("store_id", currentStore.id);
+          const ids = (prodIds || []).map((p: any) => p.id);
+          if (ids.length > 0) {
+            const { data: existingV } = await supabase
+              .from("product_variants")
+              .select("sku")
+              .in("product_id", ids)
+              .in("sku", vSkus);
+            (existingV || []).forEach((v: any) => v.sku && dbVSkus.add(String(v.sku).toLowerCase()));
+          }
+        }
+        rows.forEach((r, i) => {
+          const n = String(r["Nama Produk"] || "").trim().toLowerCase();
+          const s = String(r["SKU Produk"] || "").trim().toLowerCase();
+          const vs = String(r["SKU Varian"] || "").trim().toLowerCase();
+          if (n && dbNames.has(n)) add(i, `Nama Produk sudah ada di database: "${n}"`);
+          if (s && dbSkus.has(s)) add(i, `SKU Produk sudah ada di database: "${s}"`);
+          if (vs && dbVSkus.has(vs)) add(i, `SKU Varian sudah ada di database: "${vs}"`);
+        });
+      } catch (e) {
+        console.error("Duplicate scan error:", e);
+      }
+
+      if (!cancelled) setDuplicateRows(dup);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, rows, currentStore]);
+
   // Auto-open conflict dialog when all products found in update mode
   useEffect(() => {
     if (mode !== "update") return;
