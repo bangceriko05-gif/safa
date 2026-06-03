@@ -115,6 +115,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const autoTriggeredRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cancelRef = useRef(false);
+  const pauseRef = useRef(false);
   const createdProductIdsRef = useRef<string[]>([]);
   const createdVariantIdsRef = useRef<string[]>([]);
   const createdTierIdsRef = useRef<string[]>([]);
@@ -131,6 +132,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     overwriteConfirmedRef.current = false;
     autoTriggeredRef.current = null;
     cancelRef.current = false;
+    pauseRef.current = false;
     createdProductIdsRef.current = [];
     createdVariantIdsRef.current = [];
     createdTierIdsRef.current = [];
@@ -306,6 +308,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       return;
     }
     cancelRef.current = false;
+    pauseRef.current = false;
     createdProductIdsRef.current = [];
     createdVariantIdsRef.current = [];
     createdTierIdsRef.current = [];
@@ -377,6 +380,10 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       let processed = 0;
 
       for (const [, gRows] of groups) {
+        // Wait while paused (user opened cancel confirmation)
+        while (pauseRef.current && !cancelRef.current) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
         if (cancelRef.current) break;
         const first = gRows[0];
         const name = String(first["Nama Produk"] || "").trim();
@@ -726,6 +733,93 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       toast.error("Pilih file terlebih dahulu");
       return;
     }
+    // Create mode: enforce uniqueness for Nama Produk, SKU Produk, SKU Varian
+    if (mode === "create") {
+      // 1) intra-file duplicates
+      const productKeyMap = new Map<string, Set<string>>(); // nameLower -> set of skuLower
+      const seenProductNames = new Set<string>();
+      const seenProductSkus = new Set<string>();
+      const seenVariantSkus = new Set<string>();
+      const dupErrors: string[] = [];
+      for (const r of rows) {
+        const n = String(r["Nama Produk"] || "").trim();
+        const s = String(r["SKU Produk"] || "").trim();
+        const vs = String(r["SKU Varian"] || "").trim();
+        if (n) {
+          const key = `${n.toLowerCase()}||${s.toLowerCase()}`;
+          if (!productKeyMap.has(n.toLowerCase())) productKeyMap.set(n.toLowerCase(), new Set());
+          productKeyMap.get(n.toLowerCase())!.add(s.toLowerCase());
+          // collect (akan kita validasi setelah loop berdasarkan group)
+          seenProductNames.add(n.toLowerCase());
+          if (s) seenProductSkus.add(s.toLowerCase());
+        }
+        if (vs) {
+          const k = vs.toLowerCase();
+          if (seenVariantSkus.has(k)) {
+            dupErrors.push(`SKU Varian duplikat di file: "${vs}"`);
+          } else {
+            seenVariantSkus.add(k);
+          }
+        }
+      }
+      // Check DB existence
+      try {
+        setImporting(true);
+        setProgress({ current: 0, total: 1, label: "Memeriksa duplikasi di database..." });
+        const names = Array.from(seenProductNames);
+        const skus = Array.from(seenProductSkus);
+        const vSkus = Array.from(seenVariantSkus);
+        if (names.length > 0) {
+          const { data: existing } = await supabase
+            .from("products")
+            .select("name")
+            .eq("store_id", currentStore.id)
+            .in("name", names);
+          (existing || []).forEach((p: any) => {
+            dupErrors.push(`Nama Produk sudah ada: "${p.name}"`);
+          });
+        }
+        if (skus.length > 0) {
+          const { data: existing } = await supabase
+            .from("products")
+            .select("sku")
+            .eq("store_id", currentStore.id)
+            .in("sku", skus);
+          (existing || []).forEach((p: any) => {
+            if (p.sku) dupErrors.push(`SKU Produk sudah ada: "${p.sku}"`);
+          });
+        }
+        if (vSkus.length > 0) {
+          // variant SKUs are unique per store; join through products
+          const { data: prodIds } = await supabase
+            .from("products")
+            .select("id")
+            .eq("store_id", currentStore.id);
+          const ids = (prodIds || []).map((p: any) => p.id);
+          if (ids.length > 0) {
+            const { data: existingV } = await supabase
+              .from("product_variants")
+              .select("sku")
+              .in("product_id", ids)
+              .in("sku", vSkus);
+            (existingV || []).forEach((v: any) => {
+              if (v.sku) dupErrors.push(`SKU Varian sudah ada: "${v.sku}"`);
+            });
+          }
+        }
+      } finally {
+        setImporting(false);
+        setProgress({ current: 0, total: 0, label: "" });
+      }
+      if (dupErrors.length > 0) {
+        const preview = dupErrors.slice(0, 5).join("\n");
+        const more = dupErrors.length > 5 ? `\n…dan ${dupErrors.length - 5} lainnya` : "";
+        toast.error(`Import dibatalkan: ${dupErrors.length} duplikasi terdeteksi.\n${preview}${more}`, {
+          duration: 8000,
+        });
+        return;
+      }
+    }
     if (mode === "update") {
       setImporting(true);
       setProgress({ current: 0, total: 1, label: "Memeriksa perubahan varian..." });
@@ -763,7 +857,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
       onOpenChange={(v) => {
         if (!v) {
           if (importing) {
-            // Block accidental close while importing — ask via cancel dialog
+            // Pause and ask via cancel dialog
+            pauseRef.current = true;
             setCancelConfirmOpen(true);
             return;
           }
@@ -985,6 +1080,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
             variant="outline"
             onClick={() => {
               if (importing) {
+                pauseRef.current = true;
                 setCancelConfirmOpen(true);
               } else {
                 onOpenChange(false);
@@ -1003,23 +1099,37 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
         </div>
       </DialogContent>
 
-      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+      <AlertDialog
+        open={cancelConfirmOpen}
+        onOpenChange={(v) => {
+          setCancelConfirmOpen(v);
+          // Closing dialog without explicit action → resume import
+          if (!v && !cancelRef.current) pauseRef.current = false;
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Batalkan import?</AlertDialogTitle>
             <AlertDialogDescription>
-              Proses import sedang berjalan ({progress.current}/{progress.total}). Jika
+              Proses import dijeda sementara ({progress.current}/{progress.total}). Jika
               dibatalkan, semua produk, varian, dan tingkatan harga yang sudah berhasil
               dibuat dalam proses ini akan dihapus. Produk/varian yang sudah terlanjur
               <strong> diperbarui</strong> (mode Edit) tidak dapat dikembalikan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Lanjutkan Import</AlertDialogCancel>
+            <AlertDialogCancel
+              onClick={() => {
+                pauseRef.current = false;
+              }}
+            >
+              Lanjutkan Import
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 cancelRef.current = true;
+                pauseRef.current = false;
                 setCancelConfirmOpen(false);
               }}
             >
