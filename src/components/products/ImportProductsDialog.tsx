@@ -120,6 +120,8 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
   const createdVariantIdsRef = useRef<string[]>([]);
   const createdTierIdsRef = useRef<string[]>([]);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  // Duplicate detection (create mode): row index -> reasons
+  const [duplicateRows, setDuplicateRows] = useState<Map<number, string[]>>(new Map());
 
   const reset = () => {
     setFile(null);
@@ -137,6 +139,7 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     createdVariantIdsRef.current = [];
     createdTierIdsRef.current = [];
     setCancelConfirmOpen(false);
+    setDuplicateRows(new Map());
   };
 
   // Unique product keys (name||sku) from rows
@@ -197,6 +200,122 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
     const sku = String(r["SKU Produk"] || "").trim().toLowerCase();
     return `${name}||${sku}`;
   };
+
+  // Detect duplicates (create mode only)
+  useEffect(() => {
+    if (mode !== "create" || !currentStore || rows.length === 0) {
+      setDuplicateRows(new Map());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const nameCount = new Map<string, number[]>();
+      const skuCount = new Map<string, number[]>();
+      const vSkuCount = new Map<string, number[]>();
+      rows.forEach((r, i) => {
+        const n = String(r["Nama Produk"] || "").trim().toLowerCase();
+        const s = String(r["SKU Produk"] || "").trim().toLowerCase();
+        const vs = String(r["SKU Varian"] || "").trim().toLowerCase();
+        if (n) {
+          if (!nameCount.has(n)) nameCount.set(n, []);
+          nameCount.get(n)!.push(i);
+        }
+        if (s) {
+          if (!skuCount.has(s)) skuCount.set(s, []);
+          skuCount.get(s)!.push(i);
+        }
+        if (vs) {
+          if (!vSkuCount.has(vs)) vSkuCount.set(vs, []);
+          vSkuCount.get(vs)!.push(i);
+        }
+      });
+
+      // For Nama Produk + SKU Produk, multiple rows for the same product
+      // (same product with multiple variants) are NOT duplicates by themselves.
+      // Treat as intra-file duplicate only when the SAME variant SKU
+      // appears more than once, OR when Nama Produk maps to multiple distinct
+      // SKU Produk (conflicting product identity).
+      const dup = new Map<number, string[]>();
+      const add = (idx: number, reason: string) => {
+        if (!dup.has(idx)) dup.set(idx, []);
+        const arr = dup.get(idx)!;
+        if (!arr.includes(reason)) arr.push(reason);
+      };
+
+      // duplicate variant SKU within file
+      vSkuCount.forEach((idxs, vs) => {
+        if (idxs.length > 1) idxs.forEach((i) => add(i, `SKU Varian duplikat di file: "${vs}"`));
+      });
+
+      // same Nama Produk but different SKU Produk
+      nameCount.forEach((idxs, n) => {
+        const skus = new Set(idxs.map((i) => String(rows[i]["SKU Produk"] || "").trim().toLowerCase()));
+        if (skus.size > 1) idxs.forEach((i) => add(i, `Nama Produk "${n}" memiliki SKU berbeda di file`));
+      });
+
+      // same SKU Produk but different Nama Produk
+      skuCount.forEach((idxs, s) => {
+        const names = new Set(idxs.map((i) => String(rows[i]["Nama Produk"] || "").trim().toLowerCase()));
+        if (names.size > 1) idxs.forEach((i) => add(i, `SKU Produk "${s}" memiliki Nama berbeda di file`));
+      });
+
+      // DB existence checks
+      try {
+        const names = Array.from(nameCount.keys());
+        const skus = Array.from(skuCount.keys());
+        const vSkus = Array.from(vSkuCount.keys());
+        const dbNames = new Set<string>();
+        const dbSkus = new Set<string>();
+        const dbVSkus = new Set<string>();
+        if (names.length > 0) {
+          const { data } = await supabase
+            .from("products")
+            .select("name")
+            .eq("store_id", currentStore.id)
+            .in("name", names);
+          (data || []).forEach((p: any) => dbNames.add(String(p.name).toLowerCase()));
+        }
+        if (skus.length > 0) {
+          const { data } = await supabase
+            .from("products")
+            .select("sku")
+            .eq("store_id", currentStore.id)
+            .in("sku", skus);
+          (data || []).forEach((p: any) => p.sku && dbSkus.add(String(p.sku).toLowerCase()));
+        }
+        if (vSkus.length > 0) {
+          const { data: prodIds } = await supabase
+            .from("products")
+            .select("id")
+            .eq("store_id", currentStore.id);
+          const ids = (prodIds || []).map((p: any) => p.id);
+          if (ids.length > 0) {
+            const { data: existingV } = await supabase
+              .from("product_variants")
+              .select("sku")
+              .in("product_id", ids)
+              .in("sku", vSkus);
+            (existingV || []).forEach((v: any) => v.sku && dbVSkus.add(String(v.sku).toLowerCase()));
+          }
+        }
+        rows.forEach((r, i) => {
+          const n = String(r["Nama Produk"] || "").trim().toLowerCase();
+          const s = String(r["SKU Produk"] || "").trim().toLowerCase();
+          const vs = String(r["SKU Varian"] || "").trim().toLowerCase();
+          if (n && dbNames.has(n)) add(i, `Nama Produk sudah ada di database: "${n}"`);
+          if (s && dbSkus.has(s)) add(i, `SKU Produk sudah ada di database: "${s}"`);
+          if (vs && dbVSkus.has(vs)) add(i, `SKU Varian sudah ada di database: "${vs}"`);
+        });
+      } catch (e) {
+        console.error("Duplicate scan error:", e);
+      }
+
+      if (!cancelled) setDuplicateRows(dup);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, rows, currentStore]);
 
   // Auto-open conflict dialog when all products found in update mode
   useEffect(() => {
@@ -1006,7 +1125,20 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                       : "Semua produk ditemukan"}
                   </div>
                 )}
+                {mode === "create" && duplicateRows.size > 0 && (
+                  <div className="text-xs text-destructive font-medium">
+                    {duplicateRows.size} baris duplikat terdeteksi
+                  </div>
+                )}
               </div>
+              {mode === "create" && duplicateRows.size > 0 && (
+                <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs px-3 py-2">
+                  Baris yang ditandai merah memiliki duplikasi pada{" "}
+                  <strong>Nama Produk</strong>, <strong>SKU Produk</strong>, atau{" "}
+                  <strong>SKU Varian</strong> — baik di dalam file maupun terhadap data yang
+                  sudah ada di database. Import akan dibatalkan jika duplikasi ini tidak diperbaiki.
+                </div>
+              )}
               {mode === "update" && !checkingMissing && missingKeys.size > 0 && (
                 <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs px-3 py-2">
                   Mode Edit/Perbarui: {missingKeys.size} produk tidak ditemukan di database
@@ -1028,27 +1160,41 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                   <TableBody>
                     {rows.slice(0, 10).map((r, i) => {
                       const isMissing = mode === "update" && missingKeys.has(rowKey(r));
+                      const dupReasons = mode === "create" ? duplicateRows.get(i) : undefined;
+                      const isDup = !!dupReasons && dupReasons.length > 0;
+                      const isBad = isMissing || isDup;
                       return (
                         <TableRow
                           key={i}
                           className={
-                            isMissing
+                            isBad
                               ? "bg-destructive/10 hover:bg-destructive/15"
                               : ""
                           }
-                          title={isMissing ? "Produk tidak ditemukan di database" : undefined}
+                          title={
+                            isMissing
+                              ? "Produk tidak ditemukan di database"
+                              : isDup
+                              ? dupReasons!.join("\n")
+                              : undefined
+                          }
                         >
                           {headers.map((h, idx) => (
                             <TableCell
                               key={h}
                               className={`whitespace-nowrap text-xs ${
-                                isMissing ? "text-destructive font-medium" : ""
-                              } ${isMissing && idx === 0 ? "border-l-4 border-destructive" : ""}`}
+                                isBad ? "text-destructive font-medium" : ""
+                              } ${isBad && idx === 0 ? "border-l-4 border-destructive" : ""}`}
                             >
                               {String(r[h] ?? "")}
                               {isMissing && idx === 0 && (
                                 <span className="ml-2 inline-block rounded bg-destructive text-destructive-foreground px-1.5 py-0.5 text-[10px] font-semibold">
                                   TIDAK DITEMUKAN
+                                </span>
+                              )}
+                              {isDup && idx === 0 && (
+                                <span className="ml-2 inline-block rounded bg-destructive text-destructive-foreground px-1.5 py-0.5 text-[10px] font-semibold">
+                                  DUPLIKAT
                                 </span>
                               )}
                             </TableCell>
