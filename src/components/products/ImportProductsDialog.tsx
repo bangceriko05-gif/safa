@@ -1125,7 +1125,20 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                       : "Semua produk ditemukan"}
                   </div>
                 )}
+                {mode === "create" && duplicateRows.size > 0 && (
+                  <div className="text-xs text-destructive font-medium">
+                    {duplicateRows.size} baris duplikat terdeteksi
+                  </div>
+                )}
               </div>
+              {mode === "create" && duplicateRows.size > 0 && (
+                <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs px-3 py-2">
+                  Baris yang ditandai merah memiliki duplikasi pada{" "}
+                  <strong>Nama Produk</strong>, <strong>SKU Produk</strong>, atau{" "}
+                  <strong>SKU Varian</strong> — baik di dalam file maupun terhadap data yang
+                  sudah ada di database. Import akan dibatalkan jika duplikasi ini tidak diperbaiki.
+                </div>
+              )}
               {mode === "update" && !checkingMissing && missingKeys.size > 0 && (
                 <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs px-3 py-2">
                   Mode Edit/Perbarui: {missingKeys.size} produk tidak ditemukan di database
@@ -1147,27 +1160,41 @@ export default function ImportProductsDialog({ open, onOpenChange, onImported }:
                   <TableBody>
                     {rows.slice(0, 10).map((r, i) => {
                       const isMissing = mode === "update" && missingKeys.has(rowKey(r));
+                      const dupReasons = mode === "create" ? duplicateRows.get(i) : undefined;
+                      const isDup = !!dupReasons && dupReasons.length > 0;
+                      const isBad = isMissing || isDup;
                       return (
                         <TableRow
                           key={i}
                           className={
-                            isMissing
+                            isBad
                               ? "bg-destructive/10 hover:bg-destructive/15"
                               : ""
                           }
-                          title={isMissing ? "Produk tidak ditemukan di database" : undefined}
+                          title={
+                            isMissing
+                              ? "Produk tidak ditemukan di database"
+                              : isDup
+                              ? dupReasons!.join("\n")
+                              : undefined
+                          }
                         >
                           {headers.map((h, idx) => (
                             <TableCell
                               key={h}
                               className={`whitespace-nowrap text-xs ${
-                                isMissing ? "text-destructive font-medium" : ""
-                              } ${isMissing && idx === 0 ? "border-l-4 border-destructive" : ""}`}
+                                isBad ? "text-destructive font-medium" : ""
+                              } ${isBad && idx === 0 ? "border-l-4 border-destructive" : ""}`}
                             >
                               {String(r[h] ?? "")}
                               {isMissing && idx === 0 && (
                                 <span className="ml-2 inline-block rounded bg-destructive text-destructive-foreground px-1.5 py-0.5 text-[10px] font-semibold">
                                   TIDAK DITEMUKAN
+                                </span>
+                              )}
+                              {isDup && idx === 0 && (
+                                <span className="ml-2 inline-block rounded bg-destructive text-destructive-foreground px-1.5 py-0.5 text-[10px] font-semibold">
+                                  DUPLIKAT
                                 </span>
                               )}
                             </TableCell>
