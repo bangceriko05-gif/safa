@@ -778,6 +778,26 @@ export default function PMSCalendar({
     }) || null;
   };
 
+  // Get ALL bookings that cover this room+date (for stacked overlapping bookings)
+  const getAllOccupyingBookings = (roomId: string, date: Date): BookingWithAdmin[] => {
+    const dateToCheck = startOfDay(date);
+    return bookings.filter(b => {
+      if (b.room_id !== roomId) return false;
+      const bookingStart = startOfDay(new Date(b.date));
+      const nights = b.duration || 1;
+      const bookingEnd = addDays(bookingStart, nights - 1);
+      return dateToCheck >= bookingStart && dateToCheck <= bookingEnd;
+    });
+  };
+
+  // Stack popup state — shows list of all overlapping bookings on a cell
+  const [stackPopup, setStackPopup] = useState<{
+    open: boolean;
+    bookings: BookingWithAdmin[];
+    roomName: string;
+    date: Date | null;
+  }>({ open: false, bookings: [], roomName: "", date: null });
+
   // Filter rooms
   const displayRooms = rooms;
 
@@ -1181,6 +1201,8 @@ export default function PMSCalendar({
                           const isOccupied = isDateOccupied(room.id, date);
                           const dateStr = format(date, "yyyy-MM-dd");
                           const occupyingBooking = getOccupyingBooking(room.id, date);
+                          const allOverlapping = getAllOccupyingBookings(room.id, date);
+                          const extraCount = Math.max(0, allOverlapping.length - 1);
                           
                           // Check if booking started before visible range and this is the first visible date of that booking
                           const isFirstVisibleDateOfOngoingBooking = dateIndex === 0 && isOccupied && occupyingBooking;
@@ -1252,6 +1274,30 @@ export default function PMSCalendar({
                                       <div className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: statusColor, color: '#000' }}>
                                         {status}
                                       </div>
+                                      {extraCount > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            setStackPopup({
+                                              open: true,
+                                              bookings: allOverlapping,
+                                              roomName: room.name,
+                                              date,
+                                            });
+                                          }}
+                                          title={`+${extraCount} booking lain di kamar ini`}
+                                          className="absolute -top-1 -left-1 z-20 flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold shadow-md border border-white hover:scale-110 transition-transform"
+                                        >
+                                          +{extraCount}
+                                        </button>
+                                      )}
+                                      {extraCount > 0 && (
+                                        <>
+                                          <div className="absolute inset-0 rounded-md pointer-events-none" style={{ boxShadow: `4px 4px 0 -1px ${statusColor}55, 8px 8px 0 -2px ${statusColor}33` }} />
+                                        </>
+                                      )}
                                       <div className={cn("text-xs font-semibold truncate pr-8", hasActiveDeposit && "pl-6")}>{booking.customer_name}</div>
                                       <div className="text-[11px] font-medium truncate">
                                         {nights} malam {' '}
@@ -1450,6 +1496,58 @@ export default function PMSCalendar({
         onClose={() => setDepositDetailPopup({ open: false, roomId: null, roomName: "" })}
         onSuccess={() => fetchRoomDeposits()}
       />
+
+      {/* Stacked bookings list dialog (when multiple bookings overlap one cell) */}
+      <AlertDialog open={stackPopup.open} onOpenChange={(o) => !o && setStackPopup({ open: false, bookings: [], roomName: "", date: null })}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {stackPopup.roomName}
+              {stackPopup.date && (
+                <span className="block text-xs font-normal text-muted-foreground mt-1">
+                  {format(stackPopup.date, "d MMMM yyyy", { locale: idLocale })} · {stackPopup.bookings.length} booking
+                </span>
+              )}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-2 -mx-2 px-2">
+            {stackPopup.bookings.map((b) => {
+              const st = b.status || 'BO';
+              const stColor = statusColors[st] || '#3B82F6';
+              const isPaid = (b as any).payment_status === 'lunas';
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => {
+                    setStackPopup({ open: false, bookings: [], roomName: "", date: null });
+                    onEditBooking(b);
+                  }}
+                  className="w-full text-left rounded-md border bg-card hover:bg-accent transition-colors p-3"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono text-[11px] font-semibold text-primary">{(b as any).bid || '-'}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: stColor, color: '#000' }}>{st}</span>
+                  </div>
+                  <div className="text-sm font-semibold truncate">{b.customer_name}</div>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">{b.duration || 1} malam</span>
+                    <span className={cn("text-xs font-bold", isPaid ? "text-emerald-700" : "text-red-600")}>
+                      {isPaid ? 'LUNAS' : 'BELUM LUNAS'}
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold mt-1">
+                    Rp {new Intl.NumberFormat('id-ID').format(Number((b as any).price) || 0)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tutup</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
