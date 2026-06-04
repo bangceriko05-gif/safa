@@ -76,7 +76,7 @@ export const getDateRangeDisplay = (range: ReportTimeRange, customDateRange?: Da
     if (isSameDate) {
       return format(startDate, "d MMMM yyyy", { locale: localeId });
     }
-    return `${format(startDate, "d MMM", { locale: localeId })} - ${format(endDate, "d MMM yyyy", { locale: localeId })}`;
+    return `${format(startDate, "d MMMM", { locale: localeId })} - ${format(endDate, "d MMMM yyyy", { locale: localeId })}`;
   }
 };
 
@@ -101,8 +101,23 @@ export default function ReportDateFilter({
           onTimeRangeChange(value);
         }}
       >
-        <SelectTrigger className="w-[160px]">
-          <SelectValue />
+        <SelectTrigger className="w-[280px]">
+          <SelectValue>
+            {(() => {
+              const labelMap: Record<ReportTimeRange, string> = {
+                today: "Hari Ini",
+                yesterday: "Kemarin",
+                thisMonth: "Bulan Ini",
+                lastMonth: "Bulan Lalu",
+                allTime: "Semua Waktu",
+                custom: "Custom Tanggal",
+              };
+              if (timeRange === "allTime" || timeRange === "custom") {
+                return labelMap[timeRange];
+              }
+              return `${labelMap[timeRange]} (${getDateRangeDisplay(timeRange, customDateRange)})`;
+            })()}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="today">Hari Ini</SelectItem>
