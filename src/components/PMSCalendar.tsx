@@ -1496,6 +1496,58 @@ export default function PMSCalendar({
         onClose={() => setDepositDetailPopup({ open: false, roomId: null, roomName: "" })}
         onSuccess={() => fetchRoomDeposits()}
       />
+
+      {/* Stacked bookings list dialog (when multiple bookings overlap one cell) */}
+      <AlertDialog open={stackPopup.open} onOpenChange={(o) => !o && setStackPopup({ open: false, bookings: [], roomName: "", date: null })}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {stackPopup.roomName}
+              {stackPopup.date && (
+                <span className="block text-xs font-normal text-muted-foreground mt-1">
+                  {format(stackPopup.date, "d MMMM yyyy", { locale: idLocale })} · {stackPopup.bookings.length} booking
+                </span>
+              )}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-2 -mx-2 px-2">
+            {stackPopup.bookings.map((b) => {
+              const st = b.status || 'BO';
+              const stColor = statusColors[st] || '#3B82F6';
+              const isPaid = (b as any).payment_status === 'lunas';
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => {
+                    setStackPopup({ open: false, bookings: [], roomName: "", date: null });
+                    onEditBooking(b);
+                  }}
+                  className="w-full text-left rounded-md border bg-card hover:bg-accent transition-colors p-3"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono text-[11px] font-semibold text-primary">{(b as any).bid || '-'}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: stColor, color: '#000' }}>{st}</span>
+                  </div>
+                  <div className="text-sm font-semibold truncate">{b.customer_name}</div>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">{b.duration || 1} malam</span>
+                    <span className={cn("text-xs font-bold", isPaid ? "text-emerald-700" : "text-red-600")}>
+                      {isPaid ? 'LUNAS' : 'BELUM LUNAS'}
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold mt-1">
+                    Rp {new Intl.NumberFormat('id-ID').format(Number((b as any).price) || 0)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tutup</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
