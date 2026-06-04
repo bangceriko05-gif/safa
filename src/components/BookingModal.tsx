@@ -108,6 +108,10 @@ export default function BookingModal({
   const { currentStore } = useStore();
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState<Array<{ id: string; action_type: string; user_name: string; user_role: string; description: string; created_at: string }>>([]);
+  const [creatorName, setCreatorName] = useState<string>("");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [roomVariants, setRoomVariants] = useState<RoomVariant[]>([]);
