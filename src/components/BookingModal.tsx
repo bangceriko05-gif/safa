@@ -2577,15 +2577,122 @@ export default function BookingModal({
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            {editingBooking && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={loading || deleting}
+                className="flex-1"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Hapus
+              </Button>
+            )}
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={deleting}>
               Batal
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button type="submit" disabled={loading || deleting} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingBooking ? "Update" : "Tambah"}
+              {editingBooking ? "Simpan" : "Tambah"}
             </Button>
           </div>
+
+          {editingBooking && (
+            <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <History className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-semibold">Riwayat Aktivitas</span>
+              </div>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {creatorName && (
+                  <div className="text-xs flex items-start gap-2 border-b pb-1.5">
+                    <span className="inline-block min-w-[64px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold text-center">DIBUAT</span>
+                    <div className="flex-1">
+                      <div className="font-medium">{creatorName}</div>
+                      {editingBooking.created_at && (
+                        <div className="text-muted-foreground text-[11px]">
+                          {format(new Date(editingBooking.created_at), "d MMM yyyy, HH:mm", { locale: idLocale })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {historyLogs.length === 0 && !creatorName && (
+                  <div className="text-xs text-muted-foreground italic">Belum ada riwayat tercatat.</div>
+                )}
+                {historyLogs.map((log) => {
+                  const typeColor: Record<string, string> = {
+                    created: 'bg-emerald-100 text-emerald-700',
+                    updated: 'bg-blue-100 text-blue-700',
+                    deleted: 'bg-red-100 text-red-700',
+                    'check-in': 'bg-green-100 text-green-700',
+                    'check-out': 'bg-orange-100 text-orange-700',
+                    confirm: 'bg-purple-100 text-purple-700',
+                  };
+                  return (
+                    <div key={log.id} className="text-xs flex items-start gap-2 border-b pb-1.5 last:border-b-0">
+                      <span className={cn("inline-block min-w-[64px] px-1.5 py-0.5 rounded text-[10px] font-bold uppercase text-center", typeColor[log.action_type] || 'bg-gray-100 text-gray-700')}>
+                        {log.action_type}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{log.user_name} <span className="text-muted-foreground font-normal">({log.user_role})</span></div>
+                        <div className="text-muted-foreground text-[11px] break-words">{log.description}</div>
+                        <div className="text-muted-foreground text-[10px]">
+                          {format(new Date(log.created_at), "d MMM yyyy, HH:mm", { locale: idLocale })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </form>
+
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Booking?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Booking <strong>{editingBooking?.bid || editingBooking?.customer_name}</strong> akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleting}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!editingBooking?.id) return;
+                  setDeleting(true);
+                  try {
+                    const { error } = await supabase.from('bookings').delete().eq('id', editingBooking.id);
+                    if (error) throw error;
+                    await logActivity({
+                      actionType: 'deleted',
+                      entityType: 'booking',
+                      entityId: editingBooking.id,
+                      description: `Menghapus booking ${editingBooking.bid || ''} (${editingBooking.customer_name})`,
+                      storeId: currentStore?.id,
+                    });
+                    toast.success('Booking dihapus');
+                    setDeleteConfirmOpen(false);
+                    onClose();
+                  } catch (err: any) {
+                    toast.error(err?.message || 'Gagal menghapus booking');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Ya, Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
