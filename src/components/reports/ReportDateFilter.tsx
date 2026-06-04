@@ -76,7 +76,7 @@ export const getDateRangeDisplay = (range: ReportTimeRange, customDateRange?: Da
     if (isSameDate) {
       return format(startDate, "d MMMM yyyy", { locale: localeId });
     }
-    return `${format(startDate, "d MMM", { locale: localeId })} - ${format(endDate, "d MMM yyyy", { locale: localeId })}`;
+    return `${format(startDate, "d MMMM", { locale: localeId })} - ${format(endDate, "d MMMM yyyy", { locale: localeId })}`;
   }
 };
 
