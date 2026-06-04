@@ -1274,6 +1274,30 @@ export default function PMSCalendar({
                                       <div className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: statusColor, color: '#000' }}>
                                         {status}
                                       </div>
+                                      {extraCount > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            setStackPopup({
+                                              open: true,
+                                              bookings: allOverlapping,
+                                              roomName: room.name,
+                                              date,
+                                            });
+                                          }}
+                                          title={`+${extraCount} booking lain di kamar ini`}
+                                          className="absolute -top-1 -left-1 z-20 flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold shadow-md border border-white hover:scale-110 transition-transform"
+                                        >
+                                          +{extraCount}
+                                        </button>
+                                      )}
+                                      {extraCount > 0 && (
+                                        <>
+                                          <div className="absolute inset-0 rounded-md pointer-events-none" style={{ boxShadow: `4px 4px 0 -1px ${statusColor}55, 8px 8px 0 -2px ${statusColor}33` }} />
+                                        </>
+                                      )}
                                       <div className={cn("text-xs font-semibold truncate pr-8", hasActiveDeposit && "pl-6")}>{booking.customer_name}</div>
                                       <div className="text-[11px] font-medium truncate">
                                         {nights} malam {' '}
