@@ -778,6 +778,26 @@ export default function PMSCalendar({
     }) || null;
   };
 
+  // Get ALL bookings that cover this room+date (for stacked overlapping bookings)
+  const getAllOccupyingBookings = (roomId: string, date: Date): BookingWithAdmin[] => {
+    const dateToCheck = startOfDay(date);
+    return bookings.filter(b => {
+      if (b.room_id !== roomId) return false;
+      const bookingStart = startOfDay(new Date(b.date));
+      const nights = b.duration || 1;
+      const bookingEnd = addDays(bookingStart, nights - 1);
+      return dateToCheck >= bookingStart && dateToCheck <= bookingEnd;
+    });
+  };
+
+  // Stack popup state — shows list of all overlapping bookings on a cell
+  const [stackPopup, setStackPopup] = useState<{
+    open: boolean;
+    bookings: BookingWithAdmin[];
+    roomName: string;
+    date: Date | null;
+  }>({ open: false, bookings: [], roomName: "", date: null });
+
   // Filter rooms
   const displayRooms = rooms;
 
