@@ -1201,6 +1201,8 @@ export default function PMSCalendar({
                           const isOccupied = isDateOccupied(room.id, date);
                           const dateStr = format(date, "yyyy-MM-dd");
                           const occupyingBooking = getOccupyingBooking(room.id, date);
+                          const allOverlapping = getAllOccupyingBookings(room.id, date);
+                          const extraCount = Math.max(0, allOverlapping.length - 1);
                           
                           // Check if booking started before visible range and this is the first visible date of that booking
                           const isFirstVisibleDateOfOngoingBooking = dateIndex === 0 && isOccupied && occupyingBooking;
