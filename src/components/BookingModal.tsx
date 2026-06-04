@@ -296,6 +296,35 @@ export default function BookingModal({
     }
   }, [formData.dual_payment, formData.price, formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, isPrice2ManuallyEdited, checkInDate, checkOutDate, isPMSMode]);
 
+  // Fetch activity history + creator name for editing booking
+  useEffect(() => {
+    if (!isOpen || !editingBooking?.id) {
+      setHistoryLogs([]);
+      setCreatorName("");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: logs } = await supabase
+        .from('activity_logs')
+        .select('id, action_type, user_name, user_role, description, created_at')
+        .eq('entity_type', 'booking')
+        .eq('entity_id', editingBooking.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (!cancelled) setHistoryLogs(logs || []);
+      if (editingBooking.created_by) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', editingBooking.created_by)
+          .maybeSingle();
+        if (!cancelled) setCreatorName(prof?.name || '');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, editingBooking?.id]);
+
   // Initialize form when modal opens or data changes
   useEffect(() => {
     if (!isOpen) return; // Only run when modal is open
