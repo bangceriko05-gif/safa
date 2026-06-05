@@ -75,7 +75,6 @@ export default function AddProductDialog({
         .from("products")
         .select("id,name,purchase_price,price,sku,stock_qty")
         .eq("store_id", currentStore.id)
-        .eq("is_active", true)
         .order("name");
       const list = ((data as any[]) || []) as Product[];
       setProducts(list);
