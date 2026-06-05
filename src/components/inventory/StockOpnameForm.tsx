@@ -410,6 +410,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
     }
     toast.success("Stok opname berhasil di-post");
     setStatus("posted");
+    onBack();
   };
 
   // Hard delete
