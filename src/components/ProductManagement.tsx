@@ -98,6 +98,7 @@ interface Variant {
 interface RefItem {
   id: string;
   name: string;
+  is_default?: boolean;
 }
 
 const formatRp = (n: number) =>
@@ -192,7 +193,7 @@ export default function ProductManagement() {
           .order("name"),
         supabase
           .from("product_materials" as any)
-          .select("id, name")
+          .select("id, name, is_default")
           .eq("store_id", currentStore.id)
           .order("name"),
       ]);
@@ -587,7 +588,14 @@ export default function ProductManagement() {
           </DropdownMenuItem>
           {options.map((o) => (
             <DropdownMenuItem key={o.id} onClick={() => onChange(o.id)}>
-              {o.name}
+              <span className="flex items-center gap-2">
+                {o.name}
+                {o.is_default && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase font-medium">
+                    Default
+                  </span>
+                )}
+              </span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
