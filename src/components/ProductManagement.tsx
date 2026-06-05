@@ -792,9 +792,14 @@ export default function ProductManagement() {
                       ) : (
                         <span className="font-semibold text-left">{product.name}</span>
                       )}
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {product.name}
-                      </div>
+                      {(() => {
+                        const mat = materials.find((m) => m.id === (product as any).material_id);
+                        return mat ? (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {mat.name}
+                          </div>
+                        ) : null;
+                      })()}
                       {currentStore?.name && (
                         <div className="text-xs text-muted-foreground">
                           {currentStore.name}
