@@ -422,6 +422,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       return;
     }
     toast.success("Stok masuk berhasil di-post");
+    onBack();
   };
 
   // ===== Hard delete (permanent) =====
