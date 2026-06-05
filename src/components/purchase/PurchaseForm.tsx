@@ -464,10 +464,8 @@ export default function PurchaseForm({
       toast.success("Pembelian berhasil disimpan!");
       setSavedOnce(true);
       await refreshActivityLog(purchaseId);
-      // If user marked Selesai or Batal, return to transaction list
-      if (isDone || isCancelled) {
-        onSuccess();
-      }
+      // Auto-close and return to transaction list after successful save
+      onSuccess();
     } catch (e) {
       console.error(e);
       toast.error("Gagal menyimpan pembelian");
