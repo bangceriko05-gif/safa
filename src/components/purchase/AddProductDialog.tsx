@@ -140,14 +140,17 @@ export default function AddProductDialog({
           isBase: false,
         }));
     }
-    opts.push({
-      key: "base",
-      label: baseUnit,
-      price: Number(p.purchase_price) || 0,
-      factor: 1,
-      baseUnit,
-      isBase: true,
-    });
+    // Jika ada konversi satuan aktif, hanya pakai satuan tersebut.
+    if (opts.length === 0) {
+      opts.push({
+        key: "base",
+        label: baseUnit,
+        price: Number(p.purchase_price) || 0,
+        factor: 1,
+        baseUnit,
+        isBase: true,
+      });
+    }
     setUnitOpts(opts);
     // Default: largest unit with a price > 0, else base
     const priced = opts.filter((o) => !o.isBase && o.price > 0);
