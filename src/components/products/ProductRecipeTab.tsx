@@ -266,7 +266,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
   const groups: { id: string | null; name: string; price: number }[] =
     variants.length > 0
       ? variants.map((v) => ({ id: v.id, name: v.variant_name, price: v.price }))
-      : [{ id: null, name: "BIASA", price: productPrice }];
+      : [{ id: null, name: "BAHAN BAKU", price: productPrice }];
 
   const visibleGroups =
     filterVariant === "all"
@@ -428,7 +428,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   {variants.length === 0 && (
-                    <SelectItem value="biasa">BIASA</SelectItem>
+                    <SelectItem value="biasa">BAHAN BAKU</SelectItem>
                   )}
                   {variants.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
