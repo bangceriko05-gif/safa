@@ -176,7 +176,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       // Products
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price")
+        .select("id, name, price, purchase_price")
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts(prods || []);
