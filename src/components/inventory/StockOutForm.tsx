@@ -59,6 +59,7 @@ interface Product {
   name: string;
   price: number;
   stock_qty: number;
+  purchase_price?: number;
 }
 
 interface Item {
