@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { lazy, Suspense } from "react";
 import ListBooking from "./ListBooking";
-import ExpenseTransactionView from "./expense/ExpenseTransactionView";
-import IncomeTransactionView from "./income/IncomeTransactionView";
-import PurchaseManagement from "./purchase/PurchaseManagement";
+const ExpenseTransactionView = lazy(() => import("./expense/ExpenseTransactionView"));
+const IncomeTransactionView = lazy(() => import("./income/IncomeTransactionView"));
+const PurchaseManagement = lazy(() => import("./purchase/PurchaseManagement"));
 import NoAccessMessage from "./NoAccessMessage";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -208,16 +209,20 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         </TabsContent>
 
         <TabsContent value="purchases" className="mt-4">
-          <PurchaseManagement />
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+            <PurchaseManagement />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
           {isFeatureEnabled("transactions.expenses") ? (
-            <ExpenseTransactionView
-              timeRange={timeRange}
-              customDateRange={customDateRange}
-              searchQuery={searchQuery}
-            />
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+              <ExpenseTransactionView
+                timeRange={timeRange}
+                customDateRange={customDateRange}
+                searchQuery={searchQuery}
+              />
+            </Suspense>
           ) : (
             <FeatureInactiveNotice featureName="Pengeluaran" icon={TrendingDown} price={getFeatureInfo("transactions.expenses").price} description={getFeatureInfo("transactions.expenses").description} />
           )}
@@ -225,11 +230,13 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
 
         <TabsContent value="incomes" className="mt-4">
           {isFeatureEnabled("transactions.incomes") ? (
-            <IncomeTransactionView
-              timeRange={timeRange}
-              customDateRange={customDateRange}
-              searchQuery={searchQuery}
-            />
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+              <IncomeTransactionView
+                timeRange={timeRange}
+                customDateRange={customDateRange}
+                searchQuery={searchQuery}
+              />
+            </Suspense>
           ) : (
             <FeatureInactiveNotice featureName="Pemasukan" icon={DollarSign} price={getFeatureInfo("transactions.incomes").price} description={getFeatureInfo("transactions.incomes").description} />
           )}

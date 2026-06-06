@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -30,9 +30,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
-import ProductManagement from "./ProductManagement";
+const ProductManagement = lazy(() => import("./ProductManagement"));
 import CategoryManagement from "./CategoryManagement";
-import InventoryManagement from "./inventory/InventoryManagement";
+const InventoryManagement = lazy(() => import("./inventory/InventoryManagement"));
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
@@ -583,7 +583,11 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       {/* Product Management Section */}
       {showProducts && (
       <div id="pi-section-products" className="scroll-mt-4">
-        {isFeatureEnabled("products_inventory.products") ? <ProductManagement /> : (
+        {isFeatureEnabled("products_inventory.products") ? (
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+            <ProductManagement />
+          </Suspense>
+        ) : (
           <FeatureInactiveNotice featureName="Produk" icon={ShoppingCart} price={getFeatureInfo("products_inventory.products").price} description={getFeatureInfo("products_inventory.products").description} />
         )}
       </div>
@@ -592,7 +596,9 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       {/* Inventory Section - controlled by POS master feature */}
       {showInventory && isFeatureEnabled("pos") && (
         <div id="pi-section-inventory" className="scroll-mt-4">
-          <InventoryManagement />
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+            <InventoryManagement />
+          </Suspense>
         </div>
       )}
 
