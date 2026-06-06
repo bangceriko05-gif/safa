@@ -58,6 +58,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  purchase_price?: number;
 }
 
 interface Supplier {
