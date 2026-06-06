@@ -3497,6 +3497,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      recompute_product_avg_cost: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
       safe_promote_first_admin: {
         Args: { p_user_id: string }
         Returns: boolean
