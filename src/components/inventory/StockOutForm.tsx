@@ -59,6 +59,7 @@ interface Product {
   name: string;
   price: number;
   stock_qty: number;
+  purchase_price?: number;
 }
 
 interface Item {
@@ -169,7 +170,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       // Products
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, stock_qty")
+        .select("id, name, price, stock_qty, purchase_price")
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts((prods || []) as Product[]);
@@ -862,7 +863,10 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
               <tbody>
                 {items.map((it, i) => {
                   const product = products.find((p) => p.id === it.product_id);
-                  const avgPrice = product?.price ?? it.unit_price;
+                  const avgPrice =
+                    Number(product?.purchase_price ?? 0) > 0
+                      ? Number(product?.purchase_price)
+                      : it.unit_price;
                   const isEditing = editingIndex === i;
                   return (
                     <tr key={i} className="border-t">
