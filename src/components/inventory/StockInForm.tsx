@@ -877,10 +877,19 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               <tbody>
                 {items.map((it, i) => {
                   const product = products.find((p) => p.id === it.product_id);
-                  const avgPrice =
-                    Number(product?.purchase_price ?? 0) > 0
-                      ? Number(product?.purchase_price)
-                      : it.unit_price;
+                  // Parse conversion factor from product_name suffix like "(label / 25000 gram)"
+                  const factorMatch = it.product_name.match(/\/\s*(\d+(?:[.,]\d+)?)\s+[^)]+\)\s*$/);
+                  const factor = factorMatch ? Number(factorMatch[1].replace(",", ".")) : 1;
+                  const curStockBase = Number(product?.stock_qty ?? 0);
+                  const curAvgBase = Number(product?.purchase_price ?? 0);
+                  const lineQtyBase = Number(it.quantity) * factor;
+                  const linePricePerBase = factor > 0 ? Number(it.unit_price) / factor : Number(it.unit_price);
+                  const totalBase = curStockBase + lineQtyBase;
+                  const projectedAvgBase =
+                    totalBase > 0
+                      ? (curStockBase * curAvgBase + lineQtyBase * linePricePerBase) / totalBase
+                      : linePricePerBase;
+                  const avgPrice = projectedAvgBase * factor;
                   const isEditing = editingIndex === i;
                   return (
                     <tr key={i} className="border-t">
