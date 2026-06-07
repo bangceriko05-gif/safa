@@ -59,6 +59,7 @@ interface Product {
   name: string;
   price: number;
   purchase_price?: number;
+  stock_qty?: number;
 }
 
 interface Supplier {
@@ -176,7 +177,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       // Products
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, purchase_price")
+        .select("id, name, price, purchase_price, stock_qty")
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts(prods || []);
