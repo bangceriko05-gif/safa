@@ -117,6 +117,9 @@ export default function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<{ product_id: string }[]>([]);
+  const [unitConversions, setUnitConversions] = useState<
+    { product_id: string; from_unit: string; to_unit: string; is_active: boolean }[]
+  >([]);
   const [categories, setCategories] = useState<RefItem[]>([]);
   const [brands, setBrands] = useState<RefItem[]>([]);
   const [collections, setCollections] = useState<RefItem[]>([]);
@@ -205,6 +208,17 @@ export default function ProductManagement() {
       setBrands((bRes.data as any) || []);
       setCollections((kRes.data as any) || []);
       setMaterials((mRes.data as any) || []);
+      // Load unit conversions for products in this store (for "Satuan" column base unit)
+      const productIds = ((pRes.data as any[]) || []).map((p) => p.id);
+      if (productIds.length > 0) {
+        const { data: ucData } = await supabase
+          .from("product_unit_conversions")
+          .select("product_id, from_unit, to_unit, is_active")
+          .in("product_id", productIds);
+        setUnitConversions((ucData as any) || []);
+      } else {
+        setUnitConversions([]);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Gagal memuat data produk");
@@ -225,6 +239,15 @@ export default function ProductManagement() {
     setEditorProductId(product.id);
     setEditorCopyMode(false);
     setEditorOpen(true);
+  };
+
+  const getBaseUnit = (productId: string): string => {
+    const convs = unitConversions.filter(
+      (c) => c.product_id === productId && c.is_active
+    );
+    if (convs.length === 0) return "pcs";
+    // All active conversions should resolve to the same base unit (to_unit).
+    return convs[0].to_unit || "pcs";
   };
 
   const handleDelete = async (product: Product) => {
@@ -832,7 +855,7 @@ export default function ProductManagement() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">pcs</TableCell>
+                    <TableCell className="text-sm">{getBaseUnit(product.id)}</TableCell>
                     <TableCell className="text-sm tabular-nums">
                       {formatRp(product.purchase_price)}
                     </TableCell>
