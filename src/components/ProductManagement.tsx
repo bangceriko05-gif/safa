@@ -855,7 +855,7 @@ export default function ProductManagement() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">pcs</TableCell>
+                    <TableCell className="text-sm">{getBaseUnit(product.id)}</TableCell>
                     <TableCell className="text-sm tabular-nums">
                       {formatRp(product.purchase_price)}
                     </TableCell>
