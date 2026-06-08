@@ -168,6 +168,11 @@ export default function PurchaseManagement() {
         setPurchases((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
       }
       toast.success("Data berhasil diperbarui");
+      // If user set receipt status to "Diterima" from the transaction list,
+      // navigate them directly to Inventory > Stok Masuk.
+      if (field === "receipt_status" && value === "Diterima") {
+        window.dispatchEvent(new CustomEvent("anka:goto-inventory-stock-in"));
+      }
     } catch (error) {
       console.error("Error updating purchase:", error);
       toast.error("Gagal memperbarui data");
