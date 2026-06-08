@@ -98,6 +98,15 @@ export default function Dashboard() {
     setActiveTab("rooms");
     setRoomsSection(section);
   };
+  // Listen for cross-component navigation requests (e.g., Purchase → Inventory > Stok Masuk)
+  useEffect(() => {
+    const handler = () => {
+      setActiveTab("rooms");
+      setRoomsSection("inventory");
+    };
+    window.addEventListener("anka:goto-inventory-stock-in", handler);
+    return () => window.removeEventListener("anka:goto-inventory-stock-in", handler);
+  }, []);
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
     setCustomersSection(null);
