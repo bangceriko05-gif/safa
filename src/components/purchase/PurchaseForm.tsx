@@ -466,6 +466,10 @@ export default function PurchaseForm({
       await refreshActivityLog(purchaseId);
       // Auto-close and return to transaction list after successful save
       onSuccess();
+      // If marked received, navigate directly to Inventory > Stok Masuk
+      if (receiptStatus === "Diterima") {
+        window.dispatchEvent(new CustomEvent("anka:goto-inventory-stock-in"));
+      }
     } catch (e) {
       console.error(e);
       toast.error("Gagal menyimpan pembelian");
