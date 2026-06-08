@@ -241,6 +241,15 @@ export default function ProductManagement() {
     setEditorOpen(true);
   };
 
+  const getBaseUnit = (productId: string): string => {
+    const convs = unitConversions.filter(
+      (c) => c.product_id === productId && c.is_active
+    );
+    if (convs.length === 0) return "pcs";
+    // All active conversions should resolve to the same base unit (to_unit).
+    return convs[0].to_unit || "pcs";
+  };
+
   const handleDelete = async (product: Product) => {
     if (!canDelete) {
       toast.error("Anda tidak memiliki permission hapus produk");
