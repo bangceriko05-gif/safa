@@ -2293,6 +2293,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          product_id: string | null
           product_name: string
           purchase_id: string
           quantity: number
@@ -2302,6 +2303,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          product_id?: string | null
           product_name: string
           purchase_id: string
           quantity?: number
@@ -2311,6 +2313,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          product_id?: string | null
           product_name?: string
           purchase_id?: string
           quantity?: number
@@ -2318,6 +2321,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_items_purchase_id_fkey"
             columns: ["purchase_id"]
