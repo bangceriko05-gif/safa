@@ -372,6 +372,7 @@ export default function PurchaseForm({
       if (items.length > 0) {
         const itemsData = items.map((item) => ({
           purchase_id: purchaseId,
+          product_id: item.product_id || null,
           product_name: item.product_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
