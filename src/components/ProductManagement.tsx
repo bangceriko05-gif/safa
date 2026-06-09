@@ -250,6 +250,15 @@ export default function ProductManagement() {
     return convs[0].to_unit || "pcs";
   };
 
+  const getBaseFactor = (productId: string): number => {
+    const convs = unitConversions.filter(
+      (c) => c.product_id === productId && c.is_active
+    );
+    if (convs.length === 0) return 1;
+    const f = Number((convs[0] as any).factor);
+    return Number.isFinite(f) && f > 0 ? f : 1;
+  };
+
   const handleDelete = async (product: Product) => {
     if (!canDelete) {
       toast.error("Anda tidak memiliki permission hapus produk");
@@ -848,7 +857,7 @@ export default function ProductManagement() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {product.track_inventory ? (
-                        product.stock_qty
+                        (Number(product.stock_qty) || 0) * getBaseFactor(product.id)
                       ) : (
                         <span className="text-muted-foreground">
                           Tidak terbatas
