@@ -71,6 +71,19 @@ interface Item {
   subtotal: number;
 }
 
+interface UnitConv {
+  id: string;
+  from_unit: string;
+  to_unit: string;
+  factor: number;
+}
+
+interface PendingUnitChoice {
+  product: Product;
+  qty: number;
+  price: number;
+}
+
 interface HistoryEvent {
   type: "created" | "posted" | "cancelled";
   label: string;
@@ -103,6 +116,13 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
   // Data
   const [products, setProducts] = useState<Product[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [productConvs, setProductConvs] = useState<Record<string, UnitConv[]>>({});
+
+  // Unit confirmation popup (when product has unit conversions)
+  const [unitConfirmOpen, setUnitConfirmOpen] = useState(false);
+  const [unitQueue, setUnitQueue] = useState<PendingUnitChoice[]>([]);
+  const [unitChoiceKey, setUnitChoiceKey] = useState<string>("base"); // "base" | convId
+  const [unitChoiceQty, setUnitChoiceQty] = useState<number>(1);
 
   // History (audit trail)
   const [history, setHistory] = useState<HistoryEvent[]>([]);
@@ -174,6 +194,31 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts((prods || []) as Product[]);
+
+      // Active unit conversions for these products
+      const pids = ((prods || []) as Product[]).map((p) => p.id);
+      if (pids.length > 0) {
+        const { data: convs } = await supabase
+          .from("product_unit_conversions")
+          .select("id, product_id, from_unit, to_unit, factor, is_active")
+          .in("product_id", pids)
+          .eq("is_active", true);
+        const map: Record<string, UnitConv[]> = {};
+        ((convs as any[]) || []).forEach((c) => {
+          if (Number(c.factor) <= 0) return;
+          const pid = c.product_id as string;
+          if (!map[pid]) map[pid] = [];
+          map[pid].push({
+            id: c.id,
+            from_unit: c.from_unit,
+            to_unit: c.to_unit,
+            factor: Number(c.factor),
+          });
+        });
+        setProductConvs(map);
+      } else {
+        setProductConvs({});
+      }
 
       // If editing, load existing
       if (stockOutId) {
