@@ -103,7 +103,7 @@ interface RefItem {
 
 const formatRp = (n: number) =>
   new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(n || 0);
 
