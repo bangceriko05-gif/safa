@@ -1170,6 +1170,143 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         </div>
       )}
 
+      {/* Pilih Satuan Dialog */}
+      <Dialog
+        open={unitConfirmOpen}
+        onOpenChange={(o) => {
+          if (!o) cancelUnitChoice();
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Pilih Satuan</DialogTitle>
+          </DialogHeader>
+          {unitQueue.length > 0 && (() => {
+            const current = unitQueue[0];
+            const convs = productConvs[current.product.id] || [];
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                      <Package className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{current.product.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Stok: {current.product.stock_qty}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="rounded-r-none h-10"
+                      onClick={() => setUnitChoiceQty(Math.max(1, unitChoiceQty - 1))}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={unitChoiceQty}
+                      onChange={(e) => setUnitChoiceQty(parseInt(e.target.value) || 1)}
+                      className="rounded-none text-center h-10 w-16"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="rounded-l-none h-10"
+                      onClick={() => setUnitChoiceQty(unitChoiceQty + 1)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="border-t pt-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setUnitChoiceKey("base")}
+                    className={`w-full flex items-center justify-between px-3 py-3 rounded-md border text-left transition ${
+                      unitChoiceKey === "base" ? "border-primary bg-accent" : "hover:bg-muted/40"
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium">Tanpa satuan/UOM</p>
+                      <p className="text-xs text-muted-foreground">
+                        Qty diisi dalam satuan dasar (setelah konversi)
+                      </p>
+                    </div>
+                    <span
+                      className={`h-4 w-4 rounded-full border-2 ${
+                        unitChoiceKey === "base"
+                          ? "border-primary bg-primary"
+                          : "border-muted-foreground"
+                      }`}
+                    />
+                  </button>
+                  {convs.map((c) => {
+                    const active = unitChoiceKey === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setUnitChoiceKey(c.id)}
+                        className={`w-full flex items-center justify-between px-3 py-3 rounded-md border text-left transition ${
+                          active ? "border-primary bg-accent" : "hover:bg-muted/40"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {c.from_unit} ({c.factor})
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            1 {c.from_unit} = {c.factor} {c.to_unit} (sebelum konversi)
+                          </p>
+                        </div>
+                        <span
+                          className={`h-4 w-4 rounded-full border-2 ${
+                            active ? "border-primary bg-primary" : "border-muted-foreground"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(() => {
+                  const chosen = convs.find((c) => c.id === unitChoiceKey);
+                  const factor = chosen ? chosen.factor : 1;
+                  const total = (unitChoiceQty || 0) * factor;
+                  return (
+                    <div className="text-sm bg-muted/40 rounded-md px-3 py-2">
+                      Akan mengurangi stok sebesar{" "}
+                      <span className="font-bold">{total}</span>
+                      {chosen ? ` ${chosen.to_unit}` : ""}.
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelUnitChoice}>
+              Batal
+            </Button>
+            <Button
+              className="bg-green-500 hover:bg-green-600"
+              onClick={confirmUnitChoice}
+            >
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Date Dialog */}
       <Dialog open={editDateOpen} onOpenChange={setEditDateOpen}>
         <DialogContent>
