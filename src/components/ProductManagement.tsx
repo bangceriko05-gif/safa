@@ -118,7 +118,7 @@ export default function ProductManagement() {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [recipes, setRecipes] = useState<{ product_id: string }[]>([]);
   const [unitConversions, setUnitConversions] = useState<
-    { product_id: string; from_unit: string; to_unit: string; is_active: boolean }[]
+    { product_id: string; from_unit: string; to_unit: string; factor: number; is_active: boolean }[]
   >([]);
   const [categories, setCategories] = useState<RefItem[]>([]);
   const [brands, setBrands] = useState<RefItem[]>([]);
@@ -213,7 +213,7 @@ export default function ProductManagement() {
       if (productIds.length > 0) {
         const { data: ucData } = await supabase
           .from("product_unit_conversions")
-          .select("product_id, from_unit, to_unit, is_active")
+          .select("product_id, from_unit, to_unit, factor, is_active")
           .in("product_id", productIds);
         setUnitConversions((ucData as any) || []);
       } else {
@@ -248,6 +248,15 @@ export default function ProductManagement() {
     if (convs.length === 0) return "pcs";
     // All active conversions should resolve to the same base unit (to_unit).
     return convs[0].to_unit || "pcs";
+  };
+
+  const getBaseFactor = (productId: string): number => {
+    const convs = unitConversions.filter(
+      (c) => c.product_id === productId && c.is_active
+    );
+    if (convs.length === 0) return 1;
+    const f = Number((convs[0] as any).factor);
+    return Number.isFinite(f) && f > 0 ? f : 1;
   };
 
   const handleDelete = async (product: Product) => {
@@ -848,7 +857,7 @@ export default function ProductManagement() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {product.track_inventory ? (
-                        product.stock_qty
+                        (Number(product.stock_qty) || 0) * getBaseFactor(product.id)
                       ) : (
                         <span className="text-muted-foreground">
                           Tidak terbatas
