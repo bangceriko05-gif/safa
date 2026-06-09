@@ -534,36 +534,116 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       toast.error("Qty harus lebih dari 0");
       return;
     }
-    // Validasi stok: hitung sisa stok setelah dikurangi item yang sudah dipilih sebelumnya
+    // Pisahkan produk yang punya konversi satuan (perlu popup konfirmasi)
+    // dengan yang tidak punya (langsung ditambahkan dengan satuan dasar).
     const usedByProduct = items.reduce<Record<string, number>>((acc, it) => {
       acc[it.product_id] = (acc[it.product_id] || 0) + it.quantity;
       return acc;
     }, {});
-    const insufficient = selectedProductIds
+    const selectedProducts = selectedProductIds
       .map((pid) => products.find((x) => x.id === pid))
-      .filter((p): p is Product => !!p)
-      .find((p) => (p.stock_qty - (usedByProduct[p.id] || 0)) < newQty);
-    if (insufficient) {
-      const remain = insufficient.stock_qty - (usedByProduct[insufficient.id] || 0);
-      toast.error(`Stok ${insufficient.name} tidak cukup (sisa ${remain})`);
-      return;
+      .filter((p): p is Product => !!p);
+
+    const needConfirm: PendingUnitChoice[] = [];
+    const directItems: Item[] = [];
+    for (const p of selectedProducts) {
+      const convs = productConvs[p.id] || [];
+      if (convs.length > 0) {
+        needConfirm.push({ product: p, qty: newQty, price: newPrice });
+      } else {
+        const remain = p.stock_qty - (usedByProduct[p.id] || 0);
+        if (remain < newQty) {
+          toast.error(`Stok ${p.name} tidak cukup (sisa ${remain})`);
+          return;
+        }
+        directItems.push({
+          product_id: p.id,
+          product_name: p.name,
+          quantity: newQty,
+          unit_price: newPrice,
+          subtotal: newQty * newPrice,
+        });
+      }
     }
-    const subtotal = newQty * newPrice;
-    const newItems: Item[] = selectedProductIds
-      .map((pid) => products.find((x) => x.id === pid))
-      .filter((p): p is Product => !!p)
-      .map((p) => ({
-        product_id: p.id,
-        product_name: p.name,
-        quantity: newQty,
-        unit_price: newPrice,
-        subtotal,
-      }));
-    setItems([...items, ...newItems]);
+
+    if (directItems.length > 0) setItems((prev) => [...prev, ...directItems]);
+
     setSelectedProductIds([]);
     setNewProductSearch("");
     setNewPrice(0);
     setNewQty(1);
+
+    if (needConfirm.length > 0) {
+      setUnitQueue(needConfirm);
+      const first = needConfirm[0];
+      const convs = productConvs[first.product.id] || [];
+      // Default ke konversi pertama (satuan terbesar)
+      const def = [...convs].sort((a, b) => b.factor - a.factor)[0];
+      setUnitChoiceKey(def ? def.id : "base");
+      setUnitChoiceQty(first.qty || 1);
+      setUnitConfirmOpen(true);
+    }
+  };
+
+  // Konfirmasi pilihan satuan untuk produk teratas di antrian.
+  const confirmUnitChoice = () => {
+    if (unitQueue.length === 0) {
+      setUnitConfirmOpen(false);
+      return;
+    }
+    const current = unitQueue[0];
+    const convs = productConvs[current.product.id] || [];
+    const chosen = convs.find((c) => c.id === unitChoiceKey);
+    const factor = chosen ? chosen.factor : 1;
+    const unitLabel = chosen ? chosen.from_unit : "";
+    const baseUnit = chosen ? chosen.to_unit : "";
+    const inputQty = unitChoiceQty > 0 ? unitChoiceQty : 1;
+    const baseQty = inputQty * factor;
+
+    // Validasi stok (stok disimpan dalam satuan dasar)
+    const usedByProduct = items.reduce<Record<string, number>>((acc, it) => {
+      acc[it.product_id] = (acc[it.product_id] || 0) + it.quantity;
+      return acc;
+    }, {});
+    const remain = current.product.stock_qty - (usedByProduct[current.product.id] || 0);
+    if (remain < baseQty) {
+      toast.error(
+        `Stok ${current.product.name} tidak cukup (sisa ${remain}${baseUnit ? " " + baseUnit : ""})`,
+      );
+      return;
+    }
+
+    const suffix = chosen
+      ? ` (${inputQty} ${unitLabel} × ${factor} ${baseUnit})`
+      : "";
+    setItems((prev) => [
+      ...prev,
+      {
+        product_id: current.product.id,
+        product_name: current.product.name + suffix,
+        quantity: baseQty,
+        unit_price: current.price,
+        subtotal: baseQty * current.price,
+      },
+    ]);
+
+    // Lanjut ke produk berikutnya di antrian
+    const rest = unitQueue.slice(1);
+    setUnitQueue(rest);
+    if (rest.length === 0) {
+      setUnitConfirmOpen(false);
+    } else {
+      const next = rest[0];
+      const nextConvs = productConvs[next.product.id] || [];
+      const def = [...nextConvs].sort((a, b) => b.factor - a.factor)[0];
+      setUnitChoiceKey(def ? def.id : "base");
+      setUnitChoiceQty(next.qty || 1);
+    }
+  };
+
+  const cancelUnitChoice = () => {
+    setUnitConfirmOpen(false);
+    setUnitQueue([]);
   };
 
   const removeItem = (idx: number) => {
