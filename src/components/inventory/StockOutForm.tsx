@@ -562,7 +562,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       if (convs.length > 0) {
         needConfirm.push({ product: p, qty: newQty, price: newPrice });
       } else {
-        const remain = p.stock_qty - (usedByProduct[p.id] || 0);
+        const remain = getBaseStock(p) - (usedByProduct[p.id] || 0);
         if (remain < newQty) {
           toast.error(`Stok ${p.name} tidak cukup (sisa ${remain})`);
           return;
@@ -616,7 +616,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       acc[it.product_id] = (acc[it.product_id] || 0) + it.quantity;
       return acc;
     }, {});
-    const remain = current.product.stock_qty - (usedByProduct[current.product.id] || 0);
+    const remain = getBaseStock(current.product) - (usedByProduct[current.product.id] || 0);
     if (remain < baseQty) {
       toast.error(
         `Stok ${current.product.name} tidak cukup (sisa ${remain}${baseUnit ? " " + baseUnit : ""})`,
@@ -865,7 +865,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                           )
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
-                          const outOfStock = (p.stock_qty || 0) <= 0;
+                          const outOfStock = (Number(p.stock_qty) || 0) <= 0;
                           return (
                             <CommandItem
                               key={p.id}
@@ -891,7 +891,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                               <div className="flex justify-between w-full">
                                 <span>{p.name}</span>
                                 <span className={`text-xs ${outOfStock ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                                  Stok: {p.stock_qty || 0}
+                                  Stok: {getBaseStock(p)}
                                 </span>
                               </div>
                             </CommandItem>
@@ -1205,7 +1205,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                     <div>
                       <p className="font-semibold">{current.product.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Stok: {current.product.stock_qty}
+                        Stok: {getBaseStock(current.product)}
                       </p>
                     </div>
                   </div>
