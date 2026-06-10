@@ -605,9 +605,13 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     const current = unitQueue[0];
     const convs = productConvs[current.product.id] || [];
     const chosen = convs.find((c) => c.id === unitChoiceKey);
-    const factor = chosen ? chosen.factor : 1;
-    const unitLabel = chosen ? chosen.from_unit : "";
-    const baseUnit = chosen ? chosen.to_unit : "";
+    // Semantik baru:
+    // - Jika satuan dipilih (mis. "kg"): qty diinput dalam satuan dasar/sesudah konversi (mis. "gram"). factor = 1.
+    // - Jika "tanpa satuan": qty diinput dalam satuan sebelum konversi (mis. "sak"). factor = konv pertama.
+    const firstConv = convs[0];
+    const factor = chosen ? 1 : (firstConv ? firstConv.factor : 1);
+    const unitLabel = chosen ? chosen.to_unit : (firstConv ? firstConv.from_unit : "");
+    const baseUnit = chosen ? chosen.to_unit : (firstConv ? firstConv.to_unit : "");
     const inputQty = unitChoiceQty > 0 ? unitChoiceQty : 0;
     if (inputQty <= 0) {
       toast.error("Qty harus lebih dari 0");
@@ -629,8 +633,10 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     }
 
     const suffix = chosen
-      ? ` (${inputQty} ${unitLabel} × ${factor} ${baseUnit})`
-      : "";
+      ? ` (${inputQty} ${unitLabel})`
+      : firstConv
+        ? ` (${inputQty} ${unitLabel} × ${factor} ${baseUnit})`
+        : "";
     setItems((prev) => [
       ...prev,
       {
