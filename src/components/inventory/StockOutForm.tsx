@@ -1252,6 +1252,17 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                       onChange={(e) => setUnitChoiceQty(parseFloat(e.target.value) || 0)}
                       className="rounded-none text-center h-10 w-20"
                     />
+                    {(() => {
+                      const chosen = convs.find((c) => c.id === unitChoiceKey);
+                      const firstConv = convs[0];
+                      const lbl = chosen ? chosen.to_unit : (firstConv ? firstConv.from_unit : "");
+                      if (!lbl) return null;
+                      return (
+                        <span className="px-2 h-10 flex items-center text-sm text-muted-foreground border border-l-0 bg-muted/40">
+                          {lbl}
+                        </span>
+                      );
+                    })()}
                     <Button
                       type="button"
                       variant="outline"
@@ -1275,7 +1286,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                     <div>
                       <p className="font-medium">Tanpa satuan/UOM</p>
                       <p className="text-xs text-muted-foreground">
-                        Qty diisi dalam satuan dasar (setelah konversi)
+                        Qty diisi dalam satuan sebelum konversi
+                        {convs[0] ? ` (${convs[0].from_unit})` : ""}
                       </p>
                     </div>
                     <span
@@ -1302,7 +1314,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                             {c.from_unit} ({c.factor})
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            1 {c.from_unit} = {c.factor} {c.to_unit} (sebelum konversi)
+                            Qty diisi dalam {c.to_unit} (setelah konversi). 1 {c.from_unit} = {c.factor} {c.to_unit}.
                           </p>
                         </div>
                         <span
@@ -1317,13 +1329,15 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
 
                 {(() => {
                   const chosen = convs.find((c) => c.id === unitChoiceKey);
-                  const factor = chosen ? chosen.factor : 1;
+                  const firstConv = convs[0];
+                  const factor = chosen ? 1 : (firstConv ? firstConv.factor : 1);
+                  const baseUnit = chosen ? chosen.to_unit : (firstConv ? firstConv.to_unit : "");
                   const total = (unitChoiceQty || 0) * factor;
                   return (
                     <div className="text-sm bg-muted/40 rounded-md px-3 py-2">
                       Akan mengurangi stok sebesar{" "}
                       <span className="font-bold">{total}</span>
-                      {chosen ? ` ${chosen.to_unit}` : ""}.
+                      {baseUnit ? ` ${baseUnit}` : ""}.
                     </div>
                   );
                 })()}
