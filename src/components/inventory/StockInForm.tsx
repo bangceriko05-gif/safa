@@ -809,10 +809,14 @@ export default function StockInForm({ stockInId, onBack }: Props) {
             <div>
               <Label className="text-xs text-muted-foreground">Harga Beli</Label>
               <Input
-                type="number"
-                min={0}
-                value={newPrice}
-                onChange={(e) => setNewPrice(parseFloat(e.target.value) || 0)}
+                type="text"
+                inputMode="numeric"
+                value={newPrice ? new Intl.NumberFormat("id-ID").format(newPrice) : ""}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
+                  setNewPrice(digits ? parseInt(digits, 10) : 0);
+                }}
+                placeholder="0"
                 className="mt-1"
               />
             </div>
