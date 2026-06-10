@@ -176,6 +176,17 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
   const isDraft = status === "draft";
   const isReadOnly = isPosted || isCancelled;
 
+  // Faktor konversi ke satuan dasar (gram, ml, dst). Stok di DB disimpan dalam
+  // satuan pembelian (mis. 1 sak), padahal validasi & tampilan menggunakan
+  // satuan dasar. Kalikan stok mentah dengan faktor terbesar yang aktif.
+  const getBaseFactor = (productId: string): number => {
+    const convs = productConvs[productId] || [];
+    if (convs.length === 0) return 1;
+    return Math.max(...convs.map((c) => c.factor));
+  };
+  const getBaseStock = (p: Product): number =>
+    (Number(p.stock_qty) || 0) * getBaseFactor(p.id);
+
   // Refs to access latest state inside cleanup/unload handlers
   const stateRef = useRef({ status, items, bid, recipient, reason, notes, date });
   stateRef.current = { status, items, bid, recipient, reason, notes, date };
