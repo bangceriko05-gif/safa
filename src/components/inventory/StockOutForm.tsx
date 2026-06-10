@@ -608,7 +608,11 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     const factor = chosen ? chosen.factor : 1;
     const unitLabel = chosen ? chosen.from_unit : "";
     const baseUnit = chosen ? chosen.to_unit : "";
-    const inputQty = unitChoiceQty > 0 ? unitChoiceQty : 1;
+    const inputQty = unitChoiceQty > 0 ? unitChoiceQty : 0;
+    if (inputQty <= 0) {
+      toast.error("Qty harus lebih dari 0");
+      return;
+    }
     const baseQty = inputQty * factor;
 
     // Validasi stok (stok disimpan dalam satuan dasar)
@@ -1204,9 +1208,24 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                     </div>
                     <div>
                       <p className="font-semibold">{current.product.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Stok: {getBaseStock(current.product)}
-                      </p>
+                      {(() => {
+                        const chosen = (productConvs[current.product.id] || []).find(
+                          (c) => c.id === unitChoiceKey,
+                        );
+                        const base = getBaseStock(current.product);
+                        if (chosen) {
+                          const inUnit = base / chosen.factor;
+                          return (
+                            <p className="text-xs text-muted-foreground">
+                              Stok: {Number.isInteger(inUnit) ? inUnit : inUnit.toFixed(2)} {chosen.from_unit}
+                              {" "}({base} {chosen.to_unit})
+                            </p>
+                          );
+                        }
+                        return (
+                          <p className="text-xs text-muted-foreground">Stok: {base}</p>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center">
@@ -1215,16 +1234,17 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                       variant="outline"
                       size="icon"
                       className="rounded-r-none h-10"
-                      onClick={() => setUnitChoiceQty(Math.max(1, unitChoiceQty - 1))}
+                      onClick={() => setUnitChoiceQty(Math.max(0, +(unitChoiceQty - 1).toFixed(4)))}
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
                     <Input
                       type="number"
-                      min={1}
+                      min={0}
+                      step="any"
                       value={unitChoiceQty}
-                      onChange={(e) => setUnitChoiceQty(parseInt(e.target.value) || 1)}
-                      className="rounded-none text-center h-10 w-16"
+                      onChange={(e) => setUnitChoiceQty(parseFloat(e.target.value) || 0)}
+                      className="rounded-none text-center h-10 w-20"
                     />
                     <Button
                       type="button"
