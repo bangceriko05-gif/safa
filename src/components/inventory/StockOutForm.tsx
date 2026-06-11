@@ -619,6 +619,13 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     }
     const baseQty = inputQty * factor;
 
+    // Konversi harga ke satuan dasar.
+    // - chosen (mis. kg→gram): harga current.price adalah per from_unit (per kg). Harga per base (gram) = price / chosen.factor.
+    // - tanpa satuan: qty diinput dalam from_unit, baseQty = qty * firstConv.factor.
+    //   Harga per base = price / firstConv.factor.
+    const priceDivisor = chosen ? chosen.factor : (firstConv ? firstConv.factor : 1);
+    const unitPricePerBase = priceDivisor > 0 ? current.price / priceDivisor : current.price;
+
     // Validasi stok (stok disimpan dalam satuan dasar)
     const usedByProduct = items.reduce<Record<string, number>>((acc, it) => {
       acc[it.product_id] = (acc[it.product_id] || 0) + it.quantity;
@@ -643,8 +650,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         product_id: current.product.id,
         product_name: current.product.name + suffix,
         quantity: baseQty,
-        unit_price: current.price,
-        subtotal: baseQty * current.price,
+        unit_price: unitPricePerBase,
+        subtotal: baseQty * unitPricePerBase,
       },
     ]);
 
