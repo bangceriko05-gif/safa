@@ -1035,8 +1035,11 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
               <tbody>
                 {items.map((it, i) => {
                   const product = products.find((p) => p.id === it.product_id);
-                  // unit_price sudah dalam satuan dasar (mis. per gram) setelah konversi.
-                  const avgPrice = it.unit_price;
+                  // Rata-rata Harga Beli = harga asli produk di profil (tanpa konversi satuan).
+                  const avgPrice =
+                    Number(product?.purchase_price ?? 0) > 0
+                      ? Number(product?.purchase_price)
+                      : it.unit_price;
                   const isEditing = editingIndex === i;
                   return (
                     <tr key={i} className="border-t">
