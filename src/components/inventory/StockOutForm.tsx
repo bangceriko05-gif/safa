@@ -886,14 +886,28 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                                   toast.error(`Stok ${p.name} habis`);
                                   return;
                                 }
-                                if (isSelected) {
-                                  setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
-                                } else {
-                                  setSelectedProductIds([...selectedProductIds, p.id]);
-                                  if (selectedProductIds.length === 0 && newPrice === 0) {
-                                    setNewPrice(p.price);
-                                  }
+                              const convs = productConvs[p.id] || [];
+                              // Jika produk punya satuan/konversi, langsung buka popup
+                              // pemilihan satuan saat produk dipilih (tanpa menunggu tombol +).
+                              if (convs.length > 0) {
+                                const priceForPopup = newPrice > 0 ? newPrice : p.price;
+                                setUnitQueue([{ product: p, qty: 1, price: priceForPopup }]);
+                                const def = [...convs].sort((a, b) => b.factor - a.factor)[0];
+                                setUnitChoiceKey(def ? def.id : "base");
+                                setUnitChoiceQty(1);
+                                setUnitConfirmOpen(true);
+                                setNewProductSearchOpen(false);
+                                setNewProductSearch("");
+                                return;
+                              }
+                              if (isSelected) {
+                                setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
+                              } else {
+                                setSelectedProductIds([...selectedProductIds, p.id]);
+                                if (selectedProductIds.length === 0 && newPrice === 0) {
+                                  setNewPrice(p.price);
                                 }
+                              }
                               }}
                               className={outOfStock ? "opacity-50 cursor-not-allowed" : ""}
                             >
