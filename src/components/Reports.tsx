@@ -1619,19 +1619,18 @@ function SalesSubMenu() {
 }
 
 function ExpenseSubMenu() {
-  const [sub, setSub] = useState<"active" | "batal">(() => {
+  const [sub, setSub] = useState<"active" | "batal" | "chart">(() => {
     const p = new URLSearchParams(window.location.search).get("expenseTab");
     const v = (p as any) || "active";
     // Migrasi: 'tunda' lama digabungkan ke 'active'
     return v === "tunda" ? "active" : v;
   });
-  const onChange = (v: "active" | "batal") => {
+  const onChange = (v: "active" | "batal" | "chart") => {
     setSub(v);
     const params = new URLSearchParams(window.location.search);
     params.set("expenseTab", v);
     window.history.replaceState({}, "", `?${params.toString()}`);
   };
-  const filter = sub === "active" ? "active" : "batal";
   return (
     <div className="space-y-4">
       <Select value={sub} onValueChange={(v) => onChange(v as any)}>
@@ -1649,9 +1648,18 @@ function ExpenseSubMenu() {
               <TrendingDown className="h-4 w-4" /> Laporan Pengeluaran Dibatalkan
             </div>
           </SelectItem>
+          <SelectItem value="chart">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4" /> Laporan Grafik
+            </div>
+          </SelectItem>
         </SelectContent>
       </Select>
-      <ExpenseReport processStatusFilter={filter} />
+      {sub === "chart" ? (
+        <ExpenseChartReport />
+      ) : (
+        <ExpenseReport processStatusFilter={sub === "active" ? "active" : "batal"} />
+      )}
     </div>
   );
 }
