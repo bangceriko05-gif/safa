@@ -34,6 +34,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import OccupancyChart from "./reports/OccupancyChart";
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
+import AnkaLoader from "./AnkaLoader";
 import AccountingReport from "./reports/AccountingReport";
 import PaymentMethodReport from "./reports/PaymentMethodReport";
 import TaxReport from "./reports/TaxReport";
@@ -114,7 +115,7 @@ type ReportTab = "overview" | "sales" | "incomes" | "expenses" | "payment-method
 
 export default function Reports() {
   const { currentStore } = useStore();
-  const { hasPermission, hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTabRaw] = useState<ReportTab>(() => {
     const param = new URLSearchParams(window.location.search).get("reportTab");
@@ -1092,7 +1093,9 @@ export default function Reports() {
         <h2 className="text-2xl font-bold">Laporan</h2>
       </div>
 
-      {!hasAnyReportAccess ? (
+      {permLoading ? (
+        <AnkaLoader />
+      ) : !hasAnyReportAccess ? (
         <NoAccessMessage featureName="Laporan" />
       ) : (
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
