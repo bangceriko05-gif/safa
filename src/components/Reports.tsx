@@ -29,6 +29,7 @@ import PurchaseReport from "./reports/PurchaseReport";
 import PurchaseTransactionReport from "./reports/PurchaseTransactionReport";
 import IncomeReport from "./reports/IncomeReport";
 import ExpenseReport from "./reports/ExpenseReport";
+import ExpenseChartReport from "./reports/ExpenseChartReport";
 import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
 import OccupancyChart from "./reports/OccupancyChart";
