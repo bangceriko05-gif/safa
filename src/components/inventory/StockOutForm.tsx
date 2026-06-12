@@ -212,7 +212,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       if (pids.length > 0) {
         const { data: convs } = await supabase
           .from("product_unit_conversions")
-          .select("id, product_id, from_unit, to_unit, factor, is_active")
+          .select("id, product_id, from_unit, to_unit, factor, price_per_from, is_active")
           .in("product_id", pids)
           .eq("is_active", true);
         const map: Record<string, UnitConv[]> = {};
@@ -225,6 +225,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
             from_unit: c.from_unit,
             to_unit: c.to_unit,
             factor: Number(c.factor),
+            price_per_from: Number(c.price_per_from) || 0,
           });
         });
         setProductConvs(map);
