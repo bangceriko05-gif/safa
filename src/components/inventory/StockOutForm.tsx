@@ -76,6 +76,7 @@ interface UnitConv {
   from_unit: string;
   to_unit: string;
   factor: number;
+  price_per_from?: number;
 }
 
 interface PendingUnitChoice {
