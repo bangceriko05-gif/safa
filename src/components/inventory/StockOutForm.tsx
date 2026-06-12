@@ -76,6 +76,7 @@ interface UnitConv {
   from_unit: string;
   to_unit: string;
   factor: number;
+  price_per_from?: number;
 }
 
 interface PendingUnitChoice {
@@ -211,7 +212,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       if (pids.length > 0) {
         const { data: convs } = await supabase
           .from("product_unit_conversions")
-          .select("id, product_id, from_unit, to_unit, factor, is_active")
+          .select("id, product_id, from_unit, to_unit, factor, price_per_from, is_active")
           .in("product_id", pids)
           .eq("is_active", true);
         const map: Record<string, UnitConv[]> = {};
@@ -224,6 +225,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
             from_unit: c.from_unit,
             to_unit: c.to_unit,
             factor: Number(c.factor),
+            price_per_from: Number(c.price_per_from) || 0,
           });
         });
         setProductConvs(map);
@@ -624,7 +626,16 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     // - tanpa satuan: qty diinput dalam from_unit, baseQty = qty * firstConv.factor.
     //   Harga per base = price / firstConv.factor.
     const priceDivisor = chosen ? chosen.factor : (firstConv ? firstConv.factor : 1);
-    const unitPricePerBase = priceDivisor > 0 ? current.price / priceDivisor : current.price;
+    // Prefer the conversion's configured price (per from_unit) when the user
+    // didn't override the Harga Beli input — gives correct per-base price like
+    // Rp 43.000/kg → Rp 43/gram instead of falling back to product.purchase_price.
+    const convPriceFrom = chosen
+      ? Number(chosen.price_per_from) || 0
+      : Number(firstConv?.price_per_from) || 0;
+    const effectivePrice =
+      current.price > 0 ? current.price : convPriceFrom;
+    const unitPricePerBase =
+      priceDivisor > 0 ? effectivePrice / priceDivisor : effectivePrice;
 
     // Validasi stok (stok disimpan dalam satuan dasar)
     const usedByProduct = items.reduce<Record<string, number>>((acc, it) => {
@@ -897,14 +908,17 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                               // Jika produk punya satuan/konversi, langsung buka popup
                               // pemilihan satuan saat produk dipilih (tanpa menunggu tombol +).
                               if (convs.length > 0) {
+                                const def = [...convs].sort((a, b) => b.factor - a.factor)[0];
+                                const convPrice = Number(def?.price_per_from) || 0;
                                 const priceForPopup =
                                   newPrice > 0
                                     ? newPrice
-                                    : Number(p.purchase_price) > 0
-                                      ? Number(p.purchase_price)
-                                      : p.price;
+                                    : convPrice > 0
+                                      ? convPrice
+                                      : Number(p.purchase_price) > 0
+                                        ? Number(p.purchase_price)
+                                        : p.price;
                                 setUnitQueue([{ product: p, qty: 1, price: priceForPopup }]);
-                                const def = [...convs].sort((a, b) => b.factor - a.factor)[0];
                                 setUnitChoiceKey(def ? def.id : "base");
                                 setUnitChoiceQty(1);
                                 setUnitConfirmOpen(true);
