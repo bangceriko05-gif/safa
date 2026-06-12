@@ -39,7 +39,7 @@ const ALL_TABS = [
 ];
 
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
-  const { hasPermission, hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const { currentStore } = useStore();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
@@ -57,6 +57,10 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
     "manage_expense", "manage_income"
   ]);
 
+  if (permLoading) {
+    const AnkaLoader = require("./AnkaLoader").default;
+    return <AnkaLoader />;
+  }
   if (!hasTransactionAccess) {
     return <NoAccessMessage featureName="Transaksi" />;
   }
