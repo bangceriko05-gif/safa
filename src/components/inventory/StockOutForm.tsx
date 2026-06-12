@@ -899,14 +899,17 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                               // Jika produk punya satuan/konversi, langsung buka popup
                               // pemilihan satuan saat produk dipilih (tanpa menunggu tombol +).
                               if (convs.length > 0) {
+                                const def = [...convs].sort((a, b) => b.factor - a.factor)[0];
+                                const convPrice = Number(def?.price_per_from) || 0;
                                 const priceForPopup =
                                   newPrice > 0
                                     ? newPrice
-                                    : Number(p.purchase_price) > 0
-                                      ? Number(p.purchase_price)
-                                      : p.price;
+                                    : convPrice > 0
+                                      ? convPrice
+                                      : Number(p.purchase_price) > 0
+                                        ? Number(p.purchase_price)
+                                        : p.price;
                                 setUnitQueue([{ product: p, qty: 1, price: priceForPopup }]);
-                                const def = [...convs].sort((a, b) => b.factor - a.factor)[0];
                                 setUnitChoiceKey(def ? def.id : "base");
                                 setUnitChoiceQty(1);
                                 setUnitConfirmOpen(true);
