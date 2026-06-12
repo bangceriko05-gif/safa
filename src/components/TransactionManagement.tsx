@@ -59,7 +59,6 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
   ]);
 
   if (permLoading) {
-    const AnkaLoader = require("./AnkaLoader").default;
     return <AnkaLoader />;
   }
   if (!hasTransactionAccess) {
