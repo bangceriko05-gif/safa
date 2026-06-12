@@ -11,6 +11,7 @@ const ExpenseTransactionView = lazy(() => import("./expense/ExpenseTransactionVi
 const IncomeTransactionView = lazy(() => import("./income/IncomeTransactionView"));
 const PurchaseManagement = lazy(() => import("./purchase/PurchaseManagement"));
 import NoAccessMessage from "./NoAccessMessage";
+import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
