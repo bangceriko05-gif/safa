@@ -67,6 +67,7 @@ import * as XLSX from "xlsx";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
+import AnkaLoader from "./AnkaLoader";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
@@ -128,7 +129,7 @@ export default function Dashboard() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [posOpen, setPosOpen] = useState(false);
   const navigate = useNavigate();
-  const { hasPermission: checkPerm, hasAnyPermission } = usePermissions();
+  const { hasPermission: checkPerm, hasAnyPermission, loading: permLoading } = usePermissions();
 
   // Calculate days difference from today
   const getDaysDifference = () => {
@@ -919,7 +920,9 @@ export default function Dashboard() {
 
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
             {activeTab === "rooms" && (isFeatureEnabled("products_inventory") ? (
-              hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
+              permLoading ? (
+                <AnkaLoader />
+              ) : hasAnyPermission(["manage_products", "view_products", "manage_rooms", "view_rooms"]) ? (
                 <RoomManagement section={roomsSection} />
               ) : (
                 <NoAccessMessage featureName="Produk & Inventori" />
