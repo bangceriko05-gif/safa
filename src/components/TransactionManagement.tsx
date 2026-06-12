@@ -11,6 +11,7 @@ const ExpenseTransactionView = lazy(() => import("./expense/ExpenseTransactionVi
 const IncomeTransactionView = lazy(() => import("./income/IncomeTransactionView"));
 const PurchaseManagement = lazy(() => import("./purchase/PurchaseManagement"));
 import NoAccessMessage from "./NoAccessMessage";
+import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
@@ -39,7 +40,7 @@ const ALL_TABS = [
 ];
 
 export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
-  const { hasPermission, hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const { currentStore } = useStore();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeSubTab, setActiveSubTab] = useState("list-booking");
@@ -57,6 +58,9 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
     "manage_expense", "manage_income"
   ]);
 
+  if (permLoading) {
+    return <AnkaLoader />;
+  }
   if (!hasTransactionAccess) {
     return <NoAccessMessage featureName="Transaksi" />;
   }

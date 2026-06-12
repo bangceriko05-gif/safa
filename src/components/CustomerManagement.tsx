@@ -44,6 +44,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { validateCustomerInput } from "@/utils/customerValidation";
 import { usePermissions } from "@/hooks/usePermissions";
 import NoAccessMessage from "./NoAccessMessage";
+import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 
 interface Customer {
@@ -63,7 +64,7 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
-  const { hasPermission, hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -474,6 +475,9 @@ export default function CustomerManagement() {
     setCurrentPage(1);
   }, [searchQuery, identityFilter, showMissingKtp, pageSize]);
 
+  if (permLoading) {
+    return <AnkaLoader />;
+  }
   if (!hasAnyPermission(["view_customers", "manage_customers"])) {
     return <NoAccessMessage featureName="Pelanggan" />;
   }

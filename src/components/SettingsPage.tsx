@@ -10,6 +10,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
+import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
@@ -32,7 +33,7 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { currentStore } = useStore();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, loading: permLoading } = usePermissions();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
@@ -298,6 +299,9 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     { value: "#9CA3AF", label: "Gray" },
   ];
 
+  if (permLoading) {
+    return <AnkaLoader />;
+  }
   if (!hasPermission("manage_settings")) {
     return <NoAccessMessage featureName="Pengaturan" />;
   }
