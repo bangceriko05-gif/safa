@@ -64,7 +64,7 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
-  const { hasPermission, hasAnyPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -475,6 +475,9 @@ export default function CustomerManagement() {
     setCurrentPage(1);
   }, [searchQuery, identityFilter, showMissingKtp, pageSize]);
 
+  if (permLoading) {
+    return <AnkaLoader />;
+  }
   if (!hasAnyPermission(["view_customers", "manage_customers"])) {
     return <NoAccessMessage featureName="Pelanggan" />;
   }
