@@ -7,6 +7,7 @@ import { DateRange } from "react-day-picker";
 import { startOfYear } from "date-fns";
 import StockOutForm from "./StockOutForm";
 import InventoryToolbar from "./InventoryToolbar";
+import AnkaLoader from "@/components/AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -607,7 +608,7 @@ export default function StockOutList() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Memuat...
+                    <AnkaLoader />
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
