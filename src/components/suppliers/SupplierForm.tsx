@@ -155,7 +155,7 @@ export default function SupplierForm({ supplierId, onClose, onSaved }: Props) {
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-muted-foreground">Memuat...</div>;
+    return <AnkaLoader />;
   }
 
   return (

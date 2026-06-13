@@ -955,7 +955,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
           {/* Table */}
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Memuat data...</div>
+            <AnkaLoader />
           ) : filteredExpenses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">Tidak ada data pengeluaran</div>
           ) : (

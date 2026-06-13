@@ -166,7 +166,7 @@ export default function PaymentMethodSettings() {
 
         {/* List */}
         {loading ? (
-          <p className="text-sm text-muted-foreground">Memuat...</p>
+          <AnkaLoader />
         ) : methods.length === 0 ? (
           <p className="text-sm text-muted-foreground">Belum ada metode pembayaran</p>
         ) : (

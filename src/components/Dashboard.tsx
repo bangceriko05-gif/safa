@@ -508,7 +508,7 @@ export default function Dashboard() {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-3 text-foreground">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="text-lg">Memuat data...</span>
+            <AnkaLoader />
           </div>
         </div>
       </div>
@@ -759,7 +759,7 @@ export default function Dashboard() {
 
               {/* Tabs wrapper - keeps TabsContent working */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <Suspense fallback={<div className="flex items-center justify-center py-10 text-muted-foreground text-sm">Memuat...</div>}>
+                <Suspense fallback={<AnkaLoader />}>
                 {/* Mobile: Dropdown */}
                 <div className="lg:hidden">
                   <Select value={activeTab} onValueChange={setActiveTab}>

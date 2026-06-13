@@ -45,7 +45,7 @@ export default function PurchaseNoteDialog({ purchaseId, onClose }: PurchaseNote
           <DialogTitle>Detail Nota Pembelian</DialogTitle>
         </DialogHeader>
         {loading ? (
-          <div className="py-4 text-center text-muted-foreground">Memuat...</div>
+          <AnkaLoader />
         ) : items.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground">Tidak ada item</div>
         ) : (

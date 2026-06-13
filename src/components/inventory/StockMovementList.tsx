@@ -469,8 +469,7 @@ export default function StockMovementList() {
   if (loadingBooking) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat booking...
-      </div>
+        <AnkaLoader /></div>
     );
   }
 
@@ -552,8 +551,7 @@ export default function StockMovementList() {
           <div className="overflow-auto flex-1 -mx-6 px-6">
             {loadingDetail ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin inline" /> Memuat detail...
-              </div>
+                <AnkaLoader /></div>
             ) : runningDetails.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 Tidak ada mutasi untuk produk ini pada periode terpilih.
