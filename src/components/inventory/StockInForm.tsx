@@ -173,7 +173,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
     const load = async () => {
       if (!currentStore) return;
       setLoading(true);
-
+      try {
       // Products
       const { data: prods } = await supabase
         .from("products")
@@ -290,8 +290,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         });
         if (previewBid) setBid(previewBid as string);
       }
-
-      setLoading(false);
+      } catch (e: any) {
+        console.error("StockInForm load error:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [stockInId, currentStore]);

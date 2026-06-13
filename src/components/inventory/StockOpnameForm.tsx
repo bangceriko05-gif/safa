@@ -179,7 +179,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
     const load = async () => {
       if (!currentStore) return;
       setLoading(true);
-
+      try {
       const { data: prods } = await supabase
         .from("products")
         .select("id, name, price, stock_qty")
@@ -279,8 +279,11 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
         });
         if (previewBid) setBid(previewBid as string);
       }
-
-      setLoading(false);
+      } catch (e: any) {
+        console.error("StockOpnameForm load error:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
