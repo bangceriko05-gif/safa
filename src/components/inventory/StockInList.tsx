@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { FileDown, Upload, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { Badge as UIBadge } from "@/components/ui/badge";
+import AnkaLoader from "@/components/AnkaLoader";
 
 interface StockInRow {
   id: string;

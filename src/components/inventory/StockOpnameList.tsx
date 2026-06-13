@@ -10,6 +10,7 @@ import StockOpnameForm from "./StockOpnameForm";
 import InventoryToolbar from "./InventoryToolbar";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import AnkaLoader from "@/components/AnkaLoader";
 
 interface OpnameRow {
   id: string;
