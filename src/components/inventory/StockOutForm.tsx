@@ -198,7 +198,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
     const load = async () => {
       if (!currentStore) return;
       setLoading(true);
-
+      try {
       // Products
       const { data: prods } = await supabase
         .from("products")
@@ -332,8 +332,12 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
         });
         if (previewBid) setBid(previewBid as string);
       }
-
-      setLoading(false);
+      } catch (e: any) {
+        console.error("StockOutForm load error:", e);
+        toast.error("Gagal memuat data: " + (e?.message || "unknown"));
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [stockOutId, currentStore]);
