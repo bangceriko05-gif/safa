@@ -1,3 +1,4 @@
+import AnkaLoader from "@/components/AnkaLoader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
@@ -588,7 +589,7 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
   const handlePrint = () => window.print();
 
   if (loading) {
-    return <div className="py-12 text-center text-muted-foreground">Memuat...</div>;
+    return <AnkaLoader />;
   }
 
   const StatusBadge = () => {
