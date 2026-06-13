@@ -331,9 +331,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
             </div>
 
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Memuat data...
-              </div>
+              <AnkaLoader />
             ) : categories.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 Belum ada kategori. Klik "Tambah Kategori" untuk membuat kategori baru.

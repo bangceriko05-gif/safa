@@ -1,3 +1,4 @@
+import AnkaLoader from "@/components/AnkaLoader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
@@ -173,7 +174,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
     const load = async () => {
       if (!currentStore) return;
       setLoading(true);
-
+      try {
       // Products
       const { data: prods } = await supabase
         .from("products")
@@ -290,8 +291,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         });
         if (previewBid) setBid(previewBid as string);
       }
-
-      setLoading(false);
+      } catch (e: any) {
+        console.error("StockInForm load error:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [stockInId, currentStore]);
@@ -554,7 +558,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-muted-foreground">Memuat...</div>;
+    return <AnkaLoader />;
   }
 
   const StatusBadge = () => {

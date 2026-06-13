@@ -584,7 +584,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       {showProducts && (
       <div id="pi-section-products" className="scroll-mt-4">
         {isFeatureEnabled("products_inventory.products") ? (
-          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+          <Suspense fallback={<AnkaLoader />}>
             <ProductManagement />
           </Suspense>
         ) : (
@@ -596,7 +596,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       {/* Inventory Section - controlled by POS master feature */}
       {showInventory && isFeatureEnabled("pos") && (
         <div id="pi-section-inventory" className="scroll-mt-4">
-          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+          <Suspense fallback={<AnkaLoader />}>
             <InventoryManagement />
           </Suspense>
         </div>

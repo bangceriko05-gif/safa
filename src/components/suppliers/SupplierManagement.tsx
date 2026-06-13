@@ -132,7 +132,7 @@ export default function SupplierManagement() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-muted-foreground">Memuat...</div>
+          <AnkaLoader />
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center border-2 border-dashed rounded-lg">
             <Package className="h-10 w-10 mx-auto text-muted-foreground mb-3" />

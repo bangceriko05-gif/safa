@@ -916,7 +916,7 @@ export default function PMSCalendar({
         <div className="bg-card rounded-xl shadow-[var(--shadow-card)] border-2 border-border p-8 text-center">
           <div className="flex items-center justify-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            <span className="text-muted-foreground">Memuat data booking...</span>
+            <AnkaLoader />
           </div>
         </div>
       )}

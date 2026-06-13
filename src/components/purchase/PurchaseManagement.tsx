@@ -309,7 +309,7 @@ export default function PurchaseManagement() {
 
           {/* Table */}
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Memuat data...</div>
+            <AnkaLoader />
           ) : filteredPurchases.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">Tidak ada data pembelian</div>
           ) : (

@@ -174,8 +174,7 @@ export default function BidPreviewPopup({ open, onClose, type, refId, bid, onEdi
         <div className="overflow-auto flex-1 -mx-6 px-6 space-y-4">
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin inline" /> Memuat...
-            </div>
+              <AnkaLoader /></div>
           ) : (
             <>
               {/* Header info */}

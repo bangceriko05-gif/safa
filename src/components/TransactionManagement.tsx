@@ -213,14 +213,14 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         </TabsContent>
 
         <TabsContent value="purchases" className="mt-4">
-          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+          <Suspense fallback={<AnkaLoader />}>
             <PurchaseManagement />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
           {isFeatureEnabled("transactions.expenses") ? (
-            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+            <Suspense fallback={<AnkaLoader />}>
               <ExpenseTransactionView
                 timeRange={timeRange}
                 customDateRange={customDateRange}
@@ -234,7 +234,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
 
         <TabsContent value="incomes" className="mt-4">
           {isFeatureEnabled("transactions.incomes") ? (
-            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Memuat...</div>}>
+            <Suspense fallback={<AnkaLoader />}>
               <IncomeTransactionView
                 timeRange={timeRange}
                 customDateRange={customDateRange}
