@@ -95,15 +95,17 @@ export default function ExpenseChartReport() {
 
   const pieData = categories.map((c) => ({ name: c.category, value: c.total }));
 
-  const renderLabel = ({ name, value, cx, x, y }: any) => {
-    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0";
+  const renderLabel = ({ name, value, cx, x, y, percent }: any) => {
+    if (percent < 0.03) return null; // hide tiny slices to prevent overlap
+    const pct = (percent * 100).toFixed(1);
     return (
       <text
         x={x}
         y={y}
         textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
-        className="text-[10px]"
+        fontSize={12}
+        fontWeight={700}
         fill="hsl(var(--foreground))"
       >
         {name} {pct}%
@@ -158,14 +160,16 @@ export default function ExpenseChartReport() {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                    <PieChart margin={{ top: 20, right: 60, left: 60, bottom: 20 }}>
                       <Pie
                         data={pieData}
                         cx="50%"
                         cy="50%"
-                        outerRadius={90}
+                        outerRadius={80}
                         dataKey="value"
                         label={renderLabel}
+                        labelLine={{ stroke: "hsl(var(--muted-foreground))" }}
+                        minAngle={2}
                       >
                         {pieData.map((_, i) => (
                           <Cell

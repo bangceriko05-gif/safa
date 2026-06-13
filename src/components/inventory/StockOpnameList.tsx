@@ -10,6 +10,7 @@ import StockOpnameForm from "./StockOpnameForm";
 import InventoryToolbar from "./InventoryToolbar";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import AnkaLoader from "@/components/AnkaLoader";
 
 interface OpnameRow {
   id: string;
@@ -168,7 +169,7 @@ export default function StockOpnameList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">Memuat...</td>
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground"><AnkaLoader /></td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
