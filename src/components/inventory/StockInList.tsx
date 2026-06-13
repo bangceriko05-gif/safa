@@ -618,7 +618,7 @@ export default function StockInList() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Memuat...
+                    <AnkaLoader />
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (

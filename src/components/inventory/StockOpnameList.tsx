@@ -168,7 +168,7 @@ export default function StockOpnameList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">Memuat...</td>
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground"><AnkaLoader /></td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>

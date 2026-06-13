@@ -508,7 +508,7 @@ export default function StockMovementList() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin inline" /> Memuat...
+                    <AnkaLoader />
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
