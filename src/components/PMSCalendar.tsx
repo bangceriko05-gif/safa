@@ -1,3 +1,4 @@
+import AnkaLoader from "@/components/AnkaLoader";
 import { useEffect, useState, useMemo } from "react";
 import BookingPopoverContent from "@/components/BookingPopoverContent";
 import { supabase } from "@/integrations/supabase/client";

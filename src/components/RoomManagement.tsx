@@ -1,3 +1,4 @@
+import AnkaLoader from "@/components/AnkaLoader";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
