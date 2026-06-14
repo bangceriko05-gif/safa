@@ -5,8 +5,9 @@ import { DateRange } from "react-day-picker";
 import { startOfMonth, endOfMonth } from "date-fns";
 import InventoryToolbar from "./InventoryToolbar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronRight, X, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import StockInForm from "./StockInForm";
@@ -16,48 +17,47 @@ import BidPreviewPopup, { BidType } from "./BidPreviewPopup";
 import BookingModal from "@/components/BookingModal";
 import AnkaLoader from "@/components/AnkaLoader";
 
-interface ProductRow {
-  id: string;
-  name: string;
-  awal: number;
-  masuk: number;
-  pengembalian: number;
-  penjualan: number;
-  keluar: number;
-  sisa: number;
-}
-
-interface MovementDetail {
-  date: string; // ISO datetime
-  type: "STOCK_IN" | "STOCK_OUT" | "STOCK_OPNAME" | "POS_SALE";
-  refTable: "stock_in" | "stock_out" | "stock_opname" | "bookings";
-  refId: string;
+interface Movement {
+  ts: string; // ISO datetime for sorting/display
+  productId: string;
+  productName: string;
+  unit: string;
+  direction: "in" | "out";
+  qty: number; // always positive
+  stokSebelum: number;
+  stokSesudah: number;
   bid: string;
-  qtyIn: number;
-  qtyOut: number;
+  refType: BidType;
+  refId: string;
+  note: string;
 }
 
-const formatDateTime = (s: string) => {
-  const d = new Date(s);
-  return d.toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const formatDateTime = (iso: string) => {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${date} ${time}`;
 };
-const formatDate = (s: string) =>
-  new Date(s).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+
+const fmtNum = (n: number) => {
+  if (!Number.isFinite(n)) return "0";
+  return Number(n.toFixed(3)).toLocaleString("id-ID", { maximumFractionDigits: 3 });
+};
 
 export default function StockMovementList() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(1);
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
 
-  const [rows, setRows] = useState<ProductRow[]>([]);
-  const [selected, setSelected] = useState<ProductRow | null>(null);
-  const [details, setDetails] = useState<MovementDetail[] | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [movements, setMovements] = useState<Movement[]>([]);
 
   // Edit form navigation
   const [editForm, setEditForm] = useState<
@@ -97,124 +97,225 @@ export default function StockMovementList() {
       const fromStr = fromIso.toISOString().split("T")[0];
       const toStr = toIso.toISOString().split("T")[0];
 
-      // 1. All products
-      const { data: products } = await supabase
+      // 1. All products + current stock + base unit lookup
+      const { data: productsData } = await supabase
         .from("products")
         .select("id, name, stock_qty")
         .eq("store_id", storeId)
         .order("name");
-      const productList = (products as any[]) || [];
-      const productMap = new Map<string, ProductRow>();
-      for (const p of productList) {
+      type ProdInfo = { id: string; name: string; currentStock: number; unit: string };
+      const productMap = new Map<string, ProdInfo>();
+      ((productsData as any[]) || []).forEach((p) =>
         productMap.set(p.id, {
           id: p.id,
           name: p.name,
-          awal: 0,
-          masuk: 0,
-          pengembalian: 0,
-          penjualan: 0,
-          keluar: 0,
-          sisa: Number(p.stock_qty || 0),
+          currentStock: Number(p.stock_qty || 0),
+          unit: "",
+        }),
+      );
+      setProducts(((productsData as any[]) || []).map((p) => ({ id: p.id, name: p.name })));
+
+      // Base unit per product = first conversion's to_unit
+      const productIds = Array.from(productMap.keys());
+      if (productIds.length > 0) {
+        const { data: convs } = await supabase
+          .from("product_unit_conversions")
+          .select("product_id, to_unit, from_unit")
+          .in("product_id", productIds);
+        ((convs as any[]) || []).forEach((c) => {
+          const p = productMap.get(c.product_id);
+          if (p && !p.unit) p.unit = c.to_unit || c.from_unit || "";
         });
       }
 
-      // 2. Stock IN within range (posted only) — masuk
-      const { data: stockInHeaders } = await supabase
-        .from("stock_in" as any)
-        .select("id, date, status")
-        .eq("store_id", storeId)
-        .gte("date", fromStr)
-        .lte("date", toStr);
-      const inIds = ((stockInHeaders as any[]) || [])
-        .filter((h) => h.status === "posted")
-        .map((h) => h.id);
-      if (inIds.length > 0) {
-        const { data: inItems } = await supabase
-          .from("stock_in_items" as any)
-          .select("stock_in_id, product_id, quantity")
-          .in("stock_in_id", inIds);
-        ((inItems as any[]) || []).forEach((it) => {
-          const row = productMap.get(it.product_id);
-          if (row) row.masuk += Number(it.quantity || 0);
-        });
-      }
+      // Pull all posted movements within range AND after range (for back-walking)
+      const [siRes, soRes, opRes, bkRes] = await Promise.all([
+        supabase
+          .from("stock_in" as any)
+          .select("id, bid, date, posted_at, status, notes")
+          .eq("store_id", storeId)
+          .eq("status", "posted")
+          .gte("date", fromStr),
+        supabase
+          .from("stock_out" as any)
+          .select("id, bid, date, posted_at, status, notes, reason, recipient")
+          .eq("store_id", storeId)
+          .eq("status", "posted")
+          .gte("date", fromStr),
+        supabase
+          .from("stock_opname" as any)
+          .select("id, bid, date, posted_at, status, notes")
+          .eq("store_id", storeId)
+          .eq("status", "posted")
+          .gte("date", fromStr),
+        supabase
+          .from("bookings")
+          .select("id, bid, date, created_at, status, customer_name")
+          .eq("store_id", storeId)
+          .neq("status", "BATAL")
+          .gte("date", fromStr),
+      ]);
 
-      // 3. Stock OUT within range (posted) — keluar
-      const { data: stockOutHeaders } = await supabase
-        .from("stock_out" as any)
-        .select("id, date, status")
-        .eq("store_id", storeId)
-        .gte("date", fromStr)
-        .lte("date", toStr);
-      const outIds = ((stockOutHeaders as any[]) || [])
-        .filter((h) => h.status === "posted")
-        .map((h) => h.id);
-      if (outIds.length > 0) {
-        const { data: outItems } = await supabase
-          .from("stock_out_items" as any)
-          .select("stock_out_id, product_id, quantity")
-          .in("stock_out_id", outIds);
-        ((outItems as any[]) || []).forEach((it) => {
-          const row = productMap.get(it.product_id);
-          if (row) row.keluar += Number(it.quantity || 0);
-        });
-      }
+      const siHeaders = (siRes.data as any[]) || [];
+      const soHeaders = (soRes.data as any[]) || [];
+      const opHeaders = (opRes.data as any[]) || [];
+      const bkHeaders = (bkRes.data as any[]) || [];
 
-      // 4. Bookings (posted/non-cancelled) within range — penjualan
-      const { data: bookingsData } = await supabase
-        .from("bookings")
-        .select("id, date, status")
-        .eq("store_id", storeId)
-        .gte("date", fromStr)
-        .lte("date", toStr)
-        .neq("status", "BATAL");
-      const bIds = ((bookingsData as any[]) || []).map((b) => b.id);
-      if (bIds.length > 0) {
-        const { data: bp } = await supabase
-          .from("booking_products")
-          .select("booking_id, product_id, quantity")
-          .in("booking_id", bIds);
-        ((bp as any[]) || []).forEach((it) => {
-          const row = productMap.get(it.product_id);
-          if (row) row.penjualan += Number(it.quantity || 0);
-        });
-      }
+      const siMap = new Map(siHeaders.map((h: any) => [h.id, h]));
+      const soMap = new Map(soHeaders.map((h: any) => [h.id, h]));
+      const opMap = new Map(opHeaders.map((h: any) => [h.id, h]));
+      const bkMap = new Map(bkHeaders.map((h: any) => [h.id, h]));
 
-      // 5. Stock opname within range (posted) — affects keluar (negatif) atau masuk (positif penyesuaian)
-      const { data: opnameHeaders } = await supabase
-        .from("stock_opname" as any)
-        .select("id, date, status")
-        .eq("store_id", storeId)
-        .gte("date", fromStr)
-        .lte("date", toStr);
-      const opIds = ((opnameHeaders as any[]) || [])
-        .filter((h) => h.status === "posted")
-        .map((h) => h.id);
-      if (opIds.length > 0) {
-        const { data: opItems } = await supabase
-          .from("stock_opname_items" as any)
-          .select("stock_opname_id, product_id, difference")
-          .in("stock_opname_id", opIds);
-        ((opItems as any[]) || []).forEach((it) => {
-          const row = productMap.get(it.product_id);
-          if (!row) return;
-          const diff = Number(it.difference || 0);
-          if (diff > 0) row.masuk += diff;
-          else if (diff < 0) row.keluar += Math.abs(diff);
-        });
-      }
+      const [siItemsRes, soItemsRes, opItemsRes, bpItemsRes] = await Promise.all([
+        siHeaders.length > 0
+          ? supabase
+              .from("stock_in_items" as any)
+              .select("stock_in_id, product_id, quantity")
+              .in("stock_in_id", siHeaders.map((h: any) => h.id))
+          : Promise.resolve({ data: [] as any[] } as any),
+        soHeaders.length > 0
+          ? supabase
+              .from("stock_out_items" as any)
+              .select("stock_out_id, product_id, quantity")
+              .in("stock_out_id", soHeaders.map((h: any) => h.id))
+          : Promise.resolve({ data: [] as any[] } as any),
+        opHeaders.length > 0
+          ? supabase
+              .from("stock_opname_items" as any)
+              .select("stock_opname_id, product_id, difference")
+              .in("stock_opname_id", opHeaders.map((h: any) => h.id))
+          : Promise.resolve({ data: [] as any[] } as any),
+        bkHeaders.length > 0
+          ? supabase
+              .from("booking_products")
+              .select("booking_id, product_id, quantity")
+              .in("booking_id", bkHeaders.map((h: any) => h.id))
+          : Promise.resolve({ data: [] as any[] } as any),
+      ]);
 
-      // 6. Awal = sisa - masuk + penjualan + keluar - pengembalian
-      // (Mengingat sisa adalah stok terkini, ini perkiraan untuk periode aktif)
-      productMap.forEach((row) => {
-        row.awal = row.sisa - row.masuk + row.penjualan + row.keluar - row.pengembalian;
+      // Build raw movement list (no stock_sebelum/sesudah yet)
+      type Raw = Omit<Movement, "stokSebelum" | "stokSesudah"> & { delta: number };
+      const raw: Raw[] = [];
+
+      ((siItemsRes.data as any[]) || []).forEach((it) => {
+        const h = siMap.get(it.stock_in_id);
+        if (!h) return;
+        const p = productMap.get(it.product_id);
+        if (!p) return;
+        const qty = Number(it.quantity || 0);
+        raw.push({
+          ts: h.posted_at || h.date,
+          productId: p.id,
+          productName: p.name,
+          unit: p.unit,
+          direction: "in",
+          qty,
+          delta: qty,
+          bid: h.bid || "-",
+          refType: "stock_in",
+          refId: h.id,
+          note: h.notes || "Stok masuk",
+        });
       });
 
-      // Hanya tampilkan produk yang punya pergerakan ATAU stok > 0
-      const arr = Array.from(productMap.values()).filter(
-        (r) => r.awal !== 0 || r.masuk !== 0 || r.keluar !== 0 || r.penjualan !== 0 || r.sisa !== 0,
-      );
-      setRows(arr);
+      ((soItemsRes.data as any[]) || []).forEach((it) => {
+        const h = soMap.get(it.stock_out_id);
+        if (!h) return;
+        const p = productMap.get(it.product_id);
+        if (!p) return;
+        const qty = Number(it.quantity || 0);
+        raw.push({
+          ts: h.posted_at || h.date,
+          productId: p.id,
+          productName: p.name,
+          unit: p.unit,
+          direction: "out",
+          qty,
+          delta: -qty,
+          bid: h.bid || "-",
+          refType: "stock_out",
+          refId: h.id,
+          note: h.notes || h.reason || (h.recipient ? `Diberikan ke ${h.recipient}` : "Pemakaian bahan"),
+        });
+      });
+
+      ((opItemsRes.data as any[]) || []).forEach((it) => {
+        const h = opMap.get(it.stock_opname_id);
+        if (!h) return;
+        const p = productMap.get(it.product_id);
+        if (!p) return;
+        const diff = Number(it.difference || 0);
+        if (diff === 0) return;
+        raw.push({
+          ts: h.posted_at || h.date,
+          productId: p.id,
+          productName: p.name,
+          unit: p.unit,
+          direction: diff > 0 ? "in" : "out",
+          qty: Math.abs(diff),
+          delta: diff,
+          bid: h.bid || "-",
+          refType: "stock_opname",
+          refId: h.id,
+          note: h.notes || "Penyesuaian stok opname",
+        });
+      });
+
+      ((bpItemsRes.data as any[]) || []).forEach((it) => {
+        const h = bkMap.get(it.booking_id);
+        if (!h) return;
+        const p = productMap.get(it.product_id);
+        if (!p) return;
+        const qty = Number(it.quantity || 0);
+        raw.push({
+          ts: h.created_at || h.date,
+          productId: p.id,
+          productName: p.name,
+          unit: p.unit,
+          direction: "out",
+          qty,
+          delta: -qty,
+          bid: h.bid || "-",
+          refType: "bookings",
+          refId: h.id,
+          note: `Penjualan ke ${h.customer_name || "tamu"}`,
+        });
+      });
+
+      // Sort by timestamp desc (newest first)
+      raw.sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
+
+      // Compute running stock per product walking backwards from current
+      const runningPerProduct = new Map<string, number>();
+      productMap.forEach((p) => runningPerProduct.set(p.id, p.currentStock));
+
+      const result: Movement[] = raw.map((r) => {
+        const after = runningPerProduct.get(r.productId) ?? 0;
+        const before = after - r.delta;
+        runningPerProduct.set(r.productId, before);
+        return {
+          ts: r.ts,
+          productId: r.productId,
+          productName: r.productName,
+          unit: r.unit,
+          direction: r.direction,
+          qty: r.qty,
+          stokSebelum: before,
+          stokSesudah: after,
+          bid: r.bid,
+          refType: r.refType,
+          refId: r.refId,
+          note: r.note,
+        };
+      });
+
+      // Filter to only movements within selected range (use date portion)
+      const filtered = result.filter((m) => {
+        const dateOnly = m.ts.slice(0, 10);
+        return dateOnly >= fromStr && dateOnly <= toStr;
+      });
+
+      setMovements(filtered);
     } catch (err) {
       console.error("[StockMovement] fetch error:", err);
       toast.error("Gagal memuat pergerakan stok");
@@ -230,147 +331,54 @@ export default function StockMovementList() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return rows;
-    return rows.filter((r) => r.name.toLowerCase().includes(q));
-  }, [rows, search]);
+    return movements.filter((m) => {
+      if (productFilter !== "all" && m.productId !== productFilter) return false;
+      if (!q) return true;
+      return (
+        m.productName.toLowerCase().includes(q) ||
+        m.bid.toLowerCase().includes(q) ||
+        m.note.toLowerCase().includes(q)
+      );
+    });
+  }, [movements, search, productFilter]);
 
-  const paginated = filtered.slice(0, pageSize);
+  useEffect(() => {
+    setPage(1);
+  }, [search, productFilter, pageSize, dateRange]);
 
-  const fetchDetails = async (product: ProductRow) => {
-    if (!currentStore || !fromIso || !toIso) return;
-    setSelected(product);
-    setLoadingDetail(true);
-    setDetails(null);
-    try {
-      const storeId = currentStore.id;
-      const fromStr = fromIso.toISOString().split("T")[0];
-      const toStr = toIso.toISOString().split("T")[0];
-      const all: MovementDetail[] = [];
-
-      // Track running 'awal' from product.awal
-      // STOCK IN
-      const { data: inRows } = await supabase
-        .from("stock_in_items" as any)
-        .select("stock_in_id, quantity, stock_in:stock_in_id(id, bid, date, status)")
-        .eq("product_id", product.id);
-      ((inRows as any[]) || []).forEach((it) => {
-        const h = it.stock_in;
-        if (!h || h.status !== "posted") return;
-        if (h.date < fromStr || h.date > toStr) return;
-        all.push({
-          date: h.date,
-          type: "STOCK_IN",
-          refTable: "stock_in",
-          refId: h.id,
-          bid: h.bid,
-          qtyIn: Number(it.quantity || 0),
-          qtyOut: 0,
-        });
-      });
-
-      // STOCK OUT
-      const { data: outRows } = await supabase
-        .from("stock_out_items" as any)
-        .select("stock_out_id, quantity, stock_out:stock_out_id(id, bid, date, status)")
-        .eq("product_id", product.id);
-      ((outRows as any[]) || []).forEach((it) => {
-        const h = it.stock_out;
-        if (!h || h.status !== "posted") return;
-        if (h.date < fromStr || h.date > toStr) return;
-        all.push({
-          date: h.date,
-          type: "STOCK_OUT",
-          refTable: "stock_out",
-          refId: h.id,
-          bid: h.bid,
-          qtyIn: 0,
-          qtyOut: Number(it.quantity || 0),
-        });
-      });
-
-      // STOCK OPNAME
-      const { data: opRows } = await supabase
-        .from("stock_opname_items" as any)
-        .select("stock_opname_id, difference, stock_opname:stock_opname_id(id, bid, date, status)")
-        .eq("product_id", product.id);
-      ((opRows as any[]) || []).forEach((it) => {
-        const h = it.stock_opname;
-        if (!h || h.status !== "posted") return;
-        if (h.date < fromStr || h.date > toStr) return;
-        const diff = Number(it.difference || 0);
-        all.push({
-          date: h.date,
-          type: "STOCK_OPNAME",
-          refTable: "stock_opname",
-          refId: h.id,
-          bid: h.bid,
-          qtyIn: diff > 0 ? diff : 0,
-          qtyOut: diff < 0 ? Math.abs(diff) : 0,
-        });
-      });
-
-      // BOOKINGS (penjualan)
-      const { data: bpRows } = await supabase
-        .from("booking_products")
-        .select("booking_id, quantity, booking:booking_id(id, bid, date, status, store_id)")
-        .eq("product_id", product.id);
-      ((bpRows as any[]) || []).forEach((it) => {
-        const h = it.booking;
-        if (!h || h.store_id !== storeId) return;
-        if (h.status === "BATAL") return;
-        if (h.date < fromStr || h.date > toStr) return;
-        all.push({
-          date: h.date,
-          type: "POS_SALE",
-          refTable: "bookings",
-          refId: h.id,
-          bid: h.bid,
-          qtyIn: 0,
-          qtyOut: Number(it.quantity || 0),
-        });
-      });
-
-      // sort ascending by date
-      all.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-      setDetails(all);
-    } catch (err) {
-      console.error("[StockMovement] detail error:", err);
-      toast.error("Gagal memuat detail mutasi");
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleExport = () => {
     if (filtered.length === 0) {
       toast.error("Tidak ada data untuk diekspor");
       return;
     }
-    const data = filtered.map((r) => ({
-      Produk: r.name,
-      Awal: r.awal,
-      Masuk: r.masuk,
-      Pengembalian: r.pengembalian,
-      Penjualan: r.penjualan,
-      Keluar: r.keluar,
-      Sisa: r.sisa,
+    const data = filtered.map((m) => ({
+      Waktu: formatDateTime(m.ts),
+      Produk: m.productName,
+      Tipe: m.direction === "in" ? "Masuk" : "Keluar",
+      Qty: m.qty,
+      Satuan: m.unit,
+      "Stok Sebelum": m.stokSebelum,
+      "Stok Sesudah": m.stokSesudah,
+      BID: m.bid,
+      Catatan: m.note,
     }));
     const fileName = getExportFileName("Pergerakan_Stok", currentStore?.name || "Outlet", "all");
     exportToExcel(data, "Pergerakan Stok", fileName);
-    toast.success(`Berhasil mengekspor ${data.length} produk`);
+    toast.success(`Berhasil mengekspor ${data.length} baris`);
   };
 
-  const handleBidClick = (d: MovementDetail) => {
-    setPreview({ type: d.refTable as BidType, refId: d.refId, bid: d.bid });
-  };
+  const handleBidClick = (m: Movement) =>
+    setPreview({ type: m.refType, refId: m.refId, bid: m.bid });
 
   const handlePreviewEdit = () => {
     if (!preview) return;
     if (preview.type === "bookings") {
       const refId = preview.refId;
       setPreview(null);
-      setSelected(null);
-      setDetails(null);
       // Fetch booking and open full-screen edit
       (async () => {
         setLoadingBooking(true);
@@ -397,21 +405,8 @@ export default function StockMovementList() {
       | { kind: "stock_out"; id: string }
       | { kind: "stock_opname"; id: string };
     setPreview(null);
-    setSelected(null);
-    setDetails(null);
     setEditForm(target);
   };
-
-  // Compute running balances for detail modal (must run before any early returns)
-  const runningDetails = useMemo(() => {
-    if (!details || !selected) return [];
-    let running = selected.awal;
-    return details.map((d) => {
-      const awalBaris = running;
-      running = running + d.qtyIn - d.qtyOut;
-      return { ...d, awalBaris, sisaBaris: running };
-    });
-  }, [details, selected]);
 
   // Render edit form full-screen
   if (editForm?.kind === "stock_in") {
@@ -467,10 +462,7 @@ export default function StockMovementList() {
   }
 
   if (loadingBooking) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <AnkaLoader /></div>
-    );
+    return <AnkaLoader />;
   }
 
   return (
@@ -478,129 +470,152 @@ export default function StockMovementList() {
       <InventoryToolbar
         title="Pergerakan Stok"
         count={filtered.length}
-        countLabel="Item"
+        countLabel="Pergerakan"
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Cari nama produk"
+        searchPlaceholder="Cari BID, produk, catatan..."
         onExport={handleExport}
       />
 
+      {/* Product filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Produk:</span>
+        <Select value={productFilter} onValueChange={setProductFilter}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Semua Produk" />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="all">Semua Produk</SelectItem>
+            {products.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="border rounded-lg overflow-hidden bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
+          <table className="w-full text-sm border-collapse">
+            <thead className="bg-muted/40 border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium">Produk</th>
-                <th className="text-right px-4 py-3 font-medium">Awal</th>
-                <th className="text-right px-4 py-3 font-medium">Masuk</th>
-                <th className="text-right px-4 py-3 font-medium">Pengembalian</th>
-                <th className="text-right px-4 py-3 font-medium">Penjualan</th>
-                <th className="text-right px-4 py-3 font-medium">Keluar</th>
-                <th className="text-right px-4 py-3 font-medium">Sisa</th>
-                <th className="px-4 py-3 w-10"></th>
+                <th className="text-left px-4 py-3 font-semibold whitespace-nowrap">Waktu</th>
+                <th className="text-left px-4 py-3 font-semibold">Produk</th>
+                <th className="text-left px-4 py-3 font-semibold">Tipe</th>
+                <th className="text-right px-4 py-3 font-semibold">Qty</th>
+                <th className="text-right px-4 py-3 font-semibold whitespace-nowrap">Stok Sebelum</th>
+                <th className="text-right px-4 py-3 font-semibold whitespace-nowrap">Stok Sesudah</th>
+                <th className="text-left px-4 py-3 font-semibold">Catatan</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12">
                     <AnkaLoader />
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     Belum ada pergerakan stok pada periode ini.
                   </td>
                 </tr>
               ) : (
-                paginated.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="border-t cursor-pointer hover:bg-muted/30"
-                    onClick={() => fetchDetails(r)}
-                  >
-                    <td className="px-4 py-3 font-medium">{r.name}</td>
-                    <td className="px-4 py-3 text-right">{r.awal}</td>
-                    <td className={`px-4 py-3 text-right ${r.masuk > 0 ? "text-green-600 font-semibold" : "text-muted-foreground"}`}>{r.masuk}</td>
-                    <td className={`px-4 py-3 text-right ${r.pengembalian > 0 ? "text-blue-600 font-semibold" : "text-muted-foreground"}`}>{r.pengembalian}</td>
-                    <td className={`px-4 py-3 text-right ${r.penjualan > 0 ? "text-orange-600 font-semibold" : "text-muted-foreground"}`}>{r.penjualan}</td>
-                    <td className={`px-4 py-3 text-right ${r.keluar > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>{r.keluar}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{r.sisa}</td>
-                    <td className="px-4 py-3">
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </td>
-                  </tr>
-                ))
+                paginated.map((m, i) => {
+                  const isIn = m.direction === "in";
+                  return (
+                    <tr key={i} className="border-t hover:bg-muted/30">
+                      <td className="px-4 py-3 whitespace-nowrap text-foreground">
+                        {formatDateTime(m.ts)}
+                      </td>
+                      <td className="px-4 py-3 font-medium uppercase">{m.productName}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {isIn ? (
+                            <ArrowUp className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4 text-rose-600" />
+                          )}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-white ${
+                              isIn ? "bg-emerald-600" : "bg-rose-600"
+                            }`}
+                          >
+                            {isIn ? "Masuk" : "Keluar"}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${
+                          isIn ? "text-emerald-600" : "text-rose-600"
+                        }`}
+                      >
+                        {isIn ? "+" : "-"}
+                        {fmtNum(m.qty)} <span className="text-muted-foreground font-normal">{m.unit}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {fmtNum(m.stokSebelum)} <span className="text-muted-foreground">{m.unit}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap font-semibold">
+                        {fmtNum(m.stokSesudah)} <span className="text-muted-foreground font-normal">{m.unit}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleBidClick(m)}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {m.bid}
+                        </button>
+                        <span className="text-muted-foreground"> - {m.note}</span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Detail Modal */}
-      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setDetails(null); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{selected?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-auto flex-1 -mx-6 px-6">
-            {loadingDetail ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <AnkaLoader /></div>
-            ) : runningDetails.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Tidak ada mutasi untuk produk ini pada periode terpilih.
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
-                    <th className="text-left px-3 py-3 font-medium">Tanggal</th>
-                    <th className="text-left px-3 py-3 font-medium">Tipe</th>
-                    <th className="text-right px-3 py-3 font-medium">Awal</th>
-                    <th className="text-right px-3 py-3 font-medium">Masuk</th>
-                    <th className="text-right px-3 py-3 font-medium">Keluar</th>
-                    <th className="text-right px-3 py-3 font-medium">Sisa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runningDetails.map((d, i) => (
-                    <tr key={i} className="border-t hover:bg-muted/30">
-                      <td className="px-3 py-3 text-xs">{formatDate(d.date)}</td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-muted-foreground">{d.type}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleBidClick(d)}
-                            className="text-primary hover:underline font-mono text-xs text-left"
-                          >
-                            {d.bid}
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-right">{d.awalBaris}</td>
-                      <td className={`px-3 py-3 text-right ${d.qtyIn > 0 ? "text-green-600 font-semibold" : "text-muted-foreground"}`}>{d.qtyIn}</td>
-                      <td className={`px-3 py-3 text-right ${d.qtyOut > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>{d.qtyOut}</td>
-                      <td className="px-3 py-3 text-right font-semibold">{d.sisaBaris}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-3 border-t">
-            <Button variant="outline" onClick={() => { setSelected(null); setDetails(null); }} className="gap-2">
-              <X className="h-4 w-4" /> Tutup
+      {/* Pagination */}
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
+          <span>
+            Menampilkan {(currentPage - 1) * pageSize + 1}-
+            {Math.min(currentPage * pageSize, filtered.length)} dari {filtered.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-2">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* BID Preview Popup */}
       {preview && (
