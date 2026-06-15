@@ -22,6 +22,9 @@ import { toast } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../reports/ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
 
 interface Expense {
   id: string;
@@ -63,6 +66,8 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
+  const isSuperAdmin = useIsSuperAdmin();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
