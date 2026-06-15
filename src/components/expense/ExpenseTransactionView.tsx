@@ -429,6 +429,29 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   const total = useMemo(() => filteredExpenses.reduce((s, e) => s + Number(e.amount), 0), [filteredExpenses]);
 
+  const showBulkDelete = isSuperAdmin && processTab === "batal";
+  useEffect(() => { setSelectedIds(new Set()); }, [processTab, currentStore?.id]);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredExpenses.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredExpenses.map((e) => e.id)));
+  };
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase.from("expenses").delete().in("id", ids);
+    if (error) { toast.error(error.message || "Gagal menghapus"); return; }
+    toast.success(`${ids.length} pengeluaran dihapus permanen`);
+    setSelectedIds(new Set());
+    setExpenses((prev) => prev.filter((e) => !ids.includes(e.id)));
+  };
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
