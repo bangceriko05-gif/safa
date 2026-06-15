@@ -1290,15 +1290,26 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Tabs value={processTab} onValueChange={setProcessTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              {PROCESS_TABS.map((tab) => (
-                <TabsTrigger key={tab.key} value={tab.key}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <Tabs value={processTab} onValueChange={setProcessTab} className="flex-1">
+              <TabsList className="grid w-full grid-cols-4">
+                {PROCESS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {showBulkDelete && (
+              <BulkDeleteBatalBar
+                selectedCount={selectedIds.size}
+                totalCount={filteredIncomes.length}
+                entityLabel="pemasukan"
+                onSelectAllToggle={toggleSelectAll}
+                onDelete={handleBulkDelete}
+              />
+            )}
+          </div>
 
           <div className="flex gap-2 flex-wrap">
             <Select value={paymentFilter} onValueChange={setPaymentFilter}>
@@ -1335,6 +1346,14 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {showBulkDelete && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={filteredIncomes.length > 0 && selectedIds.size === filteredIncomes.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
                     <TableHead>Pelanggan</TableHead>
@@ -1350,6 +1369,14 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                 <TableBody>
                   {filteredIncomes.map((income) => (
                     <TableRow key={income.id}>
+                      {showBulkDelete && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(income.id)}
+                            onCheckedChange={() => toggleSelect(income.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(income.date), "dd/MM/yyyy")}
                       </TableCell>
