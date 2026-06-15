@@ -564,23 +564,24 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                     className="opacity-70 bg-muted/30"
                   >
                     <TableCell>
-                      {isSuperAdmin ? (
-                        <Checkbox
-                          checked={selectedIds.has(booking.id)}
-                          onCheckedChange={() => toggleSelect(booking.id)}
-                        />
-                      ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedBookingId(booking.id);
-                          setDetailPopupOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {isSuperAdmin && (
+                          <Checkbox
+                            checked={selectedIds.has(booking.id)}
+                            onCheckedChange={() => toggleSelect(booking.id)}
+                          />
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBookingId(booking.id);
+                            setDetailPopupOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
