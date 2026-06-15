@@ -972,15 +972,26 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Process status tabs */}
-          <Tabs value={processTab} onValueChange={setProcessTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              {PROCESS_TABS.map((tab) => (
-                <TabsTrigger key={tab.key} value={tab.key}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <Tabs value={processTab} onValueChange={setProcessTab} className="flex-1">
+              <TabsList className="grid w-full grid-cols-4">
+                {PROCESS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {showBulkDelete && (
+              <BulkDeleteBatalBar
+                selectedCount={selectedIds.size}
+                totalCount={filteredExpenses.length}
+                entityLabel="pengeluaran"
+                onSelectAllToggle={toggleSelectAll}
+                onDelete={handleBulkDelete}
+              />
+            )}
+          </div>
 
           {/* Table */}
           {loading ? (
@@ -992,6 +1003,14 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {showBulkDelete && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={filteredExpenses.length > 0 && selectedIds.size === filteredExpenses.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
                     <TableHead>
@@ -1044,6 +1063,14 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                 <TableBody>
                   {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
+                      {showBulkDelete && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(expense.id)}
+                            onCheckedChange={() => toggleSelect(expense.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(expense.date), "dd/MM/yyyy")}
                       </TableCell>
