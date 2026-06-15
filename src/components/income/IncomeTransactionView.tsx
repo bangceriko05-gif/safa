@@ -24,6 +24,9 @@ import { toast } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../reports/ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
 
 interface Income {
   id: string;
@@ -65,6 +68,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
+  const isSuperAdmin = useIsSuperAdmin();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [noteDialogData, setNoteDialogData] = useState<Income | null>(null);
@@ -506,6 +511,30 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   }, [incomes, searchQuery, paymentFilter, verificationFilter]);
 
   const total = useMemo(() => filteredIncomes.reduce((s, i) => s + Number(i.amount), 0), [filteredIncomes]);
+
+  const showBulkDelete = isSuperAdmin && processTab === "batal";
+  useEffect(() => { setSelectedIds(new Set()); }, [processTab, currentStore?.id]);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredIncomes.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredIncomes.map((i) => i.id)));
+  };
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    await supabase.from("income_products").delete().in("income_id", ids);
+    const { error } = await supabase.from("incomes").delete().in("id", ids);
+    if (error) { toast.error(error.message || "Gagal menghapus"); return; }
+    toast.success(`${ids.length} pemasukan dihapus permanen`);
+    setSelectedIds(new Set());
+    setIncomes((prev) => prev.filter((i) => !ids.includes(i.id)));
+  };
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
