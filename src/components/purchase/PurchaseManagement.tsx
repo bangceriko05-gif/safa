@@ -12,7 +12,18 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, CalendarIcon, Copy, FileText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, CalendarIcon, Copy, FileText, Trash2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
@@ -67,6 +78,23 @@ export default function PurchaseManagement() {
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [noteDialogPurchaseId, setNoteDialogPurchaseId] = useState<string | null>(null);
   const [previewPurchase, setPreviewPurchase] = useState<Purchase | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.rpc("is_super_admin", { _user_id: user.id });
+      setIsSuperAdmin(!!data);
+    })();
+  }, []);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [processTab, currentStore?.id]);
 
   const getDateRange = () => {
     const now = new Date();
@@ -190,6 +218,47 @@ export default function PurchaseManagement() {
     return Array.from(methods);
   }, [purchases]);
 
+  const showBulkDelete = isSuperAdmin && processTab === "batal";
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredPurchases.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPurchases.map((p) => p.id)));
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const { error } = await supabase
+        .from("purchases" as any)
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      toast.success(`${ids.length} pembelian dihapus permanen`);
+      setSelectedIds(new Set());
+      setConfirmDeleteOpen(false);
+      fetchPurchases();
+    } catch (e: any) {
+      console.error("Permanent delete error:", e);
+      toast.error(e.message || "Gagal menghapus data");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (showForm) {
     return (
       <PurchaseForm
@@ -306,6 +375,34 @@ export default function PurchaseManagement() {
                 ))}
               </SelectContent>
             </Select>
+            {showBulkDelete && (
+              <div className="ml-auto flex items-center gap-2">
+                {selectedIds.size > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    {selectedIds.size} dipilih
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                  disabled={filteredPurchases.length === 0}
+                >
+                  {selectedIds.size === filteredPurchases.length && filteredPurchases.length > 0
+                    ? "Batal Pilih Semua"
+                    : "Pilih Semua"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  disabled={selectedIds.size === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Hapus Permanen
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Table */}
@@ -318,6 +415,17 @@ export default function PurchaseManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {showBulkDelete && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={
+                            filteredPurchases.length > 0 &&
+                            selectedIds.size === filteredPurchases.length
+                          }
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
                     <TableHead>Nota</TableHead>
@@ -336,6 +444,14 @@ export default function PurchaseManagement() {
                       className={purchase.is_draft ? "cursor-pointer hover:bg-accent/40" : ""}
                       onClick={purchase.is_draft ? () => { setEditingPurchaseId(purchase.id); setShowForm(true); } : undefined}
                     >
+                      {showBulkDelete && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(purchase.id)}
+                            onCheckedChange={() => toggleSelect(purchase.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(purchase.date), "dd/MM/yyyy")}
                       </TableCell>
@@ -488,6 +604,32 @@ export default function PurchaseManagement() {
           }
         }}
       />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Permanen Pembelian Batal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan menghapus permanen <b>{selectedIds.size}</b> transaksi pembelian
+              berstatus "Batal". Tindakan ini tidak dapat dibatalkan dan akan menghapus
+              semua data terkait (item, BID).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handlePermanentDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Menghapus..." : "Ya, Hapus Permanen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
