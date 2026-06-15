@@ -22,6 +22,9 @@ import { toast } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "../reports/ReportDateFilter";
 import { DateRange } from "react-day-picker";
 import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
 
 interface Expense {
   id: string;
@@ -63,6 +66,8 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
+  const isSuperAdmin = useIsSuperAdmin();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
@@ -423,6 +428,29 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   }, [expenses, searchQuery, categoryFilter, paymentFilter, verificationFilter]);
 
   const total = useMemo(() => filteredExpenses.reduce((s, e) => s + Number(e.amount), 0), [filteredExpenses]);
+
+  const showBulkDelete = isSuperAdmin && processTab === "batal";
+  useEffect(() => { setSelectedIds(new Set()); }, [processTab, currentStore?.id]);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredExpenses.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredExpenses.map((e) => e.id)));
+  };
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase.from("expenses").delete().in("id", ids);
+    if (error) { toast.error(error.message || "Gagal menghapus"); return; }
+    toast.success(`${ids.length} pengeluaran dihapus permanen`);
+    setSelectedIds(new Set());
+    setExpenses((prev) => prev.filter((e) => !ids.includes(e.id)));
+  };
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
@@ -944,15 +972,26 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Process status tabs */}
-          <Tabs value={processTab} onValueChange={setProcessTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              {PROCESS_TABS.map((tab) => (
-                <TabsTrigger key={tab.key} value={tab.key}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <Tabs value={processTab} onValueChange={setProcessTab} className="flex-1">
+              <TabsList className="grid w-full grid-cols-4">
+                {PROCESS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {showBulkDelete && (
+              <BulkDeleteBatalBar
+                selectedCount={selectedIds.size}
+                totalCount={filteredExpenses.length}
+                entityLabel="pengeluaran"
+                onSelectAllToggle={toggleSelectAll}
+                onDelete={handleBulkDelete}
+              />
+            )}
+          </div>
 
           {/* Table */}
           {loading ? (
@@ -964,6 +1003,14 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {showBulkDelete && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={filteredExpenses.length > 0 && selectedIds.size === filteredExpenses.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
                     <TableHead>
@@ -1016,6 +1063,14 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                 <TableBody>
                   {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
+                      {showBulkDelete && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(expense.id)}
+                            onCheckedChange={() => toggleSelect(expense.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="whitespace-nowrap">
                         {format(new Date(expense.date), "dd/MM/yyyy")}
                       </TableCell>
