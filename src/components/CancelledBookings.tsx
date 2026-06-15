@@ -33,6 +33,9 @@ import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
 import BookingDetailPopup from "./BookingDetailPopup";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import BulkDeleteBatalBar from "./shared/BulkDeleteBatalBar";
 
 interface CancelledBookingsProps {
   userRole: string | null;
@@ -60,6 +63,8 @@ interface BookingWithRoom {
 
 export default function CancelledBookings({ userRole, onEditBooking }: CancelledBookingsProps) {
   const { currentStore } = useStore();
+  const isSuperAdmin = useIsSuperAdmin();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("thisMonth");
@@ -349,6 +354,37 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
     );
   });
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredBookings.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredBookings.map((b) => b.id)));
+    }
+  };
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    try {
+      await supabase.from("booking_products").delete().in("booking_id", ids);
+      const { error } = await supabase.from("bookings").delete().in("id", ids);
+      if (error) throw error;
+      toast.success(`${ids.length} booking dihapus permanen`);
+      setSelectedIds(new Set());
+      fetchBookings();
+      window.dispatchEvent(new CustomEvent("booking-changed"));
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Gagal menghapus booking");
+    }
+  };
+
   
 
   return (
@@ -475,6 +511,15 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
               className="pl-9"
             />
           </div>
+          {isSuperAdmin && (
+            <BulkDeleteBatalBar
+              selectedCount={selectedIds.size}
+              totalCount={filteredBookings.length}
+              entityLabel="booking"
+              onSelectAllToggle={toggleSelectAll}
+              onDelete={handleBulkDelete}
+            />
+          )}
         </div>
 
         {/* Booking Table */}
@@ -491,7 +536,17 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="w-10">
+                    {isSuperAdmin && (
+                      <Checkbox
+                        checked={
+                          filteredBookings.length > 0 &&
+                          selectedIds.size === filteredBookings.length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    )}
+                  </TableHead>
                   <TableHead>BID</TableHead>
                   <TableHead>Nama Customer</TableHead>
                   <TableHead>Kamar</TableHead>
@@ -509,6 +564,12 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                     className="opacity-70 bg-muted/30"
                   >
                     <TableCell>
+                      {isSuperAdmin ? (
+                        <Checkbox
+                          checked={selectedIds.has(booking.id)}
+                          onCheckedChange={() => toggleSelect(booking.id)}
+                        />
+                      ) : (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -519,6 +580,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
