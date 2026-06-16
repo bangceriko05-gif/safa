@@ -117,7 +117,7 @@ export default function StockMovementList() {
         .select("id, name, stock_qty")
         .eq("store_id", storeId)
         .order("name");
-      type ProdInfo = { id: string; name: string; currentStock: number; unit: string };
+      type ProdInfo = { id: string; name: string; currentStock: number; unit: string; baseFactor: number };
       const productMap = new Map<string, ProdInfo>();
       ((productsData as any[]) || []).forEach((p) =>
         productMap.set(p.id, {
@@ -125,6 +125,7 @@ export default function StockMovementList() {
           name: p.name,
           currentStock: Number(p.stock_qty || 0),
           unit: "",
+          baseFactor: 1,
         }),
       );
       setProducts(((productsData as any[]) || []).map((p) => ({ id: p.id, name: p.name })));
@@ -134,11 +135,18 @@ export default function StockMovementList() {
       if (productIds.length > 0) {
         const { data: convs } = await supabase
           .from("product_unit_conversions")
-          .select("product_id, to_unit, from_unit")
+          .select("product_id, to_unit, from_unit, factor, is_active")
           .in("product_id", productIds);
         ((convs as any[]) || []).forEach((c) => {
+          if (c.is_active === false) return;
           const p = productMap.get(c.product_id);
-          if (p && !p.unit) p.unit = c.to_unit || c.from_unit || "";
+          if (!p) return;
+          const factor = Number(c.factor) || 1;
+          if (!p.unit) p.unit = c.to_unit || c.from_unit || "";
+          if (factor > p.baseFactor) p.baseFactor = factor;
+        });
+        productMap.forEach((p) => {
+          p.currentStock *= p.baseFactor;
         });
       }
 
@@ -184,13 +192,13 @@ export default function StockMovementList() {
         siHeaders.length > 0
           ? supabase
               .from("stock_in_items" as any)
-              .select("stock_in_id, product_id, quantity")
+              .select("stock_in_id, product_id, product_name, quantity")
               .in("stock_in_id", siHeaders.map((h: any) => h.id))
           : Promise.resolve({ data: [] as any[] } as any),
         soHeaders.length > 0
           ? supabase
               .from("stock_out_items" as any)
-              .select("stock_out_id, product_id, quantity")
+              .select("stock_out_id, product_id, product_name, quantity")
               .in("stock_out_id", soHeaders.map((h: any) => h.id))
           : Promise.resolve({ data: [] as any[] } as any),
         opHeaders.length > 0
@@ -216,7 +224,7 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const factor = parseFactorFromName(it.product_name || "");
+        const factor = Math.max(parseFactorFromName(it.product_name || ""), p.baseFactor || 1);
         const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
