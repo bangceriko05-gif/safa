@@ -202,7 +202,7 @@ export default function StockMovementList() {
         bkHeaders.length > 0
           ? supabase
               .from("booking_products")
-              .select("booking_id, product_id, quantity")
+              .select("booking_id, product_id, quantity, product_name")
               .in("booking_id", bkHeaders.map((h: any) => h.id))
           : Promise.resolve({ data: [] as any[] } as any),
       ]);
@@ -282,7 +282,8 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const qty = Number(it.quantity || 0);
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.created_at || h.date,
           productId: p.id,
