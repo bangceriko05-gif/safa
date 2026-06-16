@@ -53,7 +53,8 @@ const parseFactorFromName = (productName: string): number => {
   const inner = m[1];
   const f = inner.match(/\/\s*([\d.,]+)\s+/);
   if (!f) return 1;
-  const num = parseFloat(f[1].replace(/\./g, "").replace(",", "."));
+  const digits = f[1].replace(/\D/g, "");
+  const num = parseInt(digits, 10);
   return Number.isFinite(num) && num > 0 ? num : 1;
 };
 
