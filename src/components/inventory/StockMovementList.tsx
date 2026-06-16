@@ -224,7 +224,7 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const factor = parseFactorFromName(it.product_name || "");
+        const factor = Math.max(parseFactorFromName(it.product_name || ""), p.baseFactor || 1);
         const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
