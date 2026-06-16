@@ -43,6 +43,21 @@ const fmtNum = (n: number) => {
   return Number(n.toFixed(3)).toLocaleString("id-ID", { maximumFractionDigits: 3 });
 };
 
+// Parse multiplier factor from product_name like "AJINOMOTO (kg / 1000 gram)" => 1000.
+// When the item was entered in a non-base unit, the conversion factor is embedded
+// in the stored product_name in parentheses. Fallback to 1 when absent.
+const parseFactorFromName = (productName: string): number => {
+  if (!productName) return 1;
+  const m = productName.match(/\(([^)]+)\)\s*$/);
+  if (!m) return 1;
+  const inner = m[1];
+  const f = inner.match(/\/\s*([\d.,]+)\s+/);
+  if (!f) return 1;
+  const digits = f[1].replace(/\D/g, "");
+  const num = parseInt(digits, 10);
+  return Number.isFinite(num) && num > 0 ? num : 1;
+};
+
 export default function StockMovementList() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
@@ -187,7 +202,7 @@ export default function StockMovementList() {
         bkHeaders.length > 0
           ? supabase
               .from("booking_products")
-              .select("booking_id, product_id, quantity")
+              .select("booking_id, product_id, quantity, product_name")
               .in("booking_id", bkHeaders.map((h: any) => h.id))
           : Promise.resolve({ data: [] as any[] } as any),
       ]);
@@ -201,7 +216,8 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const qty = Number(it.quantity || 0);
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
           productId: p.id,
@@ -222,7 +238,8 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const qty = Number(it.quantity || 0);
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
           productId: p.id,
@@ -265,7 +282,8 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const qty = Number(it.quantity || 0);
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.created_at || h.date,
           productId: p.id,
