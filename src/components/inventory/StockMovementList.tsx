@@ -216,7 +216,8 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const qty = Number(it.quantity || 0);
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
           productId: p.id,
@@ -237,7 +238,8 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const qty = Number(it.quantity || 0);
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
           productId: p.id,
