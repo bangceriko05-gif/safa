@@ -43,6 +43,20 @@ const fmtNum = (n: number) => {
   return Number(n.toFixed(3)).toLocaleString("id-ID", { maximumFractionDigits: 3 });
 };
 
+// Parse multiplier factor from product_name like "AJINOMOTO (kg / 1000 gram)" => 1000.
+// When the item was entered in a non-base unit, the conversion factor is embedded
+// in the stored product_name in parentheses. Fallback to 1 when absent.
+const parseFactorFromName = (productName: string): number => {
+  if (!productName) return 1;
+  const m = productName.match(/\(([^)]+)\)\s*$/);
+  if (!m) return 1;
+  const inner = m[1];
+  const f = inner.match(/\/\s*([\d.,]+)\s+/);
+  if (!f) return 1;
+  const num = parseFloat(f[1].replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(num) && num > 0 ? num : 1;
+};
+
 export default function StockMovementList() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
