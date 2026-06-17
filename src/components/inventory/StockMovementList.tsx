@@ -145,37 +145,35 @@ export default function StockMovementList() {
           if (!p.unit) p.unit = c.to_unit || c.from_unit || "";
           if (factor > p.baseFactor) p.baseFactor = factor;
         });
-        productMap.forEach((p) => {
-          p.currentStock *= p.baseFactor;
-        });
       }
 
-      // Pull all posted movements within range AND after range (for back-walking)
+      // Pull all posted movements up to selected end date, then calculate stock
+      // chronologically from zero so each row reflects the real before/after flow.
       const [siRes, soRes, opRes, bkRes] = await Promise.all([
         supabase
           .from("stock_in" as any)
           .select("id, bid, date, posted_at, status, notes")
           .eq("store_id", storeId)
           .eq("status", "posted")
-          .gte("date", fromStr),
+          .lte("date", toStr),
         supabase
           .from("stock_out" as any)
           .select("id, bid, date, posted_at, status, notes, reason, recipient")
           .eq("store_id", storeId)
           .eq("status", "posted")
-          .gte("date", fromStr),
+          .lte("date", toStr),
         supabase
           .from("stock_opname" as any)
           .select("id, bid, date, posted_at, status, notes")
           .eq("store_id", storeId)
           .eq("status", "posted")
-          .gte("date", fromStr),
+          .lte("date", toStr),
         supabase
           .from("bookings")
           .select("id, bid, date, created_at, status, customer_name")
           .eq("store_id", storeId)
           .neq("status", "BATAL")
-          .gte("date", fromStr),
+          .lte("date", toStr),
       ]);
 
       const siHeaders = (siRes.data as any[]) || [];
@@ -224,7 +222,7 @@ export default function StockMovementList() {
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
-        const factor = Math.max(parseFactorFromName(it.product_name || ""), p.baseFactor || 1);
+        const factor = parseFactorFromName(it.product_name || "");
         const qty = Number(it.quantity || 0) * factor;
         raw.push({
           ts: h.posted_at || h.date,
@@ -259,7 +257,7 @@ export default function StockMovementList() {
           bid: h.bid || "-",
           refType: "stock_out",
           refId: h.id,
-          note: h.notes || h.reason || (h.recipient ? `Diberikan ke ${h.recipient}` : "Pemakaian bahan"),
+          note: "Stok keluar",
         });
       });
 
@@ -307,17 +305,18 @@ export default function StockMovementList() {
         });
       });
 
-      // Sort by timestamp desc (newest first)
-      raw.sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
+      // Sort by timestamp asc (oldest first) and compute running stock forward.
+      raw.sort((a, b) => (a.ts > b.ts ? 1 : a.ts < b.ts ? -1 : a.bid.localeCompare(b.bid)));
 
-      // Compute running stock per product walking backwards from current
+      // Compute running stock per product from movement history, not from the
+      // current product stock cache, because cached stock can use source units.
       const runningPerProduct = new Map<string, number>();
-      productMap.forEach((p) => runningPerProduct.set(p.id, p.currentStock));
+      productMap.forEach((p) => runningPerProduct.set(p.id, 0));
 
       const result: Movement[] = raw.map((r) => {
-        const after = runningPerProduct.get(r.productId) ?? 0;
-        const before = after - r.delta;
-        runningPerProduct.set(r.productId, before);
+        const before = runningPerProduct.get(r.productId) ?? 0;
+        const after = before + r.delta;
+        runningPerProduct.set(r.productId, after);
         return {
           ts: r.ts,
           productId: r.productId,
@@ -338,7 +337,7 @@ export default function StockMovementList() {
       const filtered = result.filter((m) => {
         const dateOnly = m.ts.slice(0, 10);
         return dateOnly >= fromStr && dateOnly <= toStr;
-      });
+      }).sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : b.bid.localeCompare(a.bid)));
 
       setMovements(filtered);
     } catch (err) {
