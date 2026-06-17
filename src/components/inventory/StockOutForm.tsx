@@ -470,7 +470,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       toast.error("Gagal posting: " + error.message);
       return;
     }
-    toast.success("Stok masuk berhasil di-post");
+    toast.success("Stok keluar berhasil di-post");
     onBack();
   };
 
@@ -537,7 +537,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       toast.error("Gagal membatalkan: " + error.message);
       return;
     }
-    toast.success("Stok masuk dibatalkan");
+    toast.success("Stok keluar dibatalkan");
     setStatus("cancelled");
     setCancelOpen(false);
   };
