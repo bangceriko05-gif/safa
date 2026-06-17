@@ -111,21 +111,19 @@ export default function StockMovementList() {
       const fromStr = fromIso.toISOString().split("T")[0];
       const toStr = toIso.toISOString().split("T")[0];
 
-      // 1. All products + current stock + base unit lookup
+      // 1. All products + base unit lookup
       const { data: productsData } = await supabase
         .from("products")
-        .select("id, name, stock_qty")
+        .select("id, name")
         .eq("store_id", storeId)
         .order("name");
-      type ProdInfo = { id: string; name: string; currentStock: number; unit: string; baseFactor: number };
+      type ProdInfo = { id: string; name: string; unit: string };
       const productMap = new Map<string, ProdInfo>();
       ((productsData as any[]) || []).forEach((p) =>
         productMap.set(p.id, {
           id: p.id,
           name: p.name,
-          currentStock: Number(p.stock_qty || 0),
           unit: "",
-          baseFactor: 1,
         }),
       );
       setProducts(((productsData as any[]) || []).map((p) => ({ id: p.id, name: p.name })));
@@ -141,9 +139,7 @@ export default function StockMovementList() {
           if (c.is_active === false) return;
           const p = productMap.get(c.product_id);
           if (!p) return;
-          const factor = Number(c.factor) || 1;
           if (!p.unit) p.unit = c.to_unit || c.from_unit || "";
-          if (factor > p.baseFactor) p.baseFactor = factor;
         });
       }
 
