@@ -3422,6 +3422,7 @@ export type Database = {
             Args: { p_request_id: string; p_status?: string; p_user_id: string }
             Returns: string
           }
+      extract_factor_from_name: { Args: { p_name: string }; Returns: number }
       generate_asset_bid: { Args: { p_store_id: string }; Returns: string }
       generate_booking_bid:
         | {

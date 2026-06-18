@@ -93,10 +93,22 @@ export default function ExpenseChartReport() {
     [categories],
   );
 
-  const pieData = categories.map((c) => ({ name: c.category, value: c.total }));
+  // Group very small slices into "Lainnya" so labels don't overlap
+  const pieData = useMemo(() => {
+    const threshold = 0.03; // 3%
+    const big: { name: string; value: number }[] = [];
+    let otherTotal = 0;
+    categories.forEach((c) => {
+      const pct = total > 0 ? c.total / total : 0;
+      if (pct >= threshold) big.push({ name: c.category, value: c.total });
+      else otherTotal += c.total;
+    });
+    if (otherTotal > 0) big.push({ name: "Lainnya", value: otherTotal });
+    return big;
+  }, [categories, total]);
 
-  const renderLabel = ({ name, value, cx, x, y, percent }: any) => {
-    if (percent < 0.03) return null; // hide tiny slices to prevent overlap
+  const renderLabel = ({ name, cx, x, y, percent }: any) => {
+    if (percent < 0.03) return null;
     const pct = (percent * 100).toFixed(1);
     return (
       <text
@@ -180,6 +192,11 @@ export default function ExpenseChartReport() {
                       </Pie>
                       <Tooltip
                         formatter={(value: number) => formatCurrency(value)}
+                      />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        wrapperStyle={{ fontSize: 11 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
