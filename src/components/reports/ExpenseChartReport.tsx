@@ -193,6 +193,11 @@ export default function ExpenseChartReport() {
                       <Tooltip
                         formatter={(value: number) => formatCurrency(value)}
                       />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        wrapperStyle={{ fontSize: 11 }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
