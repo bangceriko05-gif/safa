@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 const ProductManagement = lazy(() => import("./ProductManagement"));
-import CategoryManagement from "./CategoryManagement";
+const CategoryManagement = lazy(() => import("./CategoryManagement"));
 const InventoryManagement = lazy(() => import("./inventory/InventoryManagement"));
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
@@ -113,20 +113,22 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
   });
 
   useEffect(() => {
-    if (currentStore) {
+    const shouldLoadRooms = !section || section === "rooms";
+    if (currentStore && shouldLoadRooms) {
       fetchRooms();
       fetchCategories();
       fetchAllVariantCounts();
     }
-  }, [currentStore]);
+  }, [currentStore, section]);
 
   useEffect(() => {
+    if (section && section !== "rooms") return;
     rooms.forEach(room => {
       if (expandedRooms.has(room.id)) {
         fetchRoomVariants(room.id);
       }
     });
-  }, [expandedRooms, rooms]);
+  }, [expandedRooms, rooms, section]);
 
   const fetchAllVariantCounts = async () => {
     if (!currentStore) return;
@@ -960,14 +962,18 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       </Dialog>
 
       {/* Category Management Dialog */}
-      <CategoryManagement 
-        isOpen={isCategoryDialogOpen} 
-        onClose={() => setIsCategoryDialogOpen(false)}
-        onCategoryChanged={() => {
-          fetchCategories();
-          fetchRooms();
-        }}
-      />
+      {isCategoryDialogOpen && (
+        <Suspense fallback={null}>
+          <CategoryManagement 
+            isOpen={isCategoryDialogOpen} 
+            onClose={() => setIsCategoryDialogOpen(false)}
+            onCategoryChanged={() => {
+              fetchCategories();
+              fetchRooms();
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
