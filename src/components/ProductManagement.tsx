@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -56,6 +56,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
+import AnkaLoader from "@/components/AnkaLoader";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -67,8 +68,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ProductEditorModal from "./products/ProductEditorModal";
-import ImportProductsDialog from "./products/ImportProductsDialog";
+const ProductEditorModal = lazy(() => import("./products/ProductEditorModal"));
+const ImportProductsDialog = lazy(() => import("./products/ImportProductsDialog"));
 
 interface Product {
   id: string;
@@ -124,6 +125,7 @@ export default function ProductManagement() {
   const [brands, setBrands] = useState<RefItem[]>([]);
   const [collections, setCollections] = useState<RefItem[]>([]);
   const [materials, setMaterials] = useState<RefItem[]>([]);
+  const [productMetaLoading, setProductMetaLoading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorProductId, setEditorProductId] = useState<string | null>(null);
   const [editorCopyMode, setEditorCopyMode] = useState(false);
@@ -169,7 +171,7 @@ export default function ProductManagement() {
   const fetchAll = async () => {
     if (!currentStore) return;
     try {
-      const [pRes, vRes, rRes, cRes, bRes, kRes, mRes] = await Promise.all([
+      const [pRes, cRes, bRes, kRes, mRes] = await Promise.all([
         supabase
           .from("products")
           .select(
@@ -177,8 +179,6 @@ export default function ProductManagement() {
           )
           .eq("store_id", currentStore.id)
           .order("name"),
-        supabase.from("product_variants").select("id, product_id, variant_name"),
-        supabase.from("product_recipes" as any).select("product_id"),
         supabase
           .from("product_categories")
           .select("id, name")
@@ -201,27 +201,37 @@ export default function ProductManagement() {
           .order("name"),
       ]);
       if (pRes.error) throw pRes.error;
-      setProducts((pRes.data as any) || []);
-      setVariants((vRes.data as any) || []);
-      setRecipes((rRes.data as any) || []);
+      const productRows = (pRes.data as any[]) || [];
+      setProducts(productRows as any);
       setCategories((cRes.data as any) || []);
       setBrands((bRes.data as any) || []);
       setCollections((kRes.data as any) || []);
       setMaterials((mRes.data as any) || []);
-      // Load unit conversions for products in this store (for "Satuan" column base unit)
-      const productIds = ((pRes.data as any[]) || []).map((p) => p.id);
+      const productIds = productRows.map((p) => p.id);
       if (productIds.length > 0) {
-        const { data: ucData } = await supabase
-          .from("product_unit_conversions")
-          .select("product_id, from_unit, to_unit, factor, is_active")
-          .in("product_id", productIds);
+        setProductMetaLoading(true);
+        const [vRes, rRes, ucRes] = await Promise.all([
+          supabase.from("product_variants").select("id, product_id, variant_name").in("product_id", productIds),
+          supabase.from("product_recipes" as any).select("product_id").in("product_id", productIds),
+          supabase
+            .from("product_unit_conversions")
+            .select("product_id, from_unit, to_unit, factor, is_active")
+            .in("product_id", productIds),
+        ]);
+        setVariants((vRes.data as any) || []);
+        setRecipes((rRes.data as any) || []);
+        const ucData = ucRes.data;
         setUnitConversions((ucData as any) || []);
       } else {
+        setVariants([]);
+        setRecipes([]);
         setUnitConversions([]);
       }
     } catch (e) {
       console.error(e);
       toast.error("Gagal memuat data produk");
+    } finally {
+      setProductMetaLoading(false);
     }
   };
 
