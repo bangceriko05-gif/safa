@@ -269,6 +269,34 @@ export default function ProductManagement() {
     return Number.isFinite(f) && f > 0 ? f : 1;
   };
 
+  const variantsByProductMap = useMemo(() => {
+    const map = new Map<string, Variant[]>();
+    variants.forEach((v) => {
+      const rows = map.get(v.product_id) || [];
+      rows.push(v);
+      map.set(v.product_id, rows);
+    });
+    return map;
+  }, [variants]);
+
+  const recipeProductIds = useMemo(
+    () => new Set(recipes.map((r) => r.product_id)),
+    [recipes]
+  );
+
+  const unitMetaByProduct = useMemo(() => {
+    const map = new Map<string, { unit: string; factor: number }>();
+    unitConversions.forEach((c) => {
+      if (!c.is_active || map.has(c.product_id)) return;
+      const f = Number((c as any).factor);
+      map.set(c.product_id, {
+        unit: c.to_unit || c.from_unit || "pcs",
+        factor: Number.isFinite(f) && f > 0 ? f : 1,
+      });
+    });
+    return map;
+  }, [unitConversions]);
+
   const handleDelete = async (product: Product) => {
     if (!canDelete) {
       toast.error("Anda tidak memiliki permission hapus produk");
@@ -566,7 +594,7 @@ export default function ProductManagement() {
     setBulkDeleteOpen(true);
   };
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = useMemo(() => products.filter((p) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hit =
@@ -580,23 +608,25 @@ export default function ProductManagement() {
     if (filterCollection && p.collection_id !== filterCollection) return false;
     if (filterMaterial && p.material_id !== filterMaterial) return false;
     return true;
-  });
+  }), [products, searchQuery, filterCategory, filterBrand, filterCollection, filterMaterial]);
 
   const variantsByProduct = (productId: string) =>
-    variants.filter((v) => v.product_id === productId);
+    variantsByProductMap.get(productId) || [];
 
   const hasRecipe = (productId: string) =>
-    recipes.some((r) => r.product_id === productId);
+    recipeProductIds.has(productId);
 
   if (editorOpen) {
     return (
       <div className="fixed inset-0 z-50 bg-background overflow-auto">
-        <ProductEditorModal
-          productId={editorProductId}
-          copyMode={editorCopyMode}
-          onClose={handleCloseEditor}
-          onSaved={fetchAll}
-        />
+        <Suspense fallback={<AnkaLoader />}>
+          <ProductEditorModal
+            productId={editorProductId}
+            copyMode={editorCopyMode}
+            onClose={handleCloseEditor}
+            onSaved={fetchAll}
+          />
+        </Suspense>
       </div>
     );
   }
