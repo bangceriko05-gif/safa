@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -56,6 +56,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
+import AnkaLoader from "@/components/AnkaLoader";
 import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -67,8 +68,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ProductEditorModal from "./products/ProductEditorModal";
-import ImportProductsDialog from "./products/ImportProductsDialog";
+const ProductEditorModal = lazy(() => import("./products/ProductEditorModal"));
+const ImportProductsDialog = lazy(() => import("./products/ImportProductsDialog"));
 
 interface Product {
   id: string;
@@ -124,6 +125,7 @@ export default function ProductManagement() {
   const [brands, setBrands] = useState<RefItem[]>([]);
   const [collections, setCollections] = useState<RefItem[]>([]);
   const [materials, setMaterials] = useState<RefItem[]>([]);
+  const [productMetaLoading, setProductMetaLoading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorProductId, setEditorProductId] = useState<string | null>(null);
   const [editorCopyMode, setEditorCopyMode] = useState(false);
@@ -169,7 +171,7 @@ export default function ProductManagement() {
   const fetchAll = async () => {
     if (!currentStore) return;
     try {
-      const [pRes, vRes, rRes, cRes, bRes, kRes, mRes] = await Promise.all([
+      const [pRes, cRes, bRes, kRes, mRes] = await Promise.all([
         supabase
           .from("products")
           .select(
@@ -177,8 +179,6 @@ export default function ProductManagement() {
           )
           .eq("store_id", currentStore.id)
           .order("name"),
-        supabase.from("product_variants").select("id, product_id, variant_name"),
-        supabase.from("product_recipes" as any).select("product_id"),
         supabase
           .from("product_categories")
           .select("id, name")
@@ -201,27 +201,37 @@ export default function ProductManagement() {
           .order("name"),
       ]);
       if (pRes.error) throw pRes.error;
-      setProducts((pRes.data as any) || []);
-      setVariants((vRes.data as any) || []);
-      setRecipes((rRes.data as any) || []);
+      const productRows = (pRes.data as any[]) || [];
+      setProducts(productRows as any);
       setCategories((cRes.data as any) || []);
       setBrands((bRes.data as any) || []);
       setCollections((kRes.data as any) || []);
       setMaterials((mRes.data as any) || []);
-      // Load unit conversions for products in this store (for "Satuan" column base unit)
-      const productIds = ((pRes.data as any[]) || []).map((p) => p.id);
+      const productIds = productRows.map((p) => p.id);
       if (productIds.length > 0) {
-        const { data: ucData } = await supabase
-          .from("product_unit_conversions")
-          .select("product_id, from_unit, to_unit, factor, is_active")
-          .in("product_id", productIds);
+        setProductMetaLoading(true);
+        const [vRes, rRes, ucRes] = await Promise.all([
+          supabase.from("product_variants").select("id, product_id, variant_name").in("product_id", productIds),
+          supabase.from("product_recipes" as any).select("product_id").in("product_id", productIds),
+          supabase
+            .from("product_unit_conversions")
+            .select("product_id, from_unit, to_unit, factor, is_active")
+            .in("product_id", productIds),
+        ]);
+        setVariants((vRes.data as any) || []);
+        setRecipes((rRes.data as any) || []);
+        const ucData = ucRes.data;
         setUnitConversions((ucData as any) || []);
       } else {
+        setVariants([]);
+        setRecipes([]);
         setUnitConversions([]);
       }
     } catch (e) {
       console.error(e);
       toast.error("Gagal memuat data produk");
+    } finally {
+      setProductMetaLoading(false);
     }
   };
 
@@ -242,22 +252,40 @@ export default function ProductManagement() {
   };
 
   const getBaseUnit = (productId: string): string => {
-    const convs = unitConversions.filter(
-      (c) => c.product_id === productId && c.is_active
-    );
-    if (convs.length === 0) return "pcs";
-    // All active conversions should resolve to the same base unit (to_unit).
-    return convs[0].to_unit || "pcs";
+    return unitMetaByProduct.get(productId)?.unit || "pcs";
   };
 
   const getBaseFactor = (productId: string): number => {
-    const convs = unitConversions.filter(
-      (c) => c.product_id === productId && c.is_active
-    );
-    if (convs.length === 0) return 1;
-    const f = Number((convs[0] as any).factor);
-    return Number.isFinite(f) && f > 0 ? f : 1;
+    return unitMetaByProduct.get(productId)?.factor || 1;
   };
+
+  const variantsByProductMap = useMemo(() => {
+    const map = new Map<string, Variant[]>();
+    variants.forEach((v) => {
+      const rows = map.get(v.product_id) || [];
+      rows.push(v);
+      map.set(v.product_id, rows);
+    });
+    return map;
+  }, [variants]);
+
+  const recipeProductIds = useMemo(
+    () => new Set(recipes.map((r) => r.product_id)),
+    [recipes]
+  );
+
+  const unitMetaByProduct = useMemo(() => {
+    const map = new Map<string, { unit: string; factor: number }>();
+    unitConversions.forEach((c) => {
+      if (!c.is_active || map.has(c.product_id)) return;
+      const f = Number((c as any).factor);
+      map.set(c.product_id, {
+        unit: c.to_unit || c.from_unit || "pcs",
+        factor: Number.isFinite(f) && f > 0 ? f : 1,
+      });
+    });
+    return map;
+  }, [unitConversions]);
 
   const handleDelete = async (product: Product) => {
     if (!canDelete) {
@@ -556,7 +584,7 @@ export default function ProductManagement() {
     setBulkDeleteOpen(true);
   };
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = useMemo(() => products.filter((p) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hit =
@@ -570,23 +598,25 @@ export default function ProductManagement() {
     if (filterCollection && p.collection_id !== filterCollection) return false;
     if (filterMaterial && p.material_id !== filterMaterial) return false;
     return true;
-  });
+  }), [products, searchQuery, filterCategory, filterBrand, filterCollection, filterMaterial]);
 
   const variantsByProduct = (productId: string) =>
-    variants.filter((v) => v.product_id === productId);
+    variantsByProductMap.get(productId) || [];
 
   const hasRecipe = (productId: string) =>
-    recipes.some((r) => r.product_id === productId);
+    recipeProductIds.has(productId);
 
   if (editorOpen) {
     return (
       <div className="fixed inset-0 z-50 bg-background overflow-auto">
-        <ProductEditorModal
-          productId={editorProductId}
-          copyMode={editorCopyMode}
-          onClose={handleCloseEditor}
-          onSaved={fetchAll}
-        />
+        <Suspense fallback={<AnkaLoader />}>
+          <ProductEditorModal
+            productId={editorProductId}
+            copyMode={editorCopyMode}
+            onClose={handleCloseEditor}
+            onSaved={fetchAll}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -1308,11 +1338,15 @@ export default function ProductManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <ImportProductsDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={fetchAll}
-      />
+      {importOpen && (
+        <Suspense fallback={null}>
+          <ImportProductsDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            onImported={fetchAll}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
