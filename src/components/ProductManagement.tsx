@@ -1338,11 +1338,15 @@ export default function ProductManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <ImportProductsDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={fetchAll}
-      />
+      {importOpen && (
+        <Suspense fallback={null}>
+          <ImportProductsDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            onImported={fetchAll}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
