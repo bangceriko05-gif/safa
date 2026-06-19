@@ -252,21 +252,11 @@ export default function ProductManagement() {
   };
 
   const getBaseUnit = (productId: string): string => {
-    const convs = unitConversions.filter(
-      (c) => c.product_id === productId && c.is_active
-    );
-    if (convs.length === 0) return "pcs";
-    // All active conversions should resolve to the same base unit (to_unit).
-    return convs[0].to_unit || "pcs";
+    return unitMetaByProduct.get(productId)?.unit || "pcs";
   };
 
   const getBaseFactor = (productId: string): number => {
-    const convs = unitConversions.filter(
-      (c) => c.product_id === productId && c.is_active
-    );
-    if (convs.length === 0) return 1;
-    const f = Number((convs[0] as any).factor);
-    return Number.isFinite(f) && f > 0 ? f : 1;
+    return unitMetaByProduct.get(productId)?.factor || 1;
   };
 
   const variantsByProductMap = useMemo(() => {
