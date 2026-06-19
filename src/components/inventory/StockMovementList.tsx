@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { DateRange } from "react-day-picker";
@@ -15,6 +15,7 @@ import StockOpnameForm from "./StockOpnameForm";
 import BidPreviewPopup, { BidType } from "./BidPreviewPopup";
 import BookingModal from "@/components/BookingModal";
 import AnkaLoader from "@/components/AnkaLoader";
+const ProductEditorModal = lazy(() => import("@/components/products/ProductEditorModal"));
 
 interface Movement {
   ts: string; // ISO datetime for sorting/display
@@ -72,6 +73,7 @@ export default function StockMovementList() {
   });
 
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   // Edit form navigation
   const [editForm, setEditForm] = useState<
@@ -485,6 +487,20 @@ export default function StockMovementList() {
     return <AnkaLoader />;
   }
 
+  if (selectedProductId) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background overflow-auto">
+        <Suspense fallback={<AnkaLoader />}>
+          <ProductEditorModal
+            productId={selectedProductId}
+            onClose={() => setSelectedProductId(null)}
+            onSaved={fetchData}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <InventoryToolbar
@@ -554,7 +570,15 @@ export default function StockMovementList() {
                       <td className="px-4 py-3 whitespace-nowrap text-foreground">
                         {formatDateTime(m.ts)}
                       </td>
-                      <td className="px-4 py-3 font-medium uppercase">{m.productName}</td>
+                      <td className="px-4 py-3 font-medium uppercase">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProductId(m.productId)}
+                          className="text-primary hover:underline font-semibold text-left uppercase"
+                        >
+                          {m.productName}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {isIn ? (
