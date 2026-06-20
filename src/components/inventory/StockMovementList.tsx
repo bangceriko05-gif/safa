@@ -384,7 +384,7 @@ export default function StockMovementList() {
       Qty: m.qty,
       Satuan: m.unit,
       "Stok Sebelum": m.stokSebelum,
-      "Stok Sesudah": m.stokSesudah,
+      "Stok Terkini": m.stokSesudah,
       BID: m.bid,
       Catatan: m.note,
     }));
@@ -545,7 +545,7 @@ export default function StockMovementList() {
                 <th className="text-left px-4 py-3 font-semibold">Tipe</th>
                 <th className="text-right px-4 py-3 font-semibold">Qty</th>
                 <th className="text-right px-4 py-3 font-semibold whitespace-nowrap">Stok Sebelum</th>
-                <th className="text-right px-4 py-3 font-semibold whitespace-nowrap">Stok Sesudah</th>
+                <th className="text-right px-4 py-3 font-semibold whitespace-nowrap">Stok Terkini</th>
                 <th className="text-left px-4 py-3 font-semibold">Catatan</th>
               </tr>
             </thead>

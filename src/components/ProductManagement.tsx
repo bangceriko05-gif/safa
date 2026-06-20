@@ -887,7 +887,7 @@ export default function ProductManagement() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {product.track_inventory ? (
-                        (Number(product.stock_qty) || 0) * getBaseFactor(product.id)
+                        Number(product.stock_qty) || 0
                       ) : (
                         <span className="text-muted-foreground">
                           Tidak terbatas
