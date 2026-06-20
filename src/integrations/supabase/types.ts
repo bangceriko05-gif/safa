@@ -2789,6 +2789,7 @@ export type Database = {
           notes: string | null
           posted_at: string | null
           posted_by: string | null
+          purchase_id: string | null
           status: string
           store_id: string
           supplier_id: string | null
@@ -2808,6 +2809,7 @@ export type Database = {
           notes?: string | null
           posted_at?: string | null
           posted_by?: string | null
+          purchase_id?: string | null
           status?: string
           store_id: string
           supplier_id?: string | null
@@ -2827,6 +2829,7 @@ export type Database = {
           notes?: string | null
           posted_at?: string | null
           posted_by?: string | null
+          purchase_id?: string | null
           status?: string
           store_id?: string
           supplier_id?: string | null
@@ -2834,7 +2837,15 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_in_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_in_items: {
         Row: {
