@@ -505,12 +505,7 @@ export default function Dashboard() {
   if (!user || storeLoading) {
     return (
       <div className="min-h-screen p-4 md:p-6 flex items-center justify-center" style={{ background: "var(--gradient-main)" }}>
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-3 text-foreground">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <AnkaLoader />
-          </div>
-        </div>
+        <AnkaLoader />
       </div>
     );
   }
