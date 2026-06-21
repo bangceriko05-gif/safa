@@ -180,18 +180,20 @@ export default function PurchaseManagement() {
   const updateField = async (id: string, field: string, value: string) => {
     try {
       const updates: any = { [field]: value };
-      // When status changes to "batal", also move process_status to "batal"
-      if (field === "status" && value === "batal") {
-        updates.process_status = "batal";
-        updates.is_draft = false;
+      // The status dropdown directly drives which tab (Proses / Selesai / Batal) the BID lives in.
+      if (field === "status") {
+        updates.process_status = value;
+        if (value === "batal") {
+          updates.is_draft = false;
+        }
       }
       const { error } = await supabase
         .from("purchases" as any)
         .update(updates)
         .eq("id", id);
       if (error) throw error;
-      if (field === "status" && value === "batal") {
-        // remove from current view since it moves to batal tab
+      if (field === "status" && value !== processTab) {
+        // remove from current view since it moves to another tab
         setPurchases((prev) => prev.filter((p) => p.id !== id));
       } else {
         setPurchases((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
@@ -546,12 +548,12 @@ export default function PurchaseManagement() {
                           value={purchase.status}
                           onValueChange={(val) => updateField(purchase.id, "status", val)}
                         >
-                          <SelectTrigger className="w-[100px] h-8">
+                          <SelectTrigger className="w-[110px] h-8">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="tunda">tunda</SelectItem>
-                            <SelectItem value="disetujui">disetujui</SelectItem>
+                            <SelectItem value="proses">proses</SelectItem>
+                            <SelectItem value="selesai">selesai</SelectItem>
                             <SelectItem value="batal">batal</SelectItem>
                           </SelectContent>
                         </Select>
