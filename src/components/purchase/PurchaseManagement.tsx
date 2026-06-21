@@ -545,7 +545,7 @@ export default function PurchaseManagement() {
                       </TableCell>
                       <TableCell>
                         <Select
-                          value={purchase.status}
+                          value={purchase.process_status || "proses"}
                           onValueChange={(val) => updateField(purchase.id, "status", val)}
                         >
                           <SelectTrigger className="w-[110px] h-8">
