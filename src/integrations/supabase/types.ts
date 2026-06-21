@@ -2176,6 +2176,7 @@ export type Database = {
           tax_enabled: boolean
           tax_mode: string
           track_inventory: boolean
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2204,6 +2205,7 @@ export type Database = {
           tax_enabled?: boolean
           tax_mode?: string
           track_inventory?: boolean
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2232,6 +2234,7 @@ export type Database = {
           tax_enabled?: boolean
           tax_mode?: string
           track_inventory?: boolean
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2261,6 +2264,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_units"
             referencedColumns: ["id"]
           },
         ]
