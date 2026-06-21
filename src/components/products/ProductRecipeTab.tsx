@@ -47,6 +47,7 @@ interface IngredientOpt {
   purchase_price: number;
   stock_qty?: number;
   material_name?: string | null;
+  default_unit?: string | null;
 }
 
 interface Props {
@@ -71,6 +72,8 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   // ingredient_product_id -> unit price (per to_unit, typically pcs)
   const [ingUnitPrice, setIngUnitPrice] = useState<Record<string, number>>({});
+  // ingredient_product_id -> preferred satuan (active conversion to_unit, fallback product unit name)
+  const [ingDefaultUnit, setIngDefaultUnit] = useState<Record<string, string>>({});
   const [filterVariant, setFilterVariant] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
@@ -123,27 +126,17 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     }
     const { data } = await supabase
       .from("products")
-      .select("id, name, purchase_price, material_id, stock_qty")
+      .select("id, name, purchase_price, material_id, stock_qty, unit_id")
       .eq("store_id", currentStore.id)
       .in("material_id", allowedIds)
       .order("name");
-    setIngredients(
-      ((data as any) || [])
-        .filter((p: any) => p.id !== productId)
-        .map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          purchase_price: p.purchase_price,
-          stock_qty: p.stock_qty,
-          material_name: matMap.get(p.material_id) || null,
-        }))
-    );
     // Load unit conversions to derive per-unit (e.g. per pcs) price
     const ingIds = ((data as any) || []).map((p: any) => p.id);
+    const unitDefault: Record<string, string> = {};
     if (ingIds.length > 0) {
       const { data: convs } = await supabase
         .from("product_unit_conversions")
-        .select("product_id, factor, price_per_from, is_active")
+        .select("product_id, factor, price_per_from, is_active, to_unit")
         .in("product_id", ingIds);
       const map: Record<string, number> = {};
       ((convs as any[]) || [])
@@ -156,9 +149,44 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
           }
         });
       setIngUnitPrice(map);
+      ((convs as any[]) || [])
+        .filter((c) => c.is_active && c.to_unit)
+        .forEach((c) => {
+          if (!unitDefault[c.product_id]) unitDefault[c.product_id] = c.to_unit;
+        });
     } else {
       setIngUnitPrice({});
     }
+    // Fallback: products without an active conversion -> use their profile unit name
+    const missingUnitIds = ((data as any[]) || [])
+      .filter((p: any) => !unitDefault[p.id] && p.unit_id)
+      .map((p: any) => p.unit_id);
+    const unitNameMap = new Map<string, string>();
+    if (missingUnitIds.length > 0) {
+      const { data: us } = await supabase
+        .from("product_units" as any)
+        .select("id, name")
+        .in("id", missingUnitIds);
+      ((us as any[]) || []).forEach((u) => unitNameMap.set(u.id, u.name));
+    }
+    ((data as any[]) || []).forEach((p: any) => {
+      if (!unitDefault[p.id] && p.unit_id && unitNameMap.has(p.unit_id)) {
+        unitDefault[p.id] = unitNameMap.get(p.unit_id)!;
+      }
+    });
+    setIngDefaultUnit(unitDefault);
+    setIngredients(
+      ((data as any) || [])
+        .filter((p: any) => p.id !== productId)
+        .map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          purchase_price: p.purchase_price,
+          stock_qty: p.stock_qty,
+          material_name: matMap.get(p.material_id) || null,
+          default_unit: unitDefault[p.id] || null,
+        }))
+    );
   };
 
   const loadUnits = async () => {
@@ -199,6 +227,13 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     setNote(r.note || "");
     setDialogOpen(true);
   };
+
+  // Auto-set Satuan based on selected ingredient's active conversion / profile unit
+  useEffect(() => {
+    if (!ingId || editing) return;
+    const auto = ingDefaultUnit[ingId];
+    if (auto) setSatuan(auto);
+  }, [ingId, ingDefaultUnit, editing]);
 
   const save = async () => {
     if (!productId || !ingId) {
@@ -267,6 +302,11 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     variants.length > 0
       ? variants.map((v) => ({ id: v.id, name: v.variant_name, price: v.price }))
       : [{ id: null, name: "BAHAN BAKU", price: productPrice }];
+
+  const currentVariantName =
+    forVariantId == null
+      ? null
+      : variants.find((v) => v.id === forVariantId)?.variant_name || null;
 
   const visibleGroups =
     filterVariant === "all"
@@ -415,31 +455,31 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit Bahan" : "Tambah Bahan Baru"}
+              {editing ? "Edit Bahan/Resep" : "Tambah Bahan/Resep"}
+              {variants.length > 0 && currentVariantName ? ` — ${currentVariantName}` : ""}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Untuk Varian</Label>
-              <Select
-                value={forVariantId ?? "biasa"}
-                onValueChange={(v) => setForVariantId(v === "biasa" ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {variants.length === 0 && (
-                    <SelectItem value="biasa">BAHAN BAKU</SelectItem>
-                  )}
-                  {variants.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.variant_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {variants.length > 0 && (
+              <div className="space-y-2">
+                <Label>Untuk Varian</Label>
+                <Select
+                  value={forVariantId ?? ""}
+                  onValueChange={(v) => setForVariantId(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {variants.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.variant_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Pilih dari Inventori *</Label>
               <div className="relative">
