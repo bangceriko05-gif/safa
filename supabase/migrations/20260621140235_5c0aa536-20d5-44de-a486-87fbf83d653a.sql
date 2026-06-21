@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit_id uuid REFERENCES public.product_units(id) ON DELETE SET NULL;
