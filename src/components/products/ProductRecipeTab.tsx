@@ -309,9 +309,11 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
             <div key={g.id ?? "biasa"} className="border rounded-lg p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1 border-2 border-primary rounded-md font-bold text-sm">
-                    {g.name}
-                  </span>
+                  {variants.length > 0 && (
+                    <span className="px-3 py-1 border-2 border-primary rounded-md font-bold text-sm">
+                      {g.name}
+                    </span>
+                  )}
                   <span className="px-2 py-1 rounded text-xs bg-red-50 text-red-700 border border-red-200">
                     HPP: Rp {fmt(hpp)}
                   </span>
