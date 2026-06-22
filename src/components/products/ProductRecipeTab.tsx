@@ -136,7 +136,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     if (ingIds.length > 0) {
       const { data: convs } = await supabase
         .from("product_unit_conversions")
-        .select("product_id, factor, price_per_from, is_active, to_unit")
+        .select("product_id, factor, price_per_from, is_active, from_unit, to_unit")
         .in("product_id", ingIds);
       const map: Record<string, number> = {};
       ((convs as any[]) || [])
@@ -150,9 +150,9 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
         });
       setIngUnitPrice(map);
       ((convs as any[]) || [])
-        .filter((c) => c.is_active && c.to_unit)
+        .filter((c) => c.is_active && c.from_unit)
         .forEach((c) => {
-          if (!unitDefault[c.product_id]) unitDefault[c.product_id] = c.to_unit;
+          if (!unitDefault[c.product_id]) unitDefault[c.product_id] = c.from_unit;
         });
     } else {
       setIngUnitPrice({});
@@ -532,7 +532,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            Stok: {i.stock_qty ?? 0} pcs
+                            Stok: {i.stock_qty ?? 0} {i.default_unit || "pcs"}
                           </div>
                         </button>
                       ));
