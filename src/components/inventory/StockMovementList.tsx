@@ -32,6 +32,9 @@ interface Movement {
   note: string;
 }
 
+// Cache per store+date-range so re-entering the tab shows last result instantly.
+const movementCache: Record<string, { movements: Movement[]; products: { id: string; name: string }[] }> = {};
+
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
   const date = d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
@@ -107,12 +110,19 @@ export default function StockMovementList() {
 
   const fetchData = async () => {
     if (!currentStore || !fromIso || !toIso) return;
-    setLoading(true);
+    const storeId = currentStore.id;
+    const fromStr = fromIso.toISOString().split("T")[0];
+    const toStr = toIso.toISOString().split("T")[0];
+    const cacheKey = `${storeId}|${fromStr}|${toStr}`;
+    const cached = movementCache[cacheKey];
+    if (cached) {
+      setMovements(cached.movements);
+      setProducts(cached.products);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     try {
-      const storeId = currentStore.id;
-      const fromStr = fromIso.toISOString().split("T")[0];
-      const toStr = toIso.toISOString().split("T")[0];
-
       // 1. All products + base unit lookup
       const { data: productsData } = await supabase
         .from("products")
@@ -338,6 +348,10 @@ export default function StockMovementList() {
       }).sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : b.bid.localeCompare(a.bid)));
 
       setMovements(filtered);
+      movementCache[cacheKey] = {
+        movements: filtered,
+        products: ((productsData as any[]) || []).map((p) => ({ id: p.id, name: p.name })),
+      };
     } catch (err) {
       console.error("[StockMovement] fetch error:", err);
       toast.error("Gagal memuat pergerakan stok");
