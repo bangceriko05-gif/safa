@@ -885,15 +885,28 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               <tbody>
                 {items.map((it, i) => {
                   const product = products.find((p) => p.id === it.product_id);
-                  // Projected Moving Average: (existing_stock * existing_avg + new_qty * new_price) / (existing_stock + new_qty)
-                  const curStock = Number(product?.stock_qty ?? 0);
+                  // Projected Moving Average dihitung dalam SATUAN PEMBELIAN (mis. kg),
+                  // bukan satuan konversi (mis. gram). stock_qty di DB sudah dikalikan
+                  // factor konversi (mis. 1 kg => stock_qty 1000), jadi kita konversi
+                  // balik dengan factor yang di-extract dari nama produk: "(kg / 1000 gram)" => 1000.
+                  const extractFactor = (name?: string) => {
+                    if (!name) return 1;
+                    const m = name.match(/\/\s*([0-9]+(?:[.,][0-9]+)?)\s+[A-Za-z]/);
+                    if (!m) return 1;
+                    const f = parseFloat(m[1].replace(",", "."));
+                    return f > 0 ? f : 1;
+                  };
+                  const factor = extractFactor(product?.name || it.product_name);
+                  const curStockInPurchaseUnit =
+                    Number(product?.stock_qty ?? 0) / factor;
                   const curAvg = Number(product?.purchase_price ?? 0);
                   const lineQty = Number(it.quantity);
                   const linePrice = Number(it.unit_price);
-                  const totalQty = curStock + lineQty;
+                  const totalQty = curStockInPurchaseUnit + lineQty;
                   const avgPrice =
                     totalQty > 0
-                      ? (curStock * curAvg + lineQty * linePrice) / totalQty
+                      ? (curStockInPurchaseUnit * curAvg + lineQty * linePrice) /
+                        totalQty
                       : linePrice;
                   const isEditing = editingIndex === i;
                   return (

@@ -72,6 +72,8 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   // ingredient_product_id -> unit price (per to_unit, typically pcs)
   const [ingUnitPrice, setIngUnitPrice] = useState<Record<string, number>>({});
+  // ingredient_product_id -> active conversion factor (mis. 1 kg = 1000 gram => 1000)
+  const [ingFactor, setIngFactor] = useState<Record<string, number>>({});
   // ingredient_product_id -> preferred satuan (active conversion to_unit, fallback product unit name)
   const [ingDefaultUnit, setIngDefaultUnit] = useState<Record<string, string>>({});
   const [filterVariant, setFilterVariant] = useState<string>("all");
@@ -133,6 +135,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
     // Load unit conversions to derive per-unit (e.g. per pcs) price
     const ingIds = ((data as any) || []).map((p: any) => p.id);
     const unitDefault: Record<string, string> = {};
+    const factorMap: Record<string, number> = {};
     if (ingIds.length > 0) {
       const { data: convs } = await supabase
         .from("product_unit_conversions")
@@ -153,10 +156,14 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
         .filter((c) => c.is_active && c.from_unit)
         .forEach((c) => {
           if (!unitDefault[c.product_id]) unitDefault[c.product_id] = c.from_unit;
+          if (!factorMap[c.product_id] && Number(c.factor) > 0) {
+            factorMap[c.product_id] = Number(c.factor);
+          }
         });
     } else {
       setIngUnitPrice({});
     }
+    setIngFactor(factorMap);
     // Fallback: products without an active conversion -> use their profile unit name
     const missingUnitIds = ((data as any[]) || [])
       .filter((p: any) => !unitDefault[p.id] && p.unit_id)
@@ -274,9 +281,15 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
 
   // Effective unit price: prefer satuan (unit conversion) price, fallback to purchase price
   const unitPriceOf = (r: Recipe) => {
+    // Gunakan harga rata-rata pembelian (moving average) dari product.purchase_price
+    // dibagi factor konversi aktif agar mengikuti satuan resep (mis. per gram).
+    const purchasePrice = Number(r.ingredient?.purchase_price || 0);
+    const factor = Number(ingFactor[r.ingredient_product_id] || 0);
+    if (purchasePrice > 0 && factor > 0) return purchasePrice / factor;
+    // Fallback: harga manual dari konversi satuan
     const fromConv = ingUnitPrice[r.ingredient_product_id];
     if (fromConv && fromConv > 0) return fromConv;
-    return (r.ingredient?.purchase_price || 0) / (Number(r.unit_factor) || 1);
+    return purchasePrice / (Number(r.unit_factor) || 1);
   };
 
   // HPP per variant = sum(qty * effective unit price)
