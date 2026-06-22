@@ -27,6 +27,9 @@ interface StockInRow {
   item_count: number;
 }
 
+// Module-level cache so switching tabs shows data instantly and refreshes in background.
+const stockInCache: Record<string, StockInRow[]> = {};
+
 interface PreviewRow {
   index: number;
   product: string;
@@ -56,8 +59,12 @@ const statusBadge = (status: string) => {
 
 export default function StockInList() {
   const { currentStore } = useStore();
-  const [rows, setRows] = useState<StockInRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<StockInRow[]>(
+    currentStore ? stockInCache[currentStore.id] || [] : []
+  );
+  const [loading, setLoading] = useState(
+    !(currentStore && stockInCache[currentStore.id])
+  );
   const [search, setSearch] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -76,7 +83,8 @@ export default function StockInList() {
 
   const fetchData = async () => {
     if (!currentStore) return;
-    setLoading(true);
+    const hasCache = !!stockInCache[currentStore.id];
+    if (!hasCache) setLoading(true);
     const { data, error } = await supabase
       .from("stock_in" as any)
       .select("id, bid, date, supplier_name, total_amount, status, created_at")
@@ -94,12 +102,18 @@ export default function StockInList() {
           counts[it.stock_in_id] = (counts[it.stock_in_id] || 0) + Number(it.quantity || 0);
         });
       }
-      setRows((data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as any);
+      const mapped = (data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as StockInRow[];
+      stockInCache[currentStore.id] = mapped;
+      setRows(mapped);
     }
     setLoading(false);
   };
 
   useEffect(() => {
+    if (currentStore && stockInCache[currentStore.id]) {
+      setRows(stockInCache[currentStore.id]);
+      setLoading(false);
+    }
     fetchData();
   }, [currentStore]);
 
