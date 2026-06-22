@@ -28,6 +28,8 @@ interface StockOutRow {
   item_count: number;
 }
 
+const stockOutCache: Record<string, StockOutRow[]> = {};
+
 interface PreviewRow {
   index: number;
   product: string;
@@ -55,8 +57,12 @@ const statusBadge = (status: string) => {
 
 export default function StockOutList() {
   const { currentStore } = useStore();
-  const [rows, setRows] = useState<StockOutRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<StockOutRow[]>(
+    currentStore ? stockOutCache[currentStore.id] || [] : []
+  );
+  const [loading, setLoading] = useState(
+    !(currentStore && stockOutCache[currentStore.id])
+  );
   const [search, setSearch] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -75,7 +81,8 @@ export default function StockOutList() {
 
   const fetchData = async () => {
     if (!currentStore) return;
-    setLoading(true);
+    const hasCache = !!stockOutCache[currentStore.id];
+    if (!hasCache) setLoading(true);
     const { data, error } = await supabase
       .from("stock_out" as any)
       .select("id, bid, date, recipient, reason, total_amount, status, created_at")
@@ -93,12 +100,18 @@ export default function StockOutList() {
           counts[it.stock_out_id] = (counts[it.stock_out_id] || 0) + Number(it.quantity || 0);
         });
       }
-      setRows((data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as any);
+      const mapped = (data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as StockOutRow[];
+      stockOutCache[currentStore.id] = mapped;
+      setRows(mapped);
     }
     setLoading(false);
   };
 
   useEffect(() => {
+    if (currentStore && stockOutCache[currentStore.id]) {
+      setRows(stockOutCache[currentStore.id]);
+      setLoading(false);
+    }
     fetchData();
   }, [currentStore]);
 

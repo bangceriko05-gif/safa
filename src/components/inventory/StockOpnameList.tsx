@@ -24,6 +24,8 @@ interface OpnameRow {
   item_count: number;
 }
 
+const opnameCache: Record<string, OpnameRow[]> = {};
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n || 0);
 
@@ -40,8 +42,12 @@ const statusBadge = (status: string) => {
 
 export default function StockOpnameList() {
   const { currentStore } = useStore();
-  const [rows, setRows] = useState<OpnameRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<OpnameRow[]>(
+    currentStore ? opnameCache[currentStore.id] || [] : []
+  );
+  const [loading, setLoading] = useState(
+    !(currentStore && opnameCache[currentStore.id])
+  );
   const [search, setSearch] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -53,7 +59,8 @@ export default function StockOpnameList() {
 
   const fetchData = async () => {
     if (!currentStore) return;
-    setLoading(true);
+    const hasCache = !!opnameCache[currentStore.id];
+    if (!hasCache) setLoading(true);
     const { data, error } = await supabase
       .from("stock_opname" as any)
       .select("id, bid, date, notes, total_difference, total_value_difference, status, created_at")
@@ -71,12 +78,20 @@ export default function StockOpnameList() {
           counts[it.stock_opname_id] = (counts[it.stock_opname_id] || 0) + 1;
         });
       }
-      setRows((data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as any);
+      const mapped = (data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as OpnameRow[];
+      opnameCache[currentStore.id] = mapped;
+      setRows(mapped);
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [currentStore]);
+  useEffect(() => {
+    if (currentStore && opnameCache[currentStore.id]) {
+      setRows(opnameCache[currentStore.id]);
+      setLoading(false);
+    }
+    fetchData();
+  }, [currentStore]);
 
   const filtered = rows.filter((r) => {
     const q = search.toLowerCase().trim();
