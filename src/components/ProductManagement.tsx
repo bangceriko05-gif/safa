@@ -931,12 +931,52 @@ export default function ProductManagement() {
                       </span>
                     </TableCell>
                     <TableCell className="text-sm tabular-nums">
-                      <span className="border-b border-dotted">
-                        {formatRp(product.show_on_website ? product.price : 0)}
-                      </span>
+                      {canUpdate ? (
+                        <Input
+                          type="number"
+                          defaultValue={product.show_on_website ? Number(product.price) || 0 : 0}
+                          disabled={!product.show_on_website}
+                          onBlur={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            if (v !== Number(product.price)) {
+                              updateProductInline(product.id, "price", v);
+                            }
+                          }}
+                          className="h-8 w-28 text-sm"
+                        />
+                      ) : (
+                        <span className="border-b border-dotted">
+                          {formatRp(product.show_on_website ? product.price : 0)}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {product.show_on_website ? "Ya" : "Tidak"}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!!product.track_inventory}
+                          disabled={!canUpdate}
+                          onCheckedChange={(v) =>
+                            updateProductInline(product.id, "track_inventory", !!v)
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {product.track_inventory ? "Aktif" : "Off"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!!product.show_on_website}
+                          disabled={!canUpdate}
+                          onCheckedChange={(v) =>
+                            updateProductInline(product.id, "show_on_website", !!v)
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {product.show_on_website ? "Ya" : "Tidak"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Popover>
