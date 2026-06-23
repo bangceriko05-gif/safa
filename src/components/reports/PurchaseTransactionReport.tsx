@@ -267,39 +267,110 @@ export default function PurchaseTransactionReport() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {subView === "items" ? "Total Item" : "Total Transaksi"}
+                </CardTitle>
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.count}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {subView === "cancelled" ? "Total Dibatalkan" : "Total Pembelian"}
-                </CardTitle>
-                <ShoppingCart className={`h-4 w-4 ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`}>
-                  {formatCurrency(stats.total)}
+                <div className="text-2xl font-bold">
+                  {subView === "items" ? itemStats.count : stats.count}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rata-rata per Transaksi</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {subView === "cancelled" ? "Total Dibatalkan" : subView === "items" ? "Total Nilai Item" : "Total Pembelian"}
+                </CardTitle>
+                <ShoppingCart className={`h-4 w-4 ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`}>
+                  {formatCurrency(subView === "items" ? itemStats.totalAmt : stats.total)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {subView === "items" ? "Total Qty" : "Rata-rata per Transaksi"}
+                </CardTitle>
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.avg)}</div>
+                <div className="text-2xl font-bold">
+                  {subView === "items" ? itemStats.totalQty : formatCurrency(stats.avg)}
+                </div>
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardContent className="p-0">
+              {subView === "items" ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>BID</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Produk</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Harga Satuan</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {itemRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Tidak ada item pembelian
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      itemRows.map((r, idx) => (
+                        <TableRow key={`${r.purchase_id}-${idx}`}>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-primary">{r.bid || "-"}</span>
+                              {r.bid && (
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyBid(r.bid)}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{format(new Date(r.date), "d MMM yyyy", { locale: localeId })}</TableCell>
+                          <TableCell>{r.product_name}</TableCell>
+                          <TableCell className="text-right">{r.quantity}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(Number(r.unit_price) || 0)}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(Number(r.subtotal) || 0)}</TableCell>
+                          <TableCell>{r.supplier_name || "-"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                r.process_status === "selesai"
+                                  ? "default"
+                                  : r.process_status === "batal"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                            >
+                              {r.process_status === "selesai"
+                                ? "Selesai"
+                                : r.process_status === "batal"
+                                ? "Batal"
+                                : "Proses"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
