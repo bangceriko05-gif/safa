@@ -237,7 +237,12 @@ export default function PurchaseTransactionReport() {
             customDateRange={customDateRange}
             onCustomDateRangeChange={setCustomDateRange}
           />
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={loading || filtered.length === 0}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={loading || (subView === "items" ? itemRows.length === 0 : filtered.length === 0)}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
