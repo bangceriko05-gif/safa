@@ -63,7 +63,8 @@ export default function PurchaseTransactionReport() {
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
 
-      const statusFilter = subView === "cancelled" ? ["batal"] : ["proses", "selesai"];
+      const statusFilter =
+        subView === "cancelled" ? ["batal"] : ["proses", "selesai"];
 
       const { data, error } = await supabase
         .from("purchases" as any)
