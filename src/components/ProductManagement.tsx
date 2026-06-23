@@ -820,6 +820,7 @@ export default function ProductManagement() {
               <TableHead>Harga Beli</TableHead>
               <TableHead>Harga Jual di Toko</TableHead>
               <TableHead>Harga Jual Online</TableHead>
+              <TableHead>Lacak Inventori</TableHead>
               <TableHead>Tersedia Online</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
