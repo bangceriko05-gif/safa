@@ -829,7 +829,7 @@ export default function ProductManagement() {
             {filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={selectionMode ? 13 : 12}
+                  colSpan={selectionMode ? 14 : 13}
                   className="text-center text-muted-foreground py-12"
                 >
                   {searchQuery ||
