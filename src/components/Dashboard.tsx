@@ -123,6 +123,13 @@ export default function Dashboard() {
     window.addEventListener("anka:goto-inventory-stock-in", handler);
     return () => window.removeEventListener("anka:goto-inventory-stock-in", handler);
   }, []);
+
+  // Prefetch every lazy-loaded dashboard chunk shortly after mount so subsequent
+  // tab switches render instantly (no Suspense fallback spinner).
+  useEffect(() => {
+    const t = setTimeout(() => __prefetchDashboardChunks(), 0);
+    return () => clearTimeout(t);
+  }, []);
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
     setCustomersSection(null);
