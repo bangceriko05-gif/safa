@@ -17,7 +17,7 @@ import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 
-type SubView = "active" | "cancelled";
+type SubView = "active" | "cancelled" | "items";
 
 interface PurchaseRow {
   id: string;
@@ -163,6 +163,7 @@ export default function PurchaseTransactionReport() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Laporan Pembelian</SelectItem>
+              <SelectItem value="items">Laporan Pembelian Item</SelectItem>
               <SelectItem value="cancelled">Laporan Pembatalan Pembelian</SelectItem>
             </SelectContent>
           </Select>
