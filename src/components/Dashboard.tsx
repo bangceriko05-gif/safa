@@ -69,7 +69,7 @@ const __prefetchDashboardChunks = () => {
   void import("./suppliers/SupplierManagement");
   void import("./ActivityLog");
   void import("./Reports");
-  void import("./PermissionManagement);
+  void import("./PermissionManagement");
   void import("./SettingsPage");
   void import("./TransactionManagement");
   void import("./deposit/DepositFormModal");
