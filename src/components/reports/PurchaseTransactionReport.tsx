@@ -162,7 +162,26 @@ export default function PurchaseTransactionReport() {
   }, [itemRows]);
 
   const handleExport = () => {
-    if (!currentStore || filtered.length === 0) return;
+    if (!currentStore) return;
+    if (subView === "items") {
+      if (itemRows.length === 0) return;
+      const data = itemRows.map((r) => ({
+        BID: r.bid || "-",
+        Tanggal: format(new Date(r.date), "dd/MM/yyyy", { locale: localeId }),
+        Supplier: r.supplier_name || "-",
+        Produk: r.product_name,
+        Qty: r.quantity,
+        "Harga Satuan": r.unit_price,
+        Subtotal: r.subtotal,
+        "Metode Bayar": r.payment_method || "-",
+        Status: r.process_status,
+      }));
+      const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, "_");
+      exportToExcel(data, "Pembelian Item", getExportFileName("Pembelian_Item", currentStore.name, dateRangeStr));
+      toast.success("Export berhasil");
+      return;
+    }
+    if (filtered.length === 0) return;
     const data = filtered.map((r) => {
       const it = items[r.id] || [];
       const itemsText = it.length > 0 ? it.map((i) => `${i.product_name} x${i.quantity}`).join(", ") : "-";
