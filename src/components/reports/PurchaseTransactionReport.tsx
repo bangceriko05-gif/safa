@@ -128,6 +128,39 @@ export default function PurchaseTransactionReport() {
     return { total, count, avg };
   }, [filtered]);
 
+  // Flatten purchase items for the "Laporan Pembelian Item" sub-view.
+  const itemRows = useMemo(() => {
+    if (subView !== "items") return [] as Array<PurchaseItemRow & { bid: string; date: string; supplier_name: string | null; payment_method: string | null; process_status: string }>;
+    const q = searchQuery.trim().toLowerCase();
+    const out: Array<PurchaseItemRow & { bid: string; date: string; supplier_name: string | null; payment_method: string | null; process_status: string }> = [];
+    filtered.forEach((r) => {
+      (items[r.id] || []).forEach((it) => {
+        const matches =
+          !q ||
+          (r.bid || "").toLowerCase().includes(q) ||
+          (r.supplier_name || "").toLowerCase().includes(q) ||
+          (it.product_name || "").toLowerCase().includes(q);
+        if (matches) {
+          out.push({
+            ...it,
+            bid: r.bid,
+            date: r.date,
+            supplier_name: r.supplier_name,
+            payment_method: r.payment_method,
+            process_status: r.process_status,
+          });
+        }
+      });
+    });
+    return out;
+  }, [filtered, items, subView, searchQuery]);
+
+  const itemStats = useMemo(() => {
+    const totalQty = itemRows.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+    const totalAmt = itemRows.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
+    return { count: itemRows.length, totalQty, totalAmt };
+  }, [itemRows]);
+
   const handleExport = () => {
     if (!currentStore || filtered.length === 0) return;
     const data = filtered.map((r) => {
