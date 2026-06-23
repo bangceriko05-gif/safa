@@ -252,6 +252,31 @@ export default function ProductManagement() {
     setEditorOpen(true);
   };
 
+  // Inline update for quick toggles / price tweaks from the product list.
+  const updateProductInline = async (
+    productId: string,
+    field: "price" | "show_on_website" | "track_inventory",
+    value: number | boolean,
+  ) => {
+    if (!canUpdate) {
+      toast.error("Anda tidak memiliki permission mengubah produk");
+      return;
+    }
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, [field]: value as any } : p)),
+    );
+    const { error } = await supabase
+      .from("products")
+      .update({ [field]: value as any })
+      .eq("id", productId);
+    if (error) {
+      toast.error("Gagal memperbarui");
+      fetchAll();
+    } else {
+      toast.success("Tersimpan");
+    }
+  };
+
   const getBaseUnit = (productId: string): string => {
     return unitMetaByProduct.get(productId)?.unit || "pcs";
   };
