@@ -17,7 +17,7 @@ import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 
-type SubView = "active" | "cancelled";
+type SubView = "active" | "cancelled" | "items";
 
 interface PurchaseRow {
   id: string;
@@ -63,7 +63,8 @@ export default function PurchaseTransactionReport() {
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
 
-      const statusFilter = subView === "cancelled" ? ["batal"] : ["proses", "selesai"];
+      const statusFilter =
+        subView === "cancelled" ? ["batal"] : ["proses", "selesai"];
 
       const { data, error } = await supabase
         .from("purchases" as any)
@@ -127,8 +128,60 @@ export default function PurchaseTransactionReport() {
     return { total, count, avg };
   }, [filtered]);
 
+  // Flatten purchase items for the "Laporan Pembelian Item" sub-view.
+  const itemRows = useMemo(() => {
+    if (subView !== "items") return [] as Array<PurchaseItemRow & { bid: string; date: string; supplier_name: string | null; payment_method: string | null; process_status: string }>;
+    const q = searchQuery.trim().toLowerCase();
+    const out: Array<PurchaseItemRow & { bid: string; date: string; supplier_name: string | null; payment_method: string | null; process_status: string }> = [];
+    filtered.forEach((r) => {
+      (items[r.id] || []).forEach((it) => {
+        const matches =
+          !q ||
+          (r.bid || "").toLowerCase().includes(q) ||
+          (r.supplier_name || "").toLowerCase().includes(q) ||
+          (it.product_name || "").toLowerCase().includes(q);
+        if (matches) {
+          out.push({
+            ...it,
+            bid: r.bid,
+            date: r.date,
+            supplier_name: r.supplier_name,
+            payment_method: r.payment_method,
+            process_status: r.process_status,
+          });
+        }
+      });
+    });
+    return out;
+  }, [filtered, items, subView, searchQuery]);
+
+  const itemStats = useMemo(() => {
+    const totalQty = itemRows.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+    const totalAmt = itemRows.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
+    return { count: itemRows.length, totalQty, totalAmt };
+  }, [itemRows]);
+
   const handleExport = () => {
-    if (!currentStore || filtered.length === 0) return;
+    if (!currentStore) return;
+    if (subView === "items") {
+      if (itemRows.length === 0) return;
+      const data = itemRows.map((r) => ({
+        BID: r.bid || "-",
+        Tanggal: format(new Date(r.date), "dd/MM/yyyy", { locale: localeId }),
+        Supplier: r.supplier_name || "-",
+        Produk: r.product_name,
+        Qty: r.quantity,
+        "Harga Satuan": r.unit_price,
+        Subtotal: r.subtotal,
+        "Metode Bayar": r.payment_method || "-",
+        Status: r.process_status,
+      }));
+      const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, "_");
+      exportToExcel(data, "Pembelian Item", getExportFileName("Pembelian_Item", currentStore.name, dateRangeStr));
+      toast.success("Export berhasil");
+      return;
+    }
+    if (filtered.length === 0) return;
     const data = filtered.map((r) => {
       const it = items[r.id] || [];
       const itemsText = it.length > 0 ? it.map((i) => `${i.product_name} x${i.quantity}`).join(", ") : "-";
@@ -163,6 +216,7 @@ export default function PurchaseTransactionReport() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Laporan Pembelian</SelectItem>
+              <SelectItem value="items">Laporan Pembelian Item</SelectItem>
               <SelectItem value="cancelled">Laporan Pembatalan Pembelian</SelectItem>
             </SelectContent>
           </Select>
@@ -183,7 +237,12 @@ export default function PurchaseTransactionReport() {
             customDateRange={customDateRange}
             onCustomDateRangeChange={setCustomDateRange}
           />
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={loading || filtered.length === 0}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={loading || (subView === "items" ? itemRows.length === 0 : filtered.length === 0)}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -208,39 +267,110 @@ export default function PurchaseTransactionReport() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {subView === "items" ? "Total Item" : "Total Transaksi"}
+                </CardTitle>
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.count}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {subView === "cancelled" ? "Total Dibatalkan" : "Total Pembelian"}
-                </CardTitle>
-                <ShoppingCart className={`h-4 w-4 ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`}>
-                  {formatCurrency(stats.total)}
+                <div className="text-2xl font-bold">
+                  {subView === "items" ? itemStats.count : stats.count}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rata-rata per Transaksi</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {subView === "cancelled" ? "Total Dibatalkan" : subView === "items" ? "Total Nilai Item" : "Total Pembelian"}
+                </CardTitle>
+                <ShoppingCart className={`h-4 w-4 ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${subView === "cancelled" ? "text-destructive" : "text-orange-600"}`}>
+                  {formatCurrency(subView === "items" ? itemStats.totalAmt : stats.total)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {subView === "items" ? "Total Qty" : "Rata-rata per Transaksi"}
+                </CardTitle>
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.avg)}</div>
+                <div className="text-2xl font-bold">
+                  {subView === "items" ? itemStats.totalQty : formatCurrency(stats.avg)}
+                </div>
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardContent className="p-0">
+              {subView === "items" ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>BID</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Produk</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Harga Satuan</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {itemRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Tidak ada item pembelian
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      itemRows.map((r, idx) => (
+                        <TableRow key={`${r.purchase_id}-${idx}`}>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-primary">{r.bid || "-"}</span>
+                              {r.bid && (
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyBid(r.bid)}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{format(new Date(r.date), "d MMM yyyy", { locale: localeId })}</TableCell>
+                          <TableCell>{r.product_name}</TableCell>
+                          <TableCell className="text-right">{r.quantity}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(Number(r.unit_price) || 0)}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(Number(r.subtotal) || 0)}</TableCell>
+                          <TableCell>{r.supplier_name || "-"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                r.process_status === "selesai"
+                                  ? "default"
+                                  : r.process_status === "batal"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                            >
+                              {r.process_status === "selesai"
+                                ? "Selesai"
+                                : r.process_status === "batal"
+                                ? "Batal"
+                                : "Proses"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -319,6 +449,7 @@ export default function PurchaseTransactionReport() {
                   )}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         </>

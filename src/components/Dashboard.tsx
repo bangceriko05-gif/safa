@@ -59,6 +59,21 @@ const PermissionManagement = lazy(() => import("./PermissionManagement"));
 const SettingsPage = lazy(() => import("./SettingsPage"));
 const TransactionManagement = lazy(() => import("./TransactionManagement"));
 const DepositFormModal = lazy(() => import("./deposit/DepositFormModal"));
+
+// Eagerly prefetch all lazy dashboard chunks in the background so switching
+// between menus is instant (no Suspense fallback delay on first click).
+const __prefetchDashboardChunks = () => {
+  void import("./UserManagement");
+  void import("./RoomManagement");
+  void import("./CustomerManagement");
+  void import("./suppliers/SupplierManagement");
+  void import("./ActivityLog");
+  void import("./Reports");
+  void import("./PermissionManagement");
+  void import("./SettingsPage");
+  void import("./TransactionManagement");
+  void import("./deposit/DepositFormModal");
+};
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
@@ -107,6 +122,13 @@ export default function Dashboard() {
     };
     window.addEventListener("anka:goto-inventory-stock-in", handler);
     return () => window.removeEventListener("anka:goto-inventory-stock-in", handler);
+  }, []);
+
+  // Prefetch every lazy-loaded dashboard chunk shortly after mount so subsequent
+  // tab switches render instantly (no Suspense fallback spinner).
+  useEffect(() => {
+    const t = setTimeout(() => __prefetchDashboardChunks(), 0);
+    return () => clearTimeout(t);
   }, []);
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");

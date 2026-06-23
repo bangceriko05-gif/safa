@@ -187,6 +187,21 @@ export default function PurchaseManagement() {
           updates.is_draft = false;
         }
       }
+      // When a purchase is marked Verified, automatically move it to "Selesai".
+      // When unverified again, send it back to "Proses".
+      let movedTo: string | null = null;
+      if (field === "verification_status") {
+        if (value === "Verified") {
+          updates.process_status = "selesai";
+          updates.status = "selesai";
+          updates.is_draft = false;
+          movedTo = "selesai";
+        } else if (value === "Unverified") {
+          updates.process_status = "proses";
+          updates.status = "proses";
+          movedTo = "proses";
+        }
+      }
       const { error } = await supabase
         .from("purchases" as any)
         .update(updates)
@@ -194,6 +209,8 @@ export default function PurchaseManagement() {
       if (error) throw error;
       if (field === "status" && value !== processTab) {
         // remove from current view since it moves to another tab
+        setPurchases((prev) => prev.filter((p) => p.id !== id));
+      } else if (movedTo && movedTo !== processTab) {
         setPurchases((prev) => prev.filter((p) => p.id !== id));
       } else {
         setPurchases((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));

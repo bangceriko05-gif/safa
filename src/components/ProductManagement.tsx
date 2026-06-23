@@ -61,6 +61,7 @@ import { logActivity } from "@/utils/activityLogger";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -249,6 +250,31 @@ export default function ProductManagement() {
     setEditorProductId(product.id);
     setEditorCopyMode(false);
     setEditorOpen(true);
+  };
+
+  // Inline update for quick toggles / price tweaks from the product list.
+  const updateProductInline = async (
+    productId: string,
+    field: "price" | "show_on_website" | "track_inventory",
+    value: number | boolean,
+  ) => {
+    if (!canUpdate) {
+      toast.error("Anda tidak memiliki permission mengubah produk");
+      return;
+    }
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, [field]: value as any } : p)),
+    );
+    const { error } = await supabase
+      .from("products")
+      .update({ [field]: value as any })
+      .eq("id", productId);
+    if (error) {
+      toast.error("Gagal memperbarui");
+      fetchAll();
+    } else {
+      toast.success("Tersimpan");
+    }
   };
 
   const getBaseUnit = (productId: string): string => {
@@ -794,6 +820,7 @@ export default function ProductManagement() {
               <TableHead>Harga Beli</TableHead>
               <TableHead>Harga Jual di Toko</TableHead>
               <TableHead>Harga Jual Online</TableHead>
+              <TableHead>Lacak Inventori</TableHead>
               <TableHead>Tersedia Online</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -802,7 +829,7 @@ export default function ProductManagement() {
             {filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={selectionMode ? 13 : 12}
+                  colSpan={selectionMode ? 14 : 13}
                   className="text-center text-muted-foreground py-12"
                 >
                   {searchQuery ||
@@ -904,12 +931,52 @@ export default function ProductManagement() {
                       </span>
                     </TableCell>
                     <TableCell className="text-sm tabular-nums">
-                      <span className="border-b border-dotted">
-                        {formatRp(product.show_on_website ? product.price : 0)}
-                      </span>
+                      {canUpdate ? (
+                        <Input
+                          type="number"
+                          defaultValue={product.show_on_website ? Number(product.price) || 0 : 0}
+                          disabled={!product.show_on_website}
+                          onBlur={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            if (v !== Number(product.price)) {
+                              updateProductInline(product.id, "price", v);
+                            }
+                          }}
+                          className="h-8 w-28 text-sm"
+                        />
+                      ) : (
+                        <span className="border-b border-dotted">
+                          {formatRp(product.show_on_website ? product.price : 0)}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {product.show_on_website ? "Ya" : "Tidak"}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!!product.track_inventory}
+                          disabled={!canUpdate}
+                          onCheckedChange={(v) =>
+                            updateProductInline(product.id, "track_inventory", !!v)
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {product.track_inventory ? "Aktif" : "Off"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!!product.show_on_website}
+                          disabled={!canUpdate}
+                          onCheckedChange={(v) =>
+                            updateProductInline(product.id, "show_on_website", !!v)
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {product.show_on_website ? "Ya" : "Tidak"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Popover>
