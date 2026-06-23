@@ -449,6 +449,7 @@ export default function PurchaseTransactionReport() {
                   )}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         </>
