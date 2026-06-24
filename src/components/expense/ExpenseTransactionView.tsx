@@ -463,12 +463,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         else if (value === "selesai") updateData.process_status = "selesai";
         else if (value === "batal") updateData.process_status = "batal";
       }
+      if (field === "verification_status" && value === "Verified") {
+        const current = expenses.find((e) => e.id === id);
+        if (current && current.process_status === "proses") {
+          updateData.process_status = "selesai";
+          updateData.status = "selesai";
+        }
+      }
       const { error } = await supabase
         .from("expenses")
         .update(updateData)
         .eq("id", id);
       if (error) throw error;
-      if (field === "status" && updateData.process_status && updateData.process_status !== processTab) {
+      if (updateData.process_status && updateData.process_status !== processTab) {
         setExpenses((prev) => prev.filter((e) => e.id !== id));
       } else {
         setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...updateData } : e)));
