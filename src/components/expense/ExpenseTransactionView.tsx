@@ -380,9 +380,21 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     setExpenseCategories(data || []);
   };
 
+  const fetchSuppliers = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("suppliers")
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .eq("is_active", true)
+      .order("name");
+    setSuppliers((data as any) || []);
+  };
+
   useEffect(() => {
     fetchExpenses();
     fetchCategories();
+    fetchSuppliers();
 
     if (!currentStore) return;
     // Realtime subscription - silent refresh
