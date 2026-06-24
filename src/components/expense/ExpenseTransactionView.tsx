@@ -73,7 +73,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; phone?: string | null; address?: string | null; no_rek?: string | null }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
 
@@ -386,7 +386,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     if (!currentStore) return;
     const { data } = await supabase
       .from("suppliers")
-      .select("id, name")
+      .select("id, name, phone, address, no_rek")
       .eq("store_id", currentStore.id)
       .eq("is_active", true)
       .order("name");
@@ -539,70 +539,51 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     };
 
     if (isEditing) {
+      const selectedSupplier = suppliers.find((s) => s.id === editForm.supplier_id);
+      const isLunas = !!(editingExpense?.payment_proof_url || editPaymentProofFile || editPaymentProofPreview);
       return (
         <div className="space-y-4">
+          {/* Header card */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <h2 className="text-xl font-bold">Edit Pengeluaran - {viewingExpense.bid}</h2>
+                  <div>
+                    <h2 className="text-xl font-bold">Edit Pengeluaran</h2>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>BID:</span>
+                      <span className="font-mono font-semibold">{viewingExpense.bid}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyBid(viewingExpense.bid)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={isLunas ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}>
+                    {isLunas ? "Lunas" : "Belum Bayar"}
+                  </Badge>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>Batal</Button>
+                  <Button onClick={handleSaveEdit}>Simpan</Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tanggal *</Label>
-                    <Input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Kategori</Label>
-                    <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
-                      <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
-                      <SelectContent>
-                        {expenseCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Deskripsi *</Label>
-                  <Input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Jumlah (Rp) *</Label>
-                    <Input value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Metode Pembayaran</Label>
-                    <Select value={editForm.payment_method} onValueChange={(v) => setEditForm({ ...editForm, payment_method: v })}>
-                      <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                      <SelectContent>
-                        {activeMethodNames.map(method => (
-                          <SelectItem key={method} value={method}>{method}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>No. Referensi</Label>
-                  <Input value={editForm.reference_no} onChange={(e) => setEditForm({ ...editForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Supplier</Label>
+          {/* 3-column grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Supplier */}
+            <Card>
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Supplier</h3>
                   <Select value={editForm.supplier_id || "none"} onValueChange={(v) => setEditForm({ ...editForm, supplier_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Pilih supplier (opsional)" /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-auto text-xs px-3">
+                      <SelectValue placeholder="Ubah" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Tanpa Supplier</SelectItem>
                       {suppliers.map((s) => (
@@ -611,72 +592,156 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Upload areas for edit */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Bukti Bayar</Label>
-                    <div
-                      className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => editPaymentProofRef.current?.click()}
-                      onDrop={(e) => handleEditDrop(e, "proof")}
-                      onDragOver={(e) => e.preventDefault()}
-                      onPaste={(e) => handleEditPaste(e, "proof")}
-                      tabIndex={0}
-                    >
-                      <input ref={editPaymentProofRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleEditFileSelect(file, "proof"); }} />
-                      {editPaymentProofPreview ? (
-                        <div className="space-y-2">
-                          <img src={editPaymentProofPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditPaymentProofFile(null); setEditPaymentProofPreview(null); }}>Hapus</Button>
-                        </div>
-                      ) : viewingExpense.payment_proof_url ? (
-                        <div className="space-y-2">
-                          <img src={viewingExpense.payment_proof_url} alt="Bukti Bayar" className="max-h-32 mx-auto rounded" />
-                          <p className="text-xs text-muted-foreground">Klik untuk ganti</p>
-                        </div>
-                      ) : (
-                        <>
-                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
-                        </>
-                      )}
-                    </div>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <p className="text-primary font-medium">Nama Supplier</p>
+                    <p className="text-muted-foreground">{selectedSupplier?.name || "-"}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Bukti Nota</Label>
-                    <div
-                      className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => editReceiptRef.current?.click()}
-                      onDrop={(e) => handleEditDrop(e, "receipt")}
-                      onDragOver={(e) => e.preventDefault()}
-                      onPaste={(e) => handleEditPaste(e, "receipt")}
-                      tabIndex={0}
-                    >
-                      <input ref={editReceiptRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleEditFileSelect(file, "receipt"); }} />
-                      {editReceiptPreview ? (
-                        <div className="space-y-2">
-                          <img src={editReceiptPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditReceiptFile(null); setEditReceiptPreview(null); }}>Hapus</Button>
-                        </div>
-                      ) : (viewingExpense as any).receipt_url ? (
-                        <div className="space-y-2">
-                          <img src={(viewingExpense as any).receipt_url} alt="Bukti Nota" className="max-h-32 mx-auto rounded" />
-                          <p className="text-xs text-muted-foreground">Klik untuk ganti</p>
-                        </div>
-                      ) : (
-                        <>
-                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
-                        </>
-                      )}
-                    </div>
+                  <div>
+                    <p className="text-primary font-medium">No Rek</p>
+                    <p className="text-muted-foreground">{selectedSupplier?.no_rek || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-primary font-medium">Telepon</p>
+                    <p className="text-muted-foreground">{selectedSupplier?.phone || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-primary font-medium">Alamat</p>
+                    <p className="text-muted-foreground">{selectedSupplier?.address || "-"}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>Batal</Button>
-                  <Button onClick={handleSaveEdit}>Simpan Perubahan</Button>
+            {/* Info Pengeluaran */}
+            <Card>
+              <CardContent className="p-5 space-y-3">
+                <h3 className="font-semibold">Info Pengeluaran</h3>
+                <div className="space-y-2">
+                  <Label>Tanggal *</Label>
+                  <Input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kategori</Label>
+                  <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                    <SelectContent>
+                      {expenseCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Jumlah (Rp) *</Label>
+                  <Input value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Metode Pembayaran</Label>
+                  <Select value={editForm.payment_method} onValueChange={(v) => setEditForm({ ...editForm, payment_method: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                    <SelectContent>
+                      {activeMethodNames.map(method => (
+                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>No. Referensi</Label>
+                  <Input value={editForm.reference_no} onChange={(e) => setEditForm({ ...editForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Catatan */}
+            <Card>
+              <CardContent className="p-5 space-y-3">
+                <h3 className="font-semibold">Catatan</h3>
+                <div className="space-y-2">
+                  <Label>Verifikasi</Label>
+                  <Select value={viewingExpense.verification_status || "Unverified"} onValueChange={(v) => updateField(viewingExpense.id, "verification_status", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Unverified">Unverified</SelectItem>
+                      <SelectItem value="Verified">Verified</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Deskripsi *</Label>
+                  <textarea
+                    className="flex min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    placeholder="Tidak ada"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Bukti Bayar & Bukti Nota */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Bukti Bayar</Label>
+                  <div
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => editPaymentProofRef.current?.click()}
+                    onDrop={(e) => handleEditDrop(e, "proof")}
+                    onDragOver={(e) => e.preventDefault()}
+                    onPaste={(e) => handleEditPaste(e, "proof")}
+                    tabIndex={0}
+                  >
+                    <input ref={editPaymentProofRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleEditFileSelect(file, "proof"); }} />
+                    {editPaymentProofPreview ? (
+                      <div className="space-y-2">
+                        <img src={editPaymentProofPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditPaymentProofFile(null); setEditPaymentProofPreview(null); }}>Hapus</Button>
+                      </div>
+                    ) : viewingExpense.payment_proof_url ? (
+                      <div className="space-y-2">
+                        <img src={viewingExpense.payment_proof_url} alt="Bukti Bayar" className="max-h-32 mx-auto rounded" />
+                        <p className="text-xs text-muted-foreground">Klik untuk ganti</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Bukti Nota</Label>
+                  <div
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => editReceiptRef.current?.click()}
+                    onDrop={(e) => handleEditDrop(e, "receipt")}
+                    onDragOver={(e) => e.preventDefault()}
+                    onPaste={(e) => handleEditPaste(e, "receipt")}
+                    tabIndex={0}
+                  >
+                    <input ref={editReceiptRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleEditFileSelect(file, "receipt"); }} />
+                    {editReceiptPreview ? (
+                      <div className="space-y-2">
+                        <img src={editReceiptPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditReceiptFile(null); setEditReceiptPreview(null); }}>Hapus</Button>
+                      </div>
+                    ) : (viewingExpense as any).receipt_url ? (
+                      <div className="space-y-2">
+                        <img src={(viewingExpense as any).receipt_url} alt="Bukti Nota" className="max-h-32 mx-auto rounded" />
+                        <p className="text-xs text-muted-foreground">Klik untuk ganti</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Drop file atau klik untuk upload</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -787,79 +852,47 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   // Inline Add Expense View
   if (addingExpense) {
+    const selectedSupplierAdd = suppliers.find((s) => s.id === expenseForm.supplier_id);
+    const isLunasAdd = !!(paymentProofFile || paymentProofPreview);
     return (
       <div className="space-y-4">
+        {/* Header card */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Button variant="ghost" size="icon" onClick={resetAddForm}>
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <h2 className="text-xl font-bold">Tambah Pengeluaran</h2>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={resetAddForm}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h2 className="text-xl font-bold">Tambah Pengeluaran</h2>
+                  <p className="text-sm text-muted-foreground">Pengeluaran baru</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={isLunasAdd ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}>
+                  {isLunasAdd ? "Lunas" : "Belum Bayar"}
+                </Badge>
+                <Button variant="outline" onClick={resetAddForm}>Batal</Button>
+                <Button onClick={handleAddExpense} disabled={submitting}>
+                  {submitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-5">
-              {/* Row 1: Tanggal + Kategori */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Tanggal *</Label>
-                  <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Kategori</Label>
-                    <Button variant="ghost" size="sm" onClick={() => setManagingCategories(true)} className="h-6 px-2 text-xs">
-                      <Settings className="h-3 w-3 mr-1" />
-                      Kelola
-                    </Button>
-                  </div>
-                  <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
-                    <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
-                    <SelectContent>
-                      {expenseCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Deskripsi */}
-              <div className="space-y-2">
-                <Label>Deskripsi *</Label>
-                <Input value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Deskripsi pengeluaran" />
-              </div>
-
-              {/* Row 2: Jumlah + Metode Pembayaran */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Jumlah (Rp) *</Label>
-                  <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Metode Pembayaran *</Label>
-                  <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
-                    <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                    <SelectContent>
-                      {activeMethodNames.map(method => (
-                        <SelectItem key={method} value={method}>{method}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* No. Referensi */}
-              <div className="space-y-2">
-                <Label>No. Referensi</Label>
-                <Input value={expenseForm.reference_no} onChange={(e) => setExpenseForm({ ...expenseForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
-              </div>
-
-              {/* Supplier (opsional) */}
-              <div className="space-y-2">
-                <Label>Supplier</Label>
+        {/* 3-column grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Supplier */}
+          <Card>
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Supplier</h3>
                 <Select value={expenseForm.supplier_id || "none"} onValueChange={(v) => setExpenseForm({ ...expenseForm, supplier_id: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue placeholder="Pilih supplier (opsional)" /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-auto text-xs px-3">
+                    <SelectValue placeholder="Ubah" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Tanpa Supplier</SelectItem>
                     {suppliers.map((s) => (
@@ -868,9 +901,95 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="text-primary font-medium">Nama Supplier</p>
+                  <p className="text-muted-foreground">{selectedSupplierAdd?.name || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-primary font-medium">No Rek</p>
+                  <p className="text-muted-foreground">{selectedSupplierAdd?.no_rek || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-primary font-medium">Telepon</p>
+                  <p className="text-muted-foreground">{selectedSupplierAdd?.phone || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-primary font-medium">Alamat</p>
+                  <p className="text-muted-foreground">{selectedSupplierAdd?.address || "-"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Upload areas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Info Pengeluaran */}
+          <Card>
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Info Pengeluaran</h3>
+                <Button variant="ghost" size="sm" onClick={() => setManagingCategories(true)} className="h-6 px-2 text-xs">
+                  <Settings className="h-3 w-3 mr-1" />
+                  Kelola Kategori
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal *</Label>
+                <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Kategori</Label>
+                <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                  <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                  <SelectContent>
+                    {expenseCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Jumlah (Rp) *</Label>
+                <Input value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
+              </div>
+              <div className="space-y-2">
+                <Label>Metode Pembayaran *</Label>
+                <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                  <SelectContent>
+                    {activeMethodNames.map(method => (
+                      <SelectItem key={method} value={method}>{method}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>No. Referensi</Label>
+                <Input value={expenseForm.reference_no} onChange={(e) => setExpenseForm({ ...expenseForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Catatan */}
+          <Card>
+            <CardContent className="p-5 space-y-3">
+              <h3 className="font-semibold">Catatan</h3>
+              <div className="space-y-2">
+                <Label>Deskripsi *</Label>
+                <textarea
+                  className="flex min-h-[180px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={expenseForm.description}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                  placeholder="Tidak ada"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bukti Bayar & Bukti Nota */}
+        <Card>
+          <CardContent className="p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Bukti Bayar */}
                 <div className="space-y-2">
                   <Label>Bukti Bayar (opsional)</Label>
@@ -948,15 +1067,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={resetAddForm}>Batal</Button>
-                <Button onClick={handleAddExpense} disabled={submitting}>
-                  {submitting ? "Menyimpan..." : "Simpan"}
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
