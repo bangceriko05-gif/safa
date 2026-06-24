@@ -1049,6 +1049,7 @@ export type Database = {
           reference_no: string | null
           status: string
           store_id: string | null
+          supplier_id: string | null
           updated_at: string
           verification_status: string
         }
@@ -1068,6 +1069,7 @@ export type Database = {
           reference_no?: string | null
           status?: string
           store_id?: string | null
+          supplier_id?: string | null
           updated_at?: string
           verification_status?: string
         }
@@ -1087,6 +1089,7 @@ export type Database = {
           reference_no?: string | null
           status?: string
           store_id?: string | null
+          supplier_id?: string | null
           updated_at?: string
           verification_status?: string
         }
@@ -1096,6 +1099,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

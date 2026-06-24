@@ -42,6 +42,7 @@ interface Expense {
   store_id: string;
   receipt_url?: string | null;
   reference_no?: string | null;
+  supplier_id?: string | null;
 }
 
 const PROCESS_TABS = [
@@ -72,12 +73,13 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
 
   // Add expense inline view state
   const [addingExpense, setAddingExpense] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "" });
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "", supplier_id: "" });
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [previewExpense, setPreviewExpense] = useState<Expense | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "" });
+  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "", supplier_id: "" });
   const [editPaymentProofFile, setEditPaymentProofFile] = useState<File | null>(null);
   const [editReceiptFile, setEditReceiptFile] = useState<File | null>(null);
   const [editPaymentProofPreview, setEditPaymentProofPreview] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       payment_method: expense.payment_method || "",
       date: expense.date,
       reference_no: (expense as any).reference_no || "",
+      supplier_id: (expense as any).supplier_id || "",
     });
     setEditPaymentProofFile(null);
     setEditReceiptFile(null);
@@ -178,6 +181,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           payment_method: editForm.payment_method || null,
           date: editForm.date,
           reference_no: editForm.reference_no || null,
+          supplier_id: editForm.supplier_id || null,
           payment_proof_url: paymentProofUrl,
           receipt_url: receiptUrl,
         })
@@ -252,6 +256,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         payment_proof_url: paymentProofUrl,
         receipt_url: receiptUrl,
         reference_no: expenseForm.reference_no || null,
+        supplier_id: expenseForm.supplier_id || null,
       }]).select().single();
       if (error) throw error;
 
@@ -277,7 +282,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   const resetAddForm = () => {
     setAddingExpense(false);
-    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "" });
+    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "", supplier_id: "" });
     setPaymentProofFile(null);
     setReceiptFile(null);
     setPaymentProofPreview(null);
@@ -377,9 +382,21 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     setExpenseCategories(data || []);
   };
 
+  const fetchSuppliers = async () => {
+    if (!currentStore) return;
+    const { data } = await supabase
+      .from("suppliers")
+      .select("id, name")
+      .eq("store_id", currentStore.id)
+      .eq("is_active", true)
+      .order("name");
+    setSuppliers((data as any) || []);
+  };
+
   useEffect(() => {
     fetchExpenses();
     fetchCategories();
+    fetchSuppliers();
 
     if (!currentStore) return;
     // Realtime subscription - silent refresh
@@ -580,6 +597,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                 <div className="space-y-2">
                   <Label>No. Referensi</Label>
                   <Input value={editForm.reference_no} onChange={(e) => setEditForm({ ...editForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Supplier</Label>
+                  <Select value={editForm.supplier_id || "none"} onValueChange={(v) => setEditForm({ ...editForm, supplier_id: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih supplier (opsional)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Tanpa Supplier</SelectItem>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Upload areas for edit */}
@@ -823,6 +853,20 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
               <div className="space-y-2">
                 <Label>No. Referensi</Label>
                 <Input value={expenseForm.reference_no} onChange={(e) => setExpenseForm({ ...expenseForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
+              </div>
+
+              {/* Supplier (opsional) */}
+              <div className="space-y-2">
+                <Label>Supplier</Label>
+                <Select value={expenseForm.supplier_id || "none"} onValueChange={(v) => setExpenseForm({ ...expenseForm, supplier_id: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Pilih supplier (opsional)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa Supplier</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Upload areas */}
