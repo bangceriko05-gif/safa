@@ -181,6 +181,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           payment_method: editForm.payment_method || null,
           date: editForm.date,
           reference_no: editForm.reference_no || null,
+          supplier_id: editForm.supplier_id || null,
           payment_proof_url: paymentProofUrl,
           receipt_url: receiptUrl,
         })
@@ -255,6 +256,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
         payment_proof_url: paymentProofUrl,
         receipt_url: receiptUrl,
         reference_no: expenseForm.reference_no || null,
+        supplier_id: expenseForm.supplier_id || null,
       }]).select().single();
       if (error) throw error;
 
