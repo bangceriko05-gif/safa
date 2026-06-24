@@ -599,6 +599,19 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                   <Input value={editForm.reference_no} onChange={(e) => setEditForm({ ...editForm, reference_no: e.target.value })} placeholder="Nomor referensi (opsional)" />
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Supplier</Label>
+                  <Select value={editForm.supplier_id || "none"} onValueChange={(v) => setEditForm({ ...editForm, supplier_id: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih supplier (opsional)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Tanpa Supplier</SelectItem>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Upload areas for edit */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
