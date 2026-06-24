@@ -42,6 +42,7 @@ interface Expense {
   store_id: string;
   receipt_url?: string | null;
   reference_no?: string | null;
+  supplier_id?: string | null;
 }
 
 const PROCESS_TABS = [
@@ -72,12 +73,13 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
 
   // Add expense inline view state
   const [addingExpense, setAddingExpense] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "" });
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "", supplier_id: "" });
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [previewExpense, setPreviewExpense] = useState<Expense | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "" });
+  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", payment_method: "", date: "", reference_no: "", supplier_id: "" });
   const [editPaymentProofFile, setEditPaymentProofFile] = useState<File | null>(null);
   const [editReceiptFile, setEditReceiptFile] = useState<File | null>(null);
   const [editPaymentProofPreview, setEditPaymentProofPreview] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       payment_method: expense.payment_method || "",
       date: expense.date,
       reference_no: (expense as any).reference_no || "",
+      supplier_id: (expense as any).supplier_id || "",
     });
     setEditPaymentProofFile(null);
     setEditReceiptFile(null);
