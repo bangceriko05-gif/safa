@@ -280,7 +280,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
 
   const resetAddForm = () => {
     setAddingExpense(false);
-    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "" });
+    setExpenseForm({ description: "", amount: "", category: "", payment_method: "", date: format(new Date(), "yyyy-MM-dd"), reference_no: "", supplier_id: "" });
     setPaymentProofFile(null);
     setReceiptFile(null);
     setPaymentProofPreview(null);
