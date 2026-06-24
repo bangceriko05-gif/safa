@@ -73,7 +73,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string }[]>([]);
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; phone?: string | null; address?: string | null; no_rek?: string | null }[]>([]);
   const [noteDialogExpenseId, setNoteDialogExpenseId] = useState<string | null>(null);
   const [noteDialogData, setNoteDialogData] = useState<Expense | null>(null);
 
@@ -386,7 +386,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     if (!currentStore) return;
     const { data } = await supabase
       .from("suppliers")
-      .select("id, name")
+      .select("id, name, phone, address, no_rek")
       .eq("store_id", currentStore.id)
       .eq("is_active", true)
       .order("name");
