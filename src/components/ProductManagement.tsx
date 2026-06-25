@@ -983,6 +983,7 @@ export default function ProductManagement() {
                     <TableCell className="text-sm tabular-nums">
                       {canUpdate ? (
                         <Input
+                          key={`price-${product.id}-${inlineRevertKey[product.id] || 0}`}
                           type="number"
                           defaultValue={product.show_on_website ? Number(product.price) || 0 : 0}
                           disabled={!product.show_on_website}
