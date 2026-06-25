@@ -846,7 +846,7 @@ export default function ProductManagement() {
 
       {/* Table */}
       <div className="border rounded-md bg-card overflow-x-auto">
-        <Table>
+        <Table className="[&_th]:px-2 [&_td]:px-2 [&_th]:whitespace-nowrap">
           <TableHeader>
             <TableRow className="bg-muted/30">
               {selectionMode && (
