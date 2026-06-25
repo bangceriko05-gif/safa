@@ -1244,7 +1244,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           <Badge
                             variant="outline"
                             className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
-                            onClick={() => setPreviewExpense(expense)}
+                            onClick={() => openDetailView(expense)}
                           >
                             {expense.bid || '-'}
                           </Badge>
@@ -1399,20 +1399,6 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           </div>
         </DialogContent>
       </Dialog>
-
-      <TransactionBidPopup
-        open={!!previewExpense}
-        onClose={() => setPreviewExpense(null)}
-        type="expense"
-        data={previewExpense as any}
-        onEdit={() => {
-          if (previewExpense) {
-            const exp = previewExpense;
-            setPreviewExpense(null);
-            openDetailView(exp);
-          }
-        }}
-      />
 
     </div>
   );
