@@ -633,6 +633,23 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>Verifikasi</Label>
+                  <Select value={viewingExpense.verification_status || "Unverified"} onValueChange={(v) => updateField(viewingExpense.id, "verification_status", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Unverified">Unverified</SelectItem>
+                      <SelectItem value="Verified">Verified</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pembayaran */}
+            <Card>
+              <CardContent className="p-5 space-y-3">
+                <h3 className="font-semibold">Pembayaran</h3>
+                <div className="space-y-2">
                   <Label>Jumlah (Rp) *</Label>
                   <Input value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: formatAmountInput(e.target.value) })} placeholder="0" />
                 </div>
@@ -653,33 +670,20 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                 </div>
               </CardContent>
             </Card>
-
-            {/* Catatan */}
-            <Card>
-              <CardContent className="p-5 space-y-3">
-                <h3 className="font-semibold">Catatan</h3>
-                <div className="space-y-2">
-                  <Label>Verifikasi</Label>
-                  <Select value={viewingExpense.verification_status || "Unverified"} onValueChange={(v) => updateField(viewingExpense.id, "verification_status", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Unverified">Unverified</SelectItem>
-                      <SelectItem value="Verified">Verified</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Deskripsi *</Label>
-                  <textarea
-                    className="flex min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={editForm.description}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    placeholder="Tidak ada"
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </div>
+
+          {/* Deskripsi */}
+          <Card>
+            <CardContent className="p-5 space-y-2">
+              <Label>Deskripsi *</Label>
+              <textarea
+                className="flex min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Tidak ada"
+              />
+            </CardContent>
+          </Card>
 
           {/* Bukti Bayar & Bukti Nota */}
           <Card>
