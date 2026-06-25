@@ -157,6 +157,18 @@ export default function ProductManagement() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
+  // Inline edit confirmation
+  const [pendingInline, setPendingInline] = useState<{
+    productId: string;
+    productName: string;
+    field: "price" | "show_on_website" | "track_inventory";
+    value: number | boolean;
+    label: string;
+    fromText: string;
+    toText: string;
+  } | null>(null);
+  const [inlineRevertKey, setInlineRevertKey] = useState<Record<string, number>>({});
+
   // Pagination for main product list
   const [pageSize, setPageSize] = useState<number>(30);
   const [page, setPage] = useState<number>(1);
@@ -262,6 +274,34 @@ export default function ProductManagement() {
       toast.error("Anda tidak memiliki permission mengubah produk");
       return;
     }
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    const labelMap = {
+      price: "Harga Jual Online",
+      show_on_website: "Tersedia Online",
+      track_inventory: "Lacak Inventori",
+    } as const;
+    const fmt = (f: typeof field, v: number | boolean) => {
+      if (f === "price") return `Rp ${formatRp(Number(v) || 0)}`;
+      if (f === "show_on_website") return v ? "Ya" : "Tidak";
+      return v ? "Aktif" : "Off";
+    };
+    setPendingInline({
+      productId,
+      productName: product.name,
+      field,
+      value,
+      label: labelMap[field],
+      fromText: fmt(field, (product as any)[field]),
+      toText: fmt(field, value),
+    });
+  };
+
+  const performInlineUpdate = async (
+    productId: string,
+    field: "price" | "show_on_website" | "track_inventory",
+    value: number | boolean,
+  ) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, [field]: value as any } : p)),
     );
@@ -275,6 +315,16 @@ export default function ProductManagement() {
     } else {
       toast.success("Tersimpan");
     }
+  };
+
+  const cancelInlineUpdate = () => {
+    if (pendingInline) {
+      setInlineRevertKey((m) => ({
+        ...m,
+        [pendingInline.productId]: (m[pendingInline.productId] || 0) + 1,
+      }));
+    }
+    setPendingInline(null);
   };
 
   const getBaseUnit = (productId: string): string => {
@@ -933,6 +983,7 @@ export default function ProductManagement() {
                     <TableCell className="text-sm tabular-nums">
                       {canUpdate ? (
                         <Input
+                          key={`price-${product.id}-${inlineRevertKey[product.id] || 0}`}
                           type="number"
                           defaultValue={product.show_on_website ? Number(product.price) || 0 : 0}
                           disabled={!product.show_on_website}
@@ -1414,6 +1465,44 @@ export default function ProductManagement() {
           />
         </Suspense>
       )}
+
+      {/* Inline edit confirmation */}
+      <AlertDialog
+        open={!!pendingInline}
+        onOpenChange={(o) => {
+          if (!o) cancelInlineUpdate();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Yakin melakukan perubahan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingInline && (
+                <>
+                  Ubah <b>{pendingInline.label}</b> untuk produk{" "}
+                  <b>{pendingInline.productName}</b> dari{" "}
+                  <b>{pendingInline.fromText}</b> menjadi{" "}
+                  <b>{pendingInline.toText}</b>?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelInlineUpdate}>Tidak</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingInline) {
+                  const { productId, field, value } = pendingInline;
+                  setPendingInline(null);
+                  performInlineUpdate(productId, field, value);
+                }
+              }}
+            >
+              Ya
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
