@@ -157,6 +157,18 @@ export default function ProductManagement() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
+  // Inline edit confirmation
+  const [pendingInline, setPendingInline] = useState<{
+    productId: string;
+    productName: string;
+    field: "price" | "show_on_website" | "track_inventory";
+    value: number | boolean;
+    label: string;
+    fromText: string;
+    toText: string;
+  } | null>(null);
+  const [inlineRevertKey, setInlineRevertKey] = useState<Record<string, number>>({});
+
   // Pagination for main product list
   const [pageSize, setPageSize] = useState<number>(30);
   const [page, setPage] = useState<number>(1);
