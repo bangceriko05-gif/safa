@@ -1465,6 +1465,44 @@ export default function ProductManagement() {
           />
         </Suspense>
       )}
+
+      {/* Inline edit confirmation */}
+      <AlertDialog
+        open={!!pendingInline}
+        onOpenChange={(o) => {
+          if (!o) cancelInlineUpdate();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Yakin melakukan perubahan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingInline && (
+                <>
+                  Ubah <b>{pendingInline.label}</b> untuk produk{" "}
+                  <b>{pendingInline.productName}</b> dari{" "}
+                  <b>{pendingInline.fromText}</b> menjadi{" "}
+                  <b>{pendingInline.toText}</b>?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelInlineUpdate}>Tidak</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingInline) {
+                  const { productId, field, value } = pendingInline;
+                  setPendingInline(null);
+                  performInlineUpdate(productId, field, value);
+                }
+              }}
+            >
+              Ya
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
