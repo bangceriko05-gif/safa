@@ -165,6 +165,7 @@ export default function PMSCalendar({
     window.addEventListener("ready-used-color-changed", handleReadyUsedColorChange);
 
     // Realtime subscription for rooms
+    let roomsDebounce: ReturnType<typeof setTimeout>;
     const roomsChannel = supabase
       .channel(`pms-rooms-${currentStore.id}`)
       .on(
@@ -176,12 +177,14 @@ export default function PMSCalendar({
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchRooms();
+          clearTimeout(roomsDebounce);
+          roomsDebounce = setTimeout(() => fetchRooms(), 500);
         }
       )
       .subscribe();
 
     // Realtime subscription for deposits
+    let depositsDebounce: ReturnType<typeof setTimeout>;
     const depositsChannel = supabase
       .channel(`pms-deposits-${currentStore.id}`)
       .on(
@@ -193,13 +196,16 @@ export default function PMSCalendar({
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchRoomDeposits();
+          clearTimeout(depositsDebounce);
+          depositsDebounce = setTimeout(() => fetchRoomDeposits(), 500);
         }
       )
       .subscribe();
 
     return () => {
       window.removeEventListener("ready-used-color-changed", handleReadyUsedColorChange);
+      clearTimeout(roomsDebounce);
+      clearTimeout(depositsDebounce);
       supabase.removeChannel(roomsChannel);
       supabase.removeChannel(depositsChannel);
     };
@@ -211,6 +217,7 @@ export default function PMSCalendar({
     fetchRoomDailyStatus();
 
     // Realtime subscription for room_daily_status
+    let dailyStatusDebounce: ReturnType<typeof setTimeout>;
     const dailyStatusChannel = supabase
       .channel(`pms-daily-status-${currentStore.id}`)
       .on(
@@ -221,12 +228,14 @@ export default function PMSCalendar({
           table: 'room_daily_status',
         },
         () => {
-          fetchRoomDailyStatus();
+          clearTimeout(dailyStatusDebounce);
+          dailyStatusDebounce = setTimeout(() => fetchRoomDailyStatus(), 500);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(dailyStatusDebounce);
       supabase.removeChannel(dailyStatusChannel);
     };
   }, [currentStore, visibleDates]);
