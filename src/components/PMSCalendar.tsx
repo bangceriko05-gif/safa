@@ -226,7 +226,6 @@ export default function PMSCalendar({
           event: '*',
           schema: 'public',
           table: 'room_daily_status',
-          filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
           clearTimeout(dailyStatusDebounce);
