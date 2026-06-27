@@ -706,16 +706,12 @@ export default function BookingModal({
   const handlePhoneChange = async (value: string) => {
     setFormData({ ...formData, phone: value });
     
-    // Auto-fill name if phone matches
+    // Auto-fill name if phone matches — lookup from local state instead of
+    // hitting the database on every keystroke (was a major source of load).
     if (value.length >= 10) {
-      const { data } = await supabase
-        .from("customers")
-        .select("name, phone")
-        .eq("phone", value)
-        .maybeSingle();
-      
-      if (data) {
-        setFormData({ ...formData, phone: value, customer_name: data.name });
+      const match = customers.find((c) => c.phone === value);
+      if (match) {
+        setFormData({ ...formData, phone: value, customer_name: match.name });
         setShowPhoneSuggestions(false);
       }
     }
