@@ -130,7 +130,8 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     if (!currentStore) return;
     fetchBookings();
 
-    // Realtime subscription - silent refresh (no loading spinner)
+    // Realtime subscription - silent refresh (debounced 600ms to batch bursts)
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel(`list-bookings-${currentStore.id}`)
       .on(
@@ -142,16 +143,21 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchBookings(true);
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchBookings(true), 600);
         }
       )
       .subscribe();
 
-    // Listen for booking changes - silent refresh
-    const handleBookingChange = () => fetchBookings(true);
+    // Listen for booking changes - silent refresh (debounced)
+    const handleBookingChange = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchBookings(true), 300);
+    };
     window.addEventListener("booking-changed", handleBookingChange);
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
