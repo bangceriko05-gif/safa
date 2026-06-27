@@ -155,7 +155,8 @@ export default function ScheduleTable({
     window.addEventListener("status-colors-changed", handleStatusColorsChange);
     window.addEventListener("booking-text-color-changed", handleBookingTextColorChange);
 
-    // Realtime subscription for deposits
+    // Realtime subscription for deposits (debounced 500ms to batch bursts)
+    let depositsDebounce: ReturnType<typeof setTimeout>;
     const depositsChannel = supabase
       .channel(`schedule-deposits-${currentStore.id}`)
       .on(
@@ -167,7 +168,8 @@ export default function ScheduleTable({
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchRoomDeposits();
+          clearTimeout(depositsDebounce);
+          depositsDebounce = setTimeout(() => fetchRoomDeposits(), 500);
         }
       )
       .subscribe();
@@ -175,6 +177,7 @@ export default function ScheduleTable({
     return () => {
       window.removeEventListener("status-colors-changed", handleStatusColorsChange);
       window.removeEventListener("booking-text-color-changed", handleBookingTextColorChange);
+      clearTimeout(depositsDebounce);
       supabase.removeChannel(depositsChannel);
     };
   }, [currentStore]);
@@ -410,6 +413,9 @@ export default function ScheduleTable({
     fetchRoomDailyStatus();
     fetchRoomsWithCheckout();
 
+    // Debounce both status & checkout refetches to coalesce bursts of events
+    let statusDebounce: ReturnType<typeof setTimeout>;
+    let checkoutDebounce: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel(
         `room-daily-status-${currentStore.id}-${format(selectedDate, "yyyy-MM-dd")}`
@@ -417,16 +423,24 @@ export default function ScheduleTable({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_daily_status" },
-        () => fetchRoomDailyStatus()
+        () => {
+          clearTimeout(statusDebounce);
+          statusDebounce = setTimeout(() => fetchRoomDailyStatus(), 500);
+        }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "bookings" },
-        () => fetchRoomsWithCheckout()
+        { event: "*", schema: "public", table: "bookings", filter: `store_id=eq.${currentStore.id}` },
+        () => {
+          clearTimeout(checkoutDebounce);
+          checkoutDebounce = setTimeout(() => fetchRoomsWithCheckout(), 500);
+        }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(statusDebounce);
+      clearTimeout(checkoutDebounce);
       supabase.removeChannel(channel);
     };
   }, [currentStore, selectedDate]);
