@@ -895,6 +895,8 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
                           const outOfStock = (Number(p.stock_qty) || 0) <= 0;
+                          const pConvs = productConvs[p.id] || [];
+                          const baseUnitLabel = pConvs[0]?.to_unit || "";
                           return (
                             <CommandItem
                               key={p.id}
@@ -942,7 +944,7 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                               <div className="flex justify-between w-full">
                                 <span>{p.name}</span>
                                 <span className={`text-xs ${outOfStock ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                                  Stok: {getBaseStock(p)}
+                                  Stok: {getBaseStock(p)}{baseUnitLabel ? ` ${baseUnitLabel}` : ""}
                                 </span>
                               </div>
                             </CommandItem>
