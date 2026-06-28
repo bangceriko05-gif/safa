@@ -91,6 +91,12 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
     if (!currentStore) return;
     fetchBookings();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchBookings(), 600);
+    };
+
     // Realtime subscription
     const channel = supabase
       .channel(`cancelled-bookings-${currentStore.id}`)
@@ -103,16 +109,17 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchBookings();
+          debouncedFetch();
         }
       )
       .subscribe();
 
     // Listen for booking changes
-    const handleBookingChange = () => fetchBookings();
+    const handleBookingChange = () => debouncedFetch();
     window.addEventListener("booking-changed", handleBookingChange);
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
       window.removeEventListener("booking-changed", handleBookingChange);
     };
