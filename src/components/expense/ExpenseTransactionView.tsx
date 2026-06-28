@@ -399,6 +399,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     fetchSuppliers();
 
     if (!currentStore) return;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     // Realtime subscription - silent refresh
     const channel = supabase
       .channel(`expenses-${currentStore.id}`)
@@ -411,12 +412,14 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchExpenses(true);
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchExpenses(true), 600);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [currentStore, processTab, timeRange, customDateRange]);

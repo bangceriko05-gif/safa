@@ -468,6 +468,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     fetchCustomers();
 
     if (!currentStore) return;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     // Realtime subscription - silent refresh
     const channel = supabase
       .channel(`incomes-${currentStore.id}`)
@@ -480,12 +481,14 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           filter: `store_id=eq.${currentStore.id}`,
         },
         () => {
-          fetchIncomes(true);
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchIncomes(true), 600);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [currentStore, processTab, timeRange, customDateRange]);
