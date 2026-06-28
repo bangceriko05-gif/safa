@@ -48,15 +48,20 @@ export default function BookingOrdersSection({ booking, canEdit }: Props) {
   useEffect(() => {
     fetchOrders();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const ch = supabase
       .channel(`booking_orders_${booking.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "booking_orders", filter: `booking_id=eq.${booking.id}` },
-        () => fetchOrders()
+        () => {
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchOrders(), 500);
+        }
       )
       .subscribe();
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(ch);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
