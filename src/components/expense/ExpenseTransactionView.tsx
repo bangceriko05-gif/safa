@@ -25,6 +25,7 @@ import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
+import PaymentMethodHoverCell from "@/components/shared/PaymentMethodHoverCell";
 
 interface Expense {
   id: string;
