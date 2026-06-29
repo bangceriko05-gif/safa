@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import PurchaseNoteDialog from "./PurchaseNoteDialog";
 import PurchaseForm from "./PurchaseForm";
 import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
+import PaymentMethodHoverCell from "@/components/shared/PaymentMethodHoverCell";
 
 interface Purchase {
   id: string;
@@ -67,6 +68,7 @@ const TIME_RANGES = [
 export default function PurchaseManagement() {
   const { currentStore } = useStore();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; no_rek: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,6 +150,17 @@ export default function PurchaseManagement() {
   useEffect(() => {
     fetchPurchases();
   }, [currentStore, processTab, timeRange, customDateRange]);
+
+  useEffect(() => {
+    if (!currentStore) return;
+    (async () => {
+      const { data } = await supabase
+        .from("suppliers")
+        .select("id, name, no_rek")
+        .eq("store_id", currentStore.id);
+      setSuppliers((data as any) || []);
+    })();
+  }, [currentStore?.id]);
 
   const filteredPurchases = useMemo(() => {
     let result = purchases;
@@ -504,7 +517,20 @@ export default function PurchaseManagement() {
                           Lihat
                         </Button>
                       </TableCell>
-                      <TableCell>{purchase.payment_method}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const sup = suppliers.find(
+                            (s) => s.name?.toLowerCase().trim() === purchase.supplier_name?.toLowerCase().trim()
+                          );
+                          return (
+                            <PaymentMethodHoverCell
+                              method={purchase.payment_method}
+                              supplierName={sup?.name || purchase.supplier_name}
+                              supplierNoRek={sup?.no_rek}
+                            />
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>
                         {purchase.payment_proof_url ? (
                           <a href={purchase.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
