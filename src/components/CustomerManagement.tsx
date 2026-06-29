@@ -314,6 +314,8 @@ export default function CustomerManagement() {
         toast.success("Pelanggan berhasil ditambahkan");
       }
 
+      const { invalidateCustomerCache } = await import("@/utils/customerCache");
+      invalidateCustomerCache(currentStore?.id);
       fetchCustomers();
       handleCloseDialog();
     } catch (error: any) {
@@ -370,6 +372,10 @@ export default function CustomerManagement() {
       }
 
       toast.success("Pelanggan berhasil dihapus");
+      {
+        const { invalidateCustomerCache } = await import("@/utils/customerCache");
+        invalidateCustomerCache(currentStore?.id);
+      }
       fetchCustomers();
     } catch (error: any) {
       toast.error("Gagal menghapus pelanggan");
@@ -401,6 +407,10 @@ export default function CustomerManagement() {
       toast.success(`${idsArray.length} pelanggan berhasil dihapus`);
       setSelectedIds(new Set());
       setIsSelectionMode(false);
+      {
+        const { invalidateCustomerCache } = await import("@/utils/customerCache");
+        invalidateCustomerCache(currentStore?.id);
+      }
       fetchCustomers();
     } catch (error: any) {
       toast.error("Gagal menghapus pelanggan");
