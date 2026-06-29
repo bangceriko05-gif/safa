@@ -497,15 +497,9 @@ export default function BookingModal({
   const fetchCustomers = async () => {
     try {
       if (!currentStore) return;
-      
-      const { data, error } = await supabase
-        .from("customers")
-        .select("id, name, phone")
-        .eq("store_id", currentStore.id)
-        .order("name");
-
-      if (error) throw error;
-      setCustomers(data || []);
+      const { fetchCustomersCached } = await import("@/utils/customerCache");
+      const data = await fetchCustomersCached(currentStore.id);
+      setCustomers(data as any);
     } catch (error) {
       console.error("Error fetching customers:", error);
     }
@@ -1158,7 +1152,9 @@ export default function BookingModal({
             created_by: userId,
             store_id: currentStore.id,
           }]);
-          // Refresh customers list
+          // Invalidate cache and refresh list
+          const { invalidateCustomerCache } = await import("@/utils/customerCache");
+          invalidateCustomerCache(currentStore.id);
           fetchCustomers();
         } catch (error: any) {
           // If customer already exists (race condition), continue with booking

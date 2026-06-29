@@ -314,8 +314,9 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
 
   const fetchCustomers = async () => {
     if (!currentStore) return;
-    const { data } = await supabase.from("customers").select("id, name, phone").eq("store_id", currentStore.id).order("name");
-    setCustomers(data || []);
+    const { fetchCustomersCached } = await import("@/utils/customerCache");
+    const data = await fetchCustomersCached(currentStore.id);
+    setCustomers(data);
   };
 
   const calcItemSubtotal = (qty: number, price: number, discType: "percentage" | "fixed", discVal: string) => {
