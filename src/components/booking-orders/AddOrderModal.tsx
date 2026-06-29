@@ -132,12 +132,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         .in("status", ["checked_in", "confirmed", "in", "CI"])
         .order("customer_name");
       setActiveBookings(data || []);
-      const { data: cust } = await supabase
-        .from("customers")
-        .select("id, name, phone")
-        .eq("store_id", currentStore.id)
-        .order("name");
-      setDbCustomers(cust || []);
+      const { fetchCustomersCached } = await import("@/utils/customerCache");
+      const cust = await fetchCustomersCached(currentStore.id);
+      setDbCustomers(cust as any);
     })();
   }, [open, posMode, currentStore]);
 
