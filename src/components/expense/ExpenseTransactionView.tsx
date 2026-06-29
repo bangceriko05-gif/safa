@@ -25,6 +25,7 @@ import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
+import PaymentMethodHoverCell from "@/components/shared/PaymentMethodHoverCell";
 
 interface Expense {
   id: string;
@@ -1269,7 +1270,18 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>{expense.payment_method || '-'}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const sup = suppliers.find((s) => s.id === (expense as any).supplier_id);
+                          return (
+                            <PaymentMethodHoverCell
+                              method={expense.payment_method}
+                              supplierName={sup?.name}
+                              supplierNoRek={sup?.no_rek}
+                            />
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>
                         {expense.payment_proof_url ? (
                           <a href={expense.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
