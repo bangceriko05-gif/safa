@@ -157,7 +157,7 @@ export default function StockMovementList() {
 
       // Pull all posted movements up to selected end date, then calculate stock
       // chronologically from zero so each row reflects the real before/after flow.
-      const [siRes, soRes, opRes, bkRes] = await Promise.all([
+      const [siRes, soRes, opRes, bpRes] = await Promise.all([
         supabase
           .from("stock_in" as any)
           .select("id, bid, date, posted_at, status, notes")
@@ -176,25 +176,27 @@ export default function StockMovementList() {
           .eq("store_id", storeId)
           .eq("status", "posted")
           .lte("date", toStr),
+        // Only fetch booking_products that belong to this store's non-BATAL
+        // bookings up to the end date. Using an inner join keeps the payload
+        // small instead of loading every booking ever made for the store.
         supabase
-          .from("bookings")
-          .select("id, bid, date, created_at, status, customer_name")
-          .eq("store_id", storeId)
-          .neq("status", "BATAL")
-          .lte("date", toStr),
+          .from("booking_products")
+          .select("booking_id, product_id, quantity, product_name, bookings!inner(id, bid, date, created_at, status, customer_name, store_id)")
+          .eq("bookings.store_id", storeId)
+          .neq("bookings.status", "BATAL")
+          .lte("bookings.date", toStr),
       ]);
 
       const siHeaders = (siRes.data as any[]) || [];
       const soHeaders = (soRes.data as any[]) || [];
       const opHeaders = (opRes.data as any[]) || [];
-      const bkHeaders = (bkRes.data as any[]) || [];
+      const bpJoined = (bpRes.data as any[]) || [];
 
       const siMap = new Map(siHeaders.map((h: any) => [h.id, h]));
       const soMap = new Map(soHeaders.map((h: any) => [h.id, h]));
       const opMap = new Map(opHeaders.map((h: any) => [h.id, h]));
-      const bkMap = new Map(bkHeaders.map((h: any) => [h.id, h]));
 
-      const [siItemsRes, soItemsRes, opItemsRes, bpItemsRes] = await Promise.all([
+      const [siItemsRes, soItemsRes, opItemsRes] = await Promise.all([
         siHeaders.length > 0
           ? supabase
               .from("stock_in_items" as any)
@@ -212,12 +214,6 @@ export default function StockMovementList() {
               .from("stock_opname_items" as any)
               .select("stock_opname_id, product_id, difference")
               .in("stock_opname_id", opHeaders.map((h: any) => h.id))
-          : Promise.resolve({ data: [] as any[] } as any),
-        bkHeaders.length > 0
-          ? supabase
-              .from("booking_products")
-              .select("booking_id, product_id, quantity, product_name")
-              .in("booking_id", bkHeaders.map((h: any) => h.id))
           : Promise.resolve({ data: [] as any[] } as any),
       ]);
 
@@ -291,8 +287,8 @@ export default function StockMovementList() {
         });
       });
 
-      ((bpItemsRes.data as any[]) || []).forEach((it) => {
-        const h = bkMap.get(it.booking_id);
+      bpJoined.forEach((it: any) => {
+        const h = it.bookings;
         if (!h) return;
         const p = productMap.get(it.product_id);
         if (!p) return;
