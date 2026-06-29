@@ -1152,7 +1152,9 @@ export default function BookingModal({
             created_by: userId,
             store_id: currentStore.id,
           }]);
-          // Refresh customers list
+          // Invalidate cache and refresh list
+          const { invalidateCustomerCache } = await import("@/utils/customerCache");
+          invalidateCustomerCache(currentStore.id);
           fetchCustomers();
         } catch (error: any) {
           // If customer already exists (race condition), continue with booking
