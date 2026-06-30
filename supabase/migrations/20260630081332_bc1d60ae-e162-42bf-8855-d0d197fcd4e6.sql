@@ -1,0 +1,1 @@
+ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS dynamic_variant_price boolean NOT NULL DEFAULT false;

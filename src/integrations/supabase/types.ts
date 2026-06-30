@@ -2721,6 +2721,7 @@ export type Database = {
           category: string | null
           category_id: string | null
           created_at: string
+          dynamic_variant_price: boolean
           id: string
           name: string
           status: string
@@ -2730,6 +2731,7 @@ export type Database = {
           category?: string | null
           category_id?: string | null
           created_at?: string
+          dynamic_variant_price?: boolean
           id?: string
           name: string
           status?: string
@@ -2739,6 +2741,7 @@ export type Database = {
           category?: string | null
           category_id?: string | null
           created_at?: string
+          dynamic_variant_price?: boolean
           id?: string
           name?: string
           status?: string
