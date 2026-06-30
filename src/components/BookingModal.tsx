@@ -367,6 +367,7 @@ export default function BookingModal({
         booking_type: isOTA ? "ota" : "walk_in",
         ota_booking_id: editingBooking.ota_booking_id || "",
         ota_source: editingBooking.ota_source || "",
+        variant_price_override: "",
       });
       // Set payment proof URL from existing booking
       setPaymentProofUrl(editingBooking.payment_proof_url || null);
