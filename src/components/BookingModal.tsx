@@ -1694,6 +1694,36 @@ export default function BookingModal({
                     )}
                     Wajib memilih varian untuk mengisi harga otomatis
                   </p>
+                  {(() => {
+                    const selectedRoom = rooms.find(r => r.id === formData.room_id);
+                    if (!selectedRoom?.dynamic_variant_price || !formData.variant_id) return null;
+                    const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
+                    return (
+                      <div className="space-y-1 rounded-md border border-dashed p-3 bg-muted/30">
+                        <Label htmlFor="variant_price_override" className="text-sm">
+                          Harga Varian (Dinamis)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Rp</span>
+                          <Input
+                            id="variant_price_override"
+                            inputMode="numeric"
+                            value={formData.variant_price_override}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                variant_price_override: formatPrice(e.target.value),
+                              })
+                            }
+                            placeholder={selectedVariant ? selectedVariant.price.toLocaleString('id-ID') : "0"}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Harga ini hanya berlaku untuk booking ini. Harga varian default tidak diubah.
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </>
               ) : roomVariants.length > 0 ? (
                 <div className="text-sm text-amber-600 p-3 bg-amber-50 rounded-md border border-amber-200">
