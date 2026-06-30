@@ -361,6 +361,8 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         description: `Menghapus varian kamar`,
       });
 
+      const { invalidateRoomVariantCache } = await import("@/utils/roomVariantCache");
+      invalidateRoomVariantCache(currentStore?.id);
       toast.success("Varian berhasil dihapus");
       fetchRoomVariants(roomId);
       fetchAllVariantCounts();
@@ -428,6 +430,8 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         toast.success("Varian berhasil ditambahkan");
       }
 
+      const { invalidateRoomVariantCache } = await import("@/utils/roomVariantCache");
+      invalidateRoomVariantCache(currentStore?.id);
       fetchRoomVariants(selectedRoomForVariant);
       fetchAllVariantCounts();
       handleCloseVariantDialog();

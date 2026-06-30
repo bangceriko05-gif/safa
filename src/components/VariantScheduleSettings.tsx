@@ -189,6 +189,8 @@ export default function VariantScheduleSettings({
 
       if (error) throw error;
 
+      const { invalidateRoomVariantCache } = await import("@/utils/roomVariantCache");
+      invalidateRoomVariantCache(currentStore.id);
       toast.success(`Pengaturan varian "${editingVariant.variant_name}" berhasil disimpan untuk ${editingVariant.room_count} kamar`);
       setEditingVariant(null);
       fetchAllVariants();
