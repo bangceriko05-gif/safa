@@ -567,6 +567,7 @@ export default function BookingModal({
   const fetchRoomVariants = async (roomId: string) => {
     try {
       if (!currentStore) return;
+      const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
       const data = await fetchRoomVariantsByRoom(currentStore.id, roomId, true);
       setRoomVariants(data || []);
     } catch (error) {
