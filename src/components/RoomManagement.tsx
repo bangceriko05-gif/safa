@@ -288,6 +288,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       name: room.name,
       status: room.status,
       category_id: room.category_id || "",
+      dynamic_variant_price: !!(room as any).dynamic_variant_price,
     });
     setIsDialogOpen(true);
   };
@@ -451,6 +452,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       name: "",
       status: "Aktif",
       category_id: "",
+      dynamic_variant_price: false,
     });
   };
 
