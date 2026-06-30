@@ -167,6 +167,7 @@ export default function BookingModal({
     booking_type: "walk_in" as "walk_in" | "ota",
     ota_booking_id: "",
     ota_source: "",
+    variant_price_override: "",
   });
 
   // Check if PMS mode based on store calendar_type
