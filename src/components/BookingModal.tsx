@@ -280,7 +280,7 @@ export default function BookingModal({
         price: formatPrice(grandTotal.toString()),
       }));
     }
-  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type]);
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type, formData.variant_price_override, rooms, formData.room_id]);
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
