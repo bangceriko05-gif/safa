@@ -479,16 +479,19 @@ export default function ScheduleTable({
 
       // Parallel fetch all related data at once
       const [
-        { data: profiles },
-        { data: bookingProducts },
-        variants
+        profilesRes,
+        productsRes,
+        variantsRes
       ] = await Promise.all([
         supabase.from("profiles").select("id, name").in("id", allUserIds),
         supabase.from("booking_products").select("booking_id, subtotal").in("booking_id", bookingIds),
         currentStore
           ? fetchRoomVariantsByIds(currentStore.id, variantIds)
-          : Promise.resolve([] as any[])
+          : Promise.resolve([])
       ]);
+      const profiles = profilesRes.data as Array<{ id: string; name: string }> | null;
+      const bookingProducts = productsRes.data as Array<{ booking_id: string; subtotal: number }> | null;
+      const variants = variantsRes as Array<{ id: string; price: number; duration: number }>;
 
       // Create a map for products total by booking_id
       const productsMap = new Map<string, number>();
