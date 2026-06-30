@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
@@ -45,6 +46,7 @@ interface Room {
   status: string;
   category: string;
   category_id: string | null;
+  dynamic_variant_price?: boolean;
   created_at: string;
   room_categories?: {
     id: string;
@@ -101,6 +103,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
     name: "",
     status: "Aktif",
     category_id: "",
+    dynamic_variant_price: false,
   });
   const [variantFormData, setVariantFormData] = useState({
     variant_name: "",
@@ -285,6 +288,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       name: room.name,
       status: room.status,
       category_id: room.category_id || "",
+      dynamic_variant_price: !!(room as any).dynamic_variant_price,
     });
     setIsDialogOpen(true);
   };
@@ -448,6 +452,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       name: "",
       status: "Aktif",
       category_id: "",
+      dynamic_variant_price: false,
     });
   };
 
@@ -836,6 +841,24 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
                   </span>
                 </div>
               )}
+            </div>
+
+            <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="dynamic_variant_price" className="cursor-pointer">
+                  Harga Varian Dinamis
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Jika aktif, harga varian kamar dapat diubah saat membuat/edit booking di kalender. Jika nonaktif, harga mengikuti varian (tetap).
+                </p>
+              </div>
+              <Switch
+                id="dynamic_variant_price"
+                checked={formData.dynamic_variant_price}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, dynamic_variant_price: checked })
+                }
+              />
             </div>
 
             <div className="space-y-2">

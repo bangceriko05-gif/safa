@@ -62,6 +62,7 @@ interface Room {
   id: string;
   name: string;
   status: string;
+  dynamic_variant_price?: boolean;
 }
 
 interface Customer {
@@ -166,6 +167,7 @@ export default function BookingModal({
     booking_type: "walk_in" as "walk_in" | "ota",
     ota_booking_id: "",
     ota_source: "",
+    variant_price_override: "",
   });
 
   // Check if PMS mode based on store calendar_type
@@ -224,19 +226,25 @@ export default function BookingModal({
       return parseFloat(formData.price.replace(/\./g, '')) || 0;
     }
 
+    const selectedRoom = rooms.find(r => r.id === formData.room_id);
+    const dynamic = !!selectedRoom?.dynamic_variant_price;
+    const overrideRaw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
+    const overridePrice = dynamic && !isNaN(overrideRaw) && overrideRaw >= 0 ? overrideRaw : null;
+
     if (isPMSMode) {
       // For PMS mode, calculate based on nights
       if (formData.variant_id && checkInDate && checkOutDate) {
         const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
         if (selectedVariant) {
+          const unitPrice = overridePrice ?? selectedVariant.price;
           // If variant has monthly duration type, price is already for the full period - don't multiply by nights
           if (selectedVariant.booking_duration_type === "months") {
-            return selectedVariant.price;
+            return unitPrice;
           }
           
           const nights = differenceInCalendarDays(checkOutDate, checkInDate);
           if (nights > 0) {
-            return selectedVariant.price * nights;
+            return unitPrice * nights;
           }
         }
       }
@@ -246,9 +254,10 @@ export default function BookingModal({
       if (formData.variant_id && formData.start_time && formData.end_time) {
         const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
         if (selectedVariant) {
+          const unitPrice = overridePrice ?? selectedVariant.price;
           const currentDuration = calculateDuration(formData.start_time, formData.end_time);
           if (currentDuration > 0) {
-            return selectedVariant.price * currentDuration;
+            return unitPrice * currentDuration;
           }
         }
       }
@@ -271,7 +280,7 @@ export default function BookingModal({
         price: formatPrice(grandTotal.toString()),
       }));
     }
-  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type]);
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type, formData.variant_price_override, rooms, formData.room_id]);
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
@@ -365,6 +374,7 @@ export default function BookingModal({
         booking_type: isOTA ? "ota" : "walk_in",
         ota_booking_id: editingBooking.ota_booking_id || "",
         ota_source: editingBooking.ota_source || "",
+        variant_price_override: "",
       });
       // Set payment proof URL from existing booking
       setPaymentProofUrl(editingBooking.payment_proof_url || null);
@@ -416,6 +426,7 @@ export default function BookingModal({
         booking_type: "walk_in",
         ota_booking_id: "",
         ota_source: "",
+        variant_price_override: "",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -460,6 +471,7 @@ export default function BookingModal({
         booking_type: "walk_in",
         ota_booking_id: "",
         ota_source: "",
+        variant_price_override: "",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -482,7 +494,7 @@ export default function BookingModal({
       
       const { data, error } = await supabase
         .from("rooms")
-        .select("id, name, status")
+        .select("id, name, status, dynamic_variant_price")
         .eq("status", "Aktif")
         .eq("store_id", currentStore.id)
         .order("name");
@@ -641,6 +653,11 @@ export default function BookingModal({
     // User explicitly changed variant - allow price auto-fill
     isPriceProtectedRef.current = false;
     const selectedVariant = roomVariants.find(v => v.id === variantId);
+    const selectedRoom = rooms.find(r => r.id === formData.room_id);
+    const dynamic = !!selectedRoom?.dynamic_variant_price;
+    const overrideInit = dynamic && selectedVariant
+      ? formatPrice(String(selectedVariant.price))
+      : "";
     if (selectedVariant) {
       // For PMS mode with duration types (months, weeks, days), auto-set checkout date
       if (isPMSMode && checkInDate) {
@@ -663,15 +680,17 @@ export default function BookingModal({
           ...formData,
           variant_id: variantId,
           end_time: endTime,
+          variant_price_override: overrideInit,
         });
       } else {
         setFormData({
           ...formData,
           variant_id: variantId,
+          variant_price_override: overrideInit,
         });
       }
     } else {
-      setFormData({ ...formData, variant_id: variantId });
+      setFormData({ ...formData, variant_id: variantId, variant_price_override: "" });
     }
   };
 
@@ -1509,6 +1528,7 @@ export default function BookingModal({
         booking_type: "walk_in",
         ota_booking_id: "",
         ota_source: "",
+        variant_price_override: "",
       });
       // Reset deposit state
       setEnableDeposit(false);
@@ -1674,6 +1694,36 @@ export default function BookingModal({
                     )}
                     Wajib memilih varian untuk mengisi harga otomatis
                   </p>
+                  {(() => {
+                    const selectedRoom = rooms.find(r => r.id === formData.room_id);
+                    if (!selectedRoom?.dynamic_variant_price || !formData.variant_id) return null;
+                    const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
+                    return (
+                      <div className="space-y-1 rounded-md border border-dashed p-3 bg-muted/30">
+                        <Label htmlFor="variant_price_override" className="text-sm">
+                          Harga Varian (Dinamis)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Rp</span>
+                          <Input
+                            id="variant_price_override"
+                            inputMode="numeric"
+                            value={formData.variant_price_override}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                variant_price_override: formatPrice(e.target.value),
+                              })
+                            }
+                            placeholder={selectedVariant ? selectedVariant.price.toLocaleString('id-ID') : "0"}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Harga ini hanya berlaku untuk booking ini. Harga varian default tidak diubah.
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </>
               ) : roomVariants.length > 0 ? (
                 <div className="text-sm text-amber-600 p-3 bg-amber-50 rounded-md border border-amber-200">
