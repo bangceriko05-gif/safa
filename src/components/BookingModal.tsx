@@ -419,6 +419,7 @@ export default function BookingModal({
         booking_type: "walk_in",
         ota_booking_id: "",
         ota_source: "",
+        variant_price_override: "",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -463,6 +464,7 @@ export default function BookingModal({
         booking_type: "walk_in",
         ota_booking_id: "",
         ota_source: "",
+        variant_price_override: "",
       });
       setSelectedProducts([]);
       setOriginalProducts([]);
@@ -1512,6 +1514,7 @@ export default function BookingModal({
         booking_type: "walk_in",
         ota_booking_id: "",
         ota_source: "",
+        variant_price_override: "",
       });
       // Reset deposit state
       setEnableDeposit(false);
