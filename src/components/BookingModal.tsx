@@ -62,6 +62,7 @@ interface Room {
   id: string;
   name: string;
   status: string;
+  dynamic_variant_price?: boolean;
 }
 
 interface Customer {
