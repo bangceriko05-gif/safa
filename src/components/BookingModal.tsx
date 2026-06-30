@@ -226,19 +226,25 @@ export default function BookingModal({
       return parseFloat(formData.price.replace(/\./g, '')) || 0;
     }
 
+    const selectedRoom = rooms.find(r => r.id === formData.room_id);
+    const dynamic = !!selectedRoom?.dynamic_variant_price;
+    const overrideRaw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
+    const overridePrice = dynamic && !isNaN(overrideRaw) && overrideRaw >= 0 ? overrideRaw : null;
+
     if (isPMSMode) {
       // For PMS mode, calculate based on nights
       if (formData.variant_id && checkInDate && checkOutDate) {
         const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
         if (selectedVariant) {
+          const unitPrice = overridePrice ?? selectedVariant.price;
           // If variant has monthly duration type, price is already for the full period - don't multiply by nights
           if (selectedVariant.booking_duration_type === "months") {
-            return selectedVariant.price;
+            return unitPrice;
           }
           
           const nights = differenceInCalendarDays(checkOutDate, checkInDate);
           if (nights > 0) {
-            return selectedVariant.price * nights;
+            return unitPrice * nights;
           }
         }
       }
@@ -248,9 +254,10 @@ export default function BookingModal({
       if (formData.variant_id && formData.start_time && formData.end_time) {
         const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
         if (selectedVariant) {
+          const unitPrice = overridePrice ?? selectedVariant.price;
           const currentDuration = calculateDuration(formData.start_time, formData.end_time);
           if (currentDuration > 0) {
-            return selectedVariant.price * currentDuration;
+            return unitPrice * currentDuration;
           }
         }
       }
