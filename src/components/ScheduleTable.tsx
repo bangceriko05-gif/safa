@@ -480,11 +480,13 @@ export default function ScheduleTable({
       const [
         { data: profiles },
         { data: bookingProducts },
-        { data: variants }
+        variants
       ] = await Promise.all([
         supabase.from("profiles").select("id, name").in("id", allUserIds),
         supabase.from("booking_products").select("booking_id, subtotal").in("booking_id", bookingIds),
-        supabase.from("room_variants").select("id, price, duration").in("id", variantIds)
+        currentStore
+          ? fetchRoomVariantsByIds(currentStore.id, variantIds)
+          : Promise.resolve([] as any[])
       ]);
 
       // Create a map for products total by booking_id
