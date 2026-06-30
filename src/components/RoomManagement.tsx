@@ -843,6 +843,24 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
               )}
             </div>
 
+            <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="dynamic_variant_price" className="cursor-pointer">
+                  Harga Varian Dinamis
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Jika aktif, harga varian kamar dapat diubah saat membuat/edit booking di kalender. Jika nonaktif, harga mengikuti varian (tetap).
+                </p>
+              </div>
+              <Switch
+                id="dynamic_variant_price"
+                checked={formData.dynamic_variant_price}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, dynamic_variant_price: checked })
+                }
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="category">Kategori *</Label>
               <Select
