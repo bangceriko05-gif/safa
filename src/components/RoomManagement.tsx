@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
@@ -45,6 +46,7 @@ interface Room {
   status: string;
   category: string;
   category_id: string | null;
+  dynamic_variant_price?: boolean;
   created_at: string;
   room_categories?: {
     id: string;
@@ -101,6 +103,7 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
     name: "",
     status: "Aktif",
     category_id: "",
+    dynamic_variant_price: false,
   });
   const [variantFormData, setVariantFormData] = useState({
     variant_name: "",
