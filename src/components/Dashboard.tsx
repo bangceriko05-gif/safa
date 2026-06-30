@@ -435,14 +435,13 @@ export default function Dashboard() {
         .select("*")
         .in("booking_id", bookingIds);
 
-      // Fetch all variants
-      const variantIds = [...new Set(bookings.map((b: any) => b.variant_id).filter(Boolean))];
-      const { data: variants } = await supabase
-        .from("room_variants")
-        .select("*")
-        .in("id", variantIds);
-
-      const variantMap = new Map(variants?.map((v: any) => [v.id, v]) || []);
+      // Fetch all variants (cached)
+      const variantIds = [...new Set(bookings.map((b: any) => b.variant_id).filter(Boolean))] as string[];
+      const { fetchRoomVariantsByIds } = await import("@/utils/roomVariantCache");
+      const variants = currentStore
+        ? await fetchRoomVariantsByIds(currentStore.id, variantIds)
+        : [];
+      const variantMap = new Map(variants.map((v: any) => [v.id, v]));
 
       const exportData = bookings.map((booking: any) => {
         // Calculate total products
