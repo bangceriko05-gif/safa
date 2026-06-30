@@ -23,6 +23,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { logActivity } from "@/utils/activityLogger";
+import { fetchRoomVariantsByIds } from "@/utils/roomVariantCache";
 import {
   DropdownMenu,
   DropdownMenuContent,
