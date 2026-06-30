@@ -483,7 +483,7 @@ export default function BookingModal({
       
       const { data, error } = await supabase
         .from("rooms")
-        .select("id, name, status")
+        .select("id, name, status, dynamic_variant_price")
         .eq("status", "Aktif")
         .eq("store_id", currentStore.id)
         .order("name");
