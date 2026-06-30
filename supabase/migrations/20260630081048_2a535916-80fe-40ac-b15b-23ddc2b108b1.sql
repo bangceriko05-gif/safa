@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_room_variants_store_active ON public.room_variants (store_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_room_variants_store_name ON public.room_variants (store_id, variant_name);
