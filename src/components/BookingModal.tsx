@@ -646,6 +646,11 @@ export default function BookingModal({
     // User explicitly changed variant - allow price auto-fill
     isPriceProtectedRef.current = false;
     const selectedVariant = roomVariants.find(v => v.id === variantId);
+    const selectedRoom = rooms.find(r => r.id === formData.room_id);
+    const dynamic = !!selectedRoom?.dynamic_variant_price;
+    const overrideInit = dynamic && selectedVariant
+      ? formatPrice(String(selectedVariant.price))
+      : "";
     if (selectedVariant) {
       // For PMS mode with duration types (months, weeks, days), auto-set checkout date
       if (isPMSMode && checkInDate) {
@@ -668,15 +673,17 @@ export default function BookingModal({
           ...formData,
           variant_id: variantId,
           end_time: endTime,
+          variant_price_override: overrideInit,
         });
       } else {
         setFormData({
           ...formData,
           variant_id: variantId,
+          variant_price_override: overrideInit,
         });
       }
     } else {
-      setFormData({ ...formData, variant_id: variantId });
+      setFormData({ ...formData, variant_id: variantId, variant_price_override: "" });
     }
   };
 
