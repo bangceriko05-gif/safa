@@ -567,16 +567,7 @@ export default function BookingModal({
   const fetchRoomVariants = async (roomId: string) => {
     try {
       if (!currentStore) return;
-
-      const { data, error } = await supabase
-        .from("room_variants")
-        .select("*")
-        .eq("room_id", roomId)
-        .eq("store_id", currentStore.id)
-        .eq("is_active", true)
-        .order("variant_name");
-
-      if (error) throw error;
+      const data = await fetchRoomVariantsByRoom(currentStore.id, roomId, true);
       setRoomVariants(data || []);
     } catch (error) {
       console.error("Error fetching room variants:", error);
