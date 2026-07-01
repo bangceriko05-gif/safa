@@ -39,7 +39,8 @@ function isSubscriptionExpired(store: { subscription_end_date?: string | null })
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
-  return end.getTime() < today.getTime();
+  // Block on the expiry day itself too ("0 hari lagi" == habis).
+  return end.getTime() <= today.getTime();
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
