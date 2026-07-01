@@ -775,7 +775,7 @@ export default function Dashboard() {
 
               {/* Tabs wrapper - keeps TabsContent working */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <Suspense fallback={<AnkaLoader />}>
+                <Suspense fallback={null}>
                 {/* Mobile: Dropdown */}
                 <div className="lg:hidden">
                   <Select value={activeTab} onValueChange={setActiveTab}>
