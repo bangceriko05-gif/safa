@@ -25,7 +25,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ToggleRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { logActivity } from "@/utils/activityLogger";
 import StoreFeatureToggle from "./StoreFeatureToggle";
@@ -49,6 +49,18 @@ interface StoreStats {
   products: number;
   users: number;
 }
+
+const getSubscriptionDaysLeft = (endDate?: string | null) => {
+  if (!endDate) return null;
+  const parsedEndDate = parseISO(endDate);
+  if (Number.isNaN(parsedEndDate.getTime())) return null;
+  return differenceInCalendarDays(parsedEndDate, new Date());
+};
+
+const isSubscriptionExpired = (store: Pick<Store, "subscription_end_date">) => {
+  const daysLeft = getSubscriptionDaysLeft(store.subscription_end_date);
+  return daysLeft !== null && daysLeft <= 0;
+};
 
 export default function SuperAdminStoreManagement() {
   const navigate = useNavigate();
@@ -285,6 +297,12 @@ export default function SuperAdminStoreManagement() {
   };
 
   const handleToggleActive = async (store: Store) => {
+    if (!store.is_active && isSubscriptionExpired(store)) {
+      toast.error("Outlet sudah expired. Perpanjang tanggal langganan terlebih dahulu untuk mengaktifkan kembali.");
+      fetchStores();
+      return;
+    }
+
     const newStatus = !store.is_active;
     const actionText = newStatus ? 'mengaktifkan' : 'menonaktifkan (jatuh tempo pembayaran)';
     
@@ -392,7 +410,11 @@ export default function SuperAdminStoreManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                stores.map((store) => (
+                stores.map((store) => {
+                  const expired = isSubscriptionExpired(store);
+                  const displayedActive = store.is_active && !expired;
+
+                  return (
                   <React.Fragment key={store.id}>
                     <TableRow>
                       <TableCell>
@@ -446,8 +468,8 @@ export default function SuperAdminStoreManagement() {
                             </div>
                             <div className="text-muted-foreground">s/d {format(parseISO(store.subscription_end_date), "d MMM yyyy", { locale: localeId })}</div>
                             {(() => {
-                              const daysLeft = differenceInDays(parseISO(store.subscription_end_date), new Date());
-                              if (daysLeft < 0) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Expired</Badge>;
+                              const daysLeft = getSubscriptionDaysLeft(store.subscription_end_date) ?? 0;
+                              if (daysLeft <= 0) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Expired</Badge>;
                               if (daysLeft <= 7) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
                               if (daysLeft <= 30) return <Badge className="text-[10px] px-1.5 py-0 bg-amber-500">{daysLeft} hari lagi</Badge>;
                               return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{daysLeft} hari lagi</Badge>;
@@ -502,8 +524,10 @@ export default function SuperAdminStoreManagement() {
                       </TableCell>
                       <TableCell className="text-center">
                         <Switch
-                          checked={store.is_active}
+                          checked={displayedActive}
+                          disabled={expired}
                           onCheckedChange={() => handleToggleActive(store)}
+                          title={expired ? "Outlet expired. Perpanjang langganan untuk mengaktifkan kembali." : undefined}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -548,7 +572,8 @@ export default function SuperAdminStoreManagement() {
                       </TableRow>
                     )}
                   </React.Fragment>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
