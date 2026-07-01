@@ -31,6 +31,18 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/booking", "/auth"];
 
+// Consider a store expired when its subscription_end_date is before today (local).
+function isSubscriptionExpired(store: { subscription_end_date?: string | null }): boolean {
+  if (!store?.subscription_end_date) return false;
+  const end = new Date(store.subscription_end_date);
+  if (isNaN(end.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  // Block on the expiry day itself too ("0 hari lagi" == habis).
+  return end.getTime() <= today.getTime();
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [currentStore, setCurrentStoreState] = useState<Store | null>(null);
   const [userStores, setUserStores] = useState<Store[]>([]);
@@ -131,15 +143,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ?.map((access: any) => access.stores)
           .filter((store: any) => store) || [];
         
-        // Only show active stores in the list
-        stores = allUserStores.filter((store: any) => store.is_active);
+        // Only show active AND non-expired stores in the list
+        stores = allUserStores.filter(
+          (store: any) => store.is_active && !isSubscriptionExpired(store)
+        );
         
-        // Check if user's saved store is inactive
+        // Check if user's saved store is inactive or subscription expired
         const savedStoreId = localStorage.getItem("current_store_id");
         if (savedStoreId) {
           const savedStore = allUserStores.find((s: Store) => s.id === savedStoreId);
-          if (savedStore && !savedStore.is_active) {
-            // The user's current store is inactive - show the notice
+          if (savedStore && (!savedStore.is_active || isSubscriptionExpired(savedStore))) {
+            // The user's current store is inactive/expired - show the notice
             setIsStoreInactive(true);
             setInactiveStoreName(savedStore.name);
             setIsLoading(false);
@@ -171,8 +185,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const setCurrentStore = (store: Store) => {
-    // Check if store is active
-    if (!store.is_active) {
+    // Check if store is active and not expired
+    if (!store.is_active || isSubscriptionExpired(store)) {
       setIsStoreInactive(true);
       setInactiveStoreName(store.name);
       return;
