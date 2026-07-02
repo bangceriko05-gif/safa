@@ -67,15 +67,15 @@ type PresetKey =
   | "custom";
 
 const PRESETS: { key: PresetKey; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "yesterday", label: "Yesterday" },
-  { key: "last7", label: "Last 7 Days" },
-  { key: "last30", label: "Last 30 Days" },
-  { key: "thisMonth", label: "This Month" },
-  { key: "lastMonth", label: "Last Month" },
-  { key: "thisYear", label: "This Year" },
-  { key: "lastYear", label: "Last Year" },
-  { key: "custom", label: "Custom Range" },
+  { key: "today", label: "Hari Ini" },
+  { key: "yesterday", label: "Kemarin" },
+  { key: "last7", label: "7 Hari Terakhir" },
+  { key: "last30", label: "30 Hari Terakhir" },
+  { key: "thisMonth", label: "Bulan Ini" },
+  { key: "lastMonth", label: "Bulan Lalu" },
+  { key: "thisYear", label: "Tahun Ini" },
+  { key: "lastYear", label: "Selama Ini" },
+  { key: "custom", label: "Rentang Kustom" },
 ];
 
 const computePreset = (key: PresetKey): DateRange | undefined => {
@@ -100,8 +100,7 @@ const computePreset = (key: PresetKey): DateRange | undefined => {
     case "thisYear":
       return { from: startOfYear(now), to: endOfYear(now) };
     case "lastYear": {
-      const ly = subYears(now, 1);
-      return { from: startOfYear(ly), to: endOfYear(ly) };
+      return { from: new Date(2020, 0, 1), to: endOfDay(now) };
     }
     default:
       return undefined;
@@ -246,7 +245,7 @@ export default function InventoryToolbar({
                       >
                         ← Preset
                       </button>
-                      <span className="text-sm font-semibold">Custom Range</span>
+                      <span className="text-sm font-semibold">Rentang Kustom</span>
                     </div>
                     <Calendar
                       mode="range"
