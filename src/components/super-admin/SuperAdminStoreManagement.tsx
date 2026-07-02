@@ -783,51 +783,67 @@ export default function SuperAdminStoreManagement() {
 
             {/* Quick presets */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Durasi Cepat</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Perpanjang Dari Akhir Langganan
+              </Label>
               <div className="grid grid-cols-3 gap-2">
                 {[1, 2, 3].map((m) => {
-                  const isActive =
-                    subscriptionForm.start &&
-                    subscriptionForm.end &&
-                    format(addMonths(parseISO(subscriptionForm.start), m), "yyyy-MM-dd") ===
-                      subscriptionForm.end;
+                  const base = subscriptionForm.end || subscriptionForm.start;
                   return (
                     <Button
                       key={m}
                       type="button"
-                      variant={isActive ? "default" : "outline"}
-                      className={cn(
-                        "h-11 flex flex-col gap-0.5",
-                        !subscriptionForm.start && "opacity-60"
-                      )}
-                      disabled={!subscriptionForm.start}
+                      variant="outline"
+                      className={cn("h-11 flex flex-col gap-0.5", !base && "opacity-60")}
+                      disabled={!base}
                       onClick={() => {
-                        if (!subscriptionForm.start) return;
-                        const end = addMonths(parseISO(subscriptionForm.start), m);
+                        if (!base) return;
+                        const end = addMonths(parseISO(base), m);
                         setSubscriptionForm((prev) => ({ ...prev, end: format(end, "yyyy-MM-dd") }));
                       }}
                     >
-                      <span className="text-sm font-semibold leading-none">{m} Bulan</span>
+                      <span className="text-sm font-semibold leading-none">+{m} Bulan</span>
                     </Button>
                   );
                 })}
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Menambah durasi mulai dari tanggal akhir langganan saat ini.
+              </p>
             </div>
 
-            {/* End date preview */}
+            {/* End date - manual pick */}
             <div className="space-y-2">
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Akhir Langganan</Label>
-              <div
-                className={cn(
-                  "w-full h-11 rounded-md border bg-muted/40 px-3 flex items-center gap-2 text-sm",
-                  !subscriptionForm.end && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                {subscriptionForm.end
-                  ? format(parseISO(subscriptionForm.end), "d MMMM yyyy", { locale: localeId })
-                  : "Pilih durasi terlebih dahulu"}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-11",
+                      !subscriptionForm.end && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    {subscriptionForm.end
+                      ? format(parseISO(subscriptionForm.end), "d MMMM yyyy", { locale: localeId })
+                      : "Pilih tanggal akhir"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={subscriptionForm.end ? parseISO(subscriptionForm.end) : undefined}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setSubscriptionForm((prev) => ({ ...prev, end: format(d, "yyyy-MM-dd") }));
+                    }}
+                    initialFocus
+                    locale={localeId}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex gap-2 pt-2">
