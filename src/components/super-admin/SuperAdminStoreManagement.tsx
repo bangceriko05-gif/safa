@@ -25,7 +25,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Loader2, Building2, Users, DoorOpen, Package, RefreshCw, CalendarClock, ToggleRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { format, differenceInCalendarDays, parseISO } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, addMonths } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { id as localeId } from "date-fns/locale";
 import { logActivity } from "@/utils/activityLogger";
 import StoreFeatureToggle from "./StoreFeatureToggle";
@@ -727,32 +731,105 @@ export default function SuperAdminStoreManagement() {
 
       {/* Subscription Edit Dialog */}
       <Dialog open={!!subscriptionEditStore} onOpenChange={(open) => !open && setSubscriptionEditStore(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CalendarClock className="h-5 w-5" />
-              Edit Langganan - {subscriptionEditStore?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-4 border-b">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-lg">
+                <div className="h-9 w-9 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <CalendarClock className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-normal text-muted-foreground">Edit Langganan</span>
+                  <span className="text-base font-semibold">{subscriptionEditStore?.name}</span>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Start date */}
             <div className="space-y-2">
-              <Label htmlFor="sub_start">Mulai Langganan</Label>
-              <Input
-                id="sub_start"
-                type="date"
-                value={subscriptionForm.start}
-                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, start: e.target.value })}
-              />
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mulai Langganan</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-11",
+                      !subscriptionForm.start && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    {subscriptionForm.start
+                      ? format(parseISO(subscriptionForm.start), "d MMMM yyyy", { locale: localeId })
+                      : "Pilih tanggal mulai"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={subscriptionForm.start ? parseISO(subscriptionForm.start) : undefined}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setSubscriptionForm((prev) => ({ ...prev, start: format(d, "yyyy-MM-dd") }));
+                    }}
+                    initialFocus
+                    locale={localeId}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
+
+            {/* Quick presets */}
             <div className="space-y-2">
-              <Label htmlFor="sub_end">Akhir Langganan</Label>
-              <Input
-                id="sub_end"
-                type="date"
-                value={subscriptionForm.end}
-                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, end: e.target.value })}
-              />
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Durasi Cepat</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((m) => {
+                  const isActive =
+                    subscriptionForm.start &&
+                    subscriptionForm.end &&
+                    format(addMonths(parseISO(subscriptionForm.start), m), "yyyy-MM-dd") ===
+                      subscriptionForm.end;
+                  return (
+                    <Button
+                      key={m}
+                      type="button"
+                      variant={isActive ? "default" : "outline"}
+                      className={cn(
+                        "h-11 flex flex-col gap-0.5",
+                        !subscriptionForm.start && "opacity-60"
+                      )}
+                      disabled={!subscriptionForm.start}
+                      onClick={() => {
+                        if (!subscriptionForm.start) return;
+                        const end = addMonths(parseISO(subscriptionForm.start), m);
+                        setSubscriptionForm((prev) => ({ ...prev, end: format(end, "yyyy-MM-dd") }));
+                      }}
+                    >
+                      <span className="text-sm font-semibold leading-none">{m} Bulan</span>
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* End date preview */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Akhir Langganan</Label>
+              <div
+                className={cn(
+                  "w-full h-11 rounded-md border bg-muted/40 px-3 flex items-center gap-2 text-sm",
+                  !subscriptionForm.end && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                {subscriptionForm.end
+                  ? format(parseISO(subscriptionForm.end), "d MMMM yyyy", { locale: localeId })
+                  : "Pilih durasi terlebih dahulu"}
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setSubscriptionEditStore(null)}>
                 Batal
