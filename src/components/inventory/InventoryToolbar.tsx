@@ -245,7 +245,7 @@ export default function InventoryToolbar({
                       >
                         ← Preset
                       </button>
-                      <span className="text-sm font-semibold">Custom Range</span>
+                      <span className="text-sm font-semibold">Rentang Kustom</span>
                     </div>
                     <Calendar
                       mode="range"
