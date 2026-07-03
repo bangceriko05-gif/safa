@@ -40,6 +40,9 @@ import AccountingReport from "./reports/AccountingReport";
 import PaymentMethodReport from "./reports/PaymentMethodReport";
 import TaxReport from "./reports/TaxReport";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
+import ProfitLoss from "./reports/accounting/ProfitLoss";
+import CashFlow from "./reports/accounting/CashFlow";
+import BalanceSheet from "./reports/accounting/BalanceSheet";
 
 interface ReportStats {
   totalTransactions: number;
@@ -185,6 +188,9 @@ export default function Reports() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [selectedPaymentType, setSelectedPaymentType] = useState<'booking' | 'income' | null>(null);
+  const [overviewSubReport, setOverviewSubReport] = useState<
+    "ringkasan" | "profit-loss" | "cash-flow" | "balance-sheet"
+  >("ringkasan");
 
   const getDateRangeInternal = (range: ReportTimeRange) => {
     const now = new Date();
@@ -1153,15 +1159,34 @@ export default function Reports() {
           <TabsContent value="overview" className="mt-4">
             {isFeatureEnabled("reports.overview") ? (
               <>
-                <div className="flex justify-end mb-4">
-                  <ReportDateFilter
-                    timeRange={timeRange}
-                    onTimeRangeChange={setTimeRange}
-                    customDateRange={customDateRange}
-                    onCustomDateRangeChange={setCustomDateRange}
-                  />
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <Select
+                    value={overviewSubReport}
+                    onValueChange={(v) => setOverviewSubReport(v as typeof overviewSubReport)}
+                  >
+                    <SelectTrigger className="w-full sm:w-[280px]">
+                      <SelectValue placeholder="Pilih Laporan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ringkasan">Ringkasan Keseluruhan</SelectItem>
+                      <SelectItem value="profit-loss">Laporan Laba / Rugi</SelectItem>
+                      <SelectItem value="cash-flow">Laporan Arus Kas</SelectItem>
+                      <SelectItem value="balance-sheet">Laporan Neraca</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {overviewSubReport === "ringkasan" && (
+                    <ReportDateFilter
+                      timeRange={timeRange}
+                      onTimeRangeChange={setTimeRange}
+                      customDateRange={customDateRange}
+                      onCustomDateRangeChange={setCustomDateRange}
+                    />
+                  )}
                 </div>
-                {renderOverviewContent()}
+                {overviewSubReport === "ringkasan" && renderOverviewContent()}
+                {overviewSubReport === "profit-loss" && <ProfitLoss />}
+                {overviewSubReport === "cash-flow" && <CashFlow />}
+                {overviewSubReport === "balance-sheet" && <BalanceSheet />}
               </>
             ) : (
               <FeatureInactiveNotice featureName="Keseluruhan" icon={LayoutGrid} price={getFeatureInfo("reports.overview").price} description={getFeatureInfo("reports.overview").description} />
