@@ -174,6 +174,8 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
   const stateRef = useRef({ status, items, bid, notes, date });
   stateRef.current = { status, items, bid, notes, date };
   const saveDraftRef = useRef<(silent?: boolean) => Promise<string | null>>();
+  // Fallback per-base-unit price map derived from active unit conversions
+  const convPriceRef = useRef<Record<string, number>>({});
 
   // Load
   useEffect(() => {
@@ -187,6 +189,25 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts((prods || []) as Product[]);
+
+      // Load active unit conversions to derive fallback HPP (per base unit)
+      const prodIds = (prods || []).map((p: any) => p.id);
+      if (prodIds.length > 0) {
+        const { data: convs } = await supabase
+          .from("product_unit_conversions")
+          .select("product_id, factor, price_per_from, is_active")
+          .in("product_id", prodIds)
+          .eq("is_active", true);
+        const map: Record<string, number> = {};
+        (convs || []).forEach((c: any) => {
+          const f = Number(c.factor) || 0;
+          const p = Number(c.price_per_from) || 0;
+          if (f > 0 && p > 0 && map[c.product_id] === undefined) {
+            map[c.product_id] = p / f;
+          }
+        });
+        convPriceRef.current = map;
+      }
 
       if (stockOpnameId) {
         const { data: so } = await supabase
@@ -553,7 +574,9 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
       const product = products.find((p) => p.id === pid)!;
       const system = product.stock_qty;
       const diff = actual - system;
-      const unit = product.price;
+      const unit = product.price && product.price > 0
+        ? product.price
+        : (convPriceRef.current[pid] || 0);
       return {
         product_id: pid,
         product_name: product.name,
