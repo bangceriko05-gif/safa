@@ -151,6 +151,9 @@ interface CashFlowData {
   // Aktivitas Pendanaan
   pembayaranPinjaman: number;
   penambahanModal: number;
+  // Penyesuaian non-tunai (informasional)
+  opnameStok: number;
+  stokKeluar: number;
 }
 
 export default function CashFlow() {
@@ -176,6 +179,8 @@ export default function CashFlow() {
     aktivitasInvestasiLain: 0,
     pembayaranPinjaman: 0,
     penambahanModal: 0,
+    opnameStok: 0,
+    stokKeluar: 0,
   });
 
   const { startDate, endDate } = useMemo(() => {
@@ -279,7 +284,7 @@ export default function CashFlow() {
         coaOpeningBalance + priorBookings + priorIncomes - priorExpenses - priorPayables;
 
       // 3. Current period transactions
-      const [bookingsRes, incomesRes, expensesRes, payablesRes, assetsRes, investorRes] =
+      const [bookingsRes, incomesRes, expensesRes, payablesRes, assetsRes, investorRes, opnameRes, stockOutRes] =
         await Promise.all([
           supabase
             .from("bookings")
@@ -320,6 +325,20 @@ export default function CashFlow() {
             .eq("store_id", currentStore.id)
             .gte("transfer_date", startStr)
             .lte("transfer_date", endStr),
+          supabase
+            .from("stock_opname")
+            .select("total_value_difference")
+            .eq("store_id", currentStore.id)
+            .eq("status", "posted")
+            .gte("posted_at", `${startStr}T00:00:00`)
+            .lte("posted_at", `${endStr}T23:59:59`),
+          supabase
+            .from("stock_out")
+            .select("total_amount")
+            .eq("store_id", currentStore.id)
+            .eq("status", "posted")
+            .gte("posted_at", `${startStr}T00:00:00`)
+            .lte("posted_at", `${endStr}T23:59:59`),
         ]);
 
       const penerimaanPelanggan = (bookingsRes.data || []).reduce(
@@ -384,6 +403,13 @@ export default function CashFlow() {
         0
       );
 
+      const opnameStok = (opnameRes.data || []).reduce(
+        (s: number, r: any) => s + (Number(r.total_value_difference) || 0), 0
+      );
+      const stokKeluar = (stockOutRes.data || []).reduce(
+        (s: number, r: any) => s + (Number(r.total_amount) || 0), 0
+      );
+
       setData({
         openingBalance,
         penerimaanPelanggan,
@@ -397,6 +423,8 @@ export default function CashFlow() {
         aktivitasInvestasiLain: 0,
         pembayaranPinjaman: 0,
         penambahanModal,
+        opnameStok,
+        stokKeluar,
       });
     } catch (error) {
       console.error("Error fetching cash flow:", error);
@@ -413,7 +441,9 @@ export default function CashFlow() {
     data.biayaOperasional -
     data.biayaPerawatan +
     data.pendapatanLain -
-    data.pengeluaranLain;
+    data.pengeluaranLain +
+    data.opnameStok +
+    data.stokKeluar;
 
   const subtotalInvestasi =
     -data.pembelianAsetTetap -
@@ -571,6 +601,8 @@ export default function CashFlow() {
       <Row label="Biaya perawatan" amount={-data.biayaPerawatan} indent negative onClick={() => setActiveDetail("biaya_perawatan")} />
       <Row label="Pendapatan lain" amount={data.pendapatanLain} indent onClick={() => setActiveDetail("pendapatan_lain")} />
       <Row label="Pengeluaran lain" amount={-data.pengeluaranLain} indent negative onClick={() => setActiveDetail("pengeluaran_lain")} />
+      <Row label="Opname stok (penyesuaian)" amount={data.opnameStok} indent negative={data.opnameStok < 0} />
+      <Row label="Stok keluar (penyesuaian)" amount={data.stokKeluar} indent negative={data.stokKeluar < 0} />
       <SubTotalRow label="SubTotal Aktivitas operasional" amount={subtotalOperasional} />
 
       {/* Aktivitas Investasi */}
