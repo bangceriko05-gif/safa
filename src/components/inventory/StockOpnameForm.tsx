@@ -174,6 +174,8 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
   const stateRef = useRef({ status, items, bid, notes, date });
   stateRef.current = { status, items, bid, notes, date };
   const saveDraftRef = useRef<(silent?: boolean) => Promise<string | null>>();
+  // Fallback per-base-unit price map derived from active unit conversions
+  const convPriceRef = useRef<Record<string, number>>({});
 
   // Load
   useEffect(() => {
