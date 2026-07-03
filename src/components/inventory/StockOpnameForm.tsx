@@ -188,6 +188,25 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
         .order("name");
       setProducts((prods || []) as Product[]);
 
+      // Load active unit conversions to derive fallback HPP (per base unit)
+      const prodIds = (prods || []).map((p: any) => p.id);
+      if (prodIds.length > 0) {
+        const { data: convs } = await supabase
+          .from("product_unit_conversions")
+          .select("product_id, factor, price_per_from, is_active")
+          .in("product_id", prodIds)
+          .eq("is_active", true);
+        const map: Record<string, number> = {};
+        (convs || []).forEach((c: any) => {
+          const f = Number(c.factor) || 0;
+          const p = Number(c.price_per_from) || 0;
+          if (f > 0 && p > 0 && map[c.product_id] === undefined) {
+            map[c.product_id] = p / f;
+          }
+        });
+        convPriceRef.current = map;
+      }
+
       if (stockOpnameId) {
         const { data: so } = await supabase
           .from("stock_opname" as any)
