@@ -441,7 +441,9 @@ export default function CashFlow() {
     data.biayaOperasional -
     data.biayaPerawatan +
     data.pendapatanLain -
-    data.pengeluaranLain;
+    data.pengeluaranLain +
+    data.opnameStok +
+    data.stokKeluar;
 
   const subtotalInvestasi =
     -data.pembelianAsetTetap -
