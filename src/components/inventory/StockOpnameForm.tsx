@@ -574,7 +574,9 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
       const product = products.find((p) => p.id === pid)!;
       const system = product.stock_qty;
       const diff = actual - system;
-      const unit = product.price;
+      const unit = product.price && product.price > 0
+        ? product.price
+        : (convPriceRef.current[pid] || 0);
       return {
         product_id: pid,
         product_name: product.name,
