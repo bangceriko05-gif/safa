@@ -1093,21 +1093,21 @@ export default function Reports() {
           <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
-                <DollarSign className="h-3.5 w-3.5 text-green-700" />
+                <span className="text-[10px] font-bold text-green-700 leading-none">Rp</span>
                 <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-xs text-green-800/80">Kamar:</span>
-                  <span className="text-xs font-semibold text-green-800">{formatCurrency(stats.totalRoomSales)}</span>
+                  <span className="text-xs font-semibold text-green-800 truncate">{formatCurrency(stats.totalRoomSales)}</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-xs text-green-800/80">Produk:</span>
-                  <span className="text-xs font-semibold text-green-800">{formatCurrency(stats.totalProductSales)}</span>
+                  <span className="text-xs font-semibold text-green-800 truncate">{formatCurrency(stats.totalProductSales)}</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-2 pt-1 border-t border-green-200 dark:border-green-800 mt-1">
-                  <span className="text-xs font-semibold text-green-700">Keseluruhan:</span>
-                  <span className="text-sm font-bold text-green-700">
+                  <span className="text-xs font-semibold text-green-700">Total:</span>
+                  <span className="text-xs font-bold text-green-700 truncate">
                     {formatCurrency(
                       stats.totalRoomSales + stats.totalProductSales + stats.totalAdditionalIncome - stats.totalExpenses
                     )}
