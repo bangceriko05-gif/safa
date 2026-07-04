@@ -1028,15 +1028,27 @@ export default function Reports() {
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
         {/* Summary Cards - like reference image */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {/* Penjualan */}
+          {/* Penjualan Kamar */}
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <ShoppingCart className="h-3.5 w-3.5 text-blue-600" />
-                <span className="text-xs font-medium text-blue-600">Penjualan</span>
+                <span className="text-xs font-medium text-blue-600">Penjualan Kamar</span>
               </div>
-              <div className="text-base font-bold">{formatCurrency(stats.totalBookingRevenue)}</div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalRoomSales)}</div>
               <p className="text-xs text-muted-foreground">{stats.totalTransactions} transaksi</p>
+            </CardContent>
+          </Card>
+
+          {/* Penjualan Produk */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShoppingCart className="h-3.5 w-3.5 text-indigo-600" />
+                <span className="text-xs font-medium text-indigo-600">Penjualan Produk</span>
+              </div>
+              <div className="text-base font-bold">{formatCurrency(stats.totalProductSales)}</div>
+              <p className="text-xs text-muted-foreground">{stats.productSalesCount} transaksi</p>
             </CardContent>
           </Card>
 
@@ -1076,16 +1088,42 @@ export default function Reports() {
             </CardContent>
           </Card>
 
-          {/* Total Pendapatan = Penjualan + Pemasukan - Pengeluaran */}
+          {/* Pendapatan Kamar */}
+          <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <DollarSign className="h-3.5 w-3.5 text-blue-700" />
+                <span className="text-xs font-medium text-blue-700">Pendapatan Kamar</span>
+              </div>
+              <div className="text-base font-bold text-blue-700">
+                {formatCurrency(stats.totalRoomSales)}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pendapatan Produk */}
+          <Card className="bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <DollarSign className="h-3.5 w-3.5 text-indigo-700" />
+                <span className="text-xs font-medium text-indigo-700">Pendapatan Produk</span>
+              </div>
+              <div className="text-base font-bold text-indigo-700">
+                {formatCurrency(stats.totalProductSales)}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Pendapatan Keseluruhan */}
           <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <DollarSign className="h-3.5 w-3.5 text-green-700" />
-                <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
+                <span className="text-xs font-medium text-green-700">Total Pendapatan Keseluruhan</span>
               </div>
               <div className="text-base font-bold text-green-700">
                 {formatCurrency(
-                  stats.totalBookingRevenue + stats.totalAdditionalIncome - stats.totalExpenses
+                  stats.totalRoomSales + stats.totalProductSales + stats.totalAdditionalIncome - stats.totalExpenses
                 )}
               </div>
             </CardContent>
