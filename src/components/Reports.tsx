@@ -494,6 +494,21 @@ export default function Reports() {
 
       const totalBookingRevenue = activeBookings.reduce((sum, b) => sum + (Number(b.price) || 0) + (Number(b.price_2) || 0), 0);
 
+      // Fetch booking_products for active bookings in range → split room vs product sales
+      const activeBookingIds = activeBookings.map((b: any) => b.id);
+      let totalProductSales = 0;
+      let productSalesCount = 0;
+      if (activeBookingIds.length > 0) {
+        const { data: bpData } = await supabase
+          .from("booking_products")
+          .select("subtotal, booking_id")
+          .in("booking_id", activeBookingIds);
+        const bps = (bpData || []) as any[];
+        totalProductSales = bps.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
+        productSalesCount = new Set(bps.map((r) => r.booking_id)).size;
+      }
+      const totalRoomSales = Math.max(0, totalBookingRevenue - totalProductSales);
+
       const paymentMethodTotals = Object.entries(paymentTotals).map(([method, total]) => ({
         method,
         total,
@@ -529,6 +544,9 @@ export default function Reports() {
         totalExpenses,
         totalAdditionalIncome,
         totalBookingRevenue,
+        totalRoomSales,
+        totalProductSales,
+        productSalesCount,
         totalPurchase,
         purchaseTransactionCount,
         incomeTransactionCount: incomesData.length,
