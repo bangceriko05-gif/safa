@@ -52,6 +52,9 @@ interface ReportStats {
   totalExpenses: number;
   totalAdditionalIncome: number;
   totalBookingRevenue: number;
+  totalRoomSales: number;
+  totalProductSales: number;
+  productSalesCount: number;
   totalPurchase: number;
   purchaseTransactionCount: number;
   incomeTransactionCount: number;
@@ -144,6 +147,9 @@ export default function Reports() {
     totalExpenses: 0,
     totalAdditionalIncome: 0,
     totalBookingRevenue: 0,
+    totalRoomSales: 0,
+    totalProductSales: 0,
+    productSalesCount: 0,
     totalPurchase: 0,
     purchaseTransactionCount: 0,
     incomeTransactionCount: 0,
