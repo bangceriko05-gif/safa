@@ -1101,26 +1101,23 @@ export default function Reports() {
                     <span className="text-[10px] font-bold text-green-700 leading-none">Rp</span>
                     <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
                   </div>
-                  <div className="space-y-0.5">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Total Penjualan:</span>
-                      <span className="text-xs font-semibold truncate">{formatCurrency(totalPenjualan)}</span>
-                    </div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Pemasukan:</span>
-                      <span className="text-xs font-semibold truncate">{formatCurrency(stats.totalAdditionalIncome)}</span>
-                    </div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Pengeluaran:</span>
-                      <span className="text-xs font-semibold text-red-600 truncate">{formatCurrency(stats.totalExpenses)}</span>
-                    </div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Pembelian:</span>
-                      <span className="text-xs font-semibold text-red-600 truncate">{formatCurrency(stats.totalPurchase)}</span>
-                    </div>
-                    <div className="flex items-baseline justify-between gap-2 pt-1 border-t border-green-200 dark:border-green-800 mt-1">
-                      <span className="text-xs font-semibold text-green-700">Total:</span>
-                      <span className={cn("text-xs font-bold truncate", totalColor)}>
+                  <div className="space-y-1.5">
+                    {[
+                      { label: "Total Penjualan", value: totalPenjualan, cls: "" },
+                      { label: "Pemasukan", value: stats.totalAdditionalIncome, cls: "" },
+                      { label: "Pengeluaran", value: stats.totalExpenses, cls: "text-red-600" },
+                      { label: "Pembelian", value: stats.totalPurchase, cls: "text-red-600" },
+                    ].map((r) => (
+                      <div key={r.label} className="flex flex-col">
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">{r.label}</span>
+                        <span className={cn("text-xs font-semibold tabular-nums whitespace-nowrap overflow-hidden text-ellipsis", r.cls)}>
+                          {formatCurrency(r.value)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex flex-col pt-1.5 border-t border-green-200 dark:border-green-800 mt-1">
+                      <span className="text-[10px] uppercase tracking-wide font-semibold text-green-700 leading-tight">Total</span>
+                      <span className={cn("text-sm font-bold tabular-nums whitespace-nowrap overflow-hidden text-ellipsis", totalColor)}>
                         {formatCurrency(total)}
                       </span>
                     </div>
