@@ -15,14 +15,14 @@ const fmt = (n: number) => {
 
 interface PLData {
   // A. Pendapatan
-  salesPOS: number;
+  penjualanKamar: number;
+  penjualanProduk: number;
   pelunasanKredit: number;
   pengirimanIncome: number;
   pajakExclude: number;
   pajakInclude: number;
   pembulatan: number;
   pengembalian: number;
-  depositDitebus: number;
   // B. HPP
   hppPenjualan: number;
   hppPengembalian: number;
@@ -38,8 +38,8 @@ interface PLData {
 }
 
 const EMPTY: PLData = {
-  salesPOS: 0, pelunasanKredit: 0, pengirimanIncome: 0,
-  pajakExclude: 0, pajakInclude: 0, pembulatan: 0, pengembalian: 0, depositDitebus: 0,
+  penjualanKamar: 0, penjualanProduk: 0, pelunasanKredit: 0, pengirimanIncome: 0,
+  pajakExclude: 0, pajakInclude: 0, pembulatan: 0, pengembalian: 0,
   hppPenjualan: 0, hppPengembalian: 0,
   expensesByCategory: [],
   stokKeluar: 0, opnameStok: 0,
@@ -69,7 +69,7 @@ export default function ProfitLoss() {
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
 
-      const [bookingsRes, incomesRes, expensesRes, depositsRes, opnameRes, stockOutRes, purchasesRes, bookingProductsRes] = await Promise.all([
+      const [bookingsRes, incomesRes, expensesRes, opnameRes, stockOutRes, purchasesRes, bookingProductsRes] = await Promise.all([
         supabase
           .from("bookings")
           .select("id, price, price_2, tax_amount, tax_mode, tax_enabled")
@@ -92,13 +92,6 @@ export default function ProfitLoss() {
           .gte("date", startStr)
           .lte("date", endStr),
         supabase
-          .from("room_deposits")
-          .select("amount, status, returned_at")
-          .eq("store_id", currentStore.id)
-          .eq("status", "returned")
-          .gte("returned_at", `${startStr}T00:00:00`)
-          .lte("returned_at", `${endStr}T23:59:59`),
-        supabase
           .from("stock_opname")
           .select("total_value_difference, status, posted_at")
           .eq("store_id", currentStore.id)
@@ -120,16 +113,20 @@ export default function ProfitLoss() {
           .lte("date", endStr),
         supabase
           .from("booking_products")
-          .select("product_id, quantity, bookings!inner(store_id, date, status)")
+          .select("product_id, quantity, subtotal, bookings!inner(store_id, date, status)")
           .eq("bookings.store_id", currentStore.id)
           .gte("bookings.date", startStr)
           .lte("bookings.date", endStr)
           .not("bookings.status", "in", '("Cancelled","BATAL")'),
       ]);
 
-      const salesPOS = (bookingsRes.data || []).reduce(
+      const totalBookingRevenue = (bookingsRes.data || []).reduce(
         (sum, b) => sum + (Number(b.price) || 0) + (Number(b.price_2) || 0), 0
       );
+      const penjualanProduk = ((bookingProductsRes.data as any[]) || []).reduce(
+        (s, r) => s + (Number(r.subtotal) || 0), 0
+      );
+      const penjualanKamar = Math.max(0, totalBookingRevenue - penjualanProduk);
 
       let pajakExclude = 0, pajakInclude = 0;
       (bookingsRes.data || []).forEach((b: any) => {
@@ -148,10 +145,6 @@ export default function ProfitLoss() {
 
       const pelunasanKredit = incomeCat(["pelunasan", "kredit", "piutang"]);
       const pengirimanIncome = incomeCat(["pengiriman", "delivery", "ongkir"]);
-
-      const depositDitebus = (depositsRes.data || []).reduce(
-        (s: number, d: any) => s + (Number(d.amount) || 0), 0
-      );
 
       // HPP — sum(quantity * purchase_price) from booking_products
       const productIds = Array.from(
@@ -197,14 +190,14 @@ export default function ProfitLoss() {
       );
 
       setData({
-        salesPOS,
+        penjualanKamar,
+        penjualanProduk,
         pelunasanKredit,
         pengirimanIncome,
         pajakExclude,
         pajakInclude,
         pembulatan: 0,
         pengembalian: 0,
-        depositDitebus,
         hppPenjualan,
         hppPengembalian: 0,
         expensesByCategory,
@@ -230,9 +223,9 @@ export default function ProfitLoss() {
   }
 
   const totalA =
-    data.salesPOS + data.pelunasanKredit + data.pengirimanIncome +
+    data.penjualanKamar + data.penjualanProduk + data.pelunasanKredit + data.pengirimanIncome +
     data.pajakExclude + data.pajakInclude + data.pembulatan +
-    data.pengembalian + data.depositDitebus;
+    data.pengembalian;
   const totalB = data.hppPenjualan + data.hppPengembalian;
   const labaKotor = totalA - totalB;
   const totalD = data.expensesByCategory.reduce((s, e) => s + e.amount, 0);
@@ -282,14 +275,14 @@ export default function ProfitLoss() {
         <SectionHeader id="A" label="A. Pendapatan" total={totalA} />
         {openSections.A && (
           <>
-            <Row label="SALES - POINT OF SALE" value={data.salesPOS} />
+            <Row label="Penjualan Kamar" value={data.penjualanKamar} />
+            <Row label="Penjualan Produk" value={data.penjualanProduk} />
             <Row label="Pelunasan Kredit" value={data.pelunasanKredit} />
             <Row label="Pengiriman" value={data.pengirimanIncome} />
             <Row label="Pajak (exclude)" value={data.pajakExclude} />
             <Row label="Pajak (include)" value={data.pajakInclude} />
             <Row label="Pembulatan" value={data.pembulatan} />
             <Row label="Pengembalian" value={data.pengembalian} />
-            <Row label="Total Deposit yang ditebus" value={data.depositDitebus} />
           </>
         )}
 
