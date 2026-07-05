@@ -1089,33 +1089,46 @@ export default function Reports() {
             </CardContent>
           </Card>
 
-          {/* Total Pendapatan (Kamar + Produk + Keseluruhan) */}
-          <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[10px] font-bold text-green-700 leading-none">Rp</span>
-                <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs text-green-800/80">Kamar:</span>
-                  <span className="text-xs font-semibold text-green-800 truncate">{formatCurrency(stats.totalRoomSales)}</span>
-                </div>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs text-green-800/80">Produk:</span>
-                  <span className="text-xs font-semibold text-green-800 truncate">{formatCurrency(stats.totalProductSales)}</span>
-                </div>
-                <div className="flex items-baseline justify-between gap-2 pt-1 border-t border-green-200 dark:border-green-800 mt-1">
-                  <span className="text-xs font-semibold text-green-700">Total:</span>
-                  <span className="text-xs font-bold text-green-700 truncate">
-                    {formatCurrency(
-                      stats.totalRoomSales + stats.totalProductSales + stats.totalAdditionalIncome - stats.totalExpenses
-                    )}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Total Pendapatan */}
+          {(() => {
+            const totalPenjualan = stats.totalRoomSales + stats.totalProductSales;
+            const total = totalPenjualan + stats.totalAdditionalIncome - stats.totalExpenses - stats.totalPurchase;
+            const totalColor = total >= 0 ? "text-foreground" : "text-red-600";
+            return (
+              <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] font-bold text-green-700 leading-none">Rp</span>
+                    <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Total Penjualan:</span>
+                      <span className="text-xs font-semibold truncate">{formatCurrency(totalPenjualan)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Pemasukan:</span>
+                      <span className="text-xs font-semibold truncate">{formatCurrency(stats.totalAdditionalIncome)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Pengeluaran:</span>
+                      <span className="text-xs font-semibold text-red-600 truncate">{formatCurrency(stats.totalExpenses)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Pembelian:</span>
+                      <span className="text-xs font-semibold text-red-600 truncate">{formatCurrency(stats.totalPurchase)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 pt-1 border-t border-green-200 dark:border-green-800 mt-1">
+                      <span className="text-xs font-semibold text-green-700">Total:</span>
+                      <span className={cn("text-xs font-bold truncate", totalColor)}>
+                        {formatCurrency(total)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
 
         {/* Occupancy Chart & Room List */}
