@@ -1027,7 +1027,7 @@ export default function Reports() {
     return (
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
         {/* Summary Cards - like reference image */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Penjualan (Kamar + Produk) */}
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("sales")}>
             <CardContent className="p-4">
@@ -1065,27 +1065,34 @@ export default function Reports() {
             </CardContent>
           </Card>
 
-          {/* Pengeluaran */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("expenses")}>
+          {/* Pengeluaran & Pembelian */}
+          <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-                <span className="text-xs font-medium text-destructive">Pengeluaran</span>
+                <span className="text-xs font-medium text-destructive">Pengeluaran & Pembelian</span>
               </div>
-              <div className="text-base font-bold">{formatCurrency(stats.totalExpenses)}</div>
-              <p className="text-xs text-muted-foreground">{stats.expenseTransactionCount} transaksi</p>
-            </CardContent>
-          </Card>
-
-          {/* Pembelian */}
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("purchase")}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <ShoppingCart className="h-3.5 w-3.5 text-orange-600" />
-                <span className="text-xs font-medium text-orange-600">Pembelian</span>
+              <div className="space-y-0.5">
+                <div
+                  className="flex items-baseline justify-between gap-2 cursor-pointer hover:opacity-80"
+                  onClick={() => setActiveTab("expenses")}
+                >
+                  <span className="text-xs text-muted-foreground">Pengeluaran:</span>
+                  <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses)}</span>
+                </div>
+                <div
+                  className="flex items-baseline justify-between gap-2 cursor-pointer hover:opacity-80"
+                  onClick={() => setActiveTab("purchase")}
+                >
+                  <span className="text-xs text-muted-foreground">Pembelian:</span>
+                  <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalPurchase)}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 pt-1 border-t mt-1">
+                  <span className="text-xs font-semibold">Total:</span>
+                  <span className="text-sm font-bold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses + stats.totalPurchase)}</span>
+                </div>
               </div>
-              <div className="text-base font-bold">{formatCurrency(stats.totalPurchase)}</div>
-              <p className="text-xs text-muted-foreground">{stats.purchaseTransactionCount} transaksi</p>
+              <p className="text-xs text-muted-foreground mt-1">{stats.expenseTransactionCount + stats.purchaseTransactionCount} transaksi</p>
             </CardContent>
           </Card>
 
@@ -1101,23 +1108,26 @@ export default function Reports() {
                     <span className="text-[10px] font-bold text-green-700 leading-none">Rp</span>
                     <span className="text-xs font-medium text-green-700">Total Pendapatan</span>
                   </div>
-                  <div className="space-y-1.5">
-                    {[
-                      { label: "Total Penjualan", value: totalPenjualan, cls: "" },
-                      { label: "Pemasukan", value: stats.totalAdditionalIncome, cls: "" },
-                      { label: "Pengeluaran", value: stats.totalExpenses, cls: "text-red-600" },
-                      { label: "Pembelian", value: stats.totalPurchase, cls: "text-red-600" },
-                    ].map((r) => (
-                      <div key={r.label} className="flex flex-col">
-                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">{r.label}</span>
-                        <span className={cn("text-xs font-semibold tabular-nums whitespace-nowrap overflow-hidden text-ellipsis", r.cls)}>
-                          {formatCurrency(r.value)}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="flex flex-col pt-1.5 border-t border-green-200 dark:border-green-800 mt-1">
-                      <span className="text-[10px] uppercase tracking-wide font-semibold text-green-700 leading-tight">Total</span>
-                      <span className={cn("text-sm font-bold tabular-nums whitespace-nowrap overflow-hidden text-ellipsis", totalColor)}>
+                  <div className="space-y-0.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Total Penjualan:</span>
+                      <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(totalPenjualan)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Pemasukan:</span>
+                      <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalAdditionalIncome)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Pengeluaran:</span>
+                      <span className="text-xs font-semibold text-red-600 tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Pembelian:</span>
+                      <span className="text-xs font-semibold text-red-600 tabular-nums whitespace-nowrap">{formatCurrency(stats.totalPurchase)}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 pt-1 border-t border-green-200 dark:border-green-800 mt-1">
+                      <span className="text-xs font-semibold text-green-700">Total:</span>
+                      <span className={cn("text-sm font-bold tabular-nums whitespace-nowrap", totalColor)}>
                         {formatCurrency(total)}
                       </span>
                     </div>
