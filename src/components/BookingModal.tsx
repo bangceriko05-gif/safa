@@ -1102,6 +1102,13 @@ export default function BookingModal({
         duration: finalDuration,
         price: parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
+        variant_price_override: (() => {
+          const selectedRoom = rooms.find(r => r.id === formData.room_id);
+          const dynamic = !!selectedRoom?.dynamic_variant_price;
+          if (!dynamic) return null;
+          const raw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
+          return !isNaN(raw) && raw >= 0 ? raw : null;
+        })(),
         discount_type: formData.has_discount ? formData.discount_type : null,
         discount_value: formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
