@@ -110,6 +110,10 @@ export default function BookingReceipt() {
           .single();
         variantName = variantData?.variant_name;
         variantPrice = variantData?.price;
+        // Dynamic price override locks the price at booking time
+        if (bookingData.variant_price_override != null) {
+          variantPrice = Number(bookingData.variant_price_override);
+        }
         if (variantData?.booking_duration_type === "hari" || variantData?.booking_duration_type === "days") {
           durationUnit = "hari";
         } else if (variantData?.booking_duration_type === "bulan" || variantData?.booking_duration_type === "months") {
