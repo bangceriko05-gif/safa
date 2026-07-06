@@ -95,7 +95,8 @@ export default function BookingPopoverContent({
 
       setProducts(productsResult.data || []);
       if (variantResult.data && "price" in variantResult.data) {
-        setVariantPrice(variantResult.data.price);
+        const override = (booking as any).variant_price_override;
+        setVariantPrice(override != null ? Number(override) : (variantResult.data as any).price);
         setVariantDurationType((variantResult.data as any).booking_duration_type || "hours");
         setVariantDurationValue((variantResult.data as any).booking_duration_value || 1);
       }
