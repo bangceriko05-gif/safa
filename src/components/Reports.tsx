@@ -1078,18 +1078,18 @@ export default function Reports() {
                   onClick={() => setActiveTab("expenses")}
                 >
                   <span className="text-xs text-muted-foreground">Pengeluaran:</span>
-                  <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses)}</span>
+                  <span className="text-xs font-semibold text-red-600 tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses)}</span>
                 </div>
                 <div
                   className="flex items-baseline justify-between gap-2 cursor-pointer hover:opacity-80"
                   onClick={() => setActiveTab("purchase")}
                 >
                   <span className="text-xs text-muted-foreground">Pembelian:</span>
-                  <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalPurchase)}</span>
+                  <span className="text-xs font-semibold text-red-600 tabular-nums whitespace-nowrap">{formatCurrency(stats.totalPurchase)}</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-2 pt-1 border-t mt-1">
                   <span className="text-xs font-semibold">Total:</span>
-                  <span className="text-sm font-bold tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses + stats.totalPurchase)}</span>
+                  <span className="text-sm font-bold text-red-600 tabular-nums whitespace-nowrap">{formatCurrency(stats.totalExpenses + stats.totalPurchase)}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{stats.expenseTransactionCount + stats.purchaseTransactionCount} transaksi</p>

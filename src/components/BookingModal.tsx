@@ -2136,7 +2136,13 @@ export default function BookingModal({
                 {formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
                   const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
                   const isMonthlyVariant = selectedVariant?.booking_duration_type === "months";
-                  
+                  const selectedRoom = rooms.find(r => r.id === formData.room_id);
+                  const isDynamic = !!selectedRoom?.dynamic_variant_price;
+                  const overrideRaw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
+                  const hasOverride = isDynamic && !isNaN(overrideRaw) && overrideRaw >= 0;
+                  const displayPrice = hasOverride ? overrideRaw : (selectedVariant?.price || 0);
+                  const priceLabel = isMonthlyVariant ? "Harga per bulan:" : isPMSMode ? "Harga per malam:" : "Harga per jam:";
+
                   return (
                     <>
                       <div className="flex justify-between">
@@ -2145,14 +2151,21 @@ export default function BookingModal({
                           {selectedVariant?.variant_name || '-'}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          {isMonthlyVariant ? "Harga per bulan:" : isPMSMode ? "Harga per malam:" : "Harga per jam:"}
-                        </span>
-                        <span className="font-medium">
-                          Rp {selectedVariant?.price.toLocaleString('id-ID') || '0'}
-                        </span>
-                      </div>
+                      {isDynamic ? (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Harga Dinamis:</span>
+                          <span className="font-medium">
+                            Rp {displayPrice.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{priceLabel}</span>
+                          <span className="font-medium">
+                            Rp {(selectedVariant?.price || 0).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      )}
                       {/* Show duration info */}
                       {isMonthlyVariant ? (
                         <div className="flex justify-between">
