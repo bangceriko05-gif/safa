@@ -742,6 +742,7 @@ export type Database = {
           tax_rate: number
           updated_at: string
           variant_id: string | null
+          variant_price_override: number | null
         }
         Insert: {
           bid?: string | null
@@ -786,6 +787,7 @@ export type Database = {
           tax_rate?: number
           updated_at?: string
           variant_id?: string | null
+          variant_price_override?: number | null
         }
         Update: {
           bid?: string | null
@@ -830,6 +832,7 @@ export type Database = {
           tax_rate?: number
           updated_at?: string
           variant_id?: string | null
+          variant_price_override?: number | null
         }
         Relationships: [
           {

@@ -211,6 +211,9 @@ export default function BookingDetailPopup({
           .single();
         variantName = variantData?.variant_name;
         variantPrice = variantData?.price;
+        if ((bookingData as any).variant_price_override != null) {
+          variantPrice = Number((bookingData as any).variant_price_override);
+        }
         variantDurationType = variantData?.booking_duration_type || "hours";
         variantDurationValue = variantData?.booking_duration_value || 1;
       }

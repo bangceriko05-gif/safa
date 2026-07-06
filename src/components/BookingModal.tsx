@@ -374,7 +374,9 @@ export default function BookingModal({
         booking_type: isOTA ? "ota" : "walk_in",
         ota_booking_id: editingBooking.ota_booking_id || "",
         ota_source: editingBooking.ota_source || "",
-        variant_price_override: "",
+        variant_price_override: editingBooking.variant_price_override != null
+          ? formatPrice(String(editingBooking.variant_price_override))
+          : "",
       });
       // Set payment proof URL from existing booking
       setPaymentProofUrl(editingBooking.payment_proof_url || null);
@@ -1102,6 +1104,13 @@ export default function BookingModal({
         duration: finalDuration,
         price: parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
+        variant_price_override: (() => {
+          const selectedRoom = rooms.find(r => r.id === formData.room_id);
+          const dynamic = !!selectedRoom?.dynamic_variant_price;
+          if (!dynamic) return null;
+          const raw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
+          return !isNaN(raw) && raw >= 0 ? raw : null;
+        })(),
         discount_type: formData.has_discount ? formData.discount_type : null,
         discount_value: formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
