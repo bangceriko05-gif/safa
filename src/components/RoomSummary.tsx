@@ -58,6 +58,8 @@ interface RoomData {
   id: string;
   name: string;
   status: string;
+  category_id?: string | null;
+  category_name?: string | null;
 }
 
 interface RoomDailyStatusData {
@@ -66,6 +68,13 @@ interface RoomDailyStatusData {
 }
 
 type InfoCardType = "total" | "bo" | "ci" | "pending_co" | "co" | "kotor" | "available";
+
+interface CategoryAvailability {
+  id: string;
+  name: string;
+  count: number;
+  rooms: RoomData[];
+}
 
 export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const { currentStore } = useStore();
@@ -78,6 +87,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const [selectedCard, setSelectedCard] = useState<InfoCardType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -182,7 +192,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .eq("store_id", currentStore.id),
         supabase
           .from("rooms")
-          .select("id, name, status")
+          .select("id, name, status, category_id, room_categories(name)")
           .eq("store_id", currentStore.id)
           .order("name"),
         // Fetch room_daily_status for TODAY (single source of truth for dirty rooms)
@@ -271,7 +281,14 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
       setBookings(mappedBookings);
       setPendingCheckOutBookings(pendingCOBookings);
-      setRooms(roomsData || []);
+      const mappedRooms: RoomData[] = (roomsData || []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        status: r.status,
+        category_id: r.category_id,
+        category_name: r.room_categories?.name || null,
+      }));
+      setRooms(mappedRooms);
       setRoomDailyStatus(dailyStatusData || []);
       setOccupiedRoomIds(new Set(occupiedIds));
     } catch (error) {
@@ -389,7 +406,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       case "pending_co": return "Tamu Harus Check Out Hari Ini";
       case "co": return "Tamu Sudah Check Out Hari Ini";
       case "kotor": return "Kamar Kotor";
-      case "available": return "Kamar Available";
+      case "available":
+        return selectedCategoryId
+          ? `Room Types Available - ${availableCategories.find(c => c.id === selectedCategoryId)?.name || ""}`
+          : "Room Types Available";
       default: return "";
     }
   };
@@ -408,6 +428,20 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   };
 
   const isRoomData = selectedCard === "kotor" || selectedCard === "available";
+
+  // Group available rooms by category
+  const availableCategories: CategoryAvailability[] = (() => {
+    const map = new Map<string, CategoryAvailability>();
+    availableRooms.forEach(r => {
+      const id = r.category_id || "__uncat__";
+      const name = r.category_name || "Tanpa Kategori";
+      if (!map.has(id)) map.set(id, { id, name, count: 0, rooms: [] });
+      const entry = map.get(id)!;
+      entry.count += 1;
+      entry.rooms.push(r);
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   return (
     <>
@@ -547,13 +581,13 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Kamar Available</CardTitle>
+                <CardTitle className="text-sm font-medium">Room Types Available</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="space-y-1">
                 <div className="text-2xl font-bold">{availableRooms.length}</div>
-                <div className="text-sm opacity-90">Siap digunakan</div>
+                <div className="text-sm opacity-90">{availableCategories.length} kategori siap</div>
               </div>
             </CardContent>
           </Card>
@@ -561,14 +595,51 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setSelectedCategoryId(null); }}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>{getDialogTitle()}</DialogTitle>
           </DialogHeader>
-          
+          {selectedCard === "available" && selectedCategoryId && (
+            <button
+              type="button"
+              onClick={() => setSelectedCategoryId(null)}
+              className="text-sm text-primary hover:underline w-fit"
+            >
+              ← Kembali ke daftar kategori
+            </button>
+          )}
           <div className="mt-4">
-            {getDialogData().length === 0 ? (
+            {selectedCard === "available" && !selectedCategoryId ? (
+              availableCategories.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">Tidak ada data</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead className="text-right">Available</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {availableCategories.map((cat) => (
+                      <TableRow key={cat.id}>
+                        <TableCell className="font-medium">{cat.name}</TableCell>
+                        <TableCell className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategoryId(cat.id)}
+                            className="text-primary font-semibold hover:underline"
+                          >
+                            ready {cat.count} {cat.count === 1 ? "room" : "rooms"}
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )
+            ) : getDialogData().length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 Tidak ada data
               </div>
@@ -582,7 +653,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(getDialogData() as RoomData[]).map((room) => (
+                  {((selectedCard === "available" && selectedCategoryId)
+                    ? (availableCategories.find(c => c.id === selectedCategoryId)?.rooms || [])
+                    : (getDialogData() as RoomData[])
+                  ).map((room) => (
                     <TableRow key={room.id}>
                       <TableCell className="font-medium">{room.name}</TableCell>
                       <TableCell>
