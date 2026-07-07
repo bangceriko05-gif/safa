@@ -66,6 +66,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
   const { currentStore } = useStore();
   const [categories, setCategories] = useState<RoomCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [roomCounts, setRoomCounts] = useState<Record<string, number>>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<RoomCategory | null>(null);
   const [deleteCategory, setDeleteCategory] = useState<RoomCategory | null>(null);
@@ -118,6 +119,16 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
 
       if (error) throw error;
       setCategories((data || []) as RoomCategory[]);
+      // Fetch room counts per category
+      const { data: roomsData } = await supabase
+        .from("rooms")
+        .select("category_id")
+        .eq("store_id", currentStore.id);
+      const counts: Record<string, number> = {};
+      (roomsData || []).forEach((r: any) => {
+        if (r.category_id) counts[r.category_id] = (counts[r.category_id] || 0) + 1;
+      });
+      setRoomCounts(counts);
     } catch (error) {
       console.error("Error fetching categories:", error);
       toast.error("Gagal memuat data kategori");
@@ -342,6 +353,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nama Kategori</TableHead>
+                    <TableHead>Qty</TableHead>
                     <TableHead>Deskripsi</TableHead>
                     <TableHead>PPN</TableHead>
                     <TableHead>Status</TableHead>
@@ -350,8 +362,15 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                 </TableHeader>
                 <TableBody>
                   {categories.map((category) => (
-                    <TableRow key={category.id}>
+                    <TableRow
+                      key={category.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleEdit(category)}
+                    >
                       <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {(roomCounts[category.id] || 0)} room
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {category.description || "-"}
                       </TableCell>
@@ -378,21 +397,20 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleToggleActive(category)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleActive(category);
+                            }}
                           >
                             {category.is_active ? "Nonaktifkan" : "Aktifkan"}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEdit(category)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteClick(category)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(category);
+                            }}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
