@@ -581,13 +581,13 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Kamar Available</CardTitle>
+                <CardTitle className="text-sm font-medium">Room Types Available</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="space-y-1">
                 <div className="text-2xl font-bold">{availableRooms.length}</div>
-                <div className="text-sm opacity-90">Siap digunakan</div>
+                <div className="text-sm opacity-90">{availableCategories.length} kategori siap</div>
               </div>
             </CardContent>
           </Card>
