@@ -600,7 +600,15 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           <DialogHeader>
             <DialogTitle>{getDialogTitle()}</DialogTitle>
           </DialogHeader>
-          
+          {selectedCard === "available" && selectedCategoryId && (
+            <button
+              type="button"
+              onClick={() => setSelectedCategoryId(null)}
+              className="text-sm text-primary hover:underline w-fit"
+            >
+              ← Kembali ke daftar kategori
+            </button>
+          )}
           <div className="mt-4">
             {selectedCard === "available" && !selectedCategoryId ? (
               availableCategories.length === 0 ? (
