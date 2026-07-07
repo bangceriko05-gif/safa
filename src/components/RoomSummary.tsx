@@ -406,7 +406,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       case "pending_co": return "Tamu Harus Check Out Hari Ini";
       case "co": return "Tamu Sudah Check Out Hari Ini";
       case "kotor": return "Kamar Kotor";
-      case "available": return "Kamar Available";
+      case "available":
+        return selectedCategoryId
+          ? `Room Types Available - ${availableCategories.find(c => c.id === selectedCategoryId)?.name || ""}`
+          : "Room Types Available";
       default: return "";
     }
   };
@@ -425,6 +428,20 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   };
 
   const isRoomData = selectedCard === "kotor" || selectedCard === "available";
+
+  // Group available rooms by category
+  const availableCategories: CategoryAvailability[] = (() => {
+    const map = new Map<string, CategoryAvailability>();
+    availableRooms.forEach(r => {
+      const id = r.category_id || "__uncat__";
+      const name = r.category_name || "Tanpa Kategori";
+      if (!map.has(id)) map.set(id, { id, name, count: 0, rooms: [] });
+      const entry = map.get(id)!;
+      entry.count += 1;
+      entry.rooms.push(r);
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   return (
     <>
