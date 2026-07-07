@@ -58,6 +58,8 @@ interface RoomData {
   id: string;
   name: string;
   status: string;
+  category_id?: string | null;
+  category_name?: string | null;
 }
 
 interface RoomDailyStatusData {
@@ -66,6 +68,13 @@ interface RoomDailyStatusData {
 }
 
 type InfoCardType = "total" | "bo" | "ci" | "pending_co" | "co" | "kotor" | "available";
+
+interface CategoryAvailability {
+  id: string;
+  name: string;
+  count: number;
+  rooms: RoomData[];
+}
 
 export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const { currentStore } = useStore();
@@ -78,6 +87,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const [selectedCard, setSelectedCard] = useState<InfoCardType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -182,7 +192,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .eq("store_id", currentStore.id),
         supabase
           .from("rooms")
-          .select("id, name, status")
+          .select("id, name, status, category_id, room_categories(name)")
           .eq("store_id", currentStore.id)
           .order("name"),
         // Fetch room_daily_status for TODAY (single source of truth for dirty rooms)
@@ -271,7 +281,14 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
       setBookings(mappedBookings);
       setPendingCheckOutBookings(pendingCOBookings);
-      setRooms(roomsData || []);
+      const mappedRooms: RoomData[] = (roomsData || []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        status: r.status,
+        category_id: r.category_id,
+        category_name: r.room_categories?.name || null,
+      }));
+      setRooms(mappedRooms);
       setRoomDailyStatus(dailyStatusData || []);
       setOccupiedRoomIds(new Set(occupiedIds));
     } catch (error) {
