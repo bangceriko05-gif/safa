@@ -595,14 +595,43 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setSelectedCategoryId(null); }}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>{getDialogTitle()}</DialogTitle>
           </DialogHeader>
           
           <div className="mt-4">
-            {getDialogData().length === 0 ? (
+            {selectedCard === "available" && !selectedCategoryId ? (
+              availableCategories.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">Tidak ada data</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead className="text-right">Available</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {availableCategories.map((cat) => (
+                      <TableRow key={cat.id}>
+                        <TableCell className="font-medium">{cat.name}</TableCell>
+                        <TableCell className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategoryId(cat.id)}
+                            className="text-primary font-semibold hover:underline"
+                          >
+                            ready {cat.count} {cat.count === 1 ? "room" : "rooms"}
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )
+            ) : getDialogData().length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 Tidak ada data
               </div>
@@ -616,7 +645,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(getDialogData() as RoomData[]).map((room) => (
+                  {((selectedCard === "available" && selectedCategoryId)
+                    ? (availableCategories.find(c => c.id === selectedCategoryId)?.rooms || [])
+                    : (getDialogData() as RoomData[])
+                  ).map((room) => (
                     <TableRow key={room.id}>
                       <TableCell className="font-medium">{room.name}</TableCell>
                       <TableCell>
