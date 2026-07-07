@@ -636,6 +636,12 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
                         </TableCell>
                       </TableRow>
                     ))}
+                    <TableRow className="border-t-2 border-foreground/60 bg-muted/40 hover:bg-muted/40">
+                      <TableCell className="font-bold">Total</TableCell>
+                      <TableCell className="text-right font-bold">
+                        {availableRooms.length} {availableRooms.length === 1 ? "room" : "rooms"}
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               )
