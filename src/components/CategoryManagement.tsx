@@ -369,7 +369,7 @@ export default function CategoryManagement({ isOpen, onClose, onCategoryChanged 
                     >
                       <TableCell className="font-medium">{category.name}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {(roomCounts[category.id] || 0)} room
+                        {(roomCounts[category.id] || 0)} rooms
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {category.description || "-"}
