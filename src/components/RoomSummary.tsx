@@ -608,7 +608,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             <CardContent className="px-4 pb-3">
               <div className="space-y-1">
                 <div className="text-2xl font-bold">{availableRooms.length}</div>
-                <div className="text-sm opacity-90">{availableCategories.length} kategori siap</div>
+                <div className="text-sm opacity-90">{categories.length} kategori</div>
               </div>
             </CardContent>
           </Card>
