@@ -242,6 +242,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       if (dailyStatusError) throw dailyStatusError;
       if (activeBookingsError) throw activeBookingsError;
       if (pendingCOError) throw pendingCOError;
+      if (categoriesError) throw categoriesError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
