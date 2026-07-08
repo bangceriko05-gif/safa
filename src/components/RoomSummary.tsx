@@ -183,6 +183,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         { data: dailyStatusData, error: dailyStatusError },
         { data: activeBookingsData, error: activeBookingsError },
         { data: pendingCOData, error: pendingCOError },
+        { data: categoriesData, error: categoriesError },
       ] = await Promise.all([
         // Bookings that START today (for the reservation cards)
         supabase
@@ -228,6 +229,12 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .in("status", ["BO", "CI"])
           .gte("date", earliestStartDate)
           .lt("date", dateStr),
+        // Fetch all room categories for the store
+        supabase
+          .from("room_categories")
+          .select("id, name")
+          .eq("store_id", currentStore.id)
+          .order("name"),
       ]);
 
       if (bookingsError) throw bookingsError;
