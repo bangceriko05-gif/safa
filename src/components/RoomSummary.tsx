@@ -444,9 +444,15 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
   const isRoomData = selectedCard === "kotor" || selectedCard === "available";
 
-  // Group available rooms by category
+  // Group available rooms by category, including categories with 0 available rooms
   const availableCategories: CategoryAvailability[] = (() => {
     const map = new Map<string, CategoryAvailability>();
+    // Seed all store categories with count 0
+    categories.forEach(c => {
+      map.set(c.id, { id: c.id, name: c.name, count: 0, rooms: [] });
+    });
+    // Add uncategorized bucket for rooms without a category
+    map.set("__uncat__", { id: "__uncat__", name: "Tanpa Kategori", count: 0, rooms: [] });
     availableRooms.forEach(r => {
       const id = r.category_id || "__uncat__";
       const name = r.category_name || "Tanpa Kategori";
