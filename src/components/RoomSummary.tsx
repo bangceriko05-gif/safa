@@ -651,7 +651,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
                           <button
                             type="button"
                             onClick={() => setSelectedCategoryId(cat.id)}
-                            className="text-primary font-semibold hover:underline"
+                            className={cn(
+                              "font-semibold hover:underline",
+                              cat.count === 0 ? "text-destructive" : "text-primary"
+                            )}
                           >
                             ready {cat.count} {cat.count === 1 ? "room" : "rooms"}
                           </button>
