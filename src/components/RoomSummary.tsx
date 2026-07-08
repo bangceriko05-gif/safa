@@ -33,6 +33,7 @@ import { addDays, subDays, format, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { logActivity } from "@/utils/activityLogger";
 
 interface RoomSummaryProps {
@@ -650,7 +651,10 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
                           <button
                             type="button"
                             onClick={() => setSelectedCategoryId(cat.id)}
-                            className="text-primary font-semibold hover:underline"
+                            className={cn(
+                              "font-semibold hover:underline",
+                              cat.count === 0 ? "text-destructive" : "text-primary"
+                            )}
                           >
                             ready {cat.count} {cat.count === 1 ? "room" : "rooms"}
                           </button>
