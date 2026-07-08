@@ -76,6 +76,11 @@ interface CategoryAvailability {
   rooms: RoomData[];
 }
 
+interface RoomCategoryData {
+  id: string;
+  name: string;
+}
+
 export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const { currentStore } = useStore();
   const [bookings, setBookings] = useState<BookingData[]>([]);
@@ -88,6 +93,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<RoomCategoryData[]>([]);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -177,6 +183,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
         { data: dailyStatusData, error: dailyStatusError },
         { data: activeBookingsData, error: activeBookingsError },
         { data: pendingCOData, error: pendingCOError },
+        { data: categoriesData, error: categoriesError },
       ] = await Promise.all([
         // Bookings that START today (for the reservation cards)
         supabase
@@ -222,6 +229,12 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           .in("status", ["BO", "CI"])
           .gte("date", earliestStartDate)
           .lt("date", dateStr),
+        // Fetch all room categories for the store
+        supabase
+          .from("room_categories")
+          .select("id, name")
+          .eq("store_id", currentStore.id)
+          .order("name"),
       ]);
 
       if (bookingsError) throw bookingsError;
@@ -229,6 +242,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       if (dailyStatusError) throw dailyStatusError;
       if (activeBookingsError) throw activeBookingsError;
       if (pendingCOError) throw pendingCOError;
+      if (categoriesError) throw categoriesError;
 
       const mappedBookings: BookingData[] = (bookingsData || []).map((b: any) => ({
         id: b.id,
@@ -291,6 +305,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       setRooms(mappedRooms);
       setRoomDailyStatus(dailyStatusData || []);
       setOccupiedRoomIds(new Set(occupiedIds));
+      setCategories((categoriesData || []).map((c: any) => ({ id: c.id, name: c.name })));
     } catch (error) {
       console.error("Error fetching room summary data:", error);
     }
@@ -429,9 +444,15 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
 
   const isRoomData = selectedCard === "kotor" || selectedCard === "available";
 
-  // Group available rooms by category
+  // Group available rooms by category, including categories with 0 available rooms
   const availableCategories: CategoryAvailability[] = (() => {
     const map = new Map<string, CategoryAvailability>();
+    // Seed all store categories with count 0
+    categories.forEach(c => {
+      map.set(c.id, { id: c.id, name: c.name, count: 0, rooms: [] });
+    });
+    // Add uncategorized bucket for rooms without a category
+    map.set("__uncat__", { id: "__uncat__", name: "Tanpa Kategori", count: 0, rooms: [] });
     availableRooms.forEach(r => {
       const id = r.category_id || "__uncat__";
       const name = r.category_name || "Tanpa Kategori";
@@ -587,7 +608,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
             <CardContent className="px-4 pb-3">
               <div className="space-y-1">
                 <div className="text-2xl font-bold">{availableRooms.length}</div>
-                <div className="text-sm opacity-90">{availableCategories.length} kategori siap</div>
+                <div className="text-sm opacity-90">{categories.length} kategori</div>
               </div>
             </CardContent>
           </Card>
@@ -611,7 +632,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           )}
           <div className="mt-4">
             {selectedCard === "available" && !selectedCategoryId ? (
-              availableCategories.length === 0 ? (
+              categories.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">Tidak ada data</div>
               ) : (
                 <Table>
