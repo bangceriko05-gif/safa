@@ -76,6 +76,11 @@ interface CategoryAvailability {
   rooms: RoomData[];
 }
 
+interface RoomCategoryData {
+  id: string;
+  name: string;
+}
+
 export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const { currentStore } = useStore();
   const [bookings, setBookings] = useState<BookingData[]>([]);
