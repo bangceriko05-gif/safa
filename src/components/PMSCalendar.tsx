@@ -1184,7 +1184,14 @@ export default function PMSCalendar({
                               style={{ backgroundColor: isBlocked ? "#9CA3AF" : "#3B82F6" }}
                             />
                             <span className="hidden lg:inline">{room.name}</span>
-                            <span className="lg:hidden truncate">{room.name.split(' ')[0]}</span>
+                            <span className="lg:hidden flex flex-col leading-tight">
+                              <span className="truncate">{room.name.split(' ')[0]}</span>
+                              {room.name.includes(' ') && (
+                                <span className="text-[10px] text-muted-foreground font-normal truncate">
+                                  {room.name.split(' ').slice(1).join(' ')}
+                                </span>
+                              )}
+                            </span>
                             {!depositMode && hasDeposit && (
                               <div 
                                 className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 cursor-pointer hover:bg-amber-200 transition-colors" 
