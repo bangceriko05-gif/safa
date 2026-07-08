@@ -632,7 +632,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           )}
           <div className="mt-4">
             {selectedCard === "available" && !selectedCategoryId ? (
-              availableCategories.length === 0 ? (
+              categories.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">Tidak ada data</div>
               ) : (
                 <Table>
