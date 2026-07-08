@@ -93,6 +93,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<RoomCategoryData[]>([]);
 
   useEffect(() => {
     if (!currentStore) return;
