@@ -305,6 +305,7 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
       setRooms(mappedRooms);
       setRoomDailyStatus(dailyStatusData || []);
       setOccupiedRoomIds(new Set(occupiedIds));
+      setCategories((categoriesData || []).map((c: any) => ({ id: c.id, name: c.name })));
     } catch (error) {
       console.error("Error fetching room summary data:", error);
     }
