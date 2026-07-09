@@ -1158,7 +1158,7 @@ export default function PMSCalendar({
                     <tr 
                       key={room.id} 
                       className={cn(
-                        "border-b border-border hover:bg-muted/20 transition-colors",
+                        "border-b-2 border-border hover:bg-muted/20 transition-colors",
                         depositMode && canSelectForDeposit && "cursor-pointer hover:bg-amber-50",
                         depositMode && hasDeposit && "bg-amber-50/50"
                       )}
@@ -1183,9 +1183,15 @@ export default function PMSCalendar({
                               className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full flex-shrink-0"
                               style={{ backgroundColor: isBlocked ? "#9CA3AF" : "#3B82F6" }}
                             />
-                            <span className="hidden lg:inline">{room.name}</span>
-                            <span className="lg:hidden flex flex-col leading-tight">
-                              <span className="truncate">{room.name.split(' ')[0]}</span>
+                            <span className="hidden lg:inline">
+                              {room.name}
+                              {isBlocked && <span className="text-xs text-muted-foreground ml-1">({room.status})</span>}
+                            </span>
+                            <span className="lg:hidden flex flex-col leading-tight min-w-0">
+                              <span className="flex items-center gap-1">
+                                <span className="truncate font-medium">{room.name.split(' ')[0]}</span>
+                                {isBlocked && <span className="text-[10px] text-muted-foreground whitespace-nowrap">({room.status})</span>}
+                              </span>
                               {room.name.includes(' ') && (
                                 <span className="text-[10px] text-muted-foreground font-normal truncate">
                                   {room.name.split(' ').slice(1).join(' ')}
@@ -1194,7 +1200,7 @@ export default function PMSCalendar({
                             </span>
                             {!depositMode && hasDeposit && (
                               <div 
-                                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 cursor-pointer hover:bg-amber-200 transition-colors" 
+                                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 cursor-pointer hover:bg-amber-200 transition-colors flex-shrink-0" 
                                 title="Klik untuk lihat deposit"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1210,7 +1216,6 @@ export default function PMSCalendar({
                             {depositMode && canSelectForDeposit && (
                               <span className="text-xs text-muted-foreground">Klik untuk pilih</span>
                             )}
-                            {isBlocked && <span className="text-xs text-muted-foreground">({room.status})</span>}
                           </div>
                         </td>
                         {visibleDates.map((date, dateIndex) => {
