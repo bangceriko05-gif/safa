@@ -1158,7 +1158,7 @@ export default function PMSCalendar({
                     <tr 
                       key={room.id} 
                       className={cn(
-                        "border-b border-border hover:bg-muted/20 transition-colors",
+                        "border-b-2 border-border hover:bg-muted/20 transition-colors",
                         depositMode && canSelectForDeposit && "cursor-pointer hover:bg-amber-50",
                         depositMode && hasDeposit && "bg-amber-50/50"
                       )}
