@@ -63,6 +63,16 @@ interface Product {
   stock_qty?: number;
 }
 
+interface VariantOpt {
+  id: string;            // synthetic id: `p:<pid>` or `v:<vid>`
+  product_id: string;
+  display_name: string;  // "ProductName" or "ProductName - VariantName"
+  sku: string | null;
+  price: number;
+  purchase_price: number;
+  stock: number;
+}
+
 interface Supplier {
   id: string;
   name: string;
@@ -108,6 +118,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
 
   // Data
   const [products, setProducts] = useState<Product[]>([]);
+  const [pickList, setPickList] = useState<VariantOpt[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
