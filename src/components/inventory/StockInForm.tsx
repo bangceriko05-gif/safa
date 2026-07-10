@@ -194,6 +194,48 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         .order("name");
       setProducts(prods || []);
 
+      // Variants for these products
+      const productIds = (prods || []).map((p: any) => p.id);
+      let variantsByProduct: Record<string, any[]> = {};
+      if (productIds.length > 0) {
+        const { data: vars } = await supabase
+          .from("product_variants")
+          .select("id, product_id, variant_name, sku, price, purchase_price, stock, is_active")
+          .in("product_id", productIds)
+          .eq("is_active", true);
+        (vars || []).forEach((v: any) => {
+          (variantsByProduct[v.product_id] ||= []).push(v);
+        });
+      }
+      const list: VariantOpt[] = [];
+      (prods || []).forEach((p: any) => {
+        const vs = variantsByProduct[p.id] || [];
+        if (vs.length > 0) {
+          vs.forEach((v: any) => {
+            list.push({
+              id: `v:${v.id}`,
+              product_id: p.id,
+              display_name: `${p.name} - ${v.variant_name}`,
+              sku: v.sku,
+              price: Number(v.price) || Number(p.price) || 0,
+              purchase_price: Number(v.purchase_price) || Number(p.purchase_price) || 0,
+              stock: Number(v.stock) || 0,
+            });
+          });
+        } else {
+          list.push({
+            id: `p:${p.id}`,
+            product_id: p.id,
+            display_name: p.name,
+            sku: null,
+            price: Number(p.price) || 0,
+            purchase_price: Number(p.purchase_price) || 0,
+            stock: Number(p.stock_qty) || 0,
+          });
+        }
+      });
+      setPickList(list);
+
       // Suppliers
       const { data: sups } = await supabase
         .from("suppliers" as any)
