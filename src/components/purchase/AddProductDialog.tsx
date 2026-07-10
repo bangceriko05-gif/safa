@@ -46,11 +46,13 @@ export default function AddProductDialog({
   onClose,
   onAdd,
   editing,
+  existingProductIds = [],
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (p: PickedProduct) => void;
   editing?: PickedProduct | null;
+  existingProductIds?: string[];
 }) {
   const { currentStore } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
