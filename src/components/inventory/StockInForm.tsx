@@ -813,11 +813,16 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                           })
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
+                          const addedName = p.sku ? `${p.display_name} (${p.sku})` : p.display_name;
+                          const isAlreadyAdded = items.some((it) => it.product_name === addedName);
                           return (
                             <CommandItem
                               key={p.id}
                               value={`${p.display_name} ${p.sku || ""}`}
+                              disabled={isAlreadyAdded}
+                              className={isAlreadyAdded ? "opacity-50 pointer-events-none" : ""}
                               onSelect={() => {
+                                if (isAlreadyAdded) return;
                                 if (isSelected) {
                                   setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
                                 } else {
@@ -836,6 +841,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                                     <div className="text-[11px] text-muted-foreground truncate">
                                       SKU: {p.sku} · Stok: {p.stock}
                                     </div>
+                                  )}
+                                  {isAlreadyAdded && (
+                                    <div className="text-[11px] text-muted-foreground italic">Sudah ditambahkan</div>
                                   )}
                                 </div>
                                 <span className="text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(p.purchase_price || p.price)}</span>
