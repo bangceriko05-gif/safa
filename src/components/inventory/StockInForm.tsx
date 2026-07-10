@@ -803,31 +803,42 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                     <CommandList>
                       <CommandEmpty>Produk tidak ditemukan</CommandEmpty>
                       <CommandGroup>
-                        {products
-                          .filter((p) =>
-                            p.name.toLowerCase().includes(newProductSearch.toLowerCase())
-                          )
+                        {pickList
+                          .filter((p) => {
+                            const q = newProductSearch.toLowerCase();
+                            return (
+                              p.display_name.toLowerCase().includes(q) ||
+                              (p.sku || "").toLowerCase().includes(q)
+                            );
+                          })
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
                           return (
                             <CommandItem
                               key={p.id}
-                              value={p.name}
+                              value={`${p.display_name} ${p.sku || ""}`}
                               onSelect={() => {
                                 if (isSelected) {
                                   setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
                                 } else {
                                   setSelectedProductIds([...selectedProductIds, p.id]);
                                   if (selectedProductIds.length === 0 && newPrice === 0) {
-                                    setNewPrice(p.price);
+                                    setNewPrice(p.purchase_price || p.price);
                                   }
                                 }
                               }}
                             >
                               <Check className={`h-4 w-4 mr-2 ${isSelected ? "opacity-100" : "opacity-0"}`} />
-                              <div className="flex justify-between w-full">
-                                <span>{p.name}</span>
-                                <span className="text-xs text-muted-foreground">{formatCurrency(p.price)}</span>
+                              <div className="flex justify-between w-full gap-2">
+                                <div className="min-w-0">
+                                  <div className="truncate">{p.display_name}</div>
+                                  {p.sku && (
+                                    <div className="text-[11px] text-muted-foreground truncate">
+                                      SKU: {p.sku} · Stok: {p.stock}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(p.purchase_price || p.price)}</span>
                               </div>
                             </CommandItem>
                           );
@@ -840,7 +851,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               {selectedProductIds.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {selectedProductIds.map((pid) => {
-                    const p = products.find((x) => x.id === pid);
+                    const p = pickList.find((x) => x.id === pid);
                     if (!p) return null;
                     return (
                       <Badge
@@ -848,7 +859,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                         variant="secondary"
                         className="bg-blue-100 text-blue-800 hover:bg-blue-100 gap-1 pr-1"
                       >
-                        <span>{p.name}</span>
+                        <span>{p.display_name}{p.sku ? ` (${p.sku})` : ""}</span>
                         <button
                           type="button"
                           onClick={() => setSelectedProductIds(selectedProductIds.filter((id) => id !== pid))}
