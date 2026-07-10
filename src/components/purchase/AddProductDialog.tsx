@@ -206,24 +206,30 @@ export default function AddProductDialog({
             {filtered.length === 0 ? (
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">Produk tidak ditemukan</div>
             ) : (
-              filtered.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => pick(p)}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-accent border-b last:border-b-0 ${
-                    selected?.id === p.id ? "bg-accent" : ""
-                  }`}
-                >
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {p.sku ? `SKU: ${p.sku} · ` : ""}Stok: {p.stock_qty}
+              filtered.map((p) => {
+                const isAlreadyAdded =
+                  existingProductIds.includes(p.id) && editing?.product_id !== p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={isAlreadyAdded}
+                    onClick={() => !isAlreadyAdded && pick(p)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left border-b last:border-b-0 ${
+                      selected?.id === p.id ? "bg-accent" : ""
+                    } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"}`}
+                  >
+                    <div>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.sku ? `SKU: ${p.sku} · ` : ""}Stok: {p.stock_qty}
+                        {isAlreadyAdded ? " · Sudah ditambahkan" : ""}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{fmt(bestPrices[p.id] ?? Number(p.purchase_price) ?? 0)}</div>
-                </button>
-              ))
+                    <div className="text-xs text-muted-foreground">{fmt(bestPrices[p.id] ?? Number(p.purchase_price) ?? 0)}</div>
+                  </button>
+                );
+              })
             )}
           </div>
 
