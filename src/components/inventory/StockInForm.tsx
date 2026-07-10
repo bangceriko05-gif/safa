@@ -564,11 +564,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
     }
     const subtotal = newQty * newPrice;
     const newItems: Item[] = selectedProductIds
-      .map((pid) => products.find((x) => x.id === pid))
-      .filter((p): p is Product => !!p)
+      .map((pid) => pickList.find((x) => x.id === pid))
+      .filter((p): p is VariantOpt => !!p)
       .map((p) => ({
-        product_id: p.id,
-        product_name: p.name,
+        product_id: p.product_id,
+        product_name: p.sku ? `${p.display_name} (${p.sku})` : p.display_name,
         quantity: newQty,
         unit_price: newPrice,
         subtotal,
