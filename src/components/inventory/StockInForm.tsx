@@ -63,6 +63,16 @@ interface Product {
   stock_qty?: number;
 }
 
+interface VariantOpt {
+  id: string;            // synthetic id: `p:<pid>` or `v:<vid>`
+  product_id: string;
+  display_name: string;  // "ProductName" or "ProductName - VariantName"
+  sku: string | null;
+  price: number;
+  purchase_price: number;
+  stock: number;
+}
+
 interface Supplier {
   id: string;
   name: string;
@@ -108,6 +118,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
 
   // Data
   const [products, setProducts] = useState<Product[]>([]);
+  const [pickList, setPickList] = useState<VariantOpt[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
@@ -182,6 +193,48 @@ export default function StockInForm({ stockInId, onBack }: Props) {
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts(prods || []);
+
+      // Variants for these products
+      const productIds = (prods || []).map((p: any) => p.id);
+      let variantsByProduct: Record<string, any[]> = {};
+      if (productIds.length > 0) {
+        const { data: vars } = await supabase
+          .from("product_variants")
+          .select("id, product_id, variant_name, sku, price, purchase_price, stock, is_active")
+          .in("product_id", productIds)
+          .eq("is_active", true);
+        (vars || []).forEach((v: any) => {
+          (variantsByProduct[v.product_id] ||= []).push(v);
+        });
+      }
+      const list: VariantOpt[] = [];
+      (prods || []).forEach((p: any) => {
+        const vs = variantsByProduct[p.id] || [];
+        if (vs.length > 0) {
+          vs.forEach((v: any) => {
+            list.push({
+              id: `v:${v.id}`,
+              product_id: p.id,
+              display_name: `${p.name} - ${v.variant_name}`,
+              sku: v.sku,
+              price: Number(v.price) || Number(p.price) || 0,
+              purchase_price: Number(v.purchase_price) || Number(p.purchase_price) || 0,
+              stock: Number(v.stock) || 0,
+            });
+          });
+        } else {
+          list.push({
+            id: `p:${p.id}`,
+            product_id: p.id,
+            display_name: p.name,
+            sku: null,
+            price: Number(p.price) || 0,
+            purchase_price: Number(p.purchase_price) || 0,
+            stock: Number(p.stock_qty) || 0,
+          });
+        }
+      });
+      setPickList(list);
 
       // Suppliers
       const { data: sups } = await supabase
@@ -511,11 +564,11 @@ export default function StockInForm({ stockInId, onBack }: Props) {
     }
     const subtotal = newQty * newPrice;
     const newItems: Item[] = selectedProductIds
-      .map((pid) => products.find((x) => x.id === pid))
-      .filter((p): p is Product => !!p)
+      .map((pid) => pickList.find((x) => x.id === pid))
+      .filter((p): p is VariantOpt => !!p)
       .map((p) => ({
-        product_id: p.id,
-        product_name: p.name,
+        product_id: p.product_id,
+        product_name: p.sku ? `${p.display_name} (${p.sku})` : p.display_name,
         quantity: newQty,
         unit_price: newPrice,
         subtotal,
@@ -750,31 +803,42 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                     <CommandList>
                       <CommandEmpty>Produk tidak ditemukan</CommandEmpty>
                       <CommandGroup>
-                        {products
-                          .filter((p) =>
-                            p.name.toLowerCase().includes(newProductSearch.toLowerCase())
-                          )
+                        {pickList
+                          .filter((p) => {
+                            const q = newProductSearch.toLowerCase();
+                            return (
+                              p.display_name.toLowerCase().includes(q) ||
+                              (p.sku || "").toLowerCase().includes(q)
+                            );
+                          })
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
                           return (
                             <CommandItem
                               key={p.id}
-                              value={p.name}
+                              value={`${p.display_name} ${p.sku || ""}`}
                               onSelect={() => {
                                 if (isSelected) {
                                   setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
                                 } else {
                                   setSelectedProductIds([...selectedProductIds, p.id]);
                                   if (selectedProductIds.length === 0 && newPrice === 0) {
-                                    setNewPrice(p.price);
+                                    setNewPrice(p.purchase_price || p.price);
                                   }
                                 }
                               }}
                             >
                               <Check className={`h-4 w-4 mr-2 ${isSelected ? "opacity-100" : "opacity-0"}`} />
-                              <div className="flex justify-between w-full">
-                                <span>{p.name}</span>
-                                <span className="text-xs text-muted-foreground">{formatCurrency(p.price)}</span>
+                              <div className="flex justify-between w-full gap-2">
+                                <div className="min-w-0">
+                                  <div className="truncate">{p.display_name}</div>
+                                  {p.sku && (
+                                    <div className="text-[11px] text-muted-foreground truncate">
+                                      SKU: {p.sku} · Stok: {p.stock}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(p.purchase_price || p.price)}</span>
                               </div>
                             </CommandItem>
                           );
@@ -787,7 +851,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               {selectedProductIds.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {selectedProductIds.map((pid) => {
-                    const p = products.find((x) => x.id === pid);
+                    const p = pickList.find((x) => x.id === pid);
                     if (!p) return null;
                     return (
                       <Badge
@@ -795,7 +859,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                         variant="secondary"
                         className="bg-blue-100 text-blue-800 hover:bg-blue-100 gap-1 pr-1"
                       >
-                        <span>{p.name}</span>
+                        <span>{p.display_name}{p.sku ? ` (${p.sku})` : ""}</span>
                         <button
                           type="button"
                           onClick={() => setSelectedProductIds(selectedProductIds.filter((id) => id !== pid))}
