@@ -53,7 +53,7 @@ export default function DateNavigation({ selectedDate, onDateChange }: DateNavig
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full sm:w-auto transition-[var(--transition-smooth)]">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {format(selectedDate, "dd MMMM yyyy", { locale: id })}
+              {format(selectedDate, "EEEE, dd MMMM yyyy", { locale: id })}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
