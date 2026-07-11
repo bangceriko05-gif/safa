@@ -180,7 +180,7 @@ export default function AddProductDialog({
   }, [open, currentStore, editing]);
 
   const stripUnitSuffix = (n: string) =>
-    (n || "").replace(/\s*\([^)]* \/ [^)]*\)\s*$/, "").trim();
+    (n || "").replace(/\s*\([^)]*\)\s*$/, "").trim();
 
   const isItemAlreadyAdded = (p: PickItem) => {
     const candidate = p.has_variants && p.sku ? `${p.display_name} (${p.sku})` : p.display_name;
