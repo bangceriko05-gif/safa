@@ -51,12 +51,14 @@ export default function AddProductDialog({
   onAdd,
   editing,
   existingProductIds = [],
+  existingItems = [],
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (p: PickedProduct) => void;
   editing?: PickedProduct | null;
   existingProductIds?: string[];
+  existingItems?: { product_id: string | null; product_name: string }[];
 }) {
   const { currentStore } = useStore();
   const [products, setProducts] = useState<PickItem[]>([]);
@@ -177,18 +179,26 @@ export default function AddProductDialog({
     })();
   }, [open, currentStore, editing]);
 
+  const stripUnitSuffix = (n: string) =>
+    (n || "").replace(/\s*\([^)]* \/ [^)]*\)\s*$/, "").trim();
+
   const isItemAlreadyAdded = (p: PickItem) => {
-    if (editing) {
-      // allow the currently-edited row
-      const editName = editing.product_name || "";
-      const stripped = editName.replace(/\s*\([^)]* \/ [^)]*\)\s*$/, "");
-      const cur = p.sku ? `${p.display_name} (${p.sku})` : p.display_name;
-      if (stripped === cur || stripped === p.display_name) return false;
-    }
-    return existingProductIds.some((key) => {
-      // Backward-compat: keys are product_ids. For variant rows, compare against
-      // composed identity encoded in name via extra prop existingProductNames.
-      return key === `${p.product_id}::${p.variant_id ?? ""}` || (!p.has_variants && key === p.product_id);
+    const candidate = p.has_variants && p.sku ? `${p.display_name} (${p.sku})` : p.display_name;
+    const list = existingItems.length > 0
+      ? existingItems
+      : existingProductIds.map((id) => ({ product_id: id, product_name: "" }));
+    return list.some((it) => {
+      if (editing && it.product_name === editing.product_name && it.product_id === editing.product_id) {
+        return false; // allow re-selecting the row being edited
+      }
+      const stripped = stripUnitSuffix(it.product_name || "");
+      if (p.has_variants) {
+        // Must match on composed identity including SKU/name
+        return stripped === candidate;
+      }
+      // Non-variant product: match by product_id (fallback) or by name
+      if (it.product_id && it.product_id === p.product_id && !stripped.includes(" - ")) return true;
+      return stripped === candidate;
     });
   };
 

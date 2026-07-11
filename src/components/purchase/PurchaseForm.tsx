@@ -937,6 +937,7 @@ export default function PurchaseForm({
         onClose={() => { setProductOpen(false); setEditingItemIdx(null); }}
         editing={editingItemIdx !== null ? items[editingItemIdx] : null}
         existingProductIds={items.map((it) => it.product_id).filter((x): x is string => !!x)}
+        existingItems={items.map((it) => ({ product_id: it.product_id, product_name: it.product_name }))}
         onAdd={(p) => {
           if (editingItemIdx !== null) {
             setItems((prev) => prev.map((it, idx) => idx === editingItemIdx ? p : it));
