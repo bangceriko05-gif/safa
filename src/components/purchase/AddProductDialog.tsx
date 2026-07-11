@@ -23,13 +23,17 @@ export interface PickedProduct {
   discount: number;
 }
 
-interface Product {
+interface PickItem {
   id: string;
+  product_id: string;
+  variant_id: string | null;
+  display_name: string;
+  sku: string | null;
   name: string;
   purchase_price: number;
   price: number;
-  sku: string | null;
   stock_qty: number;
+  has_variants: boolean;
 }
 
 interface UnitOpt {
@@ -55,10 +59,10 @@ export default function AddProductDialog({
   existingProductIds?: string[];
 }) {
   const { currentStore } = useStore();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<PickItem[]>([]);
   const [bestPrices, setBestPrices] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Product | null>(null);
+  const [selected, setSelected] = useState<PickItem | null>(null);
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [discount, setDiscount] = useState(0);
@@ -73,20 +77,64 @@ export default function AddProductDialog({
     setSearch("");
     setDiscountMode("rp"); setDiscountInput(0);
     (async () => {
-      const { data } = await supabase
+      const { data: prods } = await supabase
         .from("products")
         .select("id,name,purchase_price,price,sku,stock_qty")
         .eq("store_id", currentStore.id)
         .order("name");
-      const list = ((data as any[]) || []) as Product[];
+      const rawProducts = (prods as any[]) || [];
+      const productIds = rawProducts.map((p) => p.id);
+      let variantsByProduct: Record<string, any[]> = {};
+      if (productIds.length > 0) {
+        const { data: vars } = await supabase
+          .from("product_variants")
+          .select("id, product_id, variant_name, sku, price, purchase_price, stock, is_active")
+          .in("product_id", productIds)
+          .eq("is_active", true);
+        (vars as any[] | null)?.forEach((v) => {
+          (variantsByProduct[v.product_id] ||= []).push(v);
+        });
+      }
+      const list: PickItem[] = [];
+      rawProducts.forEach((p: any) => {
+        const vs = variantsByProduct[p.id] || [];
+        if (vs.length > 0) {
+          vs.forEach((v: any) => {
+            list.push({
+              id: `v:${v.id}`,
+              product_id: p.id,
+              variant_id: v.id,
+              display_name: `${p.name} - ${v.variant_name}`,
+              sku: v.sku || null,
+              name: p.name,
+              purchase_price: Number(v.purchase_price) || Number(p.purchase_price) || 0,
+              price: Number(v.price) || Number(p.price) || 0,
+              stock_qty: Number(v.stock) || 0,
+              has_variants: true,
+            });
+          });
+        } else {
+          list.push({
+            id: `p:${p.id}`,
+            product_id: p.id,
+            variant_id: null,
+            display_name: p.name,
+            sku: p.sku || null,
+            name: p.name,
+            purchase_price: Number(p.purchase_price) || 0,
+            price: Number(p.price) || 0,
+            stock_qty: Number(p.stock_qty) || 0,
+            has_variants: false,
+          });
+        }
+      });
       setProducts(list);
       // Fetch active conversions to determine best (highest) unit price per product
-      const ids = list.map((p) => p.id);
-      if (ids.length > 0) {
+      if (productIds.length > 0) {
         const { data: convs } = await supabase
           .from("product_unit_conversions")
           .select("product_id, price_per_from, is_active")
-          .in("product_id", ids)
+          .in("product_id", productIds)
           .eq("is_active", true);
         const map: Record<string, number> = {};
         (convs as any[] | null)?.forEach((c) => {
@@ -99,8 +147,26 @@ export default function AddProductDialog({
         setBestPrices({});
       }
       if (editing) {
-        const found = list.find((p) => p.id === editing.product_id) || null;
-        const fallback = { id: editing.product_id || "", name: editing.product_name, purchase_price: editing.unit_price, price: 0, sku: null, stock_qty: 0 } as Product;
+        // Match by product_id and try to match variant via SKU parenthetical
+        const editName = editing.product_name || "";
+        const found =
+          list.find((p) => {
+            if (p.product_id !== editing.product_id) return false;
+            if (!p.has_variants) return true;
+            return p.sku ? editName.includes(`(${p.sku})`) : editName.startsWith(p.display_name);
+          }) || null;
+        const fallback: PickItem = {
+          id: `p:${editing.product_id || ""}`,
+          product_id: editing.product_id || "",
+          variant_id: null,
+          display_name: editing.product_name,
+          sku: null,
+          name: editing.product_name,
+          purchase_price: editing.unit_price,
+          price: 0,
+          stock_qty: 0,
+          has_variants: false,
+        };
         await pickProduct(found || fallback, editing.unit_price);
         setQty(editing.quantity);
         setDiscount(editing.discount || 0);
@@ -111,25 +177,43 @@ export default function AddProductDialog({
     })();
   }, [open, currentStore, editing]);
 
+  const isItemAlreadyAdded = (p: PickItem) => {
+    if (editing) {
+      // allow the currently-edited row
+      const editName = editing.product_name || "";
+      const stripped = editName.replace(/\s*\([^)]* \/ [^)]*\)\s*$/, "");
+      const cur = p.sku ? `${p.display_name} (${p.sku})` : p.display_name;
+      if (stripped === cur || stripped === p.display_name) return false;
+    }
+    return existingProductIds.some((key) => {
+      // Backward-compat: keys are product_ids. For variant rows, compare against
+      // composed identity encoded in name via extra prop existingProductNames.
+      return key === `${p.product_id}::${p.variant_id ?? ""}` || (!p.has_variants && key === p.product_id);
+    });
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return products;
-    return products.filter((p) => p.name.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q));
+    return products.filter(
+      (p) => p.display_name.toLowerCase().includes(q) || (p.sku || "").toLowerCase().includes(q)
+    );
   }, [products, search]);
 
-  const pick = (p: Product) => {
+  const pick = (p: PickItem) => {
     pickProduct(p);
   };
 
-  const pickProduct = async (p: Product, presetPrice?: number) => {
+  const pickProduct = async (p: PickItem, presetPrice?: number) => {
     setSelected(p);
     const baseUnit = (p as any).unit || "pcs";
     let opts: UnitOpt[] = [];
-    if (p.id) {
+    // Only offer unit conversions for products without variants
+    if (p.product_id && !p.has_variants) {
       const { data: convs } = await supabase
         .from("product_unit_conversions")
         .select("id, from_unit, to_unit, factor, price_per_from, is_active")
-        .eq("product_id", p.id)
+        .eq("product_id", p.product_id)
         .eq("is_active", true);
       opts = ((convs as any[]) || [])
         .filter((c) => Number(c.factor) > 0)
@@ -172,9 +256,10 @@ export default function AddProductDialog({
   const submit = () => {
     if (!selected) return;
     const unitSuffix = currentUnit ? ` (${currentUnit.label}${!currentUnit.isBase ? ` / ${currentUnit.factor} ${currentUnit.baseUnit}` : ""})` : "";
+    const skuSuffix = selected.has_variants && selected.sku ? ` (${selected.sku})` : "";
     onAdd({
-      product_id: selected.id,
-      product_name: selected.name + unitSuffix,
+      product_id: selected.product_id,
+      product_name: selected.display_name + skuSuffix + unitSuffix,
       quantity: qty,
       unit_price: unitPrice,
       discount,
@@ -207,8 +292,7 @@ export default function AddProductDialog({
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">Produk tidak ditemukan</div>
             ) : (
               filtered.map((p) => {
-                const isAlreadyAdded =
-                  existingProductIds.includes(p.id) && editing?.product_id !== p.id;
+                const isAlreadyAdded = isItemAlreadyAdded(p);
                 return (
                   <button
                     key={p.id}
@@ -220,13 +304,13 @@ export default function AddProductDialog({
                     } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"}`}
                   >
                     <div>
-                      <div className="font-medium">{p.name}</div>
+                      <div className="font-medium">{p.display_name}</div>
                       <div className="text-xs text-muted-foreground">
                         {p.sku ? `SKU: ${p.sku} · ` : ""}Stok: {p.stock_qty}
                         {isAlreadyAdded ? " · Sudah ditambahkan" : ""}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">{fmt(bestPrices[p.id] ?? Number(p.purchase_price) ?? 0)}</div>
+                    <div className="text-xs text-muted-foreground">{fmt(p.has_variants ? Number(p.purchase_price) : (bestPrices[p.product_id] ?? Number(p.purchase_price) ?? 0))}</div>
                   </button>
                 );
               })
