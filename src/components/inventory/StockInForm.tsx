@@ -774,7 +774,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           <div className="px-4 py-3 border-b">
             <h3 className="font-semibold">Tambah Produk</h3>
           </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-[1fr_200px_180px_auto] gap-3 items-start">
+          <div className="p-4 grid grid-cols-1 md:grid-cols-[1fr_180px_140px_auto] gap-3 items-start">
             <div>
               <Label className="text-xs text-muted-foreground">Produk</Label>
               <Popover open={newProductSearchOpen} onOpenChange={setNewProductSearchOpen}>
@@ -892,6 +892,12 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                   const digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
                   setNewPrice(digits ? parseInt(digits, 10) : 0);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddItem();
+                  }
+                }}
                 placeholder="0"
                 className="mt-1"
               />
@@ -914,7 +920,13 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                   min={1}
                   value={newQty}
                   onChange={(e) => setNewQty(parseInt(e.target.value) || 1)}
-                  className="rounded-none text-center h-10"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddItem();
+                    }
+                  }}
+                  className="rounded-none text-center h-10 w-full min-w-0"
                 />
                 <Button
                   type="button"
