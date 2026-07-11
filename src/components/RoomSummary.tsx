@@ -622,6 +622,9 @@ export default function RoomSummary({ selectedDate }: RoomSummaryProps) {
           <DialogHeader>
             <DialogTitle>{getDialogTitle()}</DialogTitle>
           </DialogHeader>
+          <div className="text-sm text-muted-foreground -mt-2">
+            {format(selectedDate, "EEEE, dd MMMM yyyy", { locale: idLocale })}
+          </div>
           {selectedCard === "available" && selectedCategoryId && (
             <button
               type="button"
