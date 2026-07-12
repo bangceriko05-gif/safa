@@ -292,6 +292,43 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
       }));
 
       setBookings(mappedBookings);
+
+      // Fetch booking_orders (POS + additional orders) for the same date range
+      let ordersQuery = supabase
+        .from("booking_orders")
+        .select("id, bid, booking_id, date, total_amount, payment_status, payment_method, note, created_at")
+        .eq("store_id", currentStore.id);
+      if (dateFilter !== "allTime") {
+        const { startDate: sd, endDate: ed } = getDateRange(dateFilter, customDateRange);
+        const startStr = format(sd, "yyyy-MM-dd");
+        const endStr = format(ed, "yyyy-MM-dd");
+        if (startStr === endStr) ordersQuery = ordersQuery.eq("date", startStr);
+        else ordersQuery = ordersQuery.gte("date", startStr).lte("date", endStr);
+      }
+      const { data: orderData } = await ordersQuery.order("created_at", { ascending: false });
+      const grouped: Record<string, BookingOrderRow[]> = {};
+      const pos: BookingOrderRow[] = [];
+      (orderData || []).forEach((o: any) => {
+        const row: BookingOrderRow = {
+          id: o.id,
+          bid: o.bid,
+          booking_id: o.booking_id,
+          date: o.date,
+          total_amount: Number(o.total_amount || 0),
+          payment_status: o.payment_status || "belum_lunas",
+          payment_method: o.payment_method,
+          note: o.note,
+          created_at: o.created_at,
+        };
+        if (o.booking_id) {
+          if (!grouped[o.booking_id]) grouped[o.booking_id] = [];
+          grouped[o.booking_id].push(row);
+        } else {
+          pos.push(row);
+        }
+      });
+      setOrdersByBooking(grouped);
+      setPosOrders(pos);
     } catch (error) {
       console.error("Error fetching bookings:", error);
       toast.error("Gagal memuat data booking");
