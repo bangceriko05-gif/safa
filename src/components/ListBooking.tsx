@@ -603,7 +603,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                   <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
-                ) : filteredActiveBookings.length === 0 ? (
+                ) : filteredActiveBookings.length === 0 && filteredPosOrders.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     {searchQuery ? "Tidak ada booking yang cocok dengan pencarian" : "Tidak ada data"}
                   </div>
