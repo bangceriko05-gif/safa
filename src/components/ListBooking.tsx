@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getDateRange } from "./reports/ReportDateFilter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +74,19 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
+interface BookingOrderRow {
+  id: string;
+  bid: string | null;
+  booking_id: string | null;
+  date: string;
+  total_amount: number;
+  payment_status: string;
+  payment_method: string | null;
+  note: string | null;
+  created_at: string;
+  items?: { product_name: string; quantity: number; unit_price: number; subtotal: number }[];
+}
+
 export default function ListBooking({ userRole, onEditBooking, onAddBooking, timeRange: externalTimeRange, customDateRange: externalCustomDateRange, searchQuery: externalSearchQuery }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
@@ -96,6 +109,34 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const [previewBooking, setPreviewBooking] = useState<any>(null);
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState(1);
+  const [ordersByBooking, setOrdersByBooking] = useState<Record<string, BookingOrderRow[]>>({});
+  const [posOrders, setPosOrders] = useState<BookingOrderRow[]>([]);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [orderItemsById, setOrderItemsById] = useState<Record<string, BookingOrderRow["items"]>>({});
+
+  const toggleExpand = async (key: string, orderIds: string[]) => {
+    const next = new Set(expandedIds);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+      // Lazy-load items for orders not yet fetched
+      const missing = orderIds.filter((id) => !orderItemsById[id]);
+      if (missing.length > 0) {
+        const { data } = await supabase
+          .from("booking_order_items")
+          .select("booking_order_id, product_name, quantity, unit_price, subtotal")
+          .in("booking_order_id", missing);
+        const grouped: Record<string, any[]> = {};
+        (data || []).forEach((it: any) => {
+          if (!grouped[it.booking_order_id]) grouped[it.booking_order_id] = [];
+          grouped[it.booking_order_id].push(it);
+        });
+        setOrderItemsById((prev) => ({ ...prev, ...grouped }));
+      }
+    }
+    setExpandedIds(next);
+  };
 
   useEffect(() => {
     if (!currentStore) return;
@@ -251,6 +292,43 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
       }));
 
       setBookings(mappedBookings);
+
+      // Fetch booking_orders (POS + additional orders) for the same date range
+      let ordersQuery = supabase
+        .from("booking_orders")
+        .select("id, bid, booking_id, date, total_amount, payment_status, payment_method, note, created_at")
+        .eq("store_id", currentStore.id);
+      if (dateFilter !== "allTime") {
+        const { startDate: sd, endDate: ed } = getDateRange(dateFilter, customDateRange);
+        const startStr = format(sd, "yyyy-MM-dd");
+        const endStr = format(ed, "yyyy-MM-dd");
+        if (startStr === endStr) ordersQuery = ordersQuery.eq("date", startStr);
+        else ordersQuery = ordersQuery.gte("date", startStr).lte("date", endStr);
+      }
+      const { data: orderData } = await ordersQuery.order("created_at", { ascending: false });
+      const grouped: Record<string, BookingOrderRow[]> = {};
+      const pos: BookingOrderRow[] = [];
+      (orderData || []).forEach((o: any) => {
+        const row: BookingOrderRow = {
+          id: o.id,
+          bid: o.bid,
+          booking_id: o.booking_id,
+          date: o.date,
+          total_amount: Number(o.total_amount || 0),
+          payment_status: o.payment_status || "belum_lunas",
+          payment_method: o.payment_method,
+          note: o.note,
+          created_at: o.created_at,
+        };
+        if (o.booking_id) {
+          if (!grouped[o.booking_id]) grouped[o.booking_id] = [];
+          grouped[o.booking_id].push(row);
+        } else {
+          pos.push(row);
+        }
+      });
+      setOrdersByBooking(grouped);
+      setPosOrders(pos);
     } catch (error) {
       console.error("Error fetching bookings:", error);
       toast.error("Gagal memuat data booking");
@@ -470,6 +548,16 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     );
   });
 
+  // Standalone POS orders (booking_id null) for the current sub-tab
+  const filteredPosOrders = posOrders.filter((o) => {
+    if (activeSubTab === "proses") { if (o.payment_status === "lunas") return false; }
+    else if (activeSubTab === "selesai") { if (o.payment_status !== "lunas") return false; }
+    else return false; // batal tab does not include POS
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (o.bid || "").toLowerCase().includes(q);
+  });
+
   // Pagination
   const totalItems = filteredActiveBookings.length;
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -515,7 +603,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                   <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
-                ) : filteredActiveBookings.length === 0 ? (
+                ) : filteredActiveBookings.length === 0 && filteredPosOrders.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     {searchQuery ? "Tidak ada booking yang cocok dengan pencarian" : "Tidak ada data"}
                   </div>
@@ -524,8 +612,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-8"></TableHead>
                           <TableHead className="w-10"></TableHead>
                           <TableHead>BID</TableHead>
+                          <TableHead>Sumber</TableHead>
                           <TableHead>Nama Customer</TableHead>
                           <TableHead>Kamar</TableHead>
                           <TableHead>Tanggal</TableHead>
@@ -536,13 +626,30 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedBookings.map((booking) => (
-                          <TableRow 
+                        {paginatedBookings.map((booking) => {
+                          const bookingChildOrders = ordersByBooking[booking.id] || [];
+                          const isExpanded = expandedIds.has(booking.id);
+                          return (
+                          <Fragment key={booking.id}>
+                          <TableRow
                             key={booking.id}
                             className={cn(
                               isStatusBatal(booking.status) && "opacity-60 bg-muted/30"
                             )}
                           >
+                            <TableCell className="p-1">
+                              {bookingChildOrders.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => toggleExpand(booking.id, bookingChildOrders.map((o) => o.id))}
+                                  title={`${bookingChildOrders.length} order tambahan`}
+                                >
+                                  <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+                                </Button>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Button
                                 variant="ghost"
@@ -585,6 +692,9 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   <span className="text-muted-foreground">-</span>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">Kamar{bookingChildOrders.length > 0 ? ` +${bookingChildOrders.length}` : ""}</Badge>
                             </TableCell>
                             <TableCell className="font-medium">
                               {booking.customer_name}
@@ -742,7 +852,101 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                               </Button>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          {isExpanded && bookingChildOrders.length > 0 && (
+                            <TableRow key={`${booking.id}-orders`} className="bg-muted/40">
+                              <TableCell colSpan={11} className="py-2">
+                                <div className="text-xs font-semibold mb-1 text-muted-foreground">Order tambahan / POS terkait booking</div>
+                                <div className="rounded border bg-background">
+                                  <table className="w-full text-sm">
+                                    <thead className="text-xs text-muted-foreground">
+                                      <tr>
+                                        <th className="text-left px-2 py-1">BID Order</th>
+                                        <th className="text-left px-2 py-1">Tanggal</th>
+                                        <th className="text-left px-2 py-1">Metode</th>
+                                        <th className="text-right px-2 py-1">Total</th>
+                                        <th className="text-left px-2 py-1">Status</th>
+                                        <th className="text-left px-2 py-1">Item</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {bookingChildOrders.map((o) => (
+                                        <tr key={o.id} className="border-t">
+                                          <td className="px-2 py-1 font-mono text-xs">{o.bid || "-"}</td>
+                                          <td className="px-2 py-1">{format(new Date(o.date), "d MMM yyyy", { locale: idLocale })}</td>
+                                          <td className="px-2 py-1">{o.payment_method || "-"}</td>
+                                          <td className="px-2 py-1 text-right tabular-nums">Rp {o.total_amount.toLocaleString("id-ID")}</td>
+                                          <td className="px-2 py-1">
+                                            <span className={cn("text-xs font-semibold", o.payment_status === "lunas" ? "text-emerald-700" : "text-red-600")}>
+                                              {o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"}
+                                            </span>
+                                          </td>
+                                          <td className="px-2 py-1 text-xs text-muted-foreground">
+                                            {(orderItemsById[o.id] || []).map((it) => `${it.product_name} x${it.quantity}`).join(", ") || "-"}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          </Fragment>
+                          );
+                        })}
+                        {/* Standalone POS orders */}
+                        {filteredPosOrders.map((o) => {
+                          const isExpanded = expandedIds.has(`pos-${o.id}`);
+                          return (
+                            <Fragment key={`pos-${o.id}`}>
+                              <TableRow key={`pos-${o.id}`}>
+                                <TableCell className="p-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => toggleExpand(`pos-${o.id}`, [o.id])}
+                                  >
+                                    <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+                                  </Button>
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell className="font-mono text-sm">{o.bid || "-"}</TableCell>
+                                <TableCell><Badge variant="secondary" className="text-xs">POS</Badge></TableCell>
+                                <TableCell className="text-muted-foreground italic">Walk-in POS</TableCell>
+                                <TableCell>-</TableCell>
+                                <TableCell>{format(new Date(o.date), "d MMM yyyy", { locale: idLocale })}</TableCell>
+                                <TableCell className="tabular-nums">Rp {o.total_amount.toLocaleString("id-ID")}
+                                  {' '}
+                                  <span className={cn("font-bold text-xs", o.payment_status === "lunas" ? "text-emerald-700" : "text-red-600")}>
+                                    ({o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                                  </span>
+                                </TableCell>
+                                <TableCell>-</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{o.payment_status === "lunas" ? "Selesai" : "Proses"}</Badge>
+                                </TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                              {isExpanded && (
+                                <TableRow key={`pos-${o.id}-items`} className="bg-muted/40">
+                                  <TableCell colSpan={11} className="py-2">
+                                    <div className="rounded border bg-background p-2 text-xs">
+                                      {(orderItemsById[o.id] || []).length === 0
+                                        ? <span className="text-muted-foreground">Tidak ada item</span>
+                                        : (orderItemsById[o.id] || []).map((it, idx) => (
+                                            <div key={idx} className="flex justify-between border-b last:border-0 py-0.5">
+                                              <span>{it.product_name} × {it.quantity}</span>
+                                              <span className="tabular-nums">Rp {Number(it.subtotal).toLocaleString("id-ID")}</span>
+                                            </div>
+                                          ))}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </Fragment>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

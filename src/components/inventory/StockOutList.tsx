@@ -90,19 +90,28 @@ export default function StockOutList() {
       .order("created_at", { ascending: false });
     if (!error && data) {
       const ids = (data as any[]).map((r) => r.id);
-      let counts: Record<string, number> = {};
+      const prevCounts: Record<string, number> = {};
+      (stockOutCache[currentStore.id] || []).forEach((r) => { prevCounts[r.id] = r.item_count || 0; });
+      const initial = (data as any[]).map((r) => ({ ...r, item_count: prevCounts[r.id] || 0 })) as StockOutRow[];
+      stockOutCache[currentStore.id] = initial;
+      setRows(initial);
+      setLoading(false);
       if (ids.length > 0) {
-        const { data: items } = await supabase
+        supabase
           .from("stock_out_items" as any)
           .select("stock_out_id, quantity")
-          .in("stock_out_id", ids);
-        (items as any[] | null)?.forEach((it) => {
-          counts[it.stock_out_id] = (counts[it.stock_out_id] || 0) + Number(it.quantity || 0);
-        });
+          .in("stock_out_id", ids)
+          .then(({ data: items }) => {
+            const counts: Record<string, number> = {};
+            (items as any[] | null)?.forEach((it) => {
+              counts[it.stock_out_id] = (counts[it.stock_out_id] || 0) + Number(it.quantity || 0);
+            });
+            const merged = initial.map((r) => ({ ...r, item_count: counts[r.id] || 0 }));
+            stockOutCache[currentStore.id] = merged;
+            setRows(merged);
+          });
       }
-      const mapped = (data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as StockOutRow[];
-      stockOutCache[currentStore.id] = mapped;
-      setRows(mapped);
+      return;
     }
     setLoading(false);
   };
