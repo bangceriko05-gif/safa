@@ -612,8 +612,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-8"></TableHead>
                           <TableHead className="w-10"></TableHead>
                           <TableHead>BID</TableHead>
+                          <TableHead>Sumber</TableHead>
                           <TableHead>Nama Customer</TableHead>
                           <TableHead>Kamar</TableHead>
                           <TableHead>Tanggal</TableHead>
@@ -624,13 +626,30 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedBookings.map((booking) => (
-                          <TableRow 
+                        {paginatedBookings.map((booking) => {
+                          const bookingChildOrders = ordersByBooking[booking.id] || [];
+                          const isExpanded = expandedIds.has(booking.id);
+                          return (
+                          <>
+                          <TableRow
                             key={booking.id}
                             className={cn(
                               isStatusBatal(booking.status) && "opacity-60 bg-muted/30"
                             )}
                           >
+                            <TableCell className="p-1">
+                              {bookingChildOrders.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => toggleExpand(booking.id, bookingChildOrders.map((o) => o.id))}
+                                  title={`${bookingChildOrders.length} order tambahan`}
+                                >
+                                  <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+                                </Button>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Button
                                 variant="ghost"
@@ -673,6 +692,9 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   <span className="text-muted-foreground">-</span>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">Kamar{bookingChildOrders.length > 0 ? ` +${bookingChildOrders.length}` : ""}</Badge>
                             </TableCell>
                             <TableCell className="font-medium">
                               {booking.customer_name}
@@ -830,7 +852,101 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                               </Button>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          {isExpanded && bookingChildOrders.length > 0 && (
+                            <TableRow key={`${booking.id}-orders`} className="bg-muted/40">
+                              <TableCell colSpan={11} className="py-2">
+                                <div className="text-xs font-semibold mb-1 text-muted-foreground">Order tambahan / POS terkait booking</div>
+                                <div className="rounded border bg-background">
+                                  <table className="w-full text-sm">
+                                    <thead className="text-xs text-muted-foreground">
+                                      <tr>
+                                        <th className="text-left px-2 py-1">BID Order</th>
+                                        <th className="text-left px-2 py-1">Tanggal</th>
+                                        <th className="text-left px-2 py-1">Metode</th>
+                                        <th className="text-right px-2 py-1">Total</th>
+                                        <th className="text-left px-2 py-1">Status</th>
+                                        <th className="text-left px-2 py-1">Item</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {bookingChildOrders.map((o) => (
+                                        <tr key={o.id} className="border-t">
+                                          <td className="px-2 py-1 font-mono text-xs">{o.bid || "-"}</td>
+                                          <td className="px-2 py-1">{format(new Date(o.date), "d MMM yyyy", { locale: idLocale })}</td>
+                                          <td className="px-2 py-1">{o.payment_method || "-"}</td>
+                                          <td className="px-2 py-1 text-right tabular-nums">Rp {o.total_amount.toLocaleString("id-ID")}</td>
+                                          <td className="px-2 py-1">
+                                            <span className={cn("text-xs font-semibold", o.payment_status === "lunas" ? "text-emerald-700" : "text-red-600")}>
+                                              {o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"}
+                                            </span>
+                                          </td>
+                                          <td className="px-2 py-1 text-xs text-muted-foreground">
+                                            {(orderItemsById[o.id] || []).map((it) => `${it.product_name} x${it.quantity}`).join(", ") || "-"}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          </>
+                          );
+                        })}
+                        {/* Standalone POS orders */}
+                        {filteredPosOrders.map((o) => {
+                          const isExpanded = expandedIds.has(`pos-${o.id}`);
+                          return (
+                            <>
+                              <TableRow key={`pos-${o.id}`}>
+                                <TableCell className="p-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => toggleExpand(`pos-${o.id}`, [o.id])}
+                                  >
+                                    <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+                                  </Button>
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell className="font-mono text-sm">{o.bid || "-"}</TableCell>
+                                <TableCell><Badge variant="secondary" className="text-xs">POS</Badge></TableCell>
+                                <TableCell className="text-muted-foreground italic">Walk-in POS</TableCell>
+                                <TableCell>-</TableCell>
+                                <TableCell>{format(new Date(o.date), "d MMM yyyy", { locale: idLocale })}</TableCell>
+                                <TableCell className="tabular-nums">Rp {o.total_amount.toLocaleString("id-ID")}
+                                  {' '}
+                                  <span className={cn("font-bold text-xs", o.payment_status === "lunas" ? "text-emerald-700" : "text-red-600")}>
+                                    ({o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
+                                  </span>
+                                </TableCell>
+                                <TableCell>-</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{o.payment_status === "lunas" ? "Selesai" : "Proses"}</Badge>
+                                </TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                              {isExpanded && (
+                                <TableRow key={`pos-${o.id}-items`} className="bg-muted/40">
+                                  <TableCell colSpan={11} className="py-2">
+                                    <div className="rounded border bg-background p-2 text-xs">
+                                      {(orderItemsById[o.id] || []).length === 0
+                                        ? <span className="text-muted-foreground">Tidak ada item</span>
+                                        : (orderItemsById[o.id] || []).map((it, idx) => (
+                                            <div key={idx} className="flex justify-between border-b last:border-0 py-0.5">
+                                              <span>{it.product_name} × {it.quantity}</span>
+                                              <span className="tabular-nums">Rp {Number(it.subtotal).toLocaleString("id-ID")}</span>
+                                            </div>
+                                          ))}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
