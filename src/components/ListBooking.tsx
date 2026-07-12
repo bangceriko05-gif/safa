@@ -548,6 +548,16 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     );
   });
 
+  // Standalone POS orders (booking_id null) for the current sub-tab
+  const filteredPosOrders = posOrders.filter((o) => {
+    if (activeSubTab === "proses") { if (o.payment_status === "lunas") return false; }
+    else if (activeSubTab === "selesai") { if (o.payment_status !== "lunas") return false; }
+    else return false; // batal tab does not include POS
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (o.bid || "").toLowerCase().includes(q);
+  });
+
   // Pagination
   const totalItems = filteredActiveBookings.length;
   const totalPages = Math.ceil(totalItems / pageSize);
