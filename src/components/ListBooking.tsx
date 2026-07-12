@@ -74,6 +74,19 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
+interface BookingOrderRow {
+  id: string;
+  bid: string | null;
+  booking_id: string | null;
+  date: string;
+  total_amount: number;
+  payment_status: string;
+  payment_method: string | null;
+  note: string | null;
+  created_at: string;
+  items?: { product_name: string; quantity: number; unit_price: number; subtotal: number }[];
+}
+
 export default function ListBooking({ userRole, onEditBooking, onAddBooking, timeRange: externalTimeRange, customDateRange: externalCustomDateRange, searchQuery: externalSearchQuery }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
@@ -96,6 +109,34 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const [previewBooking, setPreviewBooking] = useState<any>(null);
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState(1);
+  const [ordersByBooking, setOrdersByBooking] = useState<Record<string, BookingOrderRow[]>>({});
+  const [posOrders, setPosOrders] = useState<BookingOrderRow[]>([]);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [orderItemsById, setOrderItemsById] = useState<Record<string, BookingOrderRow["items"]>>({});
+
+  const toggleExpand = async (key: string, orderIds: string[]) => {
+    const next = new Set(expandedIds);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+      // Lazy-load items for orders not yet fetched
+      const missing = orderIds.filter((id) => !orderItemsById[id]);
+      if (missing.length > 0) {
+        const { data } = await supabase
+          .from("booking_order_items")
+          .select("booking_order_id, product_name, quantity, unit_price, subtotal")
+          .in("booking_order_id", missing);
+        const grouped: Record<string, any[]> = {};
+        (data || []).forEach((it: any) => {
+          if (!grouped[it.booking_order_id]) grouped[it.booking_order_id] = [];
+          grouped[it.booking_order_id].push(it);
+        });
+        setOrderItemsById((prev) => ({ ...prev, ...grouped }));
+      }
+    }
+    setExpandedIds(next);
+  };
 
   useEffect(() => {
     if (!currentStore) return;
