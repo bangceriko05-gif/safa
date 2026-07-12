@@ -68,19 +68,28 @@ export default function StockOpnameList() {
       .order("created_at", { ascending: false });
     if (!error && data) {
       const ids = (data as any[]).map((r) => r.id);
-      let counts: Record<string, number> = {};
+      const prevCounts: Record<string, number> = {};
+      (opnameCache[currentStore.id] || []).forEach((r) => { prevCounts[r.id] = r.item_count || 0; });
+      const initial = (data as any[]).map((r) => ({ ...r, item_count: prevCounts[r.id] || 0 })) as OpnameRow[];
+      opnameCache[currentStore.id] = initial;
+      setRows(initial);
+      setLoading(false);
       if (ids.length > 0) {
-        const { data: items } = await supabase
+        supabase
           .from("stock_opname_items" as any)
           .select("stock_opname_id")
-          .in("stock_opname_id", ids);
-        (items as any[] | null)?.forEach((it) => {
-          counts[it.stock_opname_id] = (counts[it.stock_opname_id] || 0) + 1;
-        });
+          .in("stock_opname_id", ids)
+          .then(({ data: items }) => {
+            const counts: Record<string, number> = {};
+            (items as any[] | null)?.forEach((it) => {
+              counts[it.stock_opname_id] = (counts[it.stock_opname_id] || 0) + 1;
+            });
+            const merged = initial.map((r) => ({ ...r, item_count: counts[r.id] || 0 }));
+            opnameCache[currentStore.id] = merged;
+            setRows(merged);
+          });
       }
-      const mapped = (data as any[]).map((r) => ({ ...r, item_count: counts[r.id] || 0 })) as OpnameRow[];
-      opnameCache[currentStore.id] = mapped;
-      setRows(mapped);
+      return;
     }
     setLoading(false);
   };
