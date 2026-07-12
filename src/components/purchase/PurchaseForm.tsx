@@ -383,8 +383,8 @@ export default function PurchaseForm({
         if (itemsError) throw itemsError;
       }
 
-      // If received, mirror items into Inventory > Stock Masuk using the same BID
-      if (receiptStatus === "Diterima") {
+      // If received (and not cancelled), mirror items into Inventory > Stock Masuk using the same BID
+      if (receiptStatus === "Diterima" && status !== "batal") {
         const validItems = items.filter((it) => it.product_id);
         if (validItems.length === 0) {
           toast.warning("Penerimaan dicatat, namun tidak ada produk dengan referensi inventori untuk dikirim ke stok masuk.");
@@ -468,8 +468,8 @@ export default function PurchaseForm({
       await refreshActivityLog(purchaseId);
       // Auto-close and return to transaction list after successful save
       onSuccess();
-      // If marked received, navigate directly to Inventory > Stok Masuk
-      if (receiptStatus === "Diterima") {
+      // If marked received (and not cancelled), navigate directly to Inventory > Stok Masuk
+      if (receiptStatus === "Diterima" && status !== "batal") {
         window.dispatchEvent(new CustomEvent("anka:goto-inventory-stock-in"));
       }
     } catch (e) {
