@@ -630,7 +630,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                           const bookingChildOrders = ordersByBooking[booking.id] || [];
                           const isExpanded = expandedIds.has(booking.id);
                           return (
-                          <>
+                          <Fragment key={booking.id}>
                           <TableRow
                             key={booking.id}
                             className={cn(
@@ -891,7 +891,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                               </TableCell>
                             </TableRow>
                           )}
-                          </>
+                          </Fragment>
                           );
                         })}
                         {/* Standalone POS orders */}
