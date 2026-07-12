@@ -898,7 +898,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                         {filteredPosOrders.map((o) => {
                           const isExpanded = expandedIds.has(`pos-${o.id}`);
                           return (
-                            <>
+                            <Fragment key={`pos-${o.id}`}>
                               <TableRow key={`pos-${o.id}`}>
                                 <TableCell className="p-1">
                                   <Button
@@ -944,7 +944,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   </TableCell>
                                 </TableRow>
                               )}
-                            </>
+                            </Fragment>
                           );
                         })}
                       </TableBody>
