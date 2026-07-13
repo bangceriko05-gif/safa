@@ -573,6 +573,45 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     setCurrentPage(1);
   }, [searchQuery, dateFilter, customDateRange, pageSize]);
 
+  // Auto-expand bookings whose nested POS/order BID matches the search
+  useEffect(() => {
+    if (!searchQuery) return;
+    const q = searchQuery.toLowerCase();
+    const toExpand: string[] = [];
+    Object.entries(ordersByBooking).forEach(([bookingId, orders]) => {
+      if (orders.some((o) => (o.bid || "").toLowerCase().includes(q))) {
+        toExpand.push(bookingId);
+      }
+    });
+    if (toExpand.length === 0) return;
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      toExpand.forEach((id) => next.add(id));
+      return next;
+    });
+    // Lazy-load items for those orders
+    const missing: string[] = [];
+    toExpand.forEach((bid) => {
+      (ordersByBooking[bid] || []).forEach((o) => {
+        if (!orderItemsById[o.id]) missing.push(o.id);
+      });
+    });
+    if (missing.length > 0) {
+      supabase
+        .from("booking_order_items")
+        .select("booking_order_id, product_name, quantity, unit_price, subtotal")
+        .in("booking_order_id", missing)
+        .then(({ data }) => {
+          const grouped: Record<string, any[]> = {};
+          (data || []).forEach((it: any) => {
+            if (!grouped[it.booking_order_id]) grouped[it.booking_order_id] = [];
+            grouped[it.booking_order_id].push(it);
+          });
+          setOrderItemsById((prev) => ({ ...prev, ...grouped }));
+        });
+    }
+  }, [searchQuery, ordersByBooking]);
+
   return (
     <div className="space-y-4">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
