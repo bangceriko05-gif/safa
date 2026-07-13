@@ -72,6 +72,8 @@ export default function BookingReceipt() {
   const [overrideBid, setOverrideBid] = useState<string | null>(null);
   const [orderExtraTotal, setOrderExtraTotal] = useState(0);
   const [orderExtraPaid, setOrderExtraPaid] = useState(0);
+  const [orderServiceCharge, setOrderServiceCharge] = useState(0);
+  const [orderServiceChargeInfo, setOrderServiceChargeInfo] = useState<{ type: string | null; value: number | null } | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -172,7 +174,7 @@ export default function BookingReceipt() {
         // Order-only receipt: replace products with this order's items
         const { data: ord } = await supabase
           .from("booking_orders")
-          .select("id, bid, total_amount, amount, amount_2, dual_payment")
+          .select("id, bid, total_amount, amount, amount_2, dual_payment, service_charge, service_charge_type, service_charge_value")
           .eq("id", orderId)
           .maybeSingle();
         const { data: oItems } = await supabase
@@ -189,11 +191,16 @@ export default function BookingReceipt() {
         if (ord?.bid) setOverrideBid(ord.bid);
         setOrderExtraTotal(Number(ord?.total_amount || 0));
         setOrderExtraPaid(Number(ord?.amount || 0) + (ord?.dual_payment ? Number(ord?.amount_2 || 0) : 0));
+        setOrderServiceCharge(Number((ord as any)?.service_charge || 0));
+        setOrderServiceChargeInfo({
+          type: (ord as any)?.service_charge_type || null,
+          value: (ord as any)?.service_charge_value ?? null,
+        });
       } else if (combined) {
         // Combined: include all orders' items
         const { data: ords } = await supabase
           .from("booking_orders")
-          .select("id, total_amount, amount, amount_2, dual_payment")
+          .select("id, total_amount, amount, amount_2, dual_payment, service_charge")
           .eq("booking_id", bookingId);
         const ordIds = (ords || []).map((o: any) => o.id);
         if (ordIds.length > 0) {
@@ -218,6 +225,9 @@ export default function BookingReceipt() {
         );
         setOrderExtraTotal(extraTotal);
         setOrderExtraPaid(extraPaid);
+        setOrderServiceCharge(
+          (ords || []).reduce((s: number, o: any) => s + Number(o.service_charge || 0), 0)
+        );
       }
 
       setProducts(mergedProducts);
@@ -570,6 +580,19 @@ export default function BookingReceipt() {
                 Deposito ({deposit.deposit_type === "Uang" ? "Uang" : `Identitas - ${deposit.identity_type || ""}`})
               </span>
               <span>{formatCurrency(calculateDepositAmount())}</span>
+            </div>
+          )}
+
+          {/* Service Charge (POS) */}
+          {orderServiceCharge > 0 && (
+            <div className="flex justify-between">
+              <span>
+                Service Charge
+                {orderServiceChargeInfo?.type === "percent" && orderServiceChargeInfo?.value != null
+                  ? ` (${orderServiceChargeInfo.value}%)`
+                  : ""}
+              </span>
+              <span>{formatCurrency(orderServiceCharge)}</span>
             </div>
           )}
         </div>
