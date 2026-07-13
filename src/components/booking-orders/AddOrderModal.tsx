@@ -207,6 +207,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
 
+  // Auto-fill Nominal Bayar with total when not dual payment (and not editing an existing order)
+  useEffect(() => {
+    if (dualPayment) return;
+    if (order) return;
+    setAmount(total);
+  }, [total, dualPayment, order]);
+
   const filtered = products.filter((p) => {
     if (activeCategory !== "all" && (p.category_id || "") !== activeCategory) return false;
     return p.name.toLowerCase().includes(search.toLowerCase());
