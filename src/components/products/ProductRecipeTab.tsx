@@ -120,7 +120,7 @@ export default function ProductRecipeTab({ productId, productPrice }: Props) {
       ((mats as any[]) || []).map((m) => [m.id, m.name])
     );
     const allowedIds = ((mats as any[]) || [])
-      .filter((m) => ["bahan mentah", "kemasan"].includes((m.name || "").toLowerCase()))
+      .filter((m) => ["bahan baku", "kemasan"].includes((m.name || "").toLowerCase()))
       .map((m) => m.id);
     if (allowedIds.length === 0) {
       setIngredients([]);
