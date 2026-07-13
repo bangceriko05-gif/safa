@@ -10,6 +10,7 @@ interface Item {
   id: string;
   name: string;
   is_default?: boolean;
+  qty?: number;
 }
 
 interface Props {
@@ -44,7 +45,19 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       toast.error("Gagal memuat data");
       return;
     }
-    setItems((data as any) || []);
+    let list: Item[] = (data as any) || [];
+    if (table === "product_materials" && list.length) {
+      const { data: prods } = await supabase
+        .from("products")
+        .select("material_id")
+        .eq("store_id", currentStore.id);
+      const counts: Record<string, number> = {};
+      (prods || []).forEach((p: any) => {
+        if (p.material_id) counts[p.material_id] = (counts[p.material_id] || 0) + 1;
+      });
+      list = list.map((i) => ({ ...i, qty: counts[i.id] || 0 }));
+    }
+    setItems(list);
   };
 
   useEffect(() => {
@@ -192,6 +205,11 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 <>
                   <span className="flex-1 text-sm">
                     {item.name}
+                    {table === "product_materials" && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (qty. {item.qty || 0} produk)
+                      </span>
+                    )}
                     {item.is_default && (
                       <span className="ml-2 text-[10px] uppercase text-muted-foreground">(default)</span>
                     )}
