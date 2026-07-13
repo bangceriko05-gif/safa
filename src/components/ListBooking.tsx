@@ -540,11 +540,13 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const filteredActiveBookings = activeBookings.filter((booking) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
+    const nestedOrders = ordersByBooking[booking.id] || [];
     return (
       booking.customer_name.toLowerCase().includes(query) ||
       booking.phone.includes(query) ||
       booking.bid?.toLowerCase().includes(query) ||
-      booking.room_name.toLowerCase().includes(query)
+      booking.room_name.toLowerCase().includes(query) ||
+      nestedOrders.some((o) => (o.bid || "").toLowerCase().includes(query))
     );
   });
 
