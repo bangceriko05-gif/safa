@@ -92,6 +92,44 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txDiscountValue, setTxDiscountValue] = useState<number>(0);
   const effectiveBooking = booking || matchedBooking;
 
+  // POS settings (per store)
+  const [posSettings, setPosSettings] = useState<{
+    require_payment_proof: boolean;
+    require_customer: boolean;
+    enable_print: boolean;
+    service_charge_enabled: boolean;
+    service_charge_type: "percent" | "nominal";
+    service_charge_value: number;
+  }>({
+    require_payment_proof: true,
+    require_customer: false,
+    enable_print: true,
+    service_charge_enabled: false,
+    service_charge_type: "percent",
+    service_charge_value: 0,
+  });
+
+  useEffect(() => {
+    if (!open || !currentStore) return;
+    (async () => {
+      const { data } = await supabase
+        .from("pos_settings")
+        .select("*")
+        .eq("store_id", currentStore.id)
+        .maybeSingle();
+      if (data) {
+        setPosSettings({
+          require_payment_proof: !!(data as any).require_payment_proof,
+          require_customer: !!(data as any).require_customer,
+          enable_print: !!(data as any).enable_print,
+          service_charge_enabled: !!(data as any).service_charge_enabled,
+          service_charge_type: ((data as any).service_charge_type as "percent" | "nominal") || "percent",
+          service_charge_value: Number((data as any).service_charge_value) || 0,
+        });
+      }
+    })();
+  }, [open, currentStore]);
+
   useEffect(() => {
     if (!open || !currentStore) return;
     (async () => {
@@ -203,7 +241,15 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     if (txDiscountMode === "pct") return Math.round((itemsSubtotal * txDiscountValue) / 100);
     return Math.min(itemsSubtotal, txDiscountValue);
   }, [itemsSubtotal, txDiscountMode, txDiscountValue]);
-  const total = Math.max(0, itemsSubtotal - txDiscountAmount);
+  const netAfterDiscount = Math.max(0, itemsSubtotal - txDiscountAmount);
+  const serviceChargeAmount = useMemo(() => {
+    if (!posMode || !posSettings.service_charge_enabled) return 0;
+    if (posSettings.service_charge_type === "percent") {
+      return Math.round((netAfterDiscount * posSettings.service_charge_value) / 100);
+    }
+    return Math.max(0, posSettings.service_charge_value);
+  }, [posMode, posSettings, netAfterDiscount]);
+  const total = netAfterDiscount + serviceChargeAmount;
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
 
@@ -288,8 +334,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       toast.error("Tambahkan minimal satu produk");
       return;
     }
-    if (!proofUrl) {
+    const proofRequired = posMode ? posSettings.require_payment_proof : true;
+    if (proofRequired && !proofUrl) {
       toast.error("Bukti pembayaran wajib diunggah");
+      return;
+    }
+    if (posMode && posSettings.require_customer && !effectiveBooking && !manualCustomerName) {
+      toast.error("Silakan pilih pelanggan terlebih dahulu");
       return;
     }
     setSaving(true);
@@ -301,10 +352,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               txDiscountMode === "pct" ? `${txDiscountValue}% = ` : ""
             }${fmt(txDiscountAmount)}]`
           : "";
+      const svcNote =
+        serviceChargeAmount > 0
+          ? `[Service Charge: ${
+              posSettings.service_charge_type === "percent"
+                ? `${posSettings.service_charge_value}% = `
+                : ""
+            }${fmt(serviceChargeAmount)}]`
+          : "";
       const customerDisplayName = effectiveBooking?.customer_name || manualCustomerName || null;
       const customerNote =
         customerDisplayName && !effectiveBooking ? `(Pelanggan: ${customerDisplayName})` : "";
-      const finalNote = [discountNote, customerNote, note].filter(Boolean).join(" ").trim();
+      const finalNote = [discountNote, svcNote, customerNote, note].filter(Boolean).join(" ").trim();
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : null,
         store_id: currentStore.id,
@@ -320,6 +379,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         payment_status: paymentStatus,
         payment_proof_urls: proofUrl ? [proofUrl] : [],
         note: finalNote || null,
+        service_charge: serviceChargeAmount,
+        service_charge_type: serviceChargeAmount > 0 ? posSettings.service_charge_type : null,
+        service_charge_value: serviceChargeAmount > 0 ? posSettings.service_charge_value : null,
       };
 
       let orderId = order?.id;
