@@ -438,7 +438,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {order?.id && (
+            {order?.id && (!posMode || posSettings.enable_print) && (
               <button
                 type="button"
                 onClick={() => window.open(`/receipt?id=${booking.id}&order=${order.id}`, "_blank")}
@@ -714,7 +714,26 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
             )}
 
-            <PaymentProofUpload value={proofUrl} onChange={setProofUrl} required compact />
+            {(!posMode || posSettings.require_payment_proof) && (
+              <PaymentProofUpload
+                value={proofUrl}
+                onChange={setProofUrl}
+                required={posMode ? posSettings.require_payment_proof : true}
+                compact
+              />
+            )}
+
+            {serviceChargeAmount > 0 && (
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="text-muted-foreground">
+                  Service Charge
+                  {posSettings.service_charge_type === "percent"
+                    ? ` (${posSettings.service_charge_value}%)`
+                    : ""}
+                </span>
+                <span className="font-semibold">+ {fmt(serviceChargeAmount)}</span>
+              </div>
+            )}
 
             <div>
               <Label className="text-xs">Catatan</Label>
