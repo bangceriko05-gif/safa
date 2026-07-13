@@ -453,6 +453,9 @@ export type Database = {
           payment_status: string
           reference_no: string | null
           reference_no_2: string | null
+          service_charge: number
+          service_charge_type: string | null
+          service_charge_value: number | null
           store_id: string
           total_amount: number
           updated_at: string
@@ -474,6 +477,9 @@ export type Database = {
           payment_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
+          service_charge?: number
+          service_charge_type?: string | null
+          service_charge_value?: number | null
           store_id: string
           total_amount?: number
           updated_at?: string
@@ -495,6 +501,9 @@ export type Database = {
           payment_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
+          service_charge?: number
+          service_charge_type?: string | null
+          service_charge_value?: number | null
           store_id?: string
           total_amount?: number
           updated_at?: string
@@ -1728,6 +1737,45 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      pos_settings: {
+        Row: {
+          created_at: string
+          enable_print: boolean
+          id: string
+          require_customer: boolean
+          require_payment_proof: boolean
+          service_charge_enabled: boolean
+          service_charge_type: string
+          service_charge_value: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enable_print?: boolean
+          id?: string
+          require_customer?: boolean
+          require_payment_proof?: boolean
+          service_charge_enabled?: boolean
+          service_charge_type?: string
+          service_charge_value?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enable_print?: boolean
+          id?: string
+          require_customer?: boolean
+          require_payment_proof?: boolean
+          service_charge_enabled?: boolean
+          service_charge_type?: string
+          service_charge_value?: number
+          store_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
