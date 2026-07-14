@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import BookingDetailPopup from "./BookingDetailPopup";
 import CancelledBookings from "./CancelledBookings";
+import AddOrderModal from "./booking-orders/AddOrderModal";
 
 interface ListBookingProps {
   userRole: string | null;
@@ -113,6 +114,20 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const [posOrders, setPosOrders] = useState<BookingOrderRow[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [orderItemsById, setOrderItemsById] = useState<Record<string, BookingOrderRow["items"]>>({});
+  const [editingPosOrder, setEditingPosOrder] = useState<any | null>(null);
+
+  const openPosOrder = async (orderId: string) => {
+    const { data, error } = await supabase
+      .from("booking_orders")
+      .select("*")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (error || !data) {
+      toast.error("Gagal memuat data POS");
+      return;
+    }
+    setEditingPosOrder(data);
+  };
 
   const toggleExpand = async (key: string, orderIds: string[]) => {
     const next = new Set(expandedIds);
@@ -952,7 +967,18 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   </Button>
                                 </TableCell>
                                 <TableCell></TableCell>
-                                <TableCell className="font-mono text-sm">{o.bid || "-"}</TableCell>
+                                <TableCell className="font-mono text-sm">
+                                  {o.bid ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openPosOrder(o.id)}
+                                      className="text-primary hover:underline font-medium"
+                                      title="Buka detail transaksi POS"
+                                    >
+                                      {o.bid}
+                                    </button>
+                                  ) : "-"}
+                                </TableCell>
                                 <TableCell><Badge variant="secondary" className="text-xs">POS</Badge></TableCell>
                                 <TableCell className="text-muted-foreground italic">Walk-in POS</TableCell>
                                 <TableCell>-</TableCell>
@@ -1091,6 +1117,16 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         }
       }}
     />
+    {editingPosOrder && (
+      <AddOrderModal
+        open={!!editingPosOrder}
+        onOpenChange={(o) => { if (!o) setEditingPosOrder(null); }}
+        booking={null}
+        order={editingPosOrder}
+        posMode
+        onSaved={() => { setEditingPosOrder(null); fetchBookings(true); }}
+      />
+    )}
   </div>
   );
 }

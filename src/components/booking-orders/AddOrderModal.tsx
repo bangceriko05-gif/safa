@@ -90,6 +90,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Transaction-wide discount
   const [txDiscountMode, setTxDiscountMode] = useState<"rp" | "pct">("rp");
   const [txDiscountValue, setTxDiscountValue] = useState<number>(0);
+  // Per-transaction toggle: cashier can opt out of the configured service charge
+  const [applyServiceCharge, setApplyServiceCharge] = useState<boolean>(true);
   const effectiveBooking = booking || matchedBooking;
 
   // POS settings (per store)
@@ -243,12 +245,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   }, [itemsSubtotal, txDiscountMode, txDiscountValue]);
   const netAfterDiscount = Math.max(0, itemsSubtotal - txDiscountAmount);
   const serviceChargeAmount = useMemo(() => {
-    if (!posMode || !posSettings.service_charge_enabled) return 0;
+    if (!posMode || !posSettings.service_charge_enabled || !applyServiceCharge) return 0;
     if (posSettings.service_charge_type === "percent") {
       return Math.round((netAfterDiscount * posSettings.service_charge_value) / 100);
     }
     return Math.max(0, posSettings.service_charge_value);
-  }, [posMode, posSettings, netAfterDiscount]);
+  }, [posMode, posSettings, netAfterDiscount, applyServiceCharge]);
   const total = netAfterDiscount + serviceChargeAmount;
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
@@ -723,15 +725,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               />
             )}
 
-            {serviceChargeAmount > 0 && (
+            {posMode && posSettings.service_charge_enabled && (
               <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-muted-foreground">
-                  Service Charge
-                  {posSettings.service_charge_type === "percent"
-                    ? ` (${posSettings.service_charge_value}%)`
-                    : ""}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={applyServiceCharge}
+                    onCheckedChange={(v) => setApplyServiceCharge(!!v)}
+                  />
+                  <span className="text-muted-foreground">
+                    Service Charge
+                    {posSettings.service_charge_type === "percent"
+                      ? ` (${posSettings.service_charge_value}%)`
+                      : ""}
+                  </span>
+                </label>
+                <span className={`font-semibold ${applyServiceCharge ? "" : "text-muted-foreground line-through"}`}>
+                  + {fmt(
+                    posSettings.service_charge_type === "percent"
+                      ? Math.round((netAfterDiscount * posSettings.service_charge_value) / 100)
+                      : Math.max(0, posSettings.service_charge_value)
+                  )}
                 </span>
-                <span className="font-semibold">+ {fmt(serviceChargeAmount)}</span>
               </div>
             )}
 
