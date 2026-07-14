@@ -449,6 +449,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         service_charge: serviceChargeAmount,
         service_charge_type: serviceChargeAmount > 0 ? posSettings.service_charge_type : null,
         service_charge_value: serviceChargeAmount > 0 ? posSettings.service_charge_value : null,
+        tax_enabled: storeTax.enabled && (taxSummary.hasExclude || taxSummary.hasInclude),
+        tax_mode:
+          taxSummary.hasExclude && taxSummary.hasInclude
+            ? "mixed"
+            : taxSummary.hasExclude
+            ? "exclude"
+            : taxSummary.hasInclude
+            ? "include"
+            : null,
+        tax_rate: storeTax.enabled ? storeTax.rate : 0,
+        tax_amount: taxSummary.excludeTax,
+        tax_included_amount: taxSummary.includeTax,
       };
 
       let orderId = order?.id;
