@@ -824,6 +824,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
             )}
 
+            {(taxSummary.hasExclude || taxSummary.hasInclude) && (
+              <div className="space-y-0.5 px-1">
+                {taxSummary.hasExclude && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      PPN ({storeTax.rate}%)
+                    </span>
+                    <span className="font-semibold">
+                      + {fmt(taxSummary.excludeTax)}
+                    </span>
+                  </div>
+                )}
+                {taxSummary.hasInclude && (
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>PPN ({storeTax.rate}%) termasuk harga</span>
+                    <span>{fmt(taxSummary.includeTax)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <Label className="text-xs">Catatan</Label>
               <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="text-xs" />
