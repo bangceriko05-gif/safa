@@ -113,6 +113,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     service_charge_value: 0,
   });
 
+  // Store-wide PPN settings
+  const [storeTax, setStoreTax] = useState<{
+    enabled: boolean;
+    rate: number;
+    modesAllowed: string[];
+  }>({ enabled: false, rate: 0, modesAllowed: ["include", "exclude"] });
+
   useEffect(() => {
     if (!open || !currentStore) return;
     (async () => {
@@ -129,6 +136,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           service_charge_enabled: !!(data as any).service_charge_enabled,
           service_charge_type: ((data as any).service_charge_type as "percent" | "nominal") || "percent",
           service_charge_value: Number((data as any).service_charge_value) || 0,
+        });
+      }
+      const { data: s } = await supabase
+        .from("stores")
+        .select("tax_enabled, tax_rate, tax_modes_allowed")
+        .eq("id", currentStore.id)
+        .maybeSingle();
+      if (s) {
+        setStoreTax({
+          enabled: !!(s as any).tax_enabled,
+          rate: Number((s as any).tax_rate) || 0,
+          modesAllowed: ((s as any).tax_modes_allowed as string[]) || ["include", "exclude"],
         });
       }
     })();
