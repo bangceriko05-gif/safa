@@ -23,6 +23,8 @@ interface Product {
   images?: any;
   category_id?: string | null;
   dynamic_price?: boolean;
+  tax_enabled?: boolean;
+  tax_mode?: string | null;
 }
 
 interface ProductVariant {
@@ -137,7 +139,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     (async () => {
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, images, category_id, dynamic_price")
+        .select("id, name, price, images, category_id, dynamic_price, tax_enabled, tax_mode")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
