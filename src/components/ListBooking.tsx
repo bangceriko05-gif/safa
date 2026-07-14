@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import BookingDetailPopup from "./BookingDetailPopup";
 import CancelledBookings from "./CancelledBookings";
+import AddOrderModal from "./booking-orders/AddOrderModal";
 
 interface ListBookingProps {
   userRole: string | null;
