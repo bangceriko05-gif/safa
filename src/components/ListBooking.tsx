@@ -967,7 +967,18 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                   </Button>
                                 </TableCell>
                                 <TableCell></TableCell>
-                                <TableCell className="font-mono text-sm">{o.bid || "-"}</TableCell>
+                                <TableCell className="font-mono text-sm">
+                                  {o.bid ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openPosOrder(o.id)}
+                                      className="text-primary hover:underline font-medium"
+                                      title="Buka detail transaksi POS"
+                                    >
+                                      {o.bid}
+                                    </button>
+                                  ) : "-"}
+                                </TableCell>
                                 <TableCell><Badge variant="secondary" className="text-xs">POS</Badge></TableCell>
                                 <TableCell className="text-muted-foreground italic">Walk-in POS</TableCell>
                                 <TableCell>-</TableCell>
