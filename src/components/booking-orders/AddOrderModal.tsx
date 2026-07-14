@@ -245,12 +245,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   }, [itemsSubtotal, txDiscountMode, txDiscountValue]);
   const netAfterDiscount = Math.max(0, itemsSubtotal - txDiscountAmount);
   const serviceChargeAmount = useMemo(() => {
-    if (!posMode || !posSettings.service_charge_enabled || !applyServiceCharge) return 0;
+    if (!posSettings.service_charge_enabled || !applyServiceCharge) return 0;
     if (posSettings.service_charge_type === "percent") {
       return Math.round((netAfterDiscount * posSettings.service_charge_value) / 100);
     }
     return Math.max(0, posSettings.service_charge_value);
-  }, [posMode, posSettings, netAfterDiscount, applyServiceCharge]);
+  }, [posSettings, netAfterDiscount, applyServiceCharge]);
   const total = netAfterDiscount + serviceChargeAmount;
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
@@ -716,16 +716,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
             )}
 
-            {(!posMode || posSettings.require_payment_proof) && (
-              <PaymentProofUpload
-                value={proofUrl}
-                onChange={setProofUrl}
-                required={posMode ? posSettings.require_payment_proof : true}
-                compact
-              />
-            )}
+            <PaymentProofUpload
+              value={proofUrl}
+              onChange={setProofUrl}
+              required={posMode ? posSettings.require_payment_proof : true}
+              compact
+            />
 
-            {posMode && posSettings.service_charge_enabled && (
+            {posSettings.service_charge_enabled && (
               <div className="flex items-center justify-between text-xs px-1">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <Checkbox
