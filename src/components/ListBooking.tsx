@@ -1117,6 +1117,16 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         }
       }}
     />
+    {editingPosOrder && (
+      <AddOrderModal
+        open={!!editingPosOrder}
+        onOpenChange={(o) => { if (!o) setEditingPosOrder(null); }}
+        booking={null}
+        order={editingPosOrder}
+        posMode
+        onSaved={() => { setEditingPosOrder(null); fetchBookings(true); }}
+      />
+    )}
   </div>
   );
 }
