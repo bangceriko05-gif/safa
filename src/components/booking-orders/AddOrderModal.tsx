@@ -23,6 +23,8 @@ interface Product {
   images?: any;
   category_id?: string | null;
   dynamic_price?: boolean;
+  tax_enabled?: boolean;
+  tax_mode?: string | null;
 }
 
 interface ProductVariant {
@@ -111,6 +113,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     service_charge_value: 0,
   });
 
+  // Store-wide PPN settings
+  const [storeTax, setStoreTax] = useState<{
+    enabled: boolean;
+    rate: number;
+    modesAllowed: string[];
+  }>({ enabled: false, rate: 0, modesAllowed: ["include", "exclude"] });
+
   useEffect(() => {
     if (!open || !currentStore) return;
     (async () => {
@@ -129,6 +138,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           service_charge_value: Number((data as any).service_charge_value) || 0,
         });
       }
+      const { data: s } = await supabase
+        .from("stores")
+        .select("tax_enabled, tax_rate, tax_modes_allowed")
+        .eq("id", currentStore.id)
+        .maybeSingle();
+      if (s) {
+        setStoreTax({
+          enabled: !!(s as any).tax_enabled,
+          rate: Number((s as any).tax_rate) || 0,
+          modesAllowed: ((s as any).tax_modes_allowed as string[]) || ["include", "exclude"],
+        });
+      }
     })();
   }, [open, currentStore]);
 
@@ -137,7 +158,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     (async () => {
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, images, category_id, dynamic_price")
+        .select("id, name, price, images, category_id, dynamic_price, tax_enabled, tax_mode")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
@@ -244,14 +265,58 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return Math.min(itemsSubtotal, txDiscountValue);
   }, [itemsSubtotal, txDiscountMode, txDiscountValue]);
   const netAfterDiscount = Math.max(0, itemsSubtotal - txDiscountAmount);
+
+  // PPN computation — per-item, respects store tax setting + product tax_enabled
+  const taxSummary = useMemo(() => {
+    if (!storeTax.enabled || !storeTax.rate) {
+      return { excludeTax: 0, includeTax: 0, hasExclude: false, hasInclude: false };
+    }
+    const r = storeTax.rate / 100;
+    let excludeTax = 0;
+    let includeTax = 0;
+    const subtotalBase = items.reduce(
+      (s, it) => s + Math.max(0, it.quantity * it.unit_price - (it.discount || 0)),
+      0,
+    );
+    for (const it of items) {
+      const lineNet = Math.max(0, it.quantity * it.unit_price - (it.discount || 0));
+      if (!lineNet) continue;
+      // Resolve product (direct or via variant parent)
+      let prod = products.find((p) => p.id === it.product_id);
+      if (!prod) {
+        const v = variants.find((x) => x.id === it.product_id);
+        if (v) prod = products.find((p) => p.id === v.product_id);
+      }
+      if (!prod?.tax_enabled) continue;
+      // Apply proportional share of transaction-level discount to base
+      const share =
+        subtotalBase > 0 ? (lineNet / subtotalBase) * txDiscountAmount : 0;
+      const base = Math.max(0, lineNet - share);
+      const mode = (prod.tax_mode as "include" | "exclude") || "exclude";
+      if (mode === "include") {
+        const dpp = base / (1 + r);
+        includeTax += base - dpp;
+      } else {
+        excludeTax += base * r;
+      }
+    }
+    return {
+      excludeTax: Math.round(excludeTax),
+      includeTax: Math.round(includeTax),
+      hasExclude: excludeTax > 0,
+      hasInclude: includeTax > 0,
+    };
+  }, [items, products, variants, storeTax, txDiscountAmount]);
+
   const serviceChargeAmount = useMemo(() => {
     if (!posSettings.service_charge_enabled || !applyServiceCharge) return 0;
     if (posSettings.service_charge_type === "percent") {
-      return Math.round((netAfterDiscount * posSettings.service_charge_value) / 100);
+      const base = netAfterDiscount + taxSummary.excludeTax;
+      return Math.round((base * posSettings.service_charge_value) / 100);
     }
     return Math.max(0, posSettings.service_charge_value);
-  }, [posSettings, netAfterDiscount, applyServiceCharge]);
-  const total = netAfterDiscount + serviceChargeAmount;
+  }, [posSettings, netAfterDiscount, applyServiceCharge, taxSummary.excludeTax]);
+  const total = netAfterDiscount + taxSummary.excludeTax + serviceChargeAmount;
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
 
@@ -384,6 +449,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         service_charge: serviceChargeAmount,
         service_charge_type: serviceChargeAmount > 0 ? posSettings.service_charge_type : null,
         service_charge_value: serviceChargeAmount > 0 ? posSettings.service_charge_value : null,
+        tax_enabled: storeTax.enabled && (taxSummary.hasExclude || taxSummary.hasInclude),
+        tax_mode:
+          taxSummary.hasExclude && taxSummary.hasInclude
+            ? "mixed"
+            : taxSummary.hasExclude
+            ? "exclude"
+            : taxSummary.hasInclude
+            ? "include"
+            : null,
+        tax_rate: storeTax.enabled ? storeTax.rate : 0,
+        tax_amount: taxSummary.excludeTax,
+        tax_included_amount: taxSummary.includeTax,
       };
 
       let orderId = order?.id;
@@ -744,6 +821,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       : Math.max(0, posSettings.service_charge_value)
                   )}
                 </span>
+              </div>
+            )}
+
+            {(taxSummary.hasExclude || taxSummary.hasInclude) && (
+              <div className="space-y-0.5 px-1">
+                {taxSummary.hasExclude && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      PPN ({storeTax.rate}%)
+                    </span>
+                    <span className="font-semibold">
+                      + {fmt(taxSummary.excludeTax)}
+                    </span>
+                  </div>
+                )}
+                {taxSummary.hasInclude && (
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>PPN ({storeTax.rate}%) termasuk harga</span>
+                    <span>{fmt(taxSummary.includeTax)}</span>
+                  </div>
+                )}
               </div>
             )}
 

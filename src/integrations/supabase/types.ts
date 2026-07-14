@@ -457,6 +457,11 @@ export type Database = {
           service_charge_type: string | null
           service_charge_value: number | null
           store_id: string
+          tax_amount: number
+          tax_enabled: boolean
+          tax_included_amount: number
+          tax_mode: string | null
+          tax_rate: number
           total_amount: number
           updated_at: string
         }
@@ -481,6 +486,11 @@ export type Database = {
           service_charge_type?: string | null
           service_charge_value?: number | null
           store_id: string
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_included_amount?: number
+          tax_mode?: string | null
+          tax_rate?: number
           total_amount?: number
           updated_at?: string
         }
@@ -505,6 +515,11 @@ export type Database = {
           service_charge_type?: string | null
           service_charge_value?: number | null
           store_id?: string
+          tax_amount?: number
+          tax_enabled?: boolean
+          tax_included_amount?: number
+          tax_mode?: string | null
+          tax_rate?: number
           total_amount?: number
           updated_at?: string
         }
