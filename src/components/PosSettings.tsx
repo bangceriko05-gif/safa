@@ -165,6 +165,7 @@ export default function PosSettings() {
                   type="number"
                   min={0}
                   value={row.service_charge_value}
+                  onFocus={(e) => e.currentTarget.select()}
                   onChange={(e) => {
                     let v = Number(e.target.value) || 0;
                     if (row.service_charge_type === "percent") v = Math.min(100, Math.max(0, v));
