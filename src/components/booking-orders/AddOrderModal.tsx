@@ -725,15 +725,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               />
             )}
 
-            {serviceChargeAmount > 0 && (
+            {posMode && posSettings.service_charge_enabled && (
               <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-muted-foreground">
-                  Service Charge
-                  {posSettings.service_charge_type === "percent"
-                    ? ` (${posSettings.service_charge_value}%)`
-                    : ""}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={applyServiceCharge}
+                    onCheckedChange={(v) => setApplyServiceCharge(!!v)}
+                  />
+                  <span className="text-muted-foreground">
+                    Service Charge
+                    {posSettings.service_charge_type === "percent"
+                      ? ` (${posSettings.service_charge_value}%)`
+                      : ""}
+                  </span>
+                </label>
+                <span className={`font-semibold ${applyServiceCharge ? "" : "text-muted-foreground line-through"}`}>
+                  + {fmt(
+                    posSettings.service_charge_type === "percent"
+                      ? Math.round((netAfterDiscount * posSettings.service_charge_value) / 100)
+                      : Math.max(0, posSettings.service_charge_value)
+                  )}
                 </span>
-                <span className="font-semibold">+ {fmt(serviceChargeAmount)}</span>
               </div>
             )}
 
