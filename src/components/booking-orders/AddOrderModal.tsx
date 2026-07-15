@@ -425,7 +425,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return d ? parseInt(d, 10) : 0;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (afterAction: "print" | "whatsapp" | null = null, waPhoneOverride?: string) => {
     if (!currentStore) return;
     if (items.length === 0) {
       toast.error("Tambahkan minimal satu produk");
@@ -524,6 +524,32 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       if (itemErr) throw itemErr;
 
       toast.success(order ? "Order diperbarui" : "Order ditambahkan");
+
+      // Post-save action
+      if (afterAction === "print") {
+        const bookingIdParam = effectiveBooking?.id ? `id=${effectiveBooking.id}&` : "";
+        window.open(`/receipt?${bookingIdParam}order=${orderId}`, "_blank");
+      } else if (afterAction === "whatsapp") {
+        const phoneRaw = (waPhoneOverride || "").replace(/\D/g, "");
+        if (phoneRaw) {
+          let phone = phoneRaw;
+          if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+          else if (!phone.startsWith("62")) phone = "62" + phone;
+          const bookingIdParam = effectiveBooking?.id ? `id=${effectiveBooking.id}&` : "";
+          const receiptUrl = `${window.location.origin}/receipt?${bookingIdParam}order=${orderId}`;
+          const custName = effectiveBooking?.customer_name || manualCustomerName || "";
+          const msg =
+            `Halo${custName ? ` ${custName}` : ""}! 🙏\n\n` +
+            `Berikut nota digital pesanan Anda dari *${currentStore.name || ""}*.\n` +
+            `Total: *${fmt(total)}*\n\n` +
+            `Lihat nota:\n${receiptUrl}\n\nTerima kasih!`;
+          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+        } else {
+          toast.error("Nomor WhatsApp belum diisi");
+        }
+      }
+
+      setFinishOpen(false);
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
