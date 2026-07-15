@@ -1084,7 +1084,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </DialogHeader>
               <div className="space-y-3">
                 <Input
-                  placeholder="Cari nama pelanggan..."
+                  placeholder="Cari nama atau nomor telepon..."
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   className="h-9"
@@ -1115,7 +1115,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     </div>
                   )}
                   {activeBookings
-                    .filter((b) => !customerSearch || b.customer_name?.toLowerCase().includes(customerSearch.toLowerCase()))
+                    .filter((b) => {
+                      if (!customerSearch) return true;
+                      const q = customerSearch.toLowerCase();
+                      return (
+                        b.customer_name?.toLowerCase().includes(q) ||
+                        (b.phone || "").toLowerCase().includes(q)
+                      );
+                    })
                     .map((b) => (
                       <button
                         key={`bk-${b.id}`}
@@ -1124,6 +1131,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           setMatchedBooking(b);
                           setPosCustomerName(b.customer_name || "");
                           setManualCustomerName("");
+                          setPickedCustomerPhone(b.phone || "");
                           setCustomerPickerOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
@@ -1140,7 +1148,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     </div>
                   )}
                   {dbCustomers
-                    .filter((c) => !customerSearch || c.name?.toLowerCase().includes(customerSearch.toLowerCase()))
+                    .filter((c) => {
+                      if (!customerSearch) return true;
+                      const q = customerSearch.toLowerCase();
+                      return (
+                        c.name?.toLowerCase().includes(q) ||
+                        (c.phone || "").toLowerCase().includes(q)
+                      );
+                    })
                     .slice(0, 50)
                     .map((c) => (
                       <button
@@ -1150,6 +1165,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           setMatchedBooking(null);
                           setManualCustomerName(c.name);
                           setPosCustomerName("");
+                          setPickedCustomerPhone(c.phone || "");
                           setCustomerPickerOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
