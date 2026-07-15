@@ -930,11 +930,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   toast.error("Tambahkan minimal satu produk");
                   return;
                 }
-                setWaPhone(
-                  (effectiveBooking?.phone as string) ||
-                    (effectiveBooking?.customer_phone as string) ||
-                    "",
-                );
+                 setWaPhone(
+                   (effectiveBooking?.phone as string) ||
+                     (effectiveBooking?.customer_phone as string) ||
+                     pickedCustomerPhone ||
+                     "",
+                 );
                 setFinishOpen(true);
               }}
               disabled={saving}
