@@ -605,10 +605,15 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 <button
                   type="button"
                   onClick={() => setCustomerPickerOpen(true)}
-                  className="h-7 w-7 rounded-full hover:bg-accent flex items-center justify-center"
+                  className="h-7 max-w-[55%] px-2 rounded hover:bg-accent flex items-center gap-1.5 min-w-0"
                   title="Pilih pelanggan"
                 >
-                  <User className={`h-4 w-4 ${effectiveBooking || manualCustomerName ? "text-primary" : "text-muted-foreground"}`} />
+                  <User className={`h-4 w-4 shrink-0 ${effectiveBooking || manualCustomerName ? "text-primary" : "text-muted-foreground"}`} />
+                  {(effectiveBooking?.customer_name || manualCustomerName) && (
+                    <span className="text-xs font-medium truncate">
+                      {effectiveBooking?.customer_name || manualCustomerName}
+                    </span>
+                  )}
                 </button>
               ) : (
                 <User className="h-4 w-4 text-muted-foreground" />
