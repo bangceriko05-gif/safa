@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -78,6 +78,36 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [discountFor, setDiscountFor] = useState<number | null>(null);
   const [priceEditFor, setPriceEditFor] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState<number>(0);
+
+  // Resizable left panel
+  const [leftWidth, setLeftWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 360;
+    const saved = Number(localStorage.getItem("pos_left_width") || 0);
+    return saved >= 280 && saved <= 720 ? saved : 360;
+  });
+  const [resizing, setResizing] = useState(false);
+
+  // Finish action popup (Print / WhatsApp)
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [waPhone, setWaPhone] = useState("");
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const w = Math.min(720, Math.max(280, e.clientX));
+      setLeftWidth(w);
+    };
+    const onUp = () => {
+      setResizing(false);
+      try { localStorage.setItem("pos_left_width", String(leftWidth)); } catch {}
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [resizing, leftWidth]);
 
   // POS-mode customer matching
   const [posCustomerName, setPosCustomerName] = useState("");
