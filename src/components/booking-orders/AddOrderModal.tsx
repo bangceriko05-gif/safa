@@ -1169,6 +1169,71 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Finish action popup: Print or WhatsApp */}
+        <Dialog open={finishOpen} onOpenChange={(o) => !saving && setFinishOpen(o)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Selesaikan Transaksi</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="text-center py-3 rounded-md bg-emerald-50 text-emerald-700">
+                <div className="text-xs">Total Pembayaran</div>
+                <div className="text-2xl font-bold">{fmt(total)}</div>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Pilih cara mengirim nota ke pelanggan.
+              </p>
+
+              {(!posMode || posSettings.enable_print) && (
+                <Button
+                  className="w-full h-12 justify-start gap-3"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => handleSave("print")}
+                >
+                  <Printer className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-semibold">Cetak Printer</div>
+                    <div className="text-[11px] text-muted-foreground">Simpan lalu buka nota untuk dicetak</div>
+                  </div>
+                </Button>
+              )}
+
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <MessageCircle className="h-4 w-4 text-emerald-600" />
+                  Kirim Nota Digital via WhatsApp
+                </div>
+                <Input
+                  placeholder="Nomor WhatsApp pelanggan (mis. 0812xxxx)"
+                  value={waPhone}
+                  onChange={(e) => setWaPhone(e.target.value)}
+                  className="h-9"
+                  inputMode="tel"
+                />
+                <Button
+                  className="w-full h-10 bg-emerald-600 hover:bg-emerald-700"
+                  disabled={saving || !waPhone.trim()}
+                  onClick={() => handleSave("whatsapp", waPhone)}
+                >
+                  {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Kirim via WhatsApp
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                disabled={saving}
+                onClick={() => handleSave(null)}
+              >
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Simpan Tanpa Nota
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
