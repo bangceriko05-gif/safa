@@ -597,7 +597,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
-          <div className="w-[360px] shrink-0 bg-background flex flex-col border-r">
+  <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r">
             <div className="px-3 py-2 flex items-center justify-between border-b">
               {posMode && !booking ? (
                 <button
