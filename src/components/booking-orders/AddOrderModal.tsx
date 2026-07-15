@@ -118,6 +118,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [dbCustomers, setDbCustomers] = useState<any[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [manualCustomerName, setManualCustomerName] = useState("");
+  const [pickedCustomerPhone, setPickedCustomerPhone] = useState("");
 
   // Transaction-wide discount
   const [txDiscountMode, setTxDiscountMode] = useState<"rp" | "pct">("rp");
@@ -235,6 +236,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setMatchedBooking(null);
       setShowSuggest(false);
       setManualCustomerName("");
+      setPickedCustomerPhone("");
       setTxDiscountMode("rp");
       setTxDiscountValue(0);
     }
@@ -603,10 +605,15 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 <button
                   type="button"
                   onClick={() => setCustomerPickerOpen(true)}
-                  className="h-7 w-7 rounded-full hover:bg-accent flex items-center justify-center"
+                  className="h-7 max-w-[55%] px-2 rounded hover:bg-accent flex items-center gap-1.5 min-w-0"
                   title="Pilih pelanggan"
                 >
-                  <User className={`h-4 w-4 ${effectiveBooking || manualCustomerName ? "text-primary" : "text-muted-foreground"}`} />
+                  <User className={`h-4 w-4 shrink-0 ${effectiveBooking || manualCustomerName ? "text-primary" : "text-muted-foreground"}`} />
+                  {(effectiveBooking?.customer_name || manualCustomerName) && (
+                    <span className="text-xs font-medium truncate">
+                      {effectiveBooking?.customer_name || manualCustomerName}
+                    </span>
+                  )}
                 </button>
               ) : (
                 <User className="h-4 w-4 text-muted-foreground" />
@@ -923,11 +930,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   toast.error("Tambahkan minimal satu produk");
                   return;
                 }
-                setWaPhone(
-                  (effectiveBooking?.phone as string) ||
-                    (effectiveBooking?.customer_phone as string) ||
-                    "",
-                );
+                 setWaPhone(
+                   (effectiveBooking?.phone as string) ||
+                     (effectiveBooking?.customer_phone as string) ||
+                     pickedCustomerPhone ||
+                     "",
+                 );
                 setFinishOpen(true);
               }}
               disabled={saving}
@@ -1076,7 +1084,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </DialogHeader>
               <div className="space-y-3">
                 <Input
-                  placeholder="Cari nama pelanggan..."
+                  placeholder="Cari nama atau nomor telepon..."
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   className="h-9"
@@ -1093,6 +1101,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     onClick={() => {
                       setMatchedBooking(null);
                       setPosCustomerName("");
+                      setPickedCustomerPhone("");
                       setCustomerPickerOpen(false);
                     }}
                     disabled={!manualCustomerName.trim()}
@@ -1107,7 +1116,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     </div>
                   )}
                   {activeBookings
-                    .filter((b) => !customerSearch || b.customer_name?.toLowerCase().includes(customerSearch.toLowerCase()))
+                    .filter((b) => {
+                      if (!customerSearch) return true;
+                      const q = customerSearch.toLowerCase();
+                      return (
+                        b.customer_name?.toLowerCase().includes(q) ||
+                        (b.phone || "").toLowerCase().includes(q)
+                      );
+                    })
                     .map((b) => (
                       <button
                         key={`bk-${b.id}`}
@@ -1116,6 +1132,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           setMatchedBooking(b);
                           setPosCustomerName(b.customer_name || "");
                           setManualCustomerName("");
+                          setPickedCustomerPhone(b.phone || "");
                           setCustomerPickerOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
@@ -1132,7 +1149,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     </div>
                   )}
                   {dbCustomers
-                    .filter((c) => !customerSearch || c.name?.toLowerCase().includes(customerSearch.toLowerCase()))
+                    .filter((c) => {
+                      if (!customerSearch) return true;
+                      const q = customerSearch.toLowerCase();
+                      return (
+                        c.name?.toLowerCase().includes(q) ||
+                        (c.phone || "").toLowerCase().includes(q)
+                      );
+                    })
                     .slice(0, 50)
                     .map((c) => (
                       <button
@@ -1142,6 +1166,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           setMatchedBooking(null);
                           setManualCustomerName(c.name);
                           setPosCustomerName("");
+                          setPickedCustomerPhone(c.phone || "");
                           setCustomerPickerOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
@@ -1159,6 +1184,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       setMatchedBooking(null);
                       setManualCustomerName("");
                       setPosCustomerName("");
+                      setPickedCustomerPhone("");
                       setCustomerPickerOpen(false);
                     }}
                   >
@@ -1177,9 +1203,66 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               <DialogTitle>Selesaikan Transaksi</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <div className="text-center py-3 rounded-md bg-emerald-50 text-emerald-700">
-                <div className="text-xs">Total Pembayaran</div>
-                <div className="text-2xl font-bold">{fmt(total)}</div>
+              {/* Receipt preview */}
+              <div className="rounded-md border bg-muted/30 p-3 font-mono text-[11px] leading-tight">
+                <div className="text-center font-semibold text-xs mb-1">
+                  {currentStore?.name || "Nota"}
+                </div>
+                {(effectiveBooking?.customer_name || manualCustomerName) && (
+                  <div className="text-center text-[10px] text-muted-foreground mb-1">
+                    Pelanggan: {effectiveBooking?.customer_name || manualCustomerName}
+                  </div>
+                )}
+                <div className="border-t border-dashed my-1" />
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {items.map((it, i) => {
+                    const gross = it.quantity * it.unit_price;
+                    const sub = Math.max(0, gross - (it.discount || 0));
+                    return (
+                      <div key={i}>
+                        <div className="truncate">{it.product_name}</div>
+                        <div className="flex justify-between">
+                          <span>{it.quantity} x {fmt(it.unit_price)}</span>
+                          <span>{fmt(sub)}</span>
+                        </div>
+                        {it.discount ? (
+                          <div className="flex justify-between text-destructive">
+                            <span>Diskon</span>
+                            <span>-{fmt(it.discount)}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-dashed my-1" />
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>{fmt(itemsSubtotal)}</span>
+                </div>
+                {txDiscountAmount > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>Diskon Transaksi</span>
+                    <span>-{fmt(txDiscountAmount)}</span>
+                  </div>
+                )}
+                {taxSummary.excludeTax > 0 && (
+                  <div className="flex justify-between">
+                    <span>PPN</span>
+                    <span>{fmt(taxSummary.excludeTax)}</span>
+                  </div>
+                )}
+                {serviceChargeAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>Service Charge</span>
+                    <span>{fmt(serviceChargeAmount)}</span>
+                  </div>
+                )}
+                <div className="border-t border-dashed my-1" />
+                <div className="flex justify-between font-bold text-sm text-emerald-700">
+                  <span>TOTAL</span>
+                  <span>{fmt(total)}</span>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">
                 Pilih cara mengirim nota ke pelanggan.
