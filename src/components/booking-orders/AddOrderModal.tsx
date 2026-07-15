@@ -1101,6 +1101,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     onClick={() => {
                       setMatchedBooking(null);
                       setPosCustomerName("");
+                      setPickedCustomerPhone("");
                       setCustomerPickerOpen(false);
                     }}
                     disabled={!manualCustomerName.trim()}
@@ -1183,6 +1184,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       setMatchedBooking(null);
                       setManualCustomerName("");
                       setPosCustomerName("");
+                      setPickedCustomerPhone("");
                       setCustomerPickerOpen(false);
                     }}
                   >
