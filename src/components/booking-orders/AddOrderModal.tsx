@@ -1203,9 +1203,66 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               <DialogTitle>Selesaikan Transaksi</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <div className="text-center py-3 rounded-md bg-emerald-50 text-emerald-700">
-                <div className="text-xs">Total Pembayaran</div>
-                <div className="text-2xl font-bold">{fmt(total)}</div>
+              {/* Receipt preview */}
+              <div className="rounded-md border bg-muted/30 p-3 font-mono text-[11px] leading-tight">
+                <div className="text-center font-semibold text-xs mb-1">
+                  {currentStore?.name || "Nota"}
+                </div>
+                {(effectiveBooking?.customer_name || manualCustomerName) && (
+                  <div className="text-center text-[10px] text-muted-foreground mb-1">
+                    Pelanggan: {effectiveBooking?.customer_name || manualCustomerName}
+                  </div>
+                )}
+                <div className="border-t border-dashed my-1" />
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {items.map((it, i) => {
+                    const gross = it.quantity * it.unit_price;
+                    const sub = Math.max(0, gross - (it.discount || 0));
+                    return (
+                      <div key={i}>
+                        <div className="truncate">{it.product_name}</div>
+                        <div className="flex justify-between">
+                          <span>{it.quantity} x {fmt(it.unit_price)}</span>
+                          <span>{fmt(sub)}</span>
+                        </div>
+                        {it.discount ? (
+                          <div className="flex justify-between text-destructive">
+                            <span>Diskon</span>
+                            <span>-{fmt(it.discount)}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-dashed my-1" />
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>{fmt(itemsSubtotal)}</span>
+                </div>
+                {txDiscountAmount > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>Diskon Transaksi</span>
+                    <span>-{fmt(txDiscountAmount)}</span>
+                  </div>
+                )}
+                {taxSummary.excludeTax > 0 && (
+                  <div className="flex justify-between">
+                    <span>PPN</span>
+                    <span>{fmt(taxSummary.excludeTax)}</span>
+                  </div>
+                )}
+                {serviceChargeAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>Service Charge</span>
+                    <span>{fmt(serviceChargeAmount)}</span>
+                  </div>
+                )}
+                <div className="border-t border-dashed my-1" />
+                <div className="flex justify-between font-bold text-sm text-emerald-700">
+                  <span>TOTAL</span>
+                  <span>{fmt(total)}</span>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">
                 Pilih cara mengirim nota ke pelanggan.
