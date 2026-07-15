@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -78,6 +78,36 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [discountFor, setDiscountFor] = useState<number | null>(null);
   const [priceEditFor, setPriceEditFor] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState<number>(0);
+
+  // Resizable left panel
+  const [leftWidth, setLeftWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 360;
+    const saved = Number(localStorage.getItem("pos_left_width") || 0);
+    return saved >= 280 && saved <= 720 ? saved : 360;
+  });
+  const [resizing, setResizing] = useState(false);
+
+  // Finish action popup (Print / WhatsApp)
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [waPhone, setWaPhone] = useState("");
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const w = Math.min(720, Math.max(280, e.clientX));
+      setLeftWidth(w);
+    };
+    const onUp = () => {
+      setResizing(false);
+      try { localStorage.setItem("pos_left_width", String(leftWidth)); } catch {}
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [resizing, leftWidth]);
 
   // POS-mode customer matching
   const [posCustomerName, setPosCustomerName] = useState("");
@@ -395,7 +425,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return d ? parseInt(d, 10) : 0;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (afterAction: "print" | "whatsapp" | null = null, waPhoneOverride?: string) => {
     if (!currentStore) return;
     if (items.length === 0) {
       toast.error("Tambahkan minimal satu produk");
@@ -494,6 +524,32 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       if (itemErr) throw itemErr;
 
       toast.success(order ? "Order diperbarui" : "Order ditambahkan");
+
+      // Post-save action
+      if (afterAction === "print") {
+        const bookingIdParam = effectiveBooking?.id ? `id=${effectiveBooking.id}&` : "";
+        window.open(`/receipt?${bookingIdParam}order=${orderId}`, "_blank");
+      } else if (afterAction === "whatsapp") {
+        const phoneRaw = (waPhoneOverride || "").replace(/\D/g, "");
+        if (phoneRaw) {
+          let phone = phoneRaw;
+          if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+          else if (!phone.startsWith("62")) phone = "62" + phone;
+          const bookingIdParam = effectiveBooking?.id ? `id=${effectiveBooking.id}&` : "";
+          const receiptUrl = `${window.location.origin}/receipt?${bookingIdParam}order=${orderId}`;
+          const custName = effectiveBooking?.customer_name || manualCustomerName || "";
+          const msg =
+            `Halo${custName ? ` ${custName}` : ""}! 🙏\n\n` +
+            `Berikut nota digital pesanan Anda dari *${currentStore.name || ""}*.\n` +
+            `Total: *${fmt(total)}*\n\n` +
+            `Lihat nota:\n${receiptUrl}\n\nTerima kasih!`;
+          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+        } else {
+          toast.error("Nomor WhatsApp belum diisi");
+        }
+      }
+
+      setFinishOpen(false);
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
@@ -541,7 +597,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
-          <div className="w-[360px] shrink-0 bg-background flex flex-col border-r">
+  <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r">
             <div className="px-3 py-2 flex items-center justify-between border-b">
               {posMode && !booking ? (
                 <button
@@ -862,13 +918,36 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {/* Big green total / save bar */}
             <button
               type="button"
-              onClick={handleSave}
+              onClick={() => {
+                if (items.length === 0) {
+                  toast.error("Tambahkan minimal satu produk");
+                  return;
+                }
+                setWaPhone(
+                  (effectiveBooking?.phone as string) ||
+                    (effectiveBooking?.customer_phone as string) ||
+                    "",
+                );
+                setFinishOpen(true);
+              }}
               disabled={saving}
               className="mt-auto h-16 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-2xl font-bold flex items-center justify-center gap-3 shrink-0"
             >
               {saving && <Loader2 className="h-5 w-5 animate-spin" />}
               {fmt(total)}
             </button>
+          </div>
+
+          {/* Resizer between left and right */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={(e) => { e.preventDefault(); setResizing(true); }}
+            className={`w-1.5 shrink-0 cursor-col-resize bg-primary/30 hover:bg-primary/60 active:bg-primary/70 transition-colors relative group ${resizing ? "bg-primary/70" : ""}`}
+            title="Geser untuk mengatur lebar"
+          >
+            <div className="absolute inset-y-0 -left-1 -right-1" />
+            <GripVertical className="h-4 w-4 text-white/70 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* RIGHT — Product grid */}
@@ -1090,6 +1169,71 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Finish action popup: Print or WhatsApp */}
+        <Dialog open={finishOpen} onOpenChange={(o) => !saving && setFinishOpen(o)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Selesaikan Transaksi</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="text-center py-3 rounded-md bg-emerald-50 text-emerald-700">
+                <div className="text-xs">Total Pembayaran</div>
+                <div className="text-2xl font-bold">{fmt(total)}</div>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Pilih cara mengirim nota ke pelanggan.
+              </p>
+
+              {(!posMode || posSettings.enable_print) && (
+                <Button
+                  className="w-full h-12 justify-start gap-3"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => handleSave("print")}
+                >
+                  <Printer className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-semibold">Cetak Printer</div>
+                    <div className="text-[11px] text-muted-foreground">Simpan lalu buka nota untuk dicetak</div>
+                  </div>
+                </Button>
+              )}
+
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <MessageCircle className="h-4 w-4 text-emerald-600" />
+                  Kirim Nota Digital via WhatsApp
+                </div>
+                <Input
+                  placeholder="Nomor WhatsApp pelanggan (mis. 0812xxxx)"
+                  value={waPhone}
+                  onChange={(e) => setWaPhone(e.target.value)}
+                  className="h-9"
+                  inputMode="tel"
+                />
+                <Button
+                  className="w-full h-10 bg-emerald-600 hover:bg-emerald-700"
+                  disabled={saving || !waPhone.trim()}
+                  onClick={() => handleSave("whatsapp", waPhone)}
+                >
+                  {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Kirim via WhatsApp
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                disabled={saving}
+                onClick={() => handleSave(null)}
+              >
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Simpan Tanpa Nota
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
