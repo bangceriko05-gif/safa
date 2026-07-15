@@ -918,13 +918,36 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {/* Big green total / save bar */}
             <button
               type="button"
-              onClick={handleSave}
+              onClick={() => {
+                if (items.length === 0) {
+                  toast.error("Tambahkan minimal satu produk");
+                  return;
+                }
+                setWaPhone(
+                  (effectiveBooking?.phone as string) ||
+                    (effectiveBooking?.customer_phone as string) ||
+                    "",
+                );
+                setFinishOpen(true);
+              }}
               disabled={saving}
               className="mt-auto h-16 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-2xl font-bold flex items-center justify-center gap-3 shrink-0"
             >
               {saving && <Loader2 className="h-5 w-5 animate-spin" />}
               {fmt(total)}
             </button>
+          </div>
+
+          {/* Resizer between left and right */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={(e) => { e.preventDefault(); setResizing(true); }}
+            className={`w-1.5 shrink-0 cursor-col-resize bg-primary/30 hover:bg-primary/60 active:bg-primary/70 transition-colors relative group ${resizing ? "bg-primary/70" : ""}`}
+            title="Geser untuk mengatur lebar"
+          >
+            <div className="absolute inset-y-0 -left-1 -right-1" />
+            <GripVertical className="h-4 w-4 text-white/70 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* RIGHT — Product grid */}
