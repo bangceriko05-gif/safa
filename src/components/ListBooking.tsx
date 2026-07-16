@@ -991,7 +991,32 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                 </TableCell>
                                 <TableCell>-</TableCell>
                                 <TableCell>
-                                  <Badge variant="outline">{o.payment_status === "lunas" ? "Selesai" : "Proses"}</Badge>
+                                  {hasPermission("edit_bookings") ? (
+                                    <Select
+                                      value={o.payment_status === "lunas" ? "lunas" : "belum_lunas"}
+                                      onValueChange={async (val) => {
+                                        const { error } = await supabase
+                                          .from("booking_orders")
+                                          .update({ payment_status: val })
+                                          .eq("id", o.id);
+                                        if (error) toast.error("Gagal ubah status");
+                                        else {
+                                          toast.success("Status diperbarui");
+                                          fetchBookings();
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-7 w-28 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="belum_lunas">Proses</SelectItem>
+                                        <SelectItem value="lunas">Selesai</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Badge variant="outline">{o.payment_status === "lunas" ? "Selesai" : "Proses"}</Badge>
+                                  )}
                                 </TableCell>
                                 <TableCell></TableCell>
                               </TableRow>
