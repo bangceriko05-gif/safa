@@ -117,17 +117,9 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const [orderItemsById, setOrderItemsById] = useState<Record<string, BookingOrderRow["items"]>>({});
   const [editingPosOrder, setEditingPosOrder] = useState<any | null>(null);
 
-  const openPosOrder = async (orderId: string) => {
-    const { data, error } = await supabase
-      .from("booking_orders")
-      .select("*")
-      .eq("id", orderId)
-      .maybeSingle();
-    if (error || !data) {
-      toast.error("Gagal memuat data POS");
-      return;
-    }
-    setEditingPosOrder(data);
+  const navigate = useNavigate();
+  const openPosOrder = (orderId: string) => {
+    navigate(`/pos-order/${orderId}`);
   };
 
   const toggleExpand = async (key: string, orderIds: string[]) => {
