@@ -540,9 +540,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           const bookingIdParam = effectiveBooking?.id ? `id=${effectiveBooking.id}&` : "";
           const receiptUrl = `${window.location.origin}/receipt?${bookingIdParam}order=${orderId}`;
           const custName = effectiveBooking?.customer_name || manualCustomerName || "";
+          const itemLines = items
+            .filter((it) => it.product_name && it.quantity > 0)
+            .map((it) => {
+              const line = it.quantity * it.unit_price - (it.discount || 0);
+              return `• ${it.product_name} x${it.quantity} — ${fmt(line)}`;
+            })
+            .join("\n");
           const msg =
             `Halo${custName ? ` ${custName}` : ""}! 🙏\n\n` +
-            `Berikut nota digital pesanan Anda dari *${currentStore.name || ""}*.\n` +
+            `Berikut nota digital pesanan Anda dari *${currentStore.name || ""}*.\n\n` +
+            `*Rincian Pesanan:*\n${itemLines || "-"}\n\n` +
             `Total: *${fmt(total)}*\n\n` +
             `Lihat nota:\n${receiptUrl}\n\nTerima kasih!`;
           window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");

@@ -149,7 +149,14 @@ export default function Dashboard() {
   const [profileData, setProfileData] = useState({ name: "", email: "", phone: "" });
   const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [profileSaving, setProfileSaving] = useState(false);
-  const [posOpen, setPosOpen] = useState(false);
+  const [posOpen, setPosOpenRaw] = useState(() => searchParams.get("pos") === "1");
+  const setPosOpen = (open: boolean) => {
+    setPosOpenRaw(open);
+    const params = new URLSearchParams(window.location.search);
+    if (open) params.set("pos", "1");
+    else params.delete("pos");
+    setSearchParams(params, { replace: true });
+  };
   const navigate = useNavigate();
   const { hasPermission: checkPerm, hasAnyPermission, loading: permLoading } = usePermissions();
 
