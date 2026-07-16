@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar,
-  StickyNote, CheckCircle2, XCircle, Balloon,
+  StickyNote, CheckCircle2, XCircle,
 } from "lucide-react";
 import AnkaLoader from "@/components/AnkaLoader";
 import { toast } from "sonner";
