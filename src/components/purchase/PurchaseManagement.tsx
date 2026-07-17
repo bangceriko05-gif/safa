@@ -460,6 +460,7 @@ export default function PurchaseManagement() {
                     )}
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
+                    <TableHead>No. Rekening</TableHead>
                     <TableHead>Nota</TableHead>
                     <TableHead>Pembayaran</TableHead>
                     <TableHead>Bukti Bayar</TableHead>
@@ -505,6 +506,32 @@ export default function PurchaseManagement() {
                             </Badge>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const sup = suppliers.find(
+                            (s) => s.name?.toLowerCase().trim() === purchase.supplier_name?.toLowerCase().trim()
+                          );
+                          return sup?.no_rek ? (
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-xs">{sup.no_rek}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(sup.no_rek!);
+                                  toast.success("No. rekening disalin!");
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Button
