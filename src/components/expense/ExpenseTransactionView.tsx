@@ -1182,6 +1182,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                     )}
                     <TableHead>Tanggal</TableHead>
                     <TableHead>BID</TableHead>
+                    <TableHead>No. Rekening</TableHead>
                     <TableHead>
                       <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                         <SelectTrigger className="border-0 shadow-none p-0 h-auto font-medium text-muted-foreground hover:text-foreground">
@@ -1258,6 +1259,30 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                             </Button>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const sup = suppliers.find((s) => s.id === (expense as any).supplier_id);
+                          return sup?.no_rek ? (
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-xs">{sup.no_rek}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(sup.no_rek!);
+                                  toast.success("No. rekening disalin!");
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>{expense.category || '-'}</TableCell>
                       <TableCell>
