@@ -1265,7 +1265,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           const sup = suppliers.find((s) => s.id === (expense as any).supplier_id);
                           return sup?.no_rek ? (
                             <div className="flex items-center gap-1">
-                              <span className="font-mono text-xs">{sup.no_rek}</span>
+                              <span className="text-xs font-medium tracking-wide tabular-nums">{sup.no_rek}</span>
                               <Button
                                 variant="ghost"
                                 size="icon"
