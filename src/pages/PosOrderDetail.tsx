@@ -8,11 +8,6 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
   ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar,
   StickyNote, CheckCircle2, XCircle,
 } from "lucide-react";
@@ -20,6 +15,8 @@ import AnkaLoader from "@/components/AnkaLoader";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/PaymentDialog";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 
@@ -45,6 +42,9 @@ export default function PosOrderDetail() {
   const [customerName, setCustomerName] = useState<string>("-");
   const [customerPhone, setCustomerPhone] = useState<string>("-");
   const [customerEmail, setCustomerEmail] = useState<string>("-");
+  const [payOpen, setPayOpen] = useState(false);
+  const [payMode, setPayMode] = useState<"edit" | "add">("edit");
+  const { methods: paymentMethods } = usePaymentMethods();
 
   const load = async () => {
     if (!id) return;
@@ -127,6 +127,34 @@ export default function PosOrderDetail() {
     navigate(-1);
   };
 
+  const setStatus = async (label: "Proses" | "Selesai") => {
+    const next = label === "Selesai" ? "lunas" : "belum_lunas";
+    const { error } = await supabase
+      .from("booking_orders").update({ payment_status: next }).eq("id", id!);
+    if (error) toast.error("Gagal mengubah status");
+    else { toast.success(`Status: ${label}`); load(); }
+  };
+
+  const currentStatusLabel = isLunas ? "Selesai" : "Proses";
+
+  const applyPayment = async (r: PaymentDialogResult) => {
+    const patch: any = {
+      date: format(r.date, "yyyy-MM-dd"),
+      payment_method: r.method,
+      reference_no: r.reff || null,
+    };
+    if (payMode === "add") {
+      const newTotal = Number(order?.amount || 0) + r.amount;
+      patch.amount = newTotal;
+    } else {
+      patch.amount = r.amount;
+    }
+    if (patch.amount >= grand) patch.payment_status = "lunas";
+    const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
+    if (error) toast.error("Gagal menyimpan pembayaran");
+    else { toast.success("Pembayaran disimpan"); load(); }
+  };
+
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><AnkaLoader /></div>;
@@ -183,7 +211,23 @@ export default function PosOrderDetail() {
             <Button variant="outline" size="sm" className="gap-2" onClick={doPrint}>
               <Printer className="h-4 w-4" /> Cetak
             </Button>
-            <div className="px-3 py-1.5 rounded-md border bg-background text-sm font-medium">Dikonfirmasi</div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 font-medium">
+                  {currentStatusLabel} <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setStatus("Proses")}>Proses</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatus("Selesai")}>Selesai</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={cancelOrder}
+                  className="text-destructive focus:text-destructive"
+                >
+                  Pembatalan
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="px-3 py-1.5 rounded-md border bg-background text-sm flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               {format(new Date(order.date), "dd-MM-yyyy", { locale: idLocale })}
@@ -270,11 +314,13 @@ export default function PosOrderDetail() {
                   label={`Pembayaran ${(order.payment_method || "").toUpperCase() || "-"}`}
                   value={`IDR ${fmt(paid)}`}
                   action="Pengaturan Pembayaran"
+                  onAction={() => { setPayMode("edit"); setPayOpen(true); }}
                 />
                 <SummaryRow
                   label="Pembayaran yang belum lunas"
                   value={`IDR ${fmt(outstanding)}`}
                   action={outstanding > 0 ? "+ Pembayaran" : undefined}
+                  onAction={outstanding > 0 ? () => { setPayMode("add"); setPayOpen(true); } : undefined}
                 />
               </tbody>
             </table>
@@ -342,27 +388,12 @@ export default function PosOrderDetail() {
 
         {/* Batalkan orderan */}
         <div className="bg-card rounded-lg border">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="w-full py-4 flex items-center justify-center gap-2 text-destructive font-medium hover:bg-destructive/5">
-                <Trash2 className="h-4 w-4" /> Batalkan orderan
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Batalkan orderan ini?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Data transaksi akan dihapus permanen. Aksi ini tidak dapat dibatalkan.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Kembali</AlertDialogCancel>
-                <AlertDialogAction onClick={cancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Ya, batalkan
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <button
+            onClick={cancelOrder}
+            className="w-full py-4 flex items-center justify-center gap-2 text-destructive font-medium hover:bg-destructive/5"
+          >
+            <Trash2 className="h-4 w-4" /> Batalkan orderan
+          </button>
         </div>
 
         {/* Log */}
@@ -381,6 +412,18 @@ export default function PosOrderDetail() {
         </div>
 
       </div>
+
+      <PaymentDialog
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+        remaining={payMode === "add" ? outstanding : grand}
+        paymentMethods={paymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+        initialMethod={payMode === "edit" ? (order?.payment_method || "") : ""}
+        initialReff={payMode === "edit" ? (order?.reference_no || "") : ""}
+        initialAmount={payMode === "edit" ? Number(order?.amount || 0) : outstanding}
+        initialDate={order?.date ? new Date(order.date) : new Date()}
+        onApply={applyPayment}
+      />
     </div>
   );
 }
@@ -411,14 +454,14 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
   );
 }
 
-function SummaryRow({ label, value, action, bold }: { label: string; value: string; action?: string; bold?: boolean }) {
+function SummaryRow({ label, value, action, bold, onAction }: { label: string; value: string; action?: string; bold?: boolean; onAction?: () => void }) {
   return (
     <tr className="border-t">
       <td colSpan={4} className={`px-4 py-2 text-right text-primary ${bold ? "font-semibold" : ""}`}>{label}</td>
       <td></td>
       <td className={`px-4 py-2 text-right tabular-nums ${bold ? "font-semibold" : ""}`}>{value}</td>
       <td className="px-4 py-2 text-right text-primary text-xs">
-        {action ? <button className="hover:underline">⚙ {action}</button> : null}
+        {action ? <button onClick={onAction} className="hover:underline">⚙ {action}</button> : null}
       </td>
     </tr>
   );
