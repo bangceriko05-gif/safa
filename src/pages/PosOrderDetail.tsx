@@ -56,6 +56,8 @@ export default function PosOrderDetail() {
   const [productSearch, setProductSearch] = useState("");
   const [products, setProducts] = useState<any[]>([]);
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [orderDiscountMode, setOrderDiscountMode] = useState<"rp" | "pct">("rp");
+  const [orderDiscountValue, setOrderDiscountValue] = useState<number>(0);
 
   const load = async () => {
     if (!id) return;
@@ -196,7 +198,9 @@ export default function PosOrderDetail() {
   };
 
   // Distribute an order-level discount across items proportionally
-  const applyOrderDiscount = async (absolute: number) => {
+  const applyOrderDiscount = async (absolute: number, mode: "rp" | "pct" = "rp", value: number = absolute) => {
+    setOrderDiscountMode(mode);
+    setOrderDiscountValue(value);
     const sub = items.reduce((s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0), 0);
     if (sub <= 0) { toast.error("Tidak ada item"); return; }
     const updates = items.map((it) => {
@@ -554,12 +558,13 @@ export default function PosOrderDetail() {
       />
 
       <DiscountDialog
+        key={discountOpen ? "disc-open" : "disc-closed"}
         open={discountOpen}
         onClose={() => setDiscountOpen(false)}
         baseAmount={items.reduce((s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0), 0)}
-        initialMode="rp"
-        initialValue={totalDiscount}
-        onApply={(abs) => applyOrderDiscount(abs)}
+        initialMode={orderDiscountMode}
+        initialValue={orderDiscountValue || totalDiscount}
+        onApply={(abs, mode, value) => applyOrderDiscount(abs, mode, value)}
         title="Pengaturan Diskon"
       />
 
