@@ -4,18 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar,
-  StickyNote, CheckCircle2, XCircle,
+  StickyNote, CheckCircle2, XCircle, Search,
 } from "lucide-react";
 import AnkaLoader from "@/components/AnkaLoader";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/PaymentDialog";
+import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
@@ -45,6 +49,13 @@ export default function PosOrderDetail() {
   const [payOpen, setPayOpen] = useState(false);
   const [payMode, setPayMode] = useState<"edit" | "add">("edit");
   const { methods: paymentMethods } = usePaymentMethods();
+
+  // Editing / adding / discount
+  const [editItem, setEditItem] = useState<OrderItem | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [products, setProducts] = useState<any[]>([]);
+  const [discountOpen, setDiscountOpen] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -98,6 +109,19 @@ export default function PosOrderDetail() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
+  // Load products for "Tambah Produk"
+  useEffect(() => {
+    if (!order?.store_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("store_id", order.store_id)
+        .order("name", { ascending: true });
+      setProducts(data || []);
+    })();
+  }, [order?.store_id]);
+
   const isLunas = order?.payment_status === "lunas";
 
   const subtotal = useMemo(() => items.reduce((s, it) => s + Number(it.subtotal || 0), 0), [items]);
@@ -108,6 +132,91 @@ export default function PosOrderDetail() {
   const grand = Number(order?.total_amount || 0);
   const paid = isLunas ? grand : Number(order?.amount || 0) + Number(order?.amount_2 || 0);
   const outstanding = Math.max(0, grand - paid);
+
+  // Recompute the order total after items change and persist
+  const recomputeOrderTotal = async (nextItems: OrderItem[]) => {
+    const sub = nextItems.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+    const tax = Number(order?.tax_amount || 0);
+    const svc = Number(order?.service_charge || 0);
+    const total = sub + tax + svc;
+    await supabase.from("booking_orders").update({ total_amount: total }).eq("id", id!);
+  };
+
+  const saveItemEdit = async (patch: { quantity: number; unit_price: number; discount: number; discount_mode: "rp" | "pct"; discount_value: number }) => {
+    if (!editItem) return;
+    const subtotal = Math.max(0, (Number(patch.unit_price) - Number(patch.discount)) * Number(patch.quantity));
+    const { error } = await supabase
+      .from("booking_order_items")
+      .update({ ...patch, subtotal })
+      .eq("id", editItem.id);
+    if (error) { toast.error("Gagal memperbarui"); return; }
+    const next = items.map((it) => it.id === editItem.id ? { ...it, ...patch, subtotal } : it);
+    setItems(next);
+    await recomputeOrderTotal(next);
+    toast.success("Item diperbarui");
+    setEditItem(null);
+    load();
+  };
+
+  const removeItem = async (itemId: string) => {
+    const { error } = await supabase.from("booking_order_items").delete().eq("id", itemId);
+    if (error) { toast.error("Gagal menghapus"); return; }
+    const next = items.filter((it) => it.id !== itemId);
+    setItems(next);
+    await recomputeOrderTotal(next);
+    toast.success("Item dihapus");
+    load();
+  };
+
+  const addProduct = async (p: any) => {
+    const subtotal = Number(p.price || 0);
+    const { data, error } = await supabase
+      .from("booking_order_items")
+      .insert({
+        booking_order_id: id!,
+        product_id: p.id,
+        product_name: p.name,
+        quantity: 1,
+        unit_price: Number(p.price || 0),
+        discount: 0,
+        discount_mode: "rp",
+        discount_value: 0,
+        subtotal,
+      })
+      .select()
+      .single();
+    if (error || !data) { toast.error("Gagal menambah produk"); return; }
+    const next = [...items, data as any];
+    setItems(next);
+    await recomputeOrderTotal(next);
+    toast.success(`${p.name} ditambahkan`);
+    setAddOpen(false);
+    setProductSearch("");
+    load();
+  };
+
+  // Distribute an order-level discount across items proportionally
+  const applyOrderDiscount = async (absolute: number) => {
+    const sub = items.reduce((s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0), 0);
+    if (sub <= 0) { toast.error("Tidak ada item"); return; }
+    const updates = items.map((it) => {
+      const gross = Number(it.unit_price) * Number(it.quantity);
+      const share = sub > 0 ? (gross / sub) * absolute : 0;
+      const perUnit = Number(it.quantity) > 0 ? share / Number(it.quantity) : 0;
+      const disc = Math.min(Number(it.unit_price), Math.round(perUnit));
+      const subtotal = Math.max(0, (Number(it.unit_price) - disc) * Number(it.quantity));
+      return { ...it, discount: disc, discount_mode: "rp", discount_value: disc, subtotal };
+    });
+    for (const u of updates) {
+      await supabase.from("booking_order_items").update({
+        discount: u.discount, discount_mode: u.discount_mode, discount_value: u.discount_value, subtotal: u.subtotal,
+      }).eq("id", u.id);
+    }
+    setItems(updates as any);
+    await recomputeOrderTotal(updates as any);
+    toast.success("Diskon diterapkan");
+    load();
+  };
 
   const togglePayment = async () => {
     const next = isLunas ? "belum_lunas" : "lunas";
@@ -266,7 +375,12 @@ export default function PosOrderDetail() {
 
         {/* Produk Pesanan */}
         <div className="bg-card rounded-lg border">
-          <div className="px-4 py-3 border-b font-semibold">Produk Pesanan</div>
+          <div className="px-4 py-3 border-b flex items-center justify-between">
+            <div className="font-semibold">Produk Pesanan</div>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4" /> Tambah Produk
+            </Button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground">
@@ -291,7 +405,16 @@ export default function PosOrderDetail() {
                     <td className="px-4 py-2 text-right tabular-nums">{fmt(it.unit_price)}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{fmt(Number(it.discount || 0) * Number(it.quantity || 0))}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{fmt(it.subtotal)}</td>
-                    <td className="px-4 py-2 text-right"></td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setEditItem(it)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(it.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {items.length === 0 && (
@@ -303,7 +426,12 @@ export default function PosOrderDetail() {
                   <td colSpan={4}></td>
                 </tr>
                 <SummaryRow label="Subtotal" value={`IDR ${fmt(subtotal)}`} />
-                <SummaryRow label="Diskon" value={`IDR ${fmt(totalDiscount)} (${subtotal ? ((totalDiscount / subtotal) * 100).toFixed(2) : "0.00"}%)`} action="Pengaturan Diskon" />
+                <SummaryRow
+                  label="Diskon"
+                  value={`IDR ${fmt(totalDiscount)} (${subtotal ? ((totalDiscount / subtotal) * 100).toFixed(2) : "0.00"}%)`}
+                  action="Pengaturan Diskon"
+                  onAction={() => setDiscountOpen(true)}
+                />
                 <SummaryRow label="Biaya Layanan" value={`IDR ${fmt(Number(order.service_charge || 0))}`} />
                 <SummaryRow label="Pajak" value={`IDR ${fmt(Number(order.tax_amount || 0))}`} />
                 <SummaryRow label="Pembulatan" value="IDR 0" />
@@ -424,7 +552,154 @@ export default function PosOrderDetail() {
         initialDate={order?.date ? new Date(order.date) : new Date()}
         onApply={applyPayment}
       />
+
+      <DiscountDialog
+        open={discountOpen}
+        onClose={() => setDiscountOpen(false)}
+        baseAmount={items.reduce((s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0), 0)}
+        initialMode="rp"
+        initialValue={totalDiscount}
+        onApply={(abs) => applyOrderDiscount(abs)}
+        title="Pengaturan Diskon"
+      />
+
+      <EditItemDialog
+        item={editItem}
+        onClose={() => setEditItem(null)}
+        onSave={saveItemEdit}
+      />
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Tambah Produk</DialogTitle></DialogHeader>
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+            <Input
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Cari produk..."
+              className="pl-9"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-80 overflow-auto divide-y border rounded-md">
+            {products
+              .filter((p) => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()))
+              .slice(0, 100)
+              .map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => addProduct(p)}
+                  className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted text-left"
+                >
+                  <span className="text-sm">{p.name}</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">Rp {fmt(p.price)}</span>
+                </button>
+              ))}
+            {products.length === 0 && (
+              <div className="p-4 text-center text-sm text-muted-foreground">Tidak ada produk</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function EditItemDialog({
+  item, onClose, onSave,
+}: {
+  item: OrderItem | null;
+  onClose: () => void;
+  onSave: (patch: { quantity: number; unit_price: number; discount: number; discount_mode: "rp" | "pct"; discount_value: number }) => void;
+}) {
+  const [qty, setQty] = useState(1);
+  const [price, setPrice] = useState(0);
+  const [discMode, setDiscMode] = useState<"rp" | "pct">("rp");
+  const [discValue, setDiscValue] = useState(0);
+
+  useEffect(() => {
+    if (item) {
+      setQty(Number(item.quantity || 1));
+      setPrice(Number(item.unit_price || 0));
+      setDiscMode((item.discount_mode as "rp" | "pct") || "rp");
+      setDiscValue(Number(item.discount_value || 0));
+    }
+  }, [item]);
+
+  const discountAbs = discMode === "pct"
+    ? Math.round((price * Math.min(100, Math.max(0, discValue))) / 100)
+    : Math.max(0, discValue);
+  const subtotal = Math.max(0, (price - discountAbs) * qty);
+
+  return (
+    <Dialog open={!!item} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Edit Item</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs text-muted-foreground">Produk</Label>
+            <div className="text-sm font-medium">{item?.product_name}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Qty</Label>
+              <Input type="number" min={1} value={qty || ""} onChange={(e) => setQty(parseInt(e.target.value) || 0)} />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Harga (Rp)</Label>
+              <Input
+                inputMode="numeric"
+                value={price ? new Intl.NumberFormat("id-ID").format(price) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^\d]/g, "");
+                  setPrice(raw ? parseInt(raw, 10) : 0);
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Diskon</Label>
+            <div className="flex gap-2 mt-1">
+              <div className="inline-flex rounded-md border p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setDiscMode("rp")}
+                  className={`px-3 py-1 text-sm rounded ${discMode === "rp" ? "bg-primary text-primary-foreground" : ""}`}
+                >Rp</button>
+                <button
+                  type="button"
+                  onClick={() => setDiscMode("pct")}
+                  className={`px-3 py-1 text-sm rounded ${discMode === "pct" ? "bg-primary text-primary-foreground" : ""}`}
+                >%</button>
+              </div>
+              <Input
+                type="number"
+                min={0}
+                max={discMode === "pct" ? 100 : undefined}
+                value={discValue || ""}
+                onChange={(e) => setDiscValue(parseFloat(e.target.value) || 0)}
+                className="flex-1"
+              />
+            </div>
+          </div>
+          <div className="rounded-md bg-muted px-3 py-2 text-sm flex items-center justify-between">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="font-semibold tabular-nums">Rp {new Intl.NumberFormat("id-ID").format(subtotal)}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button onClick={() => onSave({
+            quantity: qty,
+            unit_price: price,
+            discount: discountAbs,
+            discount_mode: discMode,
+            discount_value: discValue,
+          })}>Simpan</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
