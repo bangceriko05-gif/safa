@@ -569,6 +569,7 @@ export default function PosOrderDetail() {
       />
 
       <EditItemDialog
+        key={editItem?.id || "edit-closed"}
         item={editItem}
         onClose={() => setEditItem(null)}
         onSave={saveItemEdit}
