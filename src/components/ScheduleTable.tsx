@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
+import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
 
 interface ScheduleTableProps {
   selectedDate: Date;
@@ -231,18 +232,8 @@ export default function ScheduleTable({
 
   const fetchUserPermissions = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("user_permissions")
-        .select("permission_id, permissions(name)")
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-      
-      const permissionNames = data?.map((up: any) => up.permissions?.name).filter(Boolean) || [];
-      setUserPermissions(permissionNames);
+      const { names } = await fetchCurrentUserPermissionAccess(userRole);
+      setUserPermissions(Array.from(names));
     } catch (error) {
       console.error("Error fetching user permissions:", error);
     }

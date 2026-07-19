@@ -10,6 +10,39 @@ interface LogActivityParams {
   storeId?: string;
 }
 
+const USER_CONTEXT_TTL_MS = 60_000;
+const userContextCache = new Map<string, { at: number; data: { isSuperAdmin: boolean; name: string; role: string } }>();
+const userContextInflight = new Map<string, Promise<{ isSuperAdmin: boolean; name: string; role: string }>>();
+
+async function getCachedUserContext(user: { id: string; email?: string | null }) {
+  const now = Date.now();
+  const cached = userContextCache.get(user.id);
+  if (cached && now - cached.at < USER_CONTEXT_TTL_MS) return cached.data;
+
+  const existing = userContextInflight.get(user.id);
+  if (existing) return existing;
+
+  const request = (async () => {
+    const [{ data: isSuperAdmin }, { data: profile }, { data: roleData }] = await Promise.all([
+      supabase.rpc('is_super_admin', { _user_id: user.id }),
+      supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
+    ]);
+
+    const data = {
+      isSuperAdmin: Boolean(isSuperAdmin),
+      name: profile?.name || user.email || 'Unknown',
+      role: roleData?.role || 'user',
+    };
+
+    userContextCache.set(user.id, { at: Date.now(), data });
+    return data;
+  })().finally(() => userContextInflight.delete(user.id));
+
+  userContextInflight.set(user.id, request);
+  return request;
+}
+
 export async function logActivity({
   actionType,
   entityType,
@@ -18,34 +51,17 @@ export async function logActivity({
   storeId,
 }: LogActivityParams) {
   try {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
-    // Skip logging for super admins
-    const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
-      _user_id: user.id
-    });
-    if (isSuperAdmin) return;
-
-    // Get user profile for name
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('name')
-      .eq('id', user.id)
-      .single();
-
-    // Get user role
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    const userContext = await getCachedUserContext(user);
+    if (userContext.isSuperAdmin) return;
 
     await supabase.from('activity_logs').insert({
       user_id: user.id,
-      user_name: profile?.name || user.email || 'Unknown',
-      user_role: roleData?.role || 'user',
+      user_name: userContext.name,
+      user_role: userContext.role,
       action_type: actionType,
       entity_type: entityType,
       entity_id: entityId,
