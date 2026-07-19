@@ -47,6 +47,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import BookingDetailPopup from "./BookingDetailPopup";
 import CancelledBookings from "./CancelledBookings";
 import AddOrderModal from "./booking-orders/AddOrderModal";
+import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
 
 interface ListBookingProps {
   userRole: string | null;
@@ -154,18 +155,8 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
 
   const fetchUserPermissions = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("user_permissions")
-        .select("permission_id, permissions(name)")
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-      
-      const permissionNames = data?.map((up: any) => up.permissions?.name).filter(Boolean) || [];
-      setUserPermissions(permissionNames);
+      const { names } = await fetchCurrentUserPermissionAccess(userRole);
+      setUserPermissions(Array.from(names));
     } catch (error) {
       console.error("Error fetching user permissions:", error);
     }
