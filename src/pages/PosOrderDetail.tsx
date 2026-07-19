@@ -126,7 +126,10 @@ export default function PosOrderDetail() {
 
   const isLunas = order?.payment_status === "lunas";
 
-  const subtotal = useMemo(() => items.reduce((s, it) => s + Number(it.subtotal || 0), 0), [items]);
+  const grossSubtotal = useMemo(
+    () => items.reduce((s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0), 0),
+    [items]
+  );
   const totalDiscount = useMemo(
     () => items.reduce((s, it) => s + Number(it.discount || 0) * Number(it.quantity || 0), 0),
     [items]
@@ -429,10 +432,10 @@ export default function PosOrderDetail() {
                   <td className="px-4 py-2 text-primary">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</td>
                   <td colSpan={4}></td>
                 </tr>
-                <SummaryRow label="Subtotal" value={`IDR ${fmt(subtotal)}`} />
+                <SummaryRow label="Subtotal" value={`IDR ${fmt(grossSubtotal)}`} />
                 <SummaryRow
                   label="Diskon"
-                  value={`IDR ${fmt(totalDiscount)} (${subtotal ? ((totalDiscount / subtotal) * 100).toFixed(2) : "0.00"}%)`}
+                  value={`IDR ${fmt(totalDiscount)} (${grossSubtotal ? ((totalDiscount / grossSubtotal) * 100).toFixed(2) : "0.00"}%)`}
                   action="Pengaturan Diskon"
                   onAction={() => setDiscountOpen(true)}
                 />
