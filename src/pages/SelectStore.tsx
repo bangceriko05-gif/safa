@@ -45,29 +45,26 @@ export default function SelectStore() {
 
   const fetchStores = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      // Check if user has access to any store (registered via User Management)
-      const { count, error: accessError } = await supabase
-        .from("user_store_access")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
+      const [superAdminResult, accessResult] = await Promise.all([
+        supabase.rpc("is_super_admin", { _user_id: user.id }),
+        supabase
+          .from("user_store_access")
+          .select(`
+            store_id,
+            role,
+            stores (*)
+          `)
+          .eq("user_id", user.id),
+      ]);
 
-      if (accessError || (count ?? 0) === 0) {
-        await supabase.auth.signOut();
-        toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
-        navigate("/auth");
-        return;
-      }
-
-      // Check if super admin
-      const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
-        _user_id: user.id
-      });
+      const isSuperAdmin = Boolean(superAdminResult.data);
 
       let activeStores: StoreData[] = [];
       let inactiveStoresList: StoreData[] = [];
@@ -82,18 +79,9 @@ export default function SelectStore() {
         if (error) throw error;
         activeStores = data || [];
       } else {
-        const { data, error } = await supabase
-          .from("user_store_access")
-          .select(`
-            store_id,
-            role,
-            stores (*)
-          `)
-          .eq("user_id", user.id);
+        if (accessResult.error) throw accessResult.error;
 
-        if (error) throw error;
-
-        const allStores = data
+        const allStores = accessResult.data
           ?.map((access: any) => access.stores)
           .filter((store: any) => store) || [];
         

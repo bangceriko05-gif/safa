@@ -42,13 +42,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import DateNavigation from "./DateNavigation";
-import RoomSummary from "./RoomSummary";
-import ScheduleTable from "./ScheduleTable";
-import PMSCalendar from "./PMSCalendar";
-import BookingModal from "./BookingModal";
 import StoreSelector from "./StoreSelector";
-import AddOrderModal from "./booking-orders/AddOrderModal";
+const DateNavigation = lazy(() => import("./DateNavigation"));
+const RoomSummary = lazy(() => import("./RoomSummary"));
+const ScheduleTable = lazy(() => import("./ScheduleTable"));
+const PMSCalendar = lazy(() => import("./PMSCalendar"));
+const BookingModal = lazy(() => import("./BookingModal"));
+const AddOrderModal = lazy(() => import("./booking-orders/AddOrderModal"));
 const UserManagement = lazy(() => import("./UserManagement"));
 const RoomManagement = lazy(() => import("./RoomManagement"));
 const CustomerManagement = lazy(() => import("./CustomerManagement"));
@@ -63,6 +63,12 @@ const DepositFormModal = lazy(() => import("./deposit/DepositFormModal"));
 // Eagerly prefetch all lazy dashboard chunks in the background so switching
 // between menus is instant (no Suspense fallback delay on first click).
 const __prefetchDashboardChunks = () => {
+  void import("./DateNavigation");
+  void import("./RoomSummary");
+  void import("./PMSCalendar");
+  void import("./ScheduleTable");
+  void import("./BookingModal");
+  void import("./booking-orders/AddOrderModal");
   void import("./UserManagement");
   void import("./RoomManagement");
   void import("./CustomerManagement");
@@ -87,7 +93,7 @@ import { format, differenceInDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 export default function Dashboard() {
-  const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName } = useStore();
+  const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName, userRole: contextUserRole } = useStore();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -127,8 +133,22 @@ export default function Dashboard() {
   // Prefetch every lazy-loaded dashboard chunk shortly after mount so subsequent
   // tab switches render instantly (no Suspense fallback spinner).
   useEffect(() => {
-    const t = setTimeout(() => __prefetchDashboardChunks(), 0);
-    return () => clearTimeout(t);
+    const schedulePrefetch = () => __prefetchDashboardChunks();
+    let idleId: number | null = null;
+    const timeoutId = window.setTimeout(() => {
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(schedulePrefetch, { timeout: 3000 });
+      } else {
+        schedulePrefetch();
+      }
+    }, 2500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (idleId !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+    };
   }, []);
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
@@ -158,7 +178,11 @@ export default function Dashboard() {
     setSearchParams(params, { replace: true });
   };
   const navigate = useNavigate();
-  const { hasPermission: checkPerm, hasAnyPermission, loading: permLoading } = usePermissions();
+  useEffect(() => {
+    if (contextUserRole) setUserRole(contextUserRole);
+  }, [contextUserRole]);
+
+  const { hasPermission: checkPerm, hasAnyPermission, loading: permLoading } = usePermissions(activeTab === "rooms", userRole);
 
   // Calculate days difference from today
   const getDaysDifference = () => {
@@ -213,7 +237,9 @@ export default function Dashboard() {
         if (session?.user) {
           // Defer role fetch to avoid deadlock with auth state
           setTimeout(() => {
-            if (isMounted) fetchUserRole(session.user.id);
+            if (!isMounted) return;
+            if (contextUserRole) setUserRole(contextUserRole);
+            else fetchUserRole(session.user.id);
           }, 0);
         }
       }
@@ -224,37 +250,28 @@ export default function Dashboard() {
       if (!isMounted) return;
       
       if (!session) {
-        // Don't immediately redirect - wait a moment for onAuthStateChange 
-        // to potentially recover the session via token refresh
+        // Briefly wait for auth recovery before redirecting protected pages.
         setTimeout(() => {
           if (!isMounted) return;
-          // Re-check session after giving auth state change time to fire
           supabase.auth.getSession().then(({ data: { session: retrySession } }) => {
             if (!isMounted) return;
             if (!retrySession) {
               navigate("/auth");
+            } else {
+              setSession(retrySession);
+              setUser(retrySession.user);
+              if (contextUserRole) setUserRole(contextUserRole);
+              void fetchProfile(retrySession.user.id);
             }
           });
-        }, 1500);
-        return;
-      }
-
-      const { count, error: accessError } = await supabase
-        .from("user_store_access")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", session.user.id);
-
-      if (accessError || (count ?? 0) === 0) {
-        await supabase.auth.signOut();
-        toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
-        navigate("/auth");
+        }, 250);
         return;
       }
 
       setSession(session);
       setUser(session.user);
-      fetchUserRole(session.user.id);
-      fetchProfile(session.user.id);
+      if (contextUserRole) setUserRole(contextUserRole);
+      void fetchProfile(session.user.id);
     });
 
     // Listen for display size changes
@@ -268,7 +285,7 @@ export default function Dashboard() {
       subscription.unsubscribe();
       window.removeEventListener("display-size-changed", handleDisplaySizeChange);
     };
-  }, [navigate]);
+  }, [navigate, contextUserRole]);
 
   const fetchUserRole = async (userId: string) => {
     try {
@@ -1020,26 +1037,32 @@ export default function Dashboard() {
         </Suspense>
 
         {/* Booking Modal */}
-        <AddOrderModal
-          open={posOpen}
-          onOpenChange={setPosOpen}
-          booking={null}
-          posMode
-          onSaved={() => {}}
-        />
+        <Suspense fallback={null}>
+          {posOpen && (
+            <AddOrderModal
+              open={posOpen}
+              onOpenChange={setPosOpen}
+              booking={null}
+              posMode
+              onSaved={() => {}}
+            />
+          )}
 
-        <BookingModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingBooking(null);
-            setSelectedSlot(null);
-          }}
-          selectedDate={selectedDate}
-          selectedSlot={selectedSlot}
-          editingBooking={editingBooking}
-          userId={user.id}
-        />
+          {isModalOpen && (
+            <BookingModal
+              isOpen={isModalOpen}
+              onClose={() => {
+                setIsModalOpen(false);
+                setEditingBooking(null);
+                setSelectedSlot(null);
+              }}
+              selectedDate={selectedDate}
+              selectedSlot={selectedSlot}
+              editingBooking={editingBooking}
+              userId={user.id}
+            />
+          )}
+        </Suspense>
 
         {/* Date Confirmation Dialog */}
         <AlertDialog open={showDateConfirmation} onOpenChange={setShowDateConfirmation}>

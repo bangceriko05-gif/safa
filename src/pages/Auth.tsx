@@ -41,35 +41,11 @@ export default function Auth() {
     // Clean up any previously stored passwords
     localStorage.removeItem("anka_pms_password");
 
-    const validateUserAccess = async (userId: string) => {
-      const { count, error } = await supabase
-        .from("user_store_access")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId);
-
-      if (error) {
-        console.error("Error validating user access:", error);
-        return false;
-      }
-
-      return (count ?? 0) > 0;
-    };
-
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-          void (async () => {
-            const hasAccess = await validateUserAccess(session.user.id);
-
-            if (!hasAccess) {
-              await supabase.auth.signOut();
-              toast.error("Akun Anda belum terdaftar di sistem. Hubungi admin untuk didaftarkan melalui Manajemen Pengguna.");
-              return;
-            }
-
-            navigate("/select-store");
-          })();
+          navigate(localStorage.getItem("current_store_id") ? "/dashboard" : "/select-store");
         }
       }
     );
@@ -146,7 +122,7 @@ export default function Auth() {
         
         // Login activity will be logged in SelectStore when user selects a store
         toast.success("Login berhasil!");
-        navigate("/select-store");
+        navigate(localStorage.getItem("current_store_id") ? "/dashboard" : "/select-store");
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
