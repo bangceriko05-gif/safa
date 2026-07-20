@@ -79,8 +79,103 @@ export default function BookingReceipt() {
   useEffect(() => {
     if (bookingId) {
       fetchData();
+    } else if (orderId) {
+      fetchOrderOnly();
     }
-  }, [bookingId]);
+  }, [bookingId, orderId]);
+
+  const fetchOrderOnly = async () => {
+    if (!orderId) return;
+    setIsLoading(true);
+    try {
+      const { data: ord, error: ordErr } = await supabase
+        .from("booking_orders")
+        .select("*")
+        .eq("id", orderId)
+        .single();
+      if (ordErr) throw ordErr;
+
+      // If this order is tied to a booking, delegate to standard flow via bookingId
+      if ((ord as any)?.booking_id) {
+        // Re-run standard fetch with bookingId synthesized
+        (window as any).__syntheticBookingId = (ord as any).booking_id;
+      }
+
+      const storeId = ord.store_id;
+
+      if (storeId) {
+        const { data: storeData } = await supabase
+          .from("stores").select("name").eq("id", storeId).single();
+        setStoreName(storeData?.name || "");
+
+        const { data: settingsData } = await supabase
+          .from("print_settings").select("*").eq("store_id", storeId).maybeSingle();
+        setPrintSettings(settingsData ? settingsData : {
+          paper_size: "80mm",
+          logo_url: null,
+          business_name: null,
+          business_address: null,
+          business_phone: null,
+          manager_name: null,
+          footer_text: "Terima kasih atas kunjungan Anda!",
+          show_logo: true,
+          show_manager_signature: true,
+          show_qr_code: false,
+        });
+      }
+
+      const { data: oItems } = await supabase
+        .from("booking_order_items")
+        .select("product_name, quantity, unit_price, subtotal")
+        .eq("booking_order_id", orderId);
+      setProducts((oItems || []).map((it: any) => ({
+        product_name: it.product_name,
+        quantity: Number(it.quantity),
+        product_price: Number(it.unit_price),
+        subtotal: Number(it.subtotal),
+      })));
+
+      setOrderOnlyMode(true);
+      if (ord.bid) setOverrideBid(ord.bid);
+      setOrderExtraTotal(Number(ord.total_amount || 0));
+      setOrderExtraPaid(Number(ord.amount || 0) + (ord.dual_payment ? Number(ord.amount_2 || 0) : 0));
+      setOrderServiceCharge(Number((ord as any).service_charge || 0));
+      setOrderServiceChargeInfo({
+        type: (ord as any).service_charge_type || null,
+        value: (ord as any).service_charge_value ?? null,
+      });
+
+      // Synthesize a minimal booking object so the render path works
+      setBooking({
+        id: ord.id,
+        bid: ord.bid,
+        customer_name: "-",
+        phone: "-",
+        date: ord.date || (ord.created_at as any),
+        start_time: "",
+        end_time: "",
+        duration: 0,
+        price: 0,
+        payment_method: ord.payment_method || undefined,
+        payment_method_2: ord.payment_method_2 || undefined,
+        reference_no: ord.reference_no || undefined,
+        reference_no_2: ord.reference_no_2 || undefined,
+        dual_payment: !!ord.dual_payment,
+        price_2: ord.dual_payment ? Number(ord.amount_2 || 0) : 0,
+        note: ord.note || undefined,
+        status: undefined,
+        payment_status: ord.payment_status || undefined,
+        created_at: ord.created_at as any,
+        room_name: "",
+        store_id: storeId,
+        duration_unit: "hari",
+      } as any);
+    } catch (e) {
+      console.error("Error fetching order:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     if (!bookingId) return;
