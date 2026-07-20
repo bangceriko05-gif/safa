@@ -305,7 +305,7 @@ export default function PosOrderDetail() {
           <div className="flex items-center gap-3 flex-1">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               {/* balloon-ish */}
-              <span className="text-primary text-lg">🎈</span>
+              <span className="text-foreground text-lg">🎈</span>
             </div>
             <div className="min-w-0">
               <div className="font-mono text-lg font-semibold truncate">{order.bid || order.id.slice(0, 12)}</div>
@@ -405,16 +405,16 @@ export default function PosOrderDetail() {
                 {items.map((it) => (
                   <tr key={it.id} className="border-t">
                     <td className="px-4 py-2">
-                      <span className="text-primary font-medium">{it.product_name}</span>
+                      <span className="text-foreground font-medium">{it.product_name}</span>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground">-</td>
-                    <td className="px-4 py-2 text-primary">{it.quantity}</td>
+                    <td className="px-4 py-2 text-foreground">{it.quantity}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{fmt(it.unit_price)}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{fmt(Number(it.discount || 0) * Number(it.quantity || 0))}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{fmt(it.subtotal)}</td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => setEditItem(it)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground" onClick={() => setEditItem(it)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(it.id)}>
@@ -428,8 +428,8 @@ export default function PosOrderDetail() {
                   <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Tidak ada produk</td></tr>
                 )}
                 <tr className="bg-muted/30 border-t">
-                  <td className="px-4 py-2 text-right text-primary" colSpan={2}>Total Pesanan</td>
-                  <td className="px-4 py-2 text-primary">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</td>
+                  <td className="px-4 py-2 text-right text-foreground" colSpan={2}>Total Pesanan</td>
+                  <td className="px-4 py-2 text-foreground">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</td>
                   <td colSpan={4}></td>
                 </tr>
                 <SummaryRow label="Subtotal" value={`IDR ${fmt(grossSubtotal)}`} />
@@ -471,7 +471,7 @@ export default function PosOrderDetail() {
         {/* Pelayan POS + Jatuh tempo */}
         <div className="grid md:grid-cols-2 gap-4">
           <SectionCard title="Pelayan POS">
-            <div className="p-4 text-primary">{creatorName}</div>
+            <div className="p-4 text-foreground">{creatorName}</div>
           </SectionCard>
           <SectionCard title="Jatuh Tempo Pembayaran">
             <div className="p-6 text-center">
@@ -483,7 +483,7 @@ export default function PosOrderDetail() {
         {/* Catatan + Invoice Footer */}
         <div className="grid md:grid-cols-2 gap-4">
           <SectionCard title="Catatan" extra={
-            <Badge variant="outline" className="text-primary border-primary/40 gap-1">
+            <Badge variant="outline" className="text-foreground border-primary/40 gap-1">
               <StickyNote className="h-3 w-3" /> Pembeli
             </Badge>
           }>
@@ -536,11 +536,11 @@ export default function PosOrderDetail() {
           <div className="px-4 py-3 border-b font-semibold">Log</div>
           <div className="p-4 text-sm space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-primary">Terakhir Diperbarui</span>
+              <span className="text-foreground">Terakhir Diperbarui</span>
               <span>{creatorName}, {format(new Date(order.updated_at), "dd-MMM-yyyy HH:mm:ss", { locale: idLocale })}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-primary">Waktu Pembuatan</span>
+              <span className="text-foreground">Waktu Pembuatan</span>
               <span>{creatorName}, {format(new Date(order.created_at), "dd-MMM-yyyy HH:mm:ss", { locale: idLocale })}</span>
             </div>
           </div>
@@ -674,12 +674,12 @@ function EditItemDialog({
                 <button
                   type="button"
                   onClick={() => setDiscMode("rp")}
-                  className={`px-3 py-1 text-sm rounded ${discMode === "rp" ? "bg-primary text-primary-foreground" : ""}`}
+                  className={`px-3 py-1 text-sm rounded ${discMode === "rp" ? "bg-primary text-foreground-foreground" : ""}`}
                 >Rp</button>
                 <button
                   type="button"
                   onClick={() => setDiscMode("pct")}
-                  className={`px-3 py-1 text-sm rounded ${discMode === "pct" ? "bg-primary text-primary-foreground" : ""}`}
+                  className={`px-3 py-1 text-sm rounded ${discMode === "pct" ? "bg-primary text-foreground-foreground" : ""}`}
                 >%</button>
               </div>
               <Input
@@ -719,7 +719,7 @@ function SectionCard({ title, extra, children }: { title: string; extra?: React.
         <div className="font-semibold">{title}</div>
         <div className="flex items-center gap-2">
           {extra}
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground">
             <Pencil className="h-4 w-4" />
           </Button>
         </div>
@@ -732,7 +732,7 @@ function SectionCard({ title, extra, children }: { title: string; extra?: React.
 function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
     <div className={`flex items-center justify-between px-4 py-3 ${last ? "" : "border-b"}`}>
-      <span className="text-primary text-sm">{label}</span>
+      <span className="text-foreground text-sm">{label}</span>
       <span className="text-sm">{value}</span>
     </div>
   );
@@ -741,10 +741,10 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
 function SummaryRow({ label, value, action, bold, onAction }: { label: string; value: string; action?: string; bold?: boolean; onAction?: () => void }) {
   return (
     <tr className="border-t">
-      <td colSpan={4} className={`px-4 py-2 text-right text-primary ${bold ? "font-semibold" : ""}`}>{label}</td>
+      <td colSpan={4} className={`px-4 py-2 text-right text-foreground ${bold ? "font-semibold" : ""}`}>{label}</td>
       <td></td>
       <td className={`px-4 py-2 text-right tabular-nums ${bold ? "font-semibold" : ""}`}>{value}</td>
-      <td className="px-4 py-2 text-right text-primary text-xs">
+      <td className="px-4 py-2 text-right text-foreground text-xs">
         {action ? <button onClick={onAction} className="hover:underline">⚙ {action}</button> : null}
       </td>
     </tr>
