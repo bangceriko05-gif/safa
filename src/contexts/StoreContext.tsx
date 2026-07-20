@@ -30,6 +30,36 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/booking", "/auth"];
+const STORE_CACHE_KEY = "anka_store_context_v1";
+const STORE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type StoreCache = {
+  userId: string;
+  role: string | null;
+  stores: Store[];
+  savedAt: number;
+};
+
+function readStoreCache(userId: string): StoreCache | null {
+  try {
+    const raw = sessionStorage.getItem(STORE_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as StoreCache;
+    if (cached.userId !== userId) return null;
+    if (Date.now() - cached.savedAt > STORE_CACHE_TTL_MS) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoreCache(payload: Omit<StoreCache, "savedAt">) {
+  try {
+    sessionStorage.setItem(STORE_CACHE_KEY, JSON.stringify({ ...payload, savedAt: Date.now() }));
+  } catch {
+    // Ignore storage quota/private mode errors; backend data remains source of truth.
+  }
+}
 
 // Consider a store expired when its subscription_end_date is before today (local).
 function isSubscriptionExpired(store: { subscription_end_date?: string | null }): boolean {
@@ -61,6 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         lastUserId = session.user.id;
+        applyCachedStores(session.user.id);
         await fetchUserStoresAndRole(session.user);
       } else {
         const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
@@ -74,6 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { data: { session: retrySession } } = await supabase.auth.getSession();
         if (retrySession?.user) {
           lastUserId = retrySession.user.id;
+          applyCachedStores(retrySession.user.id);
           await fetchUserStoresAndRole(retrySession.user);
         } else {
           setIsLoading(false);
@@ -104,14 +136,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const fetchUserStoresAndRole = async (user: any) => {
     try {
-
-      const [roleResult, superAdminResult] = await Promise.all([
+      const [roleResult, superAdminResult, accessResult, allActiveStoresResult] = await Promise.all([
         supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
           .maybeSingle(),
         supabase.rpc("is_super_admin", { _user_id: user.id }),
+        supabase
+          .from("user_store_access")
+          .select(`
+            store_id,
+            role,
+            stores (*)
+          `)
+          .eq("user_id", user.id),
+        supabase
+          .from("stores")
+          .select("*")
+          .eq("is_active", true)
+          .order("name"),
       ]);
 
       const role = roleResult.data?.role || "user";
@@ -123,28 +167,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       if (isSuperAdmin) {
         // Super admin can access all active stores
-        const { data, error } = await supabase
-          .from("stores")
-          .select("*")
-          .eq("is_active", true)
-          .order("name");
-
-        if (error) throw error;
-        stores = data || [];
+        if (allActiveStoresResult.error) throw allActiveStoresResult.error;
+        stores = allActiveStoresResult.data || [];
       } else {
         // Regular users - fetch all stores they have access to (including inactive)
-        const { data, error } = await supabase
-          .from("user_store_access")
-          .select(`
-            store_id,
-            role,
-            stores (*)
-          `)
-          .eq("user_id", user.id);
+        if (accessResult.error) throw accessResult.error;
 
-        if (error) throw error;
-
-        const allUserStores = data
+        const allUserStores = accessResult.data
           ?.map((access: any) => access.stores)
           .filter((store: any) => store) || [];
         
@@ -168,6 +197,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       setUserStores(stores);
+      writeStoreCache({ userId: user.id, role, stores });
       setIsStoreInactive(false);
       setInactiveStoreName(null);
 
@@ -187,6 +217,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching user stores:", error);
       setIsLoading(false);
     }
+  };
+
+  const applyCachedStores = (userId: string) => {
+    const cached = readStoreCache(userId);
+    if (!cached?.stores?.length) return false;
+
+    setUserRole(cached.role || "user");
+    setUserStores(cached.stores);
+    setIsStoreInactive(false);
+    setInactiveStoreName(null);
+
+    const savedStoreId = localStorage.getItem("current_store_id");
+    const savedStore = cached.stores.find(store => store.id === savedStoreId);
+    setCurrentStoreState(savedStore || cached.stores[0]);
+    setIsLoading(false);
+    return true;
   };
 
   const setCurrentStore = (store: Store) => {
