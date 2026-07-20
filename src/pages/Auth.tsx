@@ -45,7 +45,7 @@ export default function Auth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-          navigate("/select-store");
+          navigate(localStorage.getItem("current_store_id") ? "/dashboard" : "/select-store");
         }
       }
     );
@@ -122,7 +122,7 @@ export default function Auth() {
         
         // Login activity will be logged in SelectStore when user selects a store
         toast.success("Login berhasil!");
-        navigate("/select-store");
+        navigate(localStorage.getItem("current_store_id") ? "/dashboard" : "/select-store");
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),

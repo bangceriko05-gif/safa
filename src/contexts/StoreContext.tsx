@@ -54,10 +54,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
+    let lastUserId: string | null = null;
+
     // First restore session from storage, then fetch stores
     const initAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        lastUserId = session.user.id;
         await fetchUserStoresAndRole(session.user);
       } else {
         const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
@@ -70,6 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 250));
         const { data: { session: retrySession } } = await supabase.auth.getSession();
         if (retrySession?.user) {
+          lastUserId = retrySession.user.id;
           await fetchUserStoresAndRole(retrySession.user);
         } else {
           setIsLoading(false);
@@ -80,7 +84,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     
     initAuth();
 
-    let lastUserId: string | null = null;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Only refetch when the user actually changes (sign in / sign out / different user).
       // Ignore TOKEN_REFRESHED and INITIAL_SESSION events triggered when switching browser tabs,
@@ -92,7 +95,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (newUserId === lastUserId) return;
       lastUserId = newUserId;
       if (session?.user) {
-        fetchUserStoresAndRole(session.user);
+        void fetchUserStoresAndRole(session.user);
       }
     });
 

@@ -237,7 +237,9 @@ export default function Dashboard() {
         if (session?.user) {
           // Defer role fetch to avoid deadlock with auth state
           setTimeout(() => {
-            if (isMounted) fetchUserRole(session.user.id);
+            if (!isMounted) return;
+            if (contextUserRole) setUserRole(contextUserRole);
+            else fetchUserRole(session.user.id);
           }, 0);
         }
       }
