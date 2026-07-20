@@ -1,17 +1,23 @@
 import { useEffect, useState } from "react";
 import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
 
-export function usePermissions() {
+export function usePermissions(enabled = true, knownRole?: string | null) {
   const [userPermissionNames, setUserPermissionNames] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     fetchUserPermissions();
-  }, []);
+  }, [enabled, knownRole]);
 
   const fetchUserPermissions = async (force = false) => {
+    if (!enabled) return;
+    setLoading(true);
     try {
-      const { names } = await fetchCurrentUserPermissionAccess(undefined, force);
+      const { names } = await fetchCurrentUserPermissionAccess(knownRole, force);
       setUserPermissionNames(names);
     } catch (error) {
       console.error("Error fetching user permissions:", error);

@@ -60,17 +60,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         await fetchUserStoresAndRole(session.user);
       } else {
-        // Wait a bit for session recovery before redirecting
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
+        if (isPublicRoute) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Briefly allow auth storage to hydrate before redirecting protected pages.
+        await new Promise(resolve => setTimeout(resolve, 250));
         const { data: { session: retrySession } } = await supabase.auth.getSession();
         if (retrySession?.user) {
           await fetchUserStoresAndRole(retrySession.user);
         } else {
           setIsLoading(false);
-          const isPublicRoute = PUBLIC_ROUTES.some(route => location.pathname.startsWith(route));
-          if (!isPublicRoute) {
-            navigate("/auth");
-          }
+          navigate("/auth");
         }
       }
     };
@@ -99,20 +102,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const fetchUserStoresAndRole = async (user: any) => {
     try {
 
-      // Fetch user role
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
+      const [roleResult, superAdminResult] = await Promise.all([
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase.rpc("is_super_admin", { _user_id: user.id }),
+      ]);
 
-      const role = roleData?.role || "user";
+      const role = roleResult.data?.role || "user";
       setUserRole(role);
 
-      // Check if super admin
-      const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
-        _user_id: user.id
-      });
+      const isSuperAdmin = Boolean(superAdminResult.data);
 
       let stores: Store[] = [];
 
