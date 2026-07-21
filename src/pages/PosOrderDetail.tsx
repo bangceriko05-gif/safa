@@ -798,25 +798,142 @@ function EditItemDialog({
   );
 }
 
-function SectionCard({ title, extra, children }: { title: string; extra?: React.ReactNode; children: React.ReactNode }) {
-  // legacy signature preserved via overload below
-  return null as any;
-}
-
-// @ts-ignore replaced below
+function SectionCard({
+  title, extra, children, onEdit,
+}: {
+  title: string;
+  extra?: React.ReactNode;
+  children: React.ReactNode;
+  onEdit?: () => void;
+}) {
   return (
     <div className="bg-card rounded-lg border">
       <div className="px-4 py-3 border-b flex items-center justify-between">
         <div className="font-semibold">{title}</div>
         <div className="flex items-center gap-2">
           {extra}
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground">
-            <Pencil className="h-4 w-4" />
-          </Button>
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-foreground"
+              onClick={onEdit}
+              aria-label={`Edit ${title}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
       <div>{children}</div>
     </div>
+  );
+}
+
+function QuickEditDialog({
+  state, order, customerName, customerPhone, customerEmail, attendantFallback, onClose, onSave,
+}: {
+  state: QuickEditKind | null;
+  order: any;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  attendantFallback: string;
+  onClose: () => void;
+  onSave: (patch: Record<string, any>) => void;
+}) {
+  const [cName, setCName] = useState("");
+  const [cPhone, setCPhone] = useState("");
+  const [cEmail, setCEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [attendant, setAttendant] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [footer, setFooter] = useState("");
+
+  useEffect(() => {
+    if (!state) return;
+    setCName(customerName === "-" ? "" : customerName);
+    setCPhone(customerPhone === "-" ? "" : customerPhone);
+    setCEmail(customerEmail === "-" ? "" : customerEmail);
+    setNote(order?.note || "");
+    setAttendant(order?.attendant_name || attendantFallback || "");
+    setDueDate(
+      order?.due_date
+        ? String(order.due_date).slice(0, 10)
+        : format(new Date(new Date(order?.date || new Date()).getTime() + 30 * 24 * 3600 * 1000), "yyyy-MM-dd")
+    );
+    setFooter(order?.invoice_footer || "");
+  }, [state, order?.id]);
+
+  if (!state) return null;
+
+  const title =
+    state.kind === "customer" ? "Edit Pelanggan"
+    : state.kind === "note" ? "Edit Catatan"
+    : state.kind === "attendant" ? "Edit Pelayan POS"
+    : state.kind === "due_date" ? "Edit Jatuh Tempo"
+    : "Edit Invoice Footer";
+
+  const submit = () => {
+    if (state.kind === "customer") onSave({ customer_name: cName || null, customer_phone: cPhone || null, customer_email: cEmail || null });
+    else if (state.kind === "note") onSave({ note });
+    else if (state.kind === "attendant") onSave({ attendant_name: attendant || null });
+    else if (state.kind === "due_date") onSave({ due_date: dueDate || null });
+    else if (state.kind === "invoice_footer") onSave({ invoice_footer: footer || null });
+  };
+
+  return (
+    <Dialog open={!!state} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          {state.kind === "customer" && (
+            <>
+              <div>
+                <Label className="text-xs text-muted-foreground">Nama</Label>
+                <Input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Nama pelanggan" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Telpon</Label>
+                <Input value={cPhone} onChange={(e) => setCPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Email</Label>
+                <Input value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="email@contoh.com" />
+              </div>
+            </>
+          )}
+          {state.kind === "note" && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Catatan</Label>
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-[120px]" />
+            </div>
+          )}
+          {state.kind === "attendant" && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Nama Pelayan</Label>
+              <Input value={attendant} onChange={(e) => setAttendant(e.target.value)} />
+            </div>
+          )}
+          {state.kind === "due_date" && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Tanggal Jatuh Tempo</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          )}
+          {state.kind === "invoice_footer" && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Teks Footer Invoice</Label>
+              <Textarea value={footer} onChange={(e) => setFooter(e.target.value)} className="min-h-[120px]" />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button onClick={submit}>Simpan</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
