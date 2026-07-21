@@ -408,7 +408,7 @@ export default function PosOrderDetail() {
               value={`${items.reduce((s, it) => s + Number(it.quantity || 0), 0)} pcs`}
             />
             <InfoRow label="Total Diskon Item" value={`IDR ${fmt(totalDiscount)}`} />
-            <InfoRow label="Subtotal" value={`IDR ${fmt(subtotal)}`} last />
+            <InfoRow label="Subtotal" value={`IDR ${fmt(grossSubtotal - totalDiscount)}`} last />
           </SectionCard>
           <SectionCard title="Info Pembayaran">
             <InfoRow
