@@ -29,6 +29,23 @@ export default function SelectStore() {
   const bankAccount = "0241003956";
 
   useEffect(() => {
+    // Hydrate from prefetch cache immediately so the page renders without a spinner.
+    try {
+      const raw = sessionStorage.getItem("anka_store_context_v1");
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached?.stores && Array.isArray(cached.stores) && Date.now() - (cached.savedAt || 0) < 5 * 60 * 1000) {
+          const active = cached.stores.filter((s: any) => s.is_active);
+          setStores(active);
+          if (active.length === 1) {
+            setLoading(false);
+            handleSelectStore(active[0]);
+            return;
+          }
+          if (active.length > 0) setLoading(false);
+        }
+      }
+    } catch { /* ignore */ }
     fetchStores();
   }, []);
 
