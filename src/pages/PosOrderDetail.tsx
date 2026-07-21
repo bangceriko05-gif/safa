@@ -14,6 +14,7 @@ import {
   ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar,
   StickyNote, CheckCircle2, XCircle, Search,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import AnkaLoader from "@/components/AnkaLoader";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -58,6 +59,29 @@ export default function PosOrderDetail() {
   const [discountOpen, setDiscountOpen] = useState(false);
   const [orderDiscountMode, setOrderDiscountMode] = useState<"rp" | "pct">("rp");
   const [orderDiscountValue, setOrderDiscountValue] = useState<number>(0);
+
+  // Order note (editable) + quick-edit state
+  const [noteDraft, setNoteDraft] = useState<string>("");
+  const [noteDirty, setNoteDirty] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+
+  useEffect(() => {
+    if (order) {
+      setNoteDraft(String(order.note || ""));
+      setNoteDirty(false);
+    }
+  }, [order?.id]);
+
+  const saveNote = async () => {
+    setSavingNote(true);
+    const { error } = await supabase
+      .from("booking_orders").update({ note: noteDraft }).eq("id", id!);
+    setSavingNote(false);
+    if (error) { toast.error("Gagal menyimpan catatan"); return; }
+    setNoteDirty(false);
+    toast.success("Catatan disimpan");
+    load();
+  };
 
   const load = async () => {
     if (!id) return;
