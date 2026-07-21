@@ -439,13 +439,19 @@ export type Database = {
         Row: {
           amount: number
           amount_2: number
+          attendant_name: string | null
           bid: string | null
           booking_id: string | null
           created_at: string
           created_by: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           date: string
           dual_payment: boolean
+          due_date: string | null
           id: string
+          invoice_footer: string | null
           note: string | null
           payment_method: string | null
           payment_method_2: string | null
@@ -468,13 +474,19 @@ export type Database = {
         Insert: {
           amount?: number
           amount_2?: number
+          attendant_name?: string | null
           bid?: string | null
           booking_id?: string | null
           created_at?: string
           created_by?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           date?: string
           dual_payment?: boolean
+          due_date?: string | null
           id?: string
+          invoice_footer?: string | null
           note?: string | null
           payment_method?: string | null
           payment_method_2?: string | null
@@ -497,13 +509,19 @@ export type Database = {
         Update: {
           amount?: number
           amount_2?: number
+          attendant_name?: string | null
           bid?: string | null
           booking_id?: string | null
           created_at?: string
           created_by?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           date?: string
           dual_payment?: boolean
+          due_date?: string | null
           id?: string
+          invoice_footer?: string | null
           note?: string | null
           payment_method?: string | null
           payment_method_2?: string | null
