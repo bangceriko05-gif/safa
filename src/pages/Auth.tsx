@@ -89,7 +89,7 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
@@ -120,7 +120,37 @@ export default function Auth() {
           localStorage.removeItem("anka_pms_email");
         }
         
-        // Login activity will be logged in SelectStore when user selects a store
+        // Prefetch role + stores in parallel and prime the StoreContext cache
+        // so /select-store and /dashboard render instantly without re-querying.
+        const uid = signInData?.user?.id;
+        if (uid) {
+          try {
+            const [roleRes, superRes, accessRes, allActiveRes] = await Promise.all([
+              supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
+              supabase.rpc("is_super_admin", { _user_id: uid }),
+              supabase
+                .from("user_store_access")
+                .select("store_id, role, stores(*)")
+                .eq("user_id", uid),
+              supabase.from("stores").select("*").eq("is_active", true).order("name"),
+            ]);
+            const role = (roleRes.data as any)?.role || "user";
+            const isSuper = Boolean(superRes.data);
+            const stores = isSuper
+              ? (allActiveRes.data || [])
+              : ((accessRes.data || [])
+                  .map((a: any) => a.stores)
+                  .filter((s: any) => s && s.is_active));
+            sessionStorage.setItem(
+              "anka_store_context_v1",
+              JSON.stringify({ userId: uid, role, stores, savedAt: Date.now() })
+            );
+          } catch (prefetchErr) {
+            // Non-fatal: SelectStore will still load fresh data.
+            console.warn("Store prefetch failed:", prefetchErr);
+          }
+        }
+
         toast.success("Login berhasil!");
         navigate("/select-store");
       } else {
