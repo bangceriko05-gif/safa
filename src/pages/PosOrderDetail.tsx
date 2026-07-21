@@ -25,6 +25,13 @@ import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 
+type QuickEditKind =
+  | { kind: "customer" }
+  | { kind: "note" }
+  | { kind: "attendant" }
+  | { kind: "due_date" }
+  | { kind: "invoice_footer" };
+
 interface OrderItem {
   id: string;
   product_id: string | null;
@@ -50,6 +57,9 @@ export default function PosOrderDetail() {
   const [payOpen, setPayOpen] = useState(false);
   const [payMode, setPayMode] = useState<"edit" | "add">("edit");
   const { methods: paymentMethods } = usePaymentMethods();
+
+  // Quick-edit dialog state
+  const [quickEdit, setQuickEdit] = useState<QuickEditKind | null>(null);
 
   // Editing / adding / discount
   const [editItem, setEditItem] = useState<OrderItem | null>(null);
@@ -119,7 +129,12 @@ export default function PosOrderDetail() {
         setCustomerPhone((b as any).customer_phone || "-");
         setCustomerEmail((b as any).customer_email || "-");
       }
-    } else {
+    }
+    // Overrides on the order itself win
+    if ((o as any).customer_name) setCustomerName((o as any).customer_name);
+    if ((o as any).customer_phone) setCustomerPhone((o as any).customer_phone);
+    if ((o as any).customer_email) setCustomerEmail((o as any).customer_email);
+    if (!(o as any).booking_id && !(o as any).customer_name) {
       // Try to parse customer info from note (POS stores "Nama - 0812..." optionally)
       const note = (o as any).note as string | null;
       if (note) {
@@ -297,6 +312,14 @@ export default function PosOrderDetail() {
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
 
+  const saveQuickEdit = async (patch: Record<string, any>) => {
+    const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
+    if (error) { toast.error("Gagal menyimpan"); return; }
+    toast.success("Perubahan disimpan");
+    setQuickEdit(null);
+    load();
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><AnkaLoader /></div>;
   if (!order) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -377,12 +400,12 @@ export default function PosOrderDetail() {
 
         {/* Customer + Shipping destination */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Pelanggan">
+          <SectionCard title="Pelanggan" onEdit={() => setQuickEdit({ kind: "customer" })}>
             <InfoRow label="Nama" value={customerName} />
             <InfoRow label="Email" value={customerEmail} />
             <InfoRow label="Telpon" value={customerPhone} last />
           </SectionCard>
-          <SectionCard title="Catatan Pesanan">
+          <SectionCard title="Catatan Pesanan" onEdit={() => setQuickEdit({ kind: "note" })}>
             <div className="p-4 space-y-2">
               <Textarea
                 value={noteDraft}
@@ -410,7 +433,7 @@ export default function PosOrderDetail() {
             <InfoRow label="Total Diskon Item" value={`IDR ${fmt(totalDiscount)}`} />
             <InfoRow label="Subtotal" value={`IDR ${fmt(grossSubtotal - totalDiscount)}`} last />
           </SectionCard>
-          <SectionCard title="Info Pembayaran">
+          <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
             <InfoRow
               label="Metode Pembayaran"
               value={(order.payment_method || "-").toString().toUpperCase()}
@@ -514,19 +537,25 @@ export default function PosOrderDetail() {
 
         {/* Pelayan POS + Jatuh tempo */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Pelayan POS">
-            <div className="p-4 text-foreground">{creatorName}</div>
+          <SectionCard title="Pelayan POS" onEdit={() => setQuickEdit({ kind: "attendant" })}>
+            <div className="p-4 text-foreground">{order.attendant_name || creatorName}</div>
           </SectionCard>
-          <SectionCard title="Jatuh Tempo Pembayaran">
+          <SectionCard title="Jatuh Tempo Pembayaran" onEdit={() => setQuickEdit({ kind: "due_date" })}>
             <div className="p-6 text-center">
-              {format(new Date(new Date(order.date).getTime() + 30 * 24 * 3600 * 1000), "dd-MMM-yyyy", { locale: idLocale })}
+              {format(
+                order.due_date
+                  ? new Date(order.due_date)
+                  : new Date(new Date(order.date).getTime() + 30 * 24 * 3600 * 1000),
+                "dd-MMM-yyyy",
+                { locale: idLocale }
+              )}
             </div>
           </SectionCard>
         </div>
 
         {/* Catatan + Invoice Footer */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Catatan" extra={
+          <SectionCard title="Catatan" onEdit={() => setQuickEdit({ kind: "note" })} extra={
             <Badge variant="outline" className="text-foreground border-primary/40 gap-1">
               <StickyNote className="h-3 w-3" /> Pembeli
             </Badge>
@@ -535,9 +564,11 @@ export default function PosOrderDetail() {
               {order.note || "Tidak ada"}
             </div>
           </SectionCard>
-          <SectionCard title="Invoice Footer">
+          <SectionCard title="Invoice Footer" onEdit={() => setQuickEdit({ kind: "invoice_footer" })}>
             <div className="p-4 bg-muted/30 min-h-[120px] text-sm">
-              <div className="text-muted-foreground">Tidak ada</div>
+              <div className="text-foreground whitespace-pre-wrap">
+                {order.invoice_footer || "Tidak ada"}
+              </div>
               <div className="mt-6 text-muted-foreground">Untuk info lebih lanjut, bisa hubungi Tim Support kami</div>
             </div>
           </SectionCard>
@@ -620,6 +651,17 @@ export default function PosOrderDetail() {
         item={editItem}
         onClose={() => setEditItem(null)}
         onSave={saveItemEdit}
+      />
+
+      <QuickEditDialog
+        state={quickEdit}
+        order={order}
+        customerName={customerName}
+        customerPhone={customerPhone}
+        customerEmail={customerEmail}
+        attendantFallback={creatorName}
+        onClose={() => setQuickEdit(null)}
+        onSave={saveQuickEdit}
       />
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -757,6 +799,11 @@ function EditItemDialog({
 }
 
 function SectionCard({ title, extra, children }: { title: string; extra?: React.ReactNode; children: React.ReactNode }) {
+  // legacy signature preserved via overload below
+  return null as any;
+}
+
+// @ts-ignore replaced below
   return (
     <div className="bg-card rounded-lg border">
       <div className="px-4 py-3 border-b flex items-center justify-between">
