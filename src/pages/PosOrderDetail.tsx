@@ -382,25 +382,45 @@ export default function PosOrderDetail() {
             <InfoRow label="Email" value={customerEmail} />
             <InfoRow label="Telpon" value={customerPhone} last />
           </SectionCard>
-          <SectionCard title="Tujuan Pengiriman">
-            <InfoRow label="Nama" value="-" />
-            <InfoRow label="Alamat" value="-" />
-            <InfoRow label="Telpon" value="-" last />
+          <SectionCard title="Catatan Pesanan">
+            <div className="p-4 space-y-2">
+              <Textarea
+                value={noteDraft}
+                onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
+                placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
+                className="min-h-[92px] text-sm"
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
+                  {savingNote ? "Menyimpan..." : "Simpan Catatan"}
+                </Button>
+              </div>
+            </div>
           </SectionCard>
         </div>
 
-        {/* Shipping status + drop ship */}
+        {/* Ringkasan Pesanan + Info Pembayaran (replaces shipping/dropship) */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Status Pengiriman">
-            <InfoRow label="Kurir Pengiriman" value="-" />
-            <InfoRow label="Tipe Layanan Pengiriman" value="-" />
-            <InfoRow label="Tanggal Kirim" value="-" />
-            <InfoRow label="No. Tracking" value="-" last />
+          <SectionCard title="Ringkasan Pesanan">
+            <InfoRow label="Jumlah Item" value={`${items.length} produk`} />
+            <InfoRow
+              label="Total Qty"
+              value={`${items.reduce((s, it) => s + Number(it.quantity || 0), 0)} pcs`}
+            />
+            <InfoRow label="Total Diskon Item" value={`IDR ${fmt(totalDiscount)}`} />
+            <InfoRow label="Subtotal" value={`IDR ${fmt(subtotal)}`} last />
           </SectionCard>
-          <SectionCard title="Drop Ship">
-            <InfoRow label="Nama Toko" value="-" />
-            <InfoRow label="Pengirim" value="-" />
-            <InfoRow label="Telpon" value="-" last />
+          <SectionCard title="Info Pembayaran">
+            <InfoRow
+              label="Metode Pembayaran"
+              value={(order.payment_method || "-").toString().toUpperCase()}
+            />
+            <InfoRow
+              label="Status"
+              value={isLunas ? "Lunas" : (paid > 0 ? "Sebagian" : "Belum Bayar")}
+            />
+            <InfoRow label="Referensi" value={order.reference_no || "-"} />
+            <InfoRow label="Sisa Tagihan" value={`IDR ${fmt(outstanding)}`} last />
           </SectionCard>
         </div>
 
