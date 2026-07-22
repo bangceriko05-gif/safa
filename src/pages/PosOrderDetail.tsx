@@ -552,12 +552,57 @@ export default function PosOrderDetail() {
 
         {/* Customer + Shipping destination */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Pelanggan" onEdit={() => setQuickEdit({ kind: "customer" })}>
-            <InfoRow label="Nama" value={customerName} />
-            <InfoRow label="Email" value={customerEmail} />
-            <InfoRow label="Telpon" value={customerPhone} last />
+          <SectionCard
+            title="Pelanggan"
+            onEdit={editingSection === "customer" ? undefined : openCustomerEdit}
+          >
+            {editingSection === "customer" ? (
+              <div className="p-4 space-y-3">
+                <div className="relative">
+                  <Label className="text-xs text-muted-foreground">Nama</Label>
+                  <Input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Nama pelanggan" />
+                  {customerSuggestions.length > 0 && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-56 overflow-auto">
+                      {customerSuggestions.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => pickCustomerSuggestion(c)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex justify-between"
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-muted-foreground">{c.phone}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Telpon</Label>
+                  <Input value={cPhone} onChange={(e) => setCPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="email@contoh.com" />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}>
+                    <X className="h-4 w-4 mr-1" /> Batal
+                  </Button>
+                  <Button size="sm" onClick={submitCustomerEdit} disabled={savingCustomer}>
+                    <Check className="h-4 w-4 mr-1" /> Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <InfoRow label="Nama" value={customerName} />
+                <InfoRow label="Email" value={customerEmail} />
+                <InfoRow label="Telpon" value={customerPhone} last />
+              </>
+            )}
           </SectionCard>
-          <SectionCard title="Catatan Pesanan" onEdit={() => setQuickEdit({ kind: "note" })}>
+          <SectionCard title="Catatan Pesanan">
             <div className="p-4 space-y-2">
               <Textarea
                 value={noteDraft}
@@ -689,34 +734,113 @@ export default function PosOrderDetail() {
 
         {/* Pelayan POS + Jatuh tempo */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Pelayan POS" onEdit={() => setQuickEdit({ kind: "attendant" })}>
-            <div className="p-4 text-foreground">{order.attendant_name || creatorName}</div>
+          <SectionCard
+            title="Pelayan POS"
+            onEdit={editingSection === "attendant" ? undefined : openAttendantEdit}
+          >
+            {editingSection === "attendant" ? (
+              <div className="p-4 space-y-3">
+                <Label className="text-xs text-muted-foreground">Pilih Pelayan (staff outlet)</Label>
+                <Select value={attendantDraft} onValueChange={setAttendantDraft}>
+                  <SelectTrigger><SelectValue placeholder="Pilih staff" /></SelectTrigger>
+                  <SelectContent>
+                    {staffOptions.length === 0 && (
+                      <SelectItem value="__none" disabled>Belum ada staff untuk outlet ini</SelectItem>
+                    )}
+                    {staffOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ attendant_name: attendantDraft || null })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-foreground">{order.attendant_name || creatorName}</div>
+            )}
           </SectionCard>
-          <SectionCard title="Jatuh Tempo Pembayaran" onEdit={() => setQuickEdit({ kind: "due_date" })}>
-            <div className="p-6 text-center">
-              {format(
-                order.due_date
-                  ? new Date(order.due_date)
-                  : new Date(new Date(order.date).getTime() + 30 * 24 * 3600 * 1000),
-                "dd-MMM-yyyy",
-                { locale: idLocale }
-              )}
-            </div>
+          <SectionCard
+            title="Jatuh Tempo Pembayaran"
+            onEdit={editingSection === "due_date" ? undefined : openDueEdit}
+          >
+            {editingSection === "due_date" ? (
+              <div className="p-4 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDuePreset(3)}>3 hari</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDuePreset(7)}>7 hari</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDuePreset(30)}>30 hari</Button>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Custom Tanggal</Label>
+                  <Input type="date" value={dueDateDraft} onChange={(e) => setDueDateDraft(e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ due_date: dueDateDraft || null })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                {format(
+                  order.due_date
+                    ? new Date(order.due_date)
+                    : new Date(new Date(order.date).getTime() + 30 * 24 * 3600 * 1000),
+                  "dd-MMM-yyyy",
+                  { locale: idLocale }
+                )}
+              </div>
+            )}
           </SectionCard>
         </div>
 
         {/* Catatan + Invoice Footer */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Catatan" onEdit={() => setQuickEdit({ kind: "note" })} extra={
-            <Badge variant="outline" className="text-foreground border-primary/40 gap-1">
-              <StickyNote className="h-3 w-3" /> Pembeli
-            </Badge>
-          }>
-            <div className="p-4 bg-muted/30 min-h-[120px] text-muted-foreground text-sm">
-              {order.note || "Tidak ada"}
-            </div>
+          <SectionCard
+            title="Catatan"
+            onEdit={editingSection === "note_card" ? undefined : openNoteCardEdit}
+            extra={
+              <Badge variant="outline" className="text-foreground border-primary/40 gap-1">
+                <StickyNote className="h-3 w-3" /> Pembeli
+              </Badge>
+            }
+          >
+            {editingSection === "note_card" ? (
+              <div className="p-4 space-y-2">
+                <Textarea value={noteCardDraft} onChange={(e) => setNoteCardDraft(e.target.value)} className="min-h-[120px]" />
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ note: noteCardDraft })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/30 min-h-[120px] text-muted-foreground text-sm">
+                {order.note || "Tidak ada"}
+              </div>
+            )}
           </SectionCard>
-          <SectionCard title="Invoice Footer" onEdit={() => setQuickEdit({ kind: "invoice_footer" })}>
+          <SectionCard
+            title="Invoice Footer"
+            onEdit={editingSection === "footer" ? undefined : openFooterEdit}
+          >
+            {editingSection === "footer" ? (
+              <div className="p-4 space-y-2">
+                <Textarea value={footerDraft} onChange={(e) => setFooterDraft(e.target.value)} className="min-h-[120px]" />
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ invoice_footer: footerDraft || null })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <div className="p-4 bg-muted/30 min-h-[120px] text-sm">
               <div className="text-foreground whitespace-pre-wrap">
                 {order.invoice_footer || "Tidak ada"}
