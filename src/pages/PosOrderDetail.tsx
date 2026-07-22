@@ -930,16 +930,18 @@ export default function PosOrderDetail() {
         onSave={saveItemEdit}
       />
 
-      <QuickEditDialog
-        state={quickEdit}
-        order={order}
-        customerName={customerName}
-        customerPhone={customerPhone}
-        customerEmail={customerEmail}
-        attendantFallback={creatorName}
-        onClose={() => setQuickEdit(null)}
-        onSave={saveQuickEdit}
-      />
+      <Dialog open={!!confirmSaveCustomer} onOpenChange={(v) => !v && setConfirmSaveCustomer(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Pelanggan tidak ditemukan</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Data pelanggan ini belum ada di database. Apakah Anda ingin menyimpannya sebagai pelanggan baru?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={confirmNoSaveCustomer}>Tidak</Button>
+            <Button onClick={confirmYesSaveCustomer} disabled={savingCustomer}>Ya, Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg">
