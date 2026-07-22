@@ -56,8 +56,29 @@ export default function PosOrderDetail() {
   const [payMode, setPayMode] = useState<"edit" | "add">("edit");
   const { methods: paymentMethods } = usePaymentMethods();
 
-  // Quick-edit dialog state
-  const [quickEdit, setQuickEdit] = useState<QuickEditKind | null>(null);
+  // Per-section inline edit mode
+  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
+
+  // Customer edit state
+  const [cName, setCName] = useState("");
+  const [cPhone, setCPhone] = useState("");
+  const [cEmail, setCEmail] = useState("");
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [confirmSaveCustomer, setConfirmSaveCustomer] = useState<null | { patch: Record<string, any> }>(null);
+
+  // Attendant edit state
+  const [attendantDraft, setAttendantDraft] = useState("");
+  const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
+
+  // Due date edit state
+  const [dueDateDraft, setDueDateDraft] = useState("");
+
+  // Footer edit state
+  const [footerDraft, setFooterDraft] = useState("");
+
+  // Note card edit state (bottom-right card)
+  const [noteCardDraft, setNoteCardDraft] = useState("");
 
   // Editing / adding / discount
   const [editItem, setEditItem] = useState<OrderItem | null>(null);
