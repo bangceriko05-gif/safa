@@ -847,6 +847,7 @@ export default function PosOrderDetail() {
               </div>
               <div className="mt-6 text-muted-foreground">Untuk info lebih lanjut, bisa hubungi Tim Support kami</div>
             </div>
+            )}
           </SectionCard>
         </div>
 
