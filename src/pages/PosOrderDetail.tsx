@@ -11,7 +11,10 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar, Check, X,
   StickyNote, CheckCircle2, XCircle, Search,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,12 +28,7 @@ import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 
-type QuickEditKind =
-  | { kind: "customer" }
-  | { kind: "note" }
-  | { kind: "attendant" }
-  | { kind: "due_date" }
-  | { kind: "invoice_footer" };
+type SectionKey = "customer" | "attendant" | "due_date" | "footer" | "note_card";
 
 interface OrderItem {
   id: string;
@@ -58,8 +56,29 @@ export default function PosOrderDetail() {
   const [payMode, setPayMode] = useState<"edit" | "add">("edit");
   const { methods: paymentMethods } = usePaymentMethods();
 
-  // Quick-edit dialog state
-  const [quickEdit, setQuickEdit] = useState<QuickEditKind | null>(null);
+  // Per-section inline edit mode
+  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
+
+  // Customer edit state
+  const [cName, setCName] = useState("");
+  const [cPhone, setCPhone] = useState("");
+  const [cEmail, setCEmail] = useState("");
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [confirmSaveCustomer, setConfirmSaveCustomer] = useState<null | { patch: Record<string, any> }>(null);
+
+  // Attendant edit state
+  const [attendantDraft, setAttendantDraft] = useState("");
+  const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
+
+  // Due date edit state
+  const [dueDateDraft, setDueDateDraft] = useState("");
+
+  // Footer edit state
+  const [footerDraft, setFooterDraft] = useState("");
+
+  // Note card edit state (bottom-right card)
+  const [noteCardDraft, setNoteCardDraft] = useState("");
 
   // Editing / adding / discount
   const [editItem, setEditItem] = useState<OrderItem | null>(null);
@@ -312,13 +331,146 @@ export default function PosOrderDetail() {
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
 
-  const saveQuickEdit = async (patch: Record<string, any>) => {
+  const savePatch = async (patch: Record<string, any>) => {
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) { toast.error("Gagal menyimpan"); return; }
     toast.success("Perubahan disimpan");
-    setQuickEdit(null);
+    setEditingSection(null);
     load();
   };
+
+  // ---------- Section: Pelanggan ----------
+  const openCustomerEdit = () => {
+    setCName(customerName === "-" ? "" : customerName);
+    setCPhone(customerPhone === "-" ? "" : customerPhone);
+    setCEmail(customerEmail === "-" ? "" : customerEmail);
+    setCustomerSuggestions([]);
+    setEditingSection("customer");
+  };
+
+  // Debounced suggest from customers table for this store
+  useEffect(() => {
+    if (editingSection !== "customer" || !order?.store_id) return;
+    const q = (cName || cPhone).trim();
+    if (!q) { setCustomerSuggestions([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, name, phone, email")
+        .eq("store_id", order.store_id)
+        .or(`name.ilike.%${q}%,phone.ilike.%${q}%`)
+        .limit(6);
+      setCustomerSuggestions(data || []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [cName, cPhone, editingSection, order?.store_id]);
+
+  const submitCustomerEdit = async () => {
+    const patch = {
+      customer_name: cName.trim() || null,
+      customer_phone: cPhone.trim() || null,
+      customer_email: cEmail.trim() || null,
+    };
+    // Match against DB
+    if (patch.customer_name || patch.customer_phone) {
+      const filters: string[] = [];
+      if (patch.customer_phone) filters.push(`phone.eq.${patch.customer_phone}`);
+      if (patch.customer_name) filters.push(`name.ilike.${patch.customer_name}`);
+      const { data: matches } = await supabase
+        .from("customers")
+        .select("id, name, phone")
+        .eq("store_id", order.store_id)
+        .or(filters.join(","))
+        .limit(1);
+      if (!matches || matches.length === 0) {
+        // Not found — ask before saving to customer DB
+        setConfirmSaveCustomer({ patch });
+        return;
+      }
+    }
+    await savePatch(patch);
+  };
+
+  const confirmYesSaveCustomer = async () => {
+    if (!confirmSaveCustomer) return;
+    const p = confirmSaveCustomer.patch;
+    setSavingCustomer(true);
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes?.user?.id;
+    if (p.customer_name && p.customer_phone && uid) {
+      const { error } = await supabase.from("customers").insert({
+        name: p.customer_name,
+        phone: p.customer_phone,
+        email: p.customer_email,
+        store_id: order.store_id,
+        created_by: uid,
+      });
+      if (error && !String(error.message).toLowerCase().includes("duplicate")) {
+        toast.error("Gagal menyimpan pelanggan: " + error.message);
+      } else {
+        toast.success("Pelanggan disimpan ke database");
+      }
+    } else if (!p.customer_phone) {
+      toast.info("Nomor telpon kosong — hanya menyimpan ke order");
+    }
+    setSavingCustomer(false);
+    setConfirmSaveCustomer(null);
+    await savePatch(p);
+  };
+
+  const confirmNoSaveCustomer = async () => {
+    if (!confirmSaveCustomer) return;
+    const p = confirmSaveCustomer.patch;
+    setConfirmSaveCustomer(null);
+    await savePatch(p);
+  };
+
+  const pickCustomerSuggestion = (c: any) => {
+    setCName(c.name || "");
+    setCPhone(c.phone || "");
+    setCEmail(c.email || "");
+    setCustomerSuggestions([]);
+  };
+
+  // ---------- Section: Pelayan POS (staff from user_store_access) ----------
+  useEffect(() => {
+    if (!order?.store_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("user_store_access")
+        .select("user_id, profiles:profiles!user_store_access_user_id_fkey(id, name, email)")
+        .eq("store_id", order.store_id);
+      const opts = (data || [])
+        .map((r: any) => r.profiles)
+        .filter(Boolean)
+        .map((p: any) => ({ id: p.id, name: p.name || p.email || "-" }));
+      setStaffOptions(opts);
+    })();
+  }, [order?.store_id]);
+
+  const openAttendantEdit = () => {
+    setAttendantDraft(order?.attendant_name || creatorName || "");
+    setEditingSection("attendant");
+  };
+
+  // ---------- Section: Jatuh Tempo ----------
+  const openDueEdit = () => {
+    setDueDateDraft(
+      order?.due_date
+        ? String(order.due_date).slice(0, 10)
+        : format(new Date(new Date(order?.date || new Date()).getTime() + 30 * 24 * 3600 * 1000), "yyyy-MM-dd")
+    );
+    setEditingSection("due_date");
+  };
+  const setDuePreset = (days: number) => {
+    const base = new Date(order?.date || new Date());
+    const d = new Date(base.getTime() + days * 24 * 3600 * 1000);
+    setDueDateDraft(format(d, "yyyy-MM-dd"));
+  };
+
+  // ---------- Section: Footer / Note ----------
+  const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
+  const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><AnkaLoader /></div>;
   if (!order) return (
@@ -400,12 +552,57 @@ export default function PosOrderDetail() {
 
         {/* Customer + Shipping destination */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Pelanggan" onEdit={() => setQuickEdit({ kind: "customer" })}>
-            <InfoRow label="Nama" value={customerName} />
-            <InfoRow label="Email" value={customerEmail} />
-            <InfoRow label="Telpon" value={customerPhone} last />
+          <SectionCard
+            title="Pelanggan"
+            onEdit={editingSection === "customer" ? undefined : openCustomerEdit}
+          >
+            {editingSection === "customer" ? (
+              <div className="p-4 space-y-3">
+                <div className="relative">
+                  <Label className="text-xs text-muted-foreground">Nama</Label>
+                  <Input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Nama pelanggan" />
+                  {customerSuggestions.length > 0 && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-56 overflow-auto">
+                      {customerSuggestions.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => pickCustomerSuggestion(c)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex justify-between"
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-muted-foreground">{c.phone}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Telpon</Label>
+                  <Input value={cPhone} onChange={(e) => setCPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="email@contoh.com" />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}>
+                    <X className="h-4 w-4 mr-1" /> Batal
+                  </Button>
+                  <Button size="sm" onClick={submitCustomerEdit} disabled={savingCustomer}>
+                    <Check className="h-4 w-4 mr-1" /> Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <InfoRow label="Nama" value={customerName} />
+                <InfoRow label="Email" value={customerEmail} />
+                <InfoRow label="Telpon" value={customerPhone} last />
+              </>
+            )}
           </SectionCard>
-          <SectionCard title="Catatan Pesanan" onEdit={() => setQuickEdit({ kind: "note" })}>
+          <SectionCard title="Catatan Pesanan">
             <div className="p-4 space-y-2">
               <Textarea
                 value={noteDraft}
@@ -537,40 +734,120 @@ export default function PosOrderDetail() {
 
         {/* Pelayan POS + Jatuh tempo */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Pelayan POS" onEdit={() => setQuickEdit({ kind: "attendant" })}>
-            <div className="p-4 text-foreground">{order.attendant_name || creatorName}</div>
+          <SectionCard
+            title="Pelayan POS"
+            onEdit={editingSection === "attendant" ? undefined : openAttendantEdit}
+          >
+            {editingSection === "attendant" ? (
+              <div className="p-4 space-y-3">
+                <Label className="text-xs text-muted-foreground">Pilih Pelayan (staff outlet)</Label>
+                <Select value={attendantDraft} onValueChange={setAttendantDraft}>
+                  <SelectTrigger><SelectValue placeholder="Pilih staff" /></SelectTrigger>
+                  <SelectContent>
+                    {staffOptions.length === 0 && (
+                      <SelectItem value="__none" disabled>Belum ada staff untuk outlet ini</SelectItem>
+                    )}
+                    {staffOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ attendant_name: attendantDraft || null })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-foreground">{order.attendant_name || creatorName}</div>
+            )}
           </SectionCard>
-          <SectionCard title="Jatuh Tempo Pembayaran" onEdit={() => setQuickEdit({ kind: "due_date" })}>
-            <div className="p-6 text-center">
-              {format(
-                order.due_date
-                  ? new Date(order.due_date)
-                  : new Date(new Date(order.date).getTime() + 30 * 24 * 3600 * 1000),
-                "dd-MMM-yyyy",
-                { locale: idLocale }
-              )}
-            </div>
+          <SectionCard
+            title="Jatuh Tempo Pembayaran"
+            onEdit={editingSection === "due_date" ? undefined : openDueEdit}
+          >
+            {editingSection === "due_date" ? (
+              <div className="p-4 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDuePreset(3)}>3 hari</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDuePreset(7)}>7 hari</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDuePreset(30)}>30 hari</Button>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Custom Tanggal</Label>
+                  <Input type="date" value={dueDateDraft} onChange={(e) => setDueDateDraft(e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ due_date: dueDateDraft || null })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                {format(
+                  order.due_date
+                    ? new Date(order.due_date)
+                    : new Date(new Date(order.date).getTime() + 30 * 24 * 3600 * 1000),
+                  "dd-MMM-yyyy",
+                  { locale: idLocale }
+                )}
+              </div>
+            )}
           </SectionCard>
         </div>
 
         {/* Catatan + Invoice Footer */}
         <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Catatan" onEdit={() => setQuickEdit({ kind: "note" })} extra={
-            <Badge variant="outline" className="text-foreground border-primary/40 gap-1">
-              <StickyNote className="h-3 w-3" /> Pembeli
-            </Badge>
-          }>
-            <div className="p-4 bg-muted/30 min-h-[120px] text-muted-foreground text-sm">
-              {order.note || "Tidak ada"}
-            </div>
+          <SectionCard
+            title="Catatan"
+            onEdit={editingSection === "note_card" ? undefined : openNoteCardEdit}
+            extra={
+              <Badge variant="outline" className="text-foreground border-primary/40 gap-1">
+                <StickyNote className="h-3 w-3" /> Pembeli
+              </Badge>
+            }
+          >
+            {editingSection === "note_card" ? (
+              <div className="p-4 space-y-2">
+                <Textarea value={noteCardDraft} onChange={(e) => setNoteCardDraft(e.target.value)} className="min-h-[120px]" />
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ note: noteCardDraft })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/30 min-h-[120px] text-muted-foreground text-sm">
+                {order.note || "Tidak ada"}
+              </div>
+            )}
           </SectionCard>
-          <SectionCard title="Invoice Footer" onEdit={() => setQuickEdit({ kind: "invoice_footer" })}>
+          <SectionCard
+            title="Invoice Footer"
+            onEdit={editingSection === "footer" ? undefined : openFooterEdit}
+          >
+            {editingSection === "footer" ? (
+              <div className="p-4 space-y-2">
+                <Textarea value={footerDraft} onChange={(e) => setFooterDraft(e.target.value)} className="min-h-[120px]" />
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
+                  <Button size="sm" onClick={() => savePatch({ invoice_footer: footerDraft || null })}>
+                    <Check className="h-4 w-4 mr-1" />Simpan
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <div className="p-4 bg-muted/30 min-h-[120px] text-sm">
               <div className="text-foreground whitespace-pre-wrap">
                 {order.invoice_footer || "Tidak ada"}
               </div>
               <div className="mt-6 text-muted-foreground">Untuk info lebih lanjut, bisa hubungi Tim Support kami</div>
             </div>
+            )}
           </SectionCard>
         </div>
 
@@ -653,16 +930,18 @@ export default function PosOrderDetail() {
         onSave={saveItemEdit}
       />
 
-      <QuickEditDialog
-        state={quickEdit}
-        order={order}
-        customerName={customerName}
-        customerPhone={customerPhone}
-        customerEmail={customerEmail}
-        attendantFallback={creatorName}
-        onClose={() => setQuickEdit(null)}
-        onSave={saveQuickEdit}
-      />
+      <Dialog open={!!confirmSaveCustomer} onOpenChange={(v) => !v && setConfirmSaveCustomer(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Pelanggan tidak ditemukan</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Data pelanggan ini belum ada di database. Apakah Anda ingin menyimpannya sebagai pelanggan baru?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={confirmNoSaveCustomer}>Tidak</Button>
+            <Button onClick={confirmYesSaveCustomer} disabled={savingCustomer}>Ya, Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg">
@@ -827,113 +1106,6 @@ function SectionCard({
       </div>
       <div>{children}</div>
     </div>
-  );
-}
-
-function QuickEditDialog({
-  state, order, customerName, customerPhone, customerEmail, attendantFallback, onClose, onSave,
-}: {
-  state: QuickEditKind | null;
-  order: any;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  attendantFallback: string;
-  onClose: () => void;
-  onSave: (patch: Record<string, any>) => void;
-}) {
-  const [cName, setCName] = useState("");
-  const [cPhone, setCPhone] = useState("");
-  const [cEmail, setCEmail] = useState("");
-  const [note, setNote] = useState("");
-  const [attendant, setAttendant] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [footer, setFooter] = useState("");
-
-  useEffect(() => {
-    if (!state) return;
-    setCName(customerName === "-" ? "" : customerName);
-    setCPhone(customerPhone === "-" ? "" : customerPhone);
-    setCEmail(customerEmail === "-" ? "" : customerEmail);
-    setNote(order?.note || "");
-    setAttendant(order?.attendant_name || attendantFallback || "");
-    setDueDate(
-      order?.due_date
-        ? String(order.due_date).slice(0, 10)
-        : format(new Date(new Date(order?.date || new Date()).getTime() + 30 * 24 * 3600 * 1000), "yyyy-MM-dd")
-    );
-    setFooter(order?.invoice_footer || "");
-  }, [state, order?.id]);
-
-  if (!state) return null;
-
-  const title =
-    state.kind === "customer" ? "Edit Pelanggan"
-    : state.kind === "note" ? "Edit Catatan"
-    : state.kind === "attendant" ? "Edit Pelayan POS"
-    : state.kind === "due_date" ? "Edit Jatuh Tempo"
-    : "Edit Invoice Footer";
-
-  const submit = () => {
-    if (state.kind === "customer") onSave({ customer_name: cName || null, customer_phone: cPhone || null, customer_email: cEmail || null });
-    else if (state.kind === "note") onSave({ note });
-    else if (state.kind === "attendant") onSave({ attendant_name: attendant || null });
-    else if (state.kind === "due_date") onSave({ due_date: dueDate || null });
-    else if (state.kind === "invoice_footer") onSave({ invoice_footer: footer || null });
-  };
-
-  return (
-    <Dialog open={!!state} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          {state.kind === "customer" && (
-            <>
-              <div>
-                <Label className="text-xs text-muted-foreground">Nama</Label>
-                <Input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Nama pelanggan" />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Telpon</Label>
-                <Input value={cPhone} onChange={(e) => setCPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Email</Label>
-                <Input value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="email@contoh.com" />
-              </div>
-            </>
-          )}
-          {state.kind === "note" && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Catatan</Label>
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-[120px]" />
-            </div>
-          )}
-          {state.kind === "attendant" && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Nama Pelayan</Label>
-              <Input value={attendant} onChange={(e) => setAttendant(e.target.value)} />
-            </div>
-          )}
-          {state.kind === "due_date" && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Tanggal Jatuh Tempo</Label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </div>
-          )}
-          {state.kind === "invoice_footer" && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Teks Footer Invoice</Label>
-              <Textarea value={footer} onChange={(e) => setFooter(e.target.value)} className="min-h-[120px]" />
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button onClick={submit}>Simpan</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
