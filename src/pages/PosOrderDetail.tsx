@@ -331,13 +331,146 @@ export default function PosOrderDetail() {
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
 
-  const saveQuickEdit = async (patch: Record<string, any>) => {
+  const savePatch = async (patch: Record<string, any>) => {
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) { toast.error("Gagal menyimpan"); return; }
     toast.success("Perubahan disimpan");
-    setQuickEdit(null);
+    setEditingSection(null);
     load();
   };
+
+  // ---------- Section: Pelanggan ----------
+  const openCustomerEdit = () => {
+    setCName(customerName === "-" ? "" : customerName);
+    setCPhone(customerPhone === "-" ? "" : customerPhone);
+    setCEmail(customerEmail === "-" ? "" : customerEmail);
+    setCustomerSuggestions([]);
+    setEditingSection("customer");
+  };
+
+  // Debounced suggest from customers table for this store
+  useEffect(() => {
+    if (editingSection !== "customer" || !order?.store_id) return;
+    const q = (cName || cPhone).trim();
+    if (!q) { setCustomerSuggestions([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, name, phone, email")
+        .eq("store_id", order.store_id)
+        .or(`name.ilike.%${q}%,phone.ilike.%${q}%`)
+        .limit(6);
+      setCustomerSuggestions(data || []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [cName, cPhone, editingSection, order?.store_id]);
+
+  const submitCustomerEdit = async () => {
+    const patch = {
+      customer_name: cName.trim() || null,
+      customer_phone: cPhone.trim() || null,
+      customer_email: cEmail.trim() || null,
+    };
+    // Match against DB
+    if (patch.customer_name || patch.customer_phone) {
+      const filters: string[] = [];
+      if (patch.customer_phone) filters.push(`phone.eq.${patch.customer_phone}`);
+      if (patch.customer_name) filters.push(`name.ilike.${patch.customer_name}`);
+      const { data: matches } = await supabase
+        .from("customers")
+        .select("id, name, phone")
+        .eq("store_id", order.store_id)
+        .or(filters.join(","))
+        .limit(1);
+      if (!matches || matches.length === 0) {
+        // Not found — ask before saving to customer DB
+        setConfirmSaveCustomer({ patch });
+        return;
+      }
+    }
+    await savePatch(patch);
+  };
+
+  const confirmYesSaveCustomer = async () => {
+    if (!confirmSaveCustomer) return;
+    const p = confirmSaveCustomer.patch;
+    setSavingCustomer(true);
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes?.user?.id;
+    if (p.customer_name && p.customer_phone && uid) {
+      const { error } = await supabase.from("customers").insert({
+        name: p.customer_name,
+        phone: p.customer_phone,
+        email: p.customer_email,
+        store_id: order.store_id,
+        created_by: uid,
+      });
+      if (error && !String(error.message).toLowerCase().includes("duplicate")) {
+        toast.error("Gagal menyimpan pelanggan: " + error.message);
+      } else {
+        toast.success("Pelanggan disimpan ke database");
+      }
+    } else if (!p.customer_phone) {
+      toast.info("Nomor telpon kosong — hanya menyimpan ke order");
+    }
+    setSavingCustomer(false);
+    setConfirmSaveCustomer(null);
+    await savePatch(p);
+  };
+
+  const confirmNoSaveCustomer = async () => {
+    if (!confirmSaveCustomer) return;
+    const p = confirmSaveCustomer.patch;
+    setConfirmSaveCustomer(null);
+    await savePatch(p);
+  };
+
+  const pickCustomerSuggestion = (c: any) => {
+    setCName(c.name || "");
+    setCPhone(c.phone || "");
+    setCEmail(c.email || "");
+    setCustomerSuggestions([]);
+  };
+
+  // ---------- Section: Pelayan POS (staff from user_store_access) ----------
+  useEffect(() => {
+    if (!order?.store_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("user_store_access")
+        .select("user_id, profiles:profiles!user_store_access_user_id_fkey(id, name, email)")
+        .eq("store_id", order.store_id);
+      const opts = (data || [])
+        .map((r: any) => r.profiles)
+        .filter(Boolean)
+        .map((p: any) => ({ id: p.id, name: p.name || p.email || "-" }));
+      setStaffOptions(opts);
+    })();
+  }, [order?.store_id]);
+
+  const openAttendantEdit = () => {
+    setAttendantDraft(order?.attendant_name || creatorName || "");
+    setEditingSection("attendant");
+  };
+
+  // ---------- Section: Jatuh Tempo ----------
+  const openDueEdit = () => {
+    setDueDateDraft(
+      order?.due_date
+        ? String(order.due_date).slice(0, 10)
+        : format(new Date(new Date(order?.date || new Date()).getTime() + 30 * 24 * 3600 * 1000), "yyyy-MM-dd")
+    );
+    setEditingSection("due_date");
+  };
+  const setDuePreset = (days: number) => {
+    const base = new Date(order?.date || new Date());
+    const d = new Date(base.getTime() + days * 24 * 3600 * 1000);
+    setDueDateDraft(format(d, "yyyy-MM-dd"));
+  };
+
+  // ---------- Section: Footer / Note ----------
+  const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
+  const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><AnkaLoader /></div>;
   if (!order) return (
