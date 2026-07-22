@@ -11,7 +11,10 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft, Printer, Pencil, Bell, ChevronDown, Trash2, Plus, Calendar, Check, X,
   StickyNote, CheckCircle2, XCircle, Search,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,12 +28,7 @@ import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 
-type QuickEditKind =
-  | { kind: "customer" }
-  | { kind: "note" }
-  | { kind: "attendant" }
-  | { kind: "due_date" }
-  | { kind: "invoice_footer" };
+type SectionKey = "customer" | "attendant" | "due_date" | "footer" | "note_card";
 
 interface OrderItem {
   id: string;
