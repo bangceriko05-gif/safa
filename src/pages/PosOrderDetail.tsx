@@ -101,6 +101,11 @@ export default function PosOrderDetail() {
     }
   }, [order?.id]);
 
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/dashboard");
+  };
+
   const saveNote = async () => {
     setSavingNote(true);
     const { error } = await supabase
@@ -109,18 +114,18 @@ export default function PosOrderDetail() {
     if (error) { toast.error("Gagal menyimpan catatan"); return; }
     setNoteDirty(false);
     toast.success("Catatan disimpan");
-    load();
+    load({ silent: true });
   };
 
-  const load = async () => {
+  const load = async (opts: { silent?: boolean } = {}) => {
     if (!id) return;
-    setLoading(true);
+    if (!opts.silent) setLoading(true);
     const { data: o } = await supabase
       .from("booking_orders")
       .select("*")
       .eq("id", id)
       .maybeSingle();
-    if (!o) { setLoading(false); return; }
+    if (!o) { if (!opts.silent) setLoading(false); return; }
     setOrder(o);
 
     const { data: its } = await supabase
@@ -164,7 +169,7 @@ export default function PosOrderDetail() {
         }
       }
     }
-    setLoading(false);
+    if (!opts.silent) setLoading(false);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
@@ -218,7 +223,7 @@ export default function PosOrderDetail() {
     await recomputeOrderTotal(next);
     toast.success("Item diperbarui");
     setEditItem(null);
-    load();
+    load({ silent: true });
   };
 
   const removeItem = async (itemId: string) => {
@@ -228,7 +233,7 @@ export default function PosOrderDetail() {
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success("Item dihapus");
-    load();
+    load({ silent: true });
   };
 
   const addProduct = async (p: any) => {
@@ -255,7 +260,7 @@ export default function PosOrderDetail() {
     toast.success(`${p.name} ditambahkan`);
     setAddOpen(false);
     setProductSearch("");
-    load();
+    load({ silent: true });
   };
 
   // Distribute an order-level discount across items proportionally
@@ -280,7 +285,7 @@ export default function PosOrderDetail() {
     setItems(updates as any);
     await recomputeOrderTotal(updates as any);
     toast.success("Diskon diterapkan");
-    load();
+    load({ silent: true });
   };
 
   const togglePayment = async () => {
@@ -288,7 +293,7 @@ export default function PosOrderDetail() {
     const { error } = await supabase
       .from("booking_orders").update({ payment_status: next }).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
-    else { toast.success("Status diperbarui"); load(); }
+    else { toast.success("Status diperbarui"); load({ silent: true }); }
   };
 
   const cancelOrder = async () => {
@@ -298,7 +303,7 @@ export default function PosOrderDetail() {
     const { error: e2 } = await supabase.from("booking_orders").delete().eq("id", id!);
     if (e2) { toast.error("Gagal membatalkan"); return; }
     toast.success("Order dibatalkan");
-    navigate(-1);
+    goBack();
   };
 
   const setStatus = async (label: "Proses" | "Selesai") => {
@@ -306,7 +311,7 @@ export default function PosOrderDetail() {
     const { error } = await supabase
       .from("booking_orders").update({ payment_status: next }).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
-    else { toast.success(`Status: ${label}`); load(); }
+    else { toast.success(`Status: ${label}`); load({ silent: true }); }
   };
 
   const currentStatusLabel = isLunas ? "Selesai" : "Proses";
@@ -326,7 +331,7 @@ export default function PosOrderDetail() {
     if (patch.amount >= grand) patch.payment_status = "lunas";
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) toast.error("Gagal menyimpan pembayaran");
-    else { toast.success("Pembayaran disimpan"); load(); }
+    else { toast.success("Pembayaran disimpan"); load({ silent: true }); }
   };
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
@@ -336,7 +341,12 @@ export default function PosOrderDetail() {
     if (error) { toast.error("Gagal menyimpan"); return; }
     toast.success("Perubahan disimpan");
     setEditingSection(null);
-    load();
+    // Optimistically merge so the UI updates immediately
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    if (patch.customer_name !== undefined) setCustomerName(patch.customer_name || "-");
+    if (patch.customer_phone !== undefined) setCustomerPhone(patch.customer_phone || "-");
+    if (patch.customer_email !== undefined) setCustomerEmail(patch.customer_email || "-");
+    load({ silent: true });
   };
 
   // ---------- Section: Pelanggan ----------
@@ -433,17 +443,23 @@ export default function PosOrderDetail() {
   };
 
   // ---------- Section: Pelayan POS (staff from user_store_access) ----------
+  // NOTE: user_store_access.user_id references auth.users, not profiles, so no
+  // PostgREST embed is possible. Fetch in two steps.
   useEffect(() => {
     if (!order?.store_id) return;
     (async () => {
-      const { data } = await supabase
+      const { data: access } = await supabase
         .from("user_store_access")
-        .select("user_id, profiles:profiles!user_store_access_user_id_fkey(id, name, email)")
+        .select("user_id")
         .eq("store_id", order.store_id);
-      const opts = (data || [])
-        .map((r: any) => r.profiles)
-        .filter(Boolean)
-        .map((p: any) => ({ id: p.id, name: p.name || p.email || "-" }));
+      const ids = Array.from(new Set((access || []).map((r: any) => r.user_id).filter(Boolean)));
+      if (ids.length === 0) { setStaffOptions([]); return; }
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .in("id", ids);
+      const opts = (profs || []).map((p: any) => ({ id: p.id, name: p.name || p.email || "-" }));
+      opts.sort((a, b) => a.name.localeCompare(b.name));
       setStaffOptions(opts);
     })();
   }, [order?.store_id]);
@@ -476,7 +492,7 @@ export default function PosOrderDetail() {
   if (!order) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <p className="text-muted-foreground">Data tidak ditemukan.</p>
-      <Button onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4 mr-2" />Kembali</Button>
+      <Button onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" />Kembali</Button>
     </div>
   );
 
@@ -498,7 +514,7 @@ export default function PosOrderDetail() {
 
         {/* Header */}
         <div className="bg-card rounded-lg border p-4 flex flex-col md:flex-row md:items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={goBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
