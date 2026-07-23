@@ -303,7 +303,7 @@ export default function PosOrderDetail() {
     const { error: e2 } = await supabase.from("booking_orders").delete().eq("id", id!);
     if (e2) { toast.error("Gagal membatalkan"); return; }
     toast.success("Order dibatalkan");
-    navigate(-1);
+    goBack();
   };
 
   const setStatus = async (label: "Proses" | "Selesai") => {
@@ -492,7 +492,7 @@ export default function PosOrderDetail() {
   if (!order) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <p className="text-muted-foreground">Data tidak ditemukan.</p>
-      <Button onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4 mr-2" />Kembali</Button>
+      <Button onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" />Kembali</Button>
     </div>
   );
 
@@ -514,7 +514,7 @@ export default function PosOrderDetail() {
 
         {/* Header */}
         <div className="bg-card rounded-lg border p-4 flex flex-col md:flex-row md:items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={goBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
