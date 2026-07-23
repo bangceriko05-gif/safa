@@ -804,11 +804,38 @@ export default function PosOrderDetail() {
                   action="Pengaturan Diskon"
                   onAction={() => setDiscountOpen(true)}
                 />
-                <SummaryRow label="Biaya Layanan" value={`IDR ${fmt(Number(order.service_charge || 0))}`} />
-                <SummaryRow label="Pajak" value={`IDR ${fmt(Number(order.tax_amount || 0))}`} />
-                <SummaryRow label="Pembulatan" value="IDR 0" />
-                <SummaryRow label="Biaya admin" value="IDR 0" />
-                <SummaryRow label="Biaya Pengiriman" value="IDR 0" action="Pengaturan Biaya Pengiriman" />
+                <SummaryRow
+                  label="Biaya Layanan"
+                  value={`IDR ${fmt(Number(order.service_charge || 0))}`}
+                  action={Number(order.service_charge || 0) > 0 ? "Nonaktifkan" : "Aktifkan"}
+                  onAction={toggleServiceCharge}
+                  extraAction={Number(order.service_charge || 0) > 0 ? "Ubah Nominal" : undefined}
+                  onExtraAction={Number(order.service_charge || 0) > 0 ? () => openAdjust("service") : undefined}
+                />
+                <SummaryRow
+                  label="Pajak"
+                  value={`IDR ${fmt(Number(order.tax_amount || 0))}`}
+                  action="Pengaturan Pajak"
+                  onAction={() => openAdjust("tax")}
+                />
+                <SummaryRow
+                  label="Pembulatan"
+                  value={`IDR ${fmt(Number((order as any).rounding || 0))}`}
+                  action="Pengaturan Pembulatan"
+                  onAction={() => openAdjust("rounding")}
+                />
+                <SummaryRow
+                  label="Biaya admin"
+                  value={`IDR ${fmt(Number((order as any).admin_fee || 0))}`}
+                  action="Pengaturan Biaya Admin"
+                  onAction={() => openAdjust("admin")}
+                />
+                <SummaryRow
+                  label="Biaya Pengiriman"
+                  value={`IDR ${fmt(Number((order as any).shipping_amount || 0))}`}
+                  action="Pengaturan Biaya Pengiriman"
+                  onAction={() => openAdjust("shipping")}
+                />
                 <SummaryRow label="Total Ditagihkan" value={`IDR ${fmt(grand)}`} bold />
                 <SummaryRow
                   label={`Pembayaran ${(order.payment_method || "").toUpperCase() || "-"}`}
