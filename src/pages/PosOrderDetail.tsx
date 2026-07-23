@@ -70,6 +70,15 @@ export default function PosOrderDetail() {
   // Attendant edit state
   const [attendantDraft, setAttendantDraft] = useState("");
   const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
+  const [staffSearch, setStaffSearch] = useState("");
+
+  // POS settings (for service charge percent/type)
+  const [posSettings, setPosSettings] = useState<any | null>(null);
+
+  // Generic adjustment dialog (shipping, tax, admin, rounding, service charge)
+  type AdjustKind = "shipping" | "tax" | "admin" | "rounding" | "service";
+  const [adjustKind, setAdjustKind] = useState<AdjustKind | null>(null);
+  const [adjustValue, setAdjustValue] = useState<number>(0);
 
   // Due date edit state
   const [dueDateDraft, setDueDateDraft] = useState("");
@@ -202,12 +211,15 @@ export default function PosOrderDetail() {
   const outstanding = Math.max(0, grand - paid);
 
   // Recompute the order total after items change and persist
-  const recomputeOrderTotal = async (nextItems: OrderItem[]) => {
+  const recomputeOrderTotal = async (nextItems: OrderItem[], overrides: Record<string, number> = {}) => {
     const sub = nextItems.reduce((s, it) => s + Number(it.subtotal || 0), 0);
-    const tax = Number(order?.tax_amount || 0);
-    const svc = Number(order?.service_charge || 0);
-    const total = sub + tax + svc;
-    await supabase.from("booking_orders").update({ total_amount: total }).eq("id", id!);
+    const tax = Number(overrides.tax_amount ?? order?.tax_amount ?? 0);
+    const svc = Number(overrides.service_charge ?? order?.service_charge ?? 0);
+    const ship = Number(overrides.shipping_amount ?? (order as any)?.shipping_amount ?? 0);
+    const admin = Number(overrides.admin_fee ?? (order as any)?.admin_fee ?? 0);
+    const round = Number(overrides.rounding ?? (order as any)?.rounding ?? 0);
+    const total = sub + tax + svc + ship + admin + round;
+    await supabase.from("booking_orders").update({ total_amount: total } as any).eq("id", id!);
   };
 
   const saveItemEdit = async (patch: { quantity: number; unit_price: number; discount: number; discount_mode: "rp" | "pct"; discount_value: number }) => {
@@ -464,6 +476,79 @@ export default function PosOrderDetail() {
     })();
   }, [order?.store_id]);
 
+  // Load POS settings (for service charge percent/type)
+  useEffect(() => {
+    if (!order?.store_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("pos_settings")
+        .select("*")
+        .eq("store_id", order.store_id)
+        .maybeSingle();
+      setPosSettings(data || null);
+    })();
+  }, [order?.store_id]);
+
+  // ---------- Adjustment dialog helpers ----------
+  const openAdjust = (kind: AdjustKind) => {
+    const map: Record<AdjustKind, number> = {
+      shipping: Number((order as any)?.shipping_amount || 0),
+      tax: Number(order?.tax_amount || 0),
+      admin: Number((order as any)?.admin_fee || 0),
+      rounding: Number((order as any)?.rounding || 0),
+      service: Number(order?.service_charge || 0),
+    };
+    setAdjustValue(map[kind]);
+    setAdjustKind(kind);
+  };
+  const adjustLabels: Record<AdjustKind, string> = {
+    shipping: "Biaya Pengiriman",
+    tax: "Pajak",
+    admin: "Biaya Admin",
+    rounding: "Pembulatan",
+    service: "Biaya Layanan (Service Charge)",
+  };
+  const saveAdjust = async () => {
+    if (!adjustKind) return;
+    const colMap: Record<AdjustKind, string> = {
+      shipping: "shipping_amount",
+      tax: "tax_amount",
+      admin: "admin_fee",
+      rounding: "rounding",
+      service: "service_charge",
+    };
+    const col = colMap[adjustKind];
+    const patch: Record<string, any> = { [col]: adjustValue };
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    await recomputeOrderTotal(items, patch);
+    setAdjustKind(null);
+    toast.success(`${adjustLabels[adjustKind]} disimpan`);
+    load({ silent: true });
+  };
+
+  // Toggle service charge on/off using percent from pos_settings
+  const toggleServiceCharge = async () => {
+    const currentlyOn = Number(order?.service_charge || 0) > 0;
+    let newAmount = 0;
+    if (!currentlyOn) {
+      const type = posSettings?.service_charge_type || "percent";
+      const val = Number(posSettings?.service_charge_value || 0);
+      if (!posSettings?.service_charge_enabled || val <= 0) {
+        toast.error("Aktifkan & atur nilai Service Charge di Pengaturan POS terlebih dahulu");
+        return;
+      }
+      const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+      newAmount = type === "percent" ? Math.round((sub * val) / 100) : Math.round(val);
+    }
+    const patch = { service_charge: newAmount };
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    await recomputeOrderTotal(items, patch);
+    toast.success(newAmount > 0 ? "Service Charge diaktifkan" : "Service Charge dinonaktifkan");
+    load({ silent: true });
+  };
+
   const openAttendantEdit = () => {
     setAttendantDraft(order?.attendant_name || creatorName || "");
     setEditingSection("attendant");
@@ -719,11 +804,38 @@ export default function PosOrderDetail() {
                   action="Pengaturan Diskon"
                   onAction={() => setDiscountOpen(true)}
                 />
-                <SummaryRow label="Biaya Layanan" value={`IDR ${fmt(Number(order.service_charge || 0))}`} />
-                <SummaryRow label="Pajak" value={`IDR ${fmt(Number(order.tax_amount || 0))}`} />
-                <SummaryRow label="Pembulatan" value="IDR 0" />
-                <SummaryRow label="Biaya admin" value="IDR 0" />
-                <SummaryRow label="Biaya Pengiriman" value="IDR 0" action="Pengaturan Biaya Pengiriman" />
+                <SummaryRow
+                  label="Biaya Layanan"
+                  value={`IDR ${fmt(Number(order.service_charge || 0))}`}
+                  action={Number(order.service_charge || 0) > 0 ? "Nonaktifkan" : "Aktifkan"}
+                  onAction={toggleServiceCharge}
+                  extraAction={Number(order.service_charge || 0) > 0 ? "Ubah Nominal" : undefined}
+                  onExtraAction={Number(order.service_charge || 0) > 0 ? () => openAdjust("service") : undefined}
+                />
+                <SummaryRow
+                  label="Pajak"
+                  value={`IDR ${fmt(Number(order.tax_amount || 0))}`}
+                  action="Pengaturan Pajak"
+                  onAction={() => openAdjust("tax")}
+                />
+                <SummaryRow
+                  label="Pembulatan"
+                  value={`IDR ${fmt(Number((order as any).rounding || 0))}`}
+                  action="Pengaturan Pembulatan"
+                  onAction={() => openAdjust("rounding")}
+                />
+                <SummaryRow
+                  label="Biaya admin"
+                  value={`IDR ${fmt(Number((order as any).admin_fee || 0))}`}
+                  action="Pengaturan Biaya Admin"
+                  onAction={() => openAdjust("admin")}
+                />
+                <SummaryRow
+                  label="Biaya Pengiriman"
+                  value={`IDR ${fmt(Number((order as any).shipping_amount || 0))}`}
+                  action="Pengaturan Biaya Pengiriman"
+                  onAction={() => openAdjust("shipping")}
+                />
                 <SummaryRow label="Total Ditagihkan" value={`IDR ${fmt(grand)}`} bold />
                 <SummaryRow
                   label={`Pembayaran ${(order.payment_method || "").toUpperCase() || "-"}`}
@@ -756,18 +868,40 @@ export default function PosOrderDetail() {
           >
             {editingSection === "attendant" ? (
               <div className="p-4 space-y-3">
-                <Label className="text-xs text-muted-foreground">Pilih Pelayan (staff outlet)</Label>
-                <Select value={attendantDraft} onValueChange={setAttendantDraft}>
-                  <SelectTrigger><SelectValue placeholder="Pilih staff" /></SelectTrigger>
-                  <SelectContent>
-                    {staffOptions.length === 0 && (
-                      <SelectItem value="__none" disabled>Belum ada staff untuk outlet ini</SelectItem>
-                    )}
-                    {staffOptions.map((s) => (
-                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                <Label className="text-xs text-muted-foreground">Cari pelayan (staff outlet)</Label>
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  <Input
+                    value={staffSearch || attendantDraft}
+                    onChange={(e) => { setStaffSearch(e.target.value); setAttendantDraft(e.target.value); }}
+                    placeholder="Ketik nama pelayan..."
+                    className="pl-9"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-56 overflow-auto border rounded-md divide-y">
+                  {staffOptions
+                    .filter((s) => {
+                      const q = (staffSearch || "").trim().toLowerCase();
+                      if (!q) return true;
+                      return s.name.toLowerCase().includes(q);
+                    })
+                    .slice(0, 50)
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => { setAttendantDraft(s.name); setStaffSearch(s.name); }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center justify-between ${attendantDraft === s.name ? "bg-muted" : ""}`}
+                      >
+                        <span>{s.name}</span>
+                        {attendantDraft === s.name && <Check className="h-4 w-4 text-primary" />}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  {staffOptions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Belum ada staff untuk outlet ini</div>
+                  )}
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
                   <Button size="sm" onClick={() => savePatch({ attendant_name: attendantDraft || null })}>
@@ -945,6 +1079,34 @@ export default function PosOrderDetail() {
         onClose={() => setEditItem(null)}
         onSave={saveItemEdit}
       />
+
+      <Dialog open={!!adjustKind} onOpenChange={(v) => !v && setAdjustKind(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{adjustKind ? adjustLabels[adjustKind] : ""}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Nominal (Rp)</Label>
+            <Input
+              inputMode="numeric"
+              value={adjustValue ? new Intl.NumberFormat("id-ID").format(adjustValue) : ""}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^\d-]/g, "");
+                setAdjustValue(raw ? parseInt(raw, 10) : 0);
+              }}
+              placeholder="0"
+              autoFocus
+            />
+            {adjustKind === "rounding" && (
+              <p className="text-xs text-muted-foreground">Boleh negatif untuk pembulatan ke bawah.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustKind(null)}>Batal</Button>
+            <Button onClick={saveAdjust}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!confirmSaveCustomer} onOpenChange={(v) => !v && setConfirmSaveCustomer(null)}>
         <DialogContent className="max-w-sm">
@@ -1134,14 +1296,17 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
   );
 }
 
-function SummaryRow({ label, value, action, bold, onAction }: { label: string; value: string; action?: string; bold?: boolean; onAction?: () => void }) {
+function SummaryRow({ label, value, action, bold, onAction, extraAction, onExtraAction }: { label: string; value: string; action?: string; bold?: boolean; onAction?: () => void; extraAction?: string; onExtraAction?: () => void }) {
   return (
     <tr className="border-t">
       <td colSpan={4} className={`px-4 py-2 text-right text-foreground ${bold ? "font-semibold" : ""}`}>{label}</td>
       <td></td>
       <td className={`px-4 py-2 text-right tabular-nums ${bold ? "font-semibold" : ""}`}>{value}</td>
       <td className="px-4 py-2 text-right text-foreground text-xs">
-        {action ? <button onClick={onAction} className="hover:underline">⚙ {action}</button> : null}
+        <div className="flex justify-end gap-2">
+          {action ? <button onClick={onAction} className="hover:underline whitespace-nowrap">⚙ {action}</button> : null}
+          {extraAction ? <button onClick={onExtraAction} className="hover:underline whitespace-nowrap">⚙ {extraAction}</button> : null}
+        </div>
       </td>
     </tr>
   );

@@ -437,6 +437,7 @@ export type Database = {
       }
       booking_orders: {
         Row: {
+          admin_fee: number
           amount: number
           amount_2: number
           attendant_name: string | null
@@ -459,9 +460,11 @@ export type Database = {
           payment_status: string
           reference_no: string | null
           reference_no_2: string | null
+          rounding: number
           service_charge: number
           service_charge_type: string | null
           service_charge_value: number | null
+          shipping_amount: number
           store_id: string
           tax_amount: number
           tax_enabled: boolean
@@ -472,6 +475,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_fee?: number
           amount?: number
           amount_2?: number
           attendant_name?: string | null
@@ -494,9 +498,11 @@ export type Database = {
           payment_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
+          rounding?: number
           service_charge?: number
           service_charge_type?: string | null
           service_charge_value?: number | null
+          shipping_amount?: number
           store_id: string
           tax_amount?: number
           tax_enabled?: boolean
@@ -507,6 +513,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_fee?: number
           amount?: number
           amount_2?: number
           attendant_name?: string | null
@@ -529,9 +536,11 @@ export type Database = {
           payment_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
+          rounding?: number
           service_charge?: number
           service_charge_type?: string | null
           service_charge_value?: number | null
+          shipping_amount?: number
           store_id?: string
           tax_amount?: number
           tax_enabled?: boolean
