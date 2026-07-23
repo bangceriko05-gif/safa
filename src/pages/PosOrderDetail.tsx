@@ -70,6 +70,15 @@ export default function PosOrderDetail() {
   // Attendant edit state
   const [attendantDraft, setAttendantDraft] = useState("");
   const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
+  const [staffSearch, setStaffSearch] = useState("");
+
+  // POS settings (for service charge percent/type)
+  const [posSettings, setPosSettings] = useState<any | null>(null);
+
+  // Generic adjustment dialog (shipping, tax, admin, rounding, service charge)
+  type AdjustKind = "shipping" | "tax" | "admin" | "rounding" | "service";
+  const [adjustKind, setAdjustKind] = useState<AdjustKind | null>(null);
+  const [adjustValue, setAdjustValue] = useState<number>(0);
 
   // Due date edit state
   const [dueDateDraft, setDueDateDraft] = useState("");
@@ -202,12 +211,15 @@ export default function PosOrderDetail() {
   const outstanding = Math.max(0, grand - paid);
 
   // Recompute the order total after items change and persist
-  const recomputeOrderTotal = async (nextItems: OrderItem[]) => {
+  const recomputeOrderTotal = async (nextItems: OrderItem[], overrides: Record<string, number> = {}) => {
     const sub = nextItems.reduce((s, it) => s + Number(it.subtotal || 0), 0);
-    const tax = Number(order?.tax_amount || 0);
-    const svc = Number(order?.service_charge || 0);
-    const total = sub + tax + svc;
-    await supabase.from("booking_orders").update({ total_amount: total }).eq("id", id!);
+    const tax = Number(overrides.tax_amount ?? order?.tax_amount ?? 0);
+    const svc = Number(overrides.service_charge ?? order?.service_charge ?? 0);
+    const ship = Number(overrides.shipping_amount ?? (order as any)?.shipping_amount ?? 0);
+    const admin = Number(overrides.admin_fee ?? (order as any)?.admin_fee ?? 0);
+    const round = Number(overrides.rounding ?? (order as any)?.rounding ?? 0);
+    const total = sub + tax + svc + ship + admin + round;
+    await supabase.from("booking_orders").update({ total_amount: total } as any).eq("id", id!);
   };
 
   const saveItemEdit = async (patch: { quantity: number; unit_price: number; discount: number; discount_mode: "rp" | "pct"; discount_value: number }) => {
@@ -463,6 +475,79 @@ export default function PosOrderDetail() {
       setStaffOptions(opts);
     })();
   }, [order?.store_id]);
+
+  // Load POS settings (for service charge percent/type)
+  useEffect(() => {
+    if (!order?.store_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("pos_settings")
+        .select("*")
+        .eq("store_id", order.store_id)
+        .maybeSingle();
+      setPosSettings(data || null);
+    })();
+  }, [order?.store_id]);
+
+  // ---------- Adjustment dialog helpers ----------
+  const openAdjust = (kind: AdjustKind) => {
+    const map: Record<AdjustKind, number> = {
+      shipping: Number((order as any)?.shipping_amount || 0),
+      tax: Number(order?.tax_amount || 0),
+      admin: Number((order as any)?.admin_fee || 0),
+      rounding: Number((order as any)?.rounding || 0),
+      service: Number(order?.service_charge || 0),
+    };
+    setAdjustValue(map[kind]);
+    setAdjustKind(kind);
+  };
+  const adjustLabels: Record<AdjustKind, string> = {
+    shipping: "Biaya Pengiriman",
+    tax: "Pajak",
+    admin: "Biaya Admin",
+    rounding: "Pembulatan",
+    service: "Biaya Layanan (Service Charge)",
+  };
+  const saveAdjust = async () => {
+    if (!adjustKind) return;
+    const colMap: Record<AdjustKind, string> = {
+      shipping: "shipping_amount",
+      tax: "tax_amount",
+      admin: "admin_fee",
+      rounding: "rounding",
+      service: "service_charge",
+    };
+    const col = colMap[adjustKind];
+    const patch: Record<string, any> = { [col]: adjustValue };
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    await recomputeOrderTotal(items, patch);
+    setAdjustKind(null);
+    toast.success(`${adjustLabels[adjustKind]} disimpan`);
+    load({ silent: true });
+  };
+
+  // Toggle service charge on/off using percent from pos_settings
+  const toggleServiceCharge = async () => {
+    const currentlyOn = Number(order?.service_charge || 0) > 0;
+    let newAmount = 0;
+    if (!currentlyOn) {
+      const type = posSettings?.service_charge_type || "percent";
+      const val = Number(posSettings?.service_charge_value || 0);
+      if (!posSettings?.service_charge_enabled || val <= 0) {
+        toast.error("Aktifkan & atur nilai Service Charge di Pengaturan POS terlebih dahulu");
+        return;
+      }
+      const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+      newAmount = type === "percent" ? Math.round((sub * val) / 100) : Math.round(val);
+    }
+    const patch = { service_charge: newAmount };
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    await recomputeOrderTotal(items, patch);
+    toast.success(newAmount > 0 ? "Service Charge diaktifkan" : "Service Charge dinonaktifkan");
+    load({ silent: true });
+  };
 
   const openAttendantEdit = () => {
     setAttendantDraft(order?.attendant_name || creatorName || "");
