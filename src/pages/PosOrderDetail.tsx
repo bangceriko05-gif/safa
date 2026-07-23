@@ -841,18 +841,40 @@ export default function PosOrderDetail() {
           >
             {editingSection === "attendant" ? (
               <div className="p-4 space-y-3">
-                <Label className="text-xs text-muted-foreground">Pilih Pelayan (staff outlet)</Label>
-                <Select value={attendantDraft} onValueChange={setAttendantDraft}>
-                  <SelectTrigger><SelectValue placeholder="Pilih staff" /></SelectTrigger>
-                  <SelectContent>
-                    {staffOptions.length === 0 && (
-                      <SelectItem value="__none" disabled>Belum ada staff untuk outlet ini</SelectItem>
-                    )}
-                    {staffOptions.map((s) => (
-                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                <Label className="text-xs text-muted-foreground">Cari pelayan (staff outlet)</Label>
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  <Input
+                    value={staffSearch || attendantDraft}
+                    onChange={(e) => { setStaffSearch(e.target.value); setAttendantDraft(e.target.value); }}
+                    placeholder="Ketik nama pelayan..."
+                    className="pl-9"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-56 overflow-auto border rounded-md divide-y">
+                  {staffOptions
+                    .filter((s) => {
+                      const q = (staffSearch || "").trim().toLowerCase();
+                      if (!q) return true;
+                      return s.name.toLowerCase().includes(q);
+                    })
+                    .slice(0, 50)
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => { setAttendantDraft(s.name); setStaffSearch(s.name); }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center justify-between ${attendantDraft === s.name ? "bg-muted" : ""}`}
+                      >
+                        <span>{s.name}</span>
+                        {attendantDraft === s.name && <Check className="h-4 w-4 text-primary" />}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  {staffOptions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Belum ada staff untuk outlet ini</div>
+                  )}
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setEditingSection(null)}><X className="h-4 w-4 mr-1" />Batal</Button>
                   <Button size="sm" onClick={() => savePatch({ attendant_name: attendantDraft || null })}>
