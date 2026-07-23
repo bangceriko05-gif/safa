@@ -1080,6 +1080,34 @@ export default function PosOrderDetail() {
         onSave={saveItemEdit}
       />
 
+      <Dialog open={!!adjustKind} onOpenChange={(v) => !v && setAdjustKind(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{adjustKind ? adjustLabels[adjustKind] : ""}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Nominal (Rp)</Label>
+            <Input
+              inputMode="numeric"
+              value={adjustValue ? new Intl.NumberFormat("id-ID").format(adjustValue) : ""}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^\d-]/g, "");
+                setAdjustValue(raw ? parseInt(raw, 10) : 0);
+              }}
+              placeholder="0"
+              autoFocus
+            />
+            {adjustKind === "rounding" && (
+              <p className="text-xs text-muted-foreground">Boleh negatif untuk pembulatan ke bawah.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustKind(null)}>Batal</Button>
+            <Button onClick={saveAdjust}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!confirmSaveCustomer} onOpenChange={(v) => !v && setConfirmSaveCustomer(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Pelanggan tidak ditemukan</DialogTitle></DialogHeader>
