@@ -1268,14 +1268,17 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
   );
 }
 
-function SummaryRow({ label, value, action, bold, onAction }: { label: string; value: string; action?: string; bold?: boolean; onAction?: () => void }) {
+function SummaryRow({ label, value, action, bold, onAction, extraAction, onExtraAction }: { label: string; value: string; action?: string; bold?: boolean; onAction?: () => void; extraAction?: string; onExtraAction?: () => void }) {
   return (
     <tr className="border-t">
       <td colSpan={4} className={`px-4 py-2 text-right text-foreground ${bold ? "font-semibold" : ""}`}>{label}</td>
       <td></td>
       <td className={`px-4 py-2 text-right tabular-nums ${bold ? "font-semibold" : ""}`}>{value}</td>
       <td className="px-4 py-2 text-right text-foreground text-xs">
-        {action ? <button onClick={onAction} className="hover:underline">⚙ {action}</button> : null}
+        <div className="flex justify-end gap-2">
+          {action ? <button onClick={onAction} className="hover:underline whitespace-nowrap">⚙ {action}</button> : null}
+          {extraAction ? <button onClick={onExtraAction} className="hover:underline whitespace-nowrap">⚙ {extraAction}</button> : null}
+        </div>
       </td>
     </tr>
   );
