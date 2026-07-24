@@ -150,6 +150,32 @@ All colors MUST be HSL.
 
   @page { margin: 10mm; size: auto; }
 
+  /* Force pure black text on ALL prints (no muted grays on paper) */
+  .print-area,
+  .print-area *,
+  .print-area *::before,
+  .print-area *::after {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+  }
+  .print-area .text-muted-foreground,
+  .print-area .text-muted,
+  .print-area .text-gray-400,
+  .print-area .text-gray-500,
+  .print-area .text-gray-600,
+  .print-area .text-slate-400,
+  .print-area .text-slate-500,
+  .print-area .text-slate-600,
+  .print-area .text-neutral-400,
+  .print-area .text-neutral-500,
+  .print-area .text-neutral-600,
+  .print-area .text-zinc-400,
+  .print-area .text-zinc-500,
+  .print-area .text-zinc-600 {
+    color: #000 !important;
+    opacity: 1 !important;
+  }
+
   /* Receipts: force solid black + bold for max printer legibility */
   .print-area[data-receipt],
   .print-area[data-receipt] * {
