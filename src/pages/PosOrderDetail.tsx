@@ -813,14 +813,12 @@ export default function PosOrderDetail() {
                   value={`IDR ${fmt(Number(order.service_charge || 0))}`}
                   action={Number(order.service_charge || 0) > 0 ? "Nonaktifkan" : "Aktifkan"}
                   onAction={toggleServiceCharge}
-                  extraAction={Number(order.service_charge || 0) > 0 ? "Ubah Nominal" : undefined}
-                  onExtraAction={Number(order.service_charge || 0) > 0 ? () => openAdjust("service") : undefined}
                 />
                 <SummaryRow
                   label="Pajak"
                   value={`IDR ${fmt(Number(order.tax_amount || 0))}`}
-                  action="Pengaturan Pajak"
-                  onAction={() => openAdjust("tax")}
+                  action={Number(order.tax_amount || 0) > 0 ? "Nonaktifkan" : "Aktifkan"}
+                  onAction={toggleTax}
                 />
                 <SummaryRow
                   label="Pembulatan"
