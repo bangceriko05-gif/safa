@@ -1121,7 +1121,31 @@ export default function PosOrderDetail() {
             <DialogTitle>{adjustKind ? adjustLabels[adjustKind] : ""}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Nominal (Rp)</Label>
+            {adjustKind === "admin" && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={adjustMode === "rp" ? "default" : "outline"}
+                  onClick={() => setAdjustMode("rp")}
+                  className="flex-1"
+                >
+                  Rp
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={adjustMode === "pct" ? "default" : "outline"}
+                  onClick={() => setAdjustMode("pct")}
+                  className="flex-1"
+                >
+                  %
+                </Button>
+              </div>
+            )}
+            <Label className="text-xs text-muted-foreground">
+              {adjustKind === "admin" && adjustMode === "pct" ? "Persentase (%)" : "Nominal (Rp)"}
+            </Label>
             <Input
               inputMode="numeric"
               value={adjustValue ? new Intl.NumberFormat("id-ID").format(adjustValue) : ""}
@@ -1132,6 +1156,11 @@ export default function PosOrderDetail() {
               placeholder="0"
               autoFocus
             />
+            {adjustKind === "admin" && adjustMode === "pct" && (
+              <p className="text-xs text-muted-foreground">
+                Dihitung dari subtotal produk (sebelum diskon & biaya lain).
+              </p>
+            )}
             {adjustKind === "rounding" && (
               <p className="text-xs text-muted-foreground">Boleh negatif untuk pembulatan ke bawah.</p>
             )}
