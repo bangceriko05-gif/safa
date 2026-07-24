@@ -1196,7 +1196,36 @@ export default function PosOrderDetail() {
               </p>
             )}
             {adjustKind === "rounding" && (
-              <p className="text-xs text-muted-foreground">Boleh negatif untuk pembulatan ke bawah.</p>
+              <>
+                {roundingSuggestions.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-xs text-muted-foreground">
+                      Referensi pembulatan dari total {new Intl.NumberFormat("id-ID").format(preRoundTotal)}:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {roundingSuggestions.map((s) => (
+                        <Button
+                          key={s.target}
+                          type="button"
+                          variant={adjustValue === s.delta ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setAdjustValue(s.delta)}
+                          className="flex-col h-auto py-2"
+                        >
+                          <span className="font-semibold">{s.label}</span>
+                          <span className="text-[10px] opacity-80">
+                            ({s.delta >= 0 ? "+" : ""}
+                            {new Intl.NumberFormat("id-ID").format(s.delta)})
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Atau isi manual. Boleh negatif untuk pembulatan ke bawah.
+                </p>
+              </>
             )}
           </div>
           <DialogFooter>
