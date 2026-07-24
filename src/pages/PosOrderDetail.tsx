@@ -214,6 +214,40 @@ export default function PosOrderDetail() {
   const paid = isLunas ? grand : Number(order?.amount || 0) + Number(order?.amount_2 || 0);
   const outstanding = Math.max(0, grand - paid);
 
+  // Base total BEFORE rounding (used to derive rounding suggestions)
+  const preRoundTotal = useMemo(() => {
+    const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+    const tax = Number(order?.tax_amount || 0);
+    const svc = Number(order?.service_charge || 0);
+    const ship = Number((order as any)?.shipping_amount || 0);
+    const admin = Number((order as any)?.admin_fee || 0);
+    return sub + tax + svc + ship + admin;
+  }, [items, order?.tax_amount, order?.service_charge, (order as any)?.shipping_amount, (order as any)?.admin_fee]);
+
+  const roundingSuggestions = useMemo(() => {
+    const base = preRoundTotal;
+    if (!base) return [] as { label: string; target: number; delta: number; hint: string }[];
+    const floor500 = Math.floor(base / 500) * 500;
+    const floor100 = Math.floor(base / 100) * 100;
+    const ceil100 = Math.ceil(base / 100) * 100;
+    const ceil500 = Math.ceil(base / 500) * 500;
+    const raw = [
+      { target: floor500, hint: "bawah 500" },
+      { target: floor100, hint: "bawah 100" },
+      { target: ceil100, hint: "atas 100" },
+      { target: ceil500, hint: "atas 500" },
+    ];
+    const seen = new Set<number>();
+    return raw
+      .filter((r) => r.target !== base && !seen.has(r.target) && (seen.add(r.target), true))
+      .map((r) => ({
+        label: new Intl.NumberFormat("id-ID").format(r.target),
+        target: r.target,
+        delta: r.target - base,
+        hint: r.hint,
+      }));
+  }, [preRoundTotal]);
+
   // Recompute the order total after items change and persist
   const recomputeOrderTotal = async (nextItems: OrderItem[], overrides: Record<string, number> = {}) => {
     const sub = nextItems.reduce((s, it) => s + Number(it.subtotal || 0), 0);
