@@ -76,9 +76,13 @@ export default function PosOrderDetail() {
   const [posSettings, setPosSettings] = useState<any | null>(null);
 
   // Generic adjustment dialog (shipping, tax, admin, rounding, service charge)
-  type AdjustKind = "shipping" | "tax" | "admin" | "rounding" | "service";
+  type AdjustKind = "shipping" | "admin" | "rounding";
   const [adjustKind, setAdjustKind] = useState<AdjustKind | null>(null);
   const [adjustValue, setAdjustValue] = useState<number>(0);
+  const [adjustMode, setAdjustMode] = useState<"rp" | "pct">("rp");
+
+  // Store tax settings (mirrors service charge behavior)
+  const [storeTax, setStoreTax] = useState<{ enabled: boolean; rate: number } | null>(null);
 
   // Due date edit state
   const [dueDateDraft, setDueDateDraft] = useState("");
@@ -487,38 +491,51 @@ export default function PosOrderDetail() {
         .maybeSingle();
       setPosSettings(data || null);
     })();
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("tax_enabled, tax_rate")
+        .eq("id", order.store_id)
+        .maybeSingle();
+      if (data) {
+        setStoreTax({
+          enabled: !!(data as any).tax_enabled,
+          rate: Number((data as any).tax_rate) || 0,
+        });
+      }
+    })();
   }, [order?.store_id]);
 
   // ---------- Adjustment dialog helpers ----------
   const openAdjust = (kind: AdjustKind) => {
     const map: Record<AdjustKind, number> = {
       shipping: Number((order as any)?.shipping_amount || 0),
-      tax: Number(order?.tax_amount || 0),
       admin: Number((order as any)?.admin_fee || 0),
       rounding: Number((order as any)?.rounding || 0),
-      service: Number(order?.service_charge || 0),
     };
     setAdjustValue(map[kind]);
+    setAdjustMode("rp");
     setAdjustKind(kind);
   };
   const adjustLabels: Record<AdjustKind, string> = {
     shipping: "Biaya Pengiriman",
-    tax: "Pajak",
     admin: "Biaya Admin",
     rounding: "Pembulatan",
-    service: "Biaya Layanan (Service Charge)",
   };
   const saveAdjust = async () => {
     if (!adjustKind) return;
     const colMap: Record<AdjustKind, string> = {
       shipping: "shipping_amount",
-      tax: "tax_amount",
       admin: "admin_fee",
       rounding: "rounding",
-      service: "service_charge",
     };
     const col = colMap[adjustKind];
-    const patch: Record<string, any> = { [col]: adjustValue };
+    let finalValue = adjustValue;
+    if (adjustKind === "admin" && adjustMode === "pct") {
+      const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+      finalValue = Math.round((sub * adjustValue) / 100);
+    }
+    const patch: Record<string, any> = { [col]: finalValue };
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
@@ -546,6 +563,26 @@ export default function PosOrderDetail() {
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
     toast.success(newAmount > 0 ? "Service Charge diaktifkan" : "Service Charge dinonaktifkan");
+    load({ silent: true });
+  };
+
+  // Toggle Pajak on/off using tax_rate from stores (mirrors service charge)
+  const toggleTax = async () => {
+    const currentlyOn = Number(order?.tax_amount || 0) > 0;
+    let newAmount = 0;
+    if (!currentlyOn) {
+      if (!storeTax?.enabled || storeTax.rate <= 0) {
+        toast.error("Aktifkan & atur tarif PPN di Pengaturan Pajak toko terlebih dahulu");
+        return;
+      }
+      const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+      newAmount = Math.round((sub * storeTax.rate) / 100);
+    }
+    const patch = { tax_amount: newAmount };
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    await recomputeOrderTotal(items, patch);
+    toast.success(newAmount > 0 ? "Pajak diaktifkan" : "Pajak dinonaktifkan");
     load({ silent: true });
   };
 
@@ -809,14 +846,12 @@ export default function PosOrderDetail() {
                   value={`IDR ${fmt(Number(order.service_charge || 0))}`}
                   action={Number(order.service_charge || 0) > 0 ? "Nonaktifkan" : "Aktifkan"}
                   onAction={toggleServiceCharge}
-                  extraAction={Number(order.service_charge || 0) > 0 ? "Ubah Nominal" : undefined}
-                  onExtraAction={Number(order.service_charge || 0) > 0 ? () => openAdjust("service") : undefined}
                 />
                 <SummaryRow
                   label="Pajak"
                   value={`IDR ${fmt(Number(order.tax_amount || 0))}`}
-                  action="Pengaturan Pajak"
-                  onAction={() => openAdjust("tax")}
+                  action={Number(order.tax_amount || 0) > 0 ? "Nonaktifkan" : "Aktifkan"}
+                  onAction={toggleTax}
                 />
                 <SummaryRow
                   label="Pembulatan"
@@ -1086,7 +1121,31 @@ export default function PosOrderDetail() {
             <DialogTitle>{adjustKind ? adjustLabels[adjustKind] : ""}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Nominal (Rp)</Label>
+            {adjustKind === "admin" && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={adjustMode === "rp" ? "default" : "outline"}
+                  onClick={() => setAdjustMode("rp")}
+                  className="flex-1"
+                >
+                  Rp
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={adjustMode === "pct" ? "default" : "outline"}
+                  onClick={() => setAdjustMode("pct")}
+                  className="flex-1"
+                >
+                  %
+                </Button>
+              </div>
+            )}
+            <Label className="text-xs text-muted-foreground">
+              {adjustKind === "admin" && adjustMode === "pct" ? "Persentase (%)" : "Nominal (Rp)"}
+            </Label>
             <Input
               inputMode="numeric"
               value={adjustValue ? new Intl.NumberFormat("id-ID").format(adjustValue) : ""}
@@ -1097,6 +1156,11 @@ export default function PosOrderDetail() {
               placeholder="0"
               autoFocus
             />
+            {adjustKind === "admin" && adjustMode === "pct" && (
+              <p className="text-xs text-muted-foreground">
+                Dihitung dari subtotal produk (sebelum diskon & biaya lain).
+              </p>
+            )}
             {adjustKind === "rounding" && (
               <p className="text-xs text-muted-foreground">Boleh negatif untuk pembulatan ke bawah.</p>
             )}
