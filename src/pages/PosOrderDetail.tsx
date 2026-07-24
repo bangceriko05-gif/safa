@@ -497,32 +497,32 @@ export default function PosOrderDetail() {
   const openAdjust = (kind: AdjustKind) => {
     const map: Record<AdjustKind, number> = {
       shipping: Number((order as any)?.shipping_amount || 0),
-      tax: Number(order?.tax_amount || 0),
       admin: Number((order as any)?.admin_fee || 0),
       rounding: Number((order as any)?.rounding || 0),
-      service: Number(order?.service_charge || 0),
     };
     setAdjustValue(map[kind]);
+    setAdjustMode("rp");
     setAdjustKind(kind);
   };
   const adjustLabels: Record<AdjustKind, string> = {
     shipping: "Biaya Pengiriman",
-    tax: "Pajak",
     admin: "Biaya Admin",
     rounding: "Pembulatan",
-    service: "Biaya Layanan (Service Charge)",
   };
   const saveAdjust = async () => {
     if (!adjustKind) return;
     const colMap: Record<AdjustKind, string> = {
       shipping: "shipping_amount",
-      tax: "tax_amount",
       admin: "admin_fee",
       rounding: "rounding",
-      service: "service_charge",
     };
     const col = colMap[adjustKind];
-    const patch: Record<string, any> = { [col]: adjustValue };
+    let finalValue = adjustValue;
+    if (adjustKind === "admin" && adjustMode === "pct") {
+      const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+      finalValue = Math.round((sub * adjustValue) / 100);
+    }
+    const patch: Record<string, any> = { [col]: finalValue };
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
