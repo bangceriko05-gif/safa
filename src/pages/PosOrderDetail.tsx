@@ -491,6 +491,19 @@ export default function PosOrderDetail() {
         .maybeSingle();
       setPosSettings(data || null);
     })();
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("tax_enabled, tax_rate")
+        .eq("id", order.store_id)
+        .maybeSingle();
+      if (data) {
+        setStoreTax({
+          enabled: !!(data as any).tax_enabled,
+          rate: Number((data as any).tax_rate) || 0,
+        });
+      }
+    })();
   }, [order?.store_id]);
 
   // ---------- Adjustment dialog helpers ----------
@@ -550,6 +563,26 @@ export default function PosOrderDetail() {
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
     toast.success(newAmount > 0 ? "Service Charge diaktifkan" : "Service Charge dinonaktifkan");
+    load({ silent: true });
+  };
+
+  // Toggle Pajak on/off using tax_rate from stores (mirrors service charge)
+  const toggleTax = async () => {
+    const currentlyOn = Number(order?.tax_amount || 0) > 0;
+    let newAmount = 0;
+    if (!currentlyOn) {
+      if (!storeTax?.enabled || storeTax.rate <= 0) {
+        toast.error("Aktifkan & atur tarif PPN di Pengaturan Pajak toko terlebih dahulu");
+        return;
+      }
+      const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+      newAmount = Math.round((sub * storeTax.rate) / 100);
+    }
+    const patch = { tax_amount: newAmount };
+    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
+    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    await recomputeOrderTotal(items, patch);
+    toast.success(newAmount > 0 ? "Pajak diaktifkan" : "Pajak dinonaktifkan");
     load({ silent: true });
   };
 
