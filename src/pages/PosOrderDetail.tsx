@@ -76,9 +76,13 @@ export default function PosOrderDetail() {
   const [posSettings, setPosSettings] = useState<any | null>(null);
 
   // Generic adjustment dialog (shipping, tax, admin, rounding, service charge)
-  type AdjustKind = "shipping" | "tax" | "admin" | "rounding" | "service";
+  type AdjustKind = "shipping" | "admin" | "rounding";
   const [adjustKind, setAdjustKind] = useState<AdjustKind | null>(null);
   const [adjustValue, setAdjustValue] = useState<number>(0);
+  const [adjustMode, setAdjustMode] = useState<"rp" | "pct">("rp");
+
+  // Store tax settings (mirrors service charge behavior)
+  const [storeTax, setStoreTax] = useState<{ enabled: boolean; rate: number } | null>(null);
 
   // Due date edit state
   const [dueDateDraft, setDueDateDraft] = useState("");
