@@ -386,6 +386,50 @@ export default function PosOrderDetail() {
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
 
+  const formatIDR = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
+  const buildReceiptMessage = () => {
+    const lines: string[] = [];
+    lines.push(`*Nota ${order?.bid || ""}*`.trim());
+    lines.push(`Halo ${customerName !== "-" ? customerName : "Pelanggan"}, berikut detail pesanan Anda:`);
+    lines.push("");
+    items.forEach((it) => {
+      lines.push(`• ${it.product_name} x${it.quantity} — ${formatIDR(Number(it.subtotal || 0))}`);
+    });
+    lines.push("");
+    const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
+    lines.push(`Subtotal: ${formatIDR(sub)}`);
+    if (Number(order?.tax_amount || 0)) lines.push(`Pajak: ${formatIDR(Number(order.tax_amount))}`);
+    if (Number(order?.service_charge || 0)) lines.push(`Service Charge: ${formatIDR(Number(order.service_charge))}`);
+    if (Number((order as any)?.shipping_amount || 0)) lines.push(`Pengiriman: ${formatIDR(Number((order as any).shipping_amount))}`);
+    if (Number((order as any)?.admin_fee || 0)) lines.push(`Biaya Admin: ${formatIDR(Number((order as any).admin_fee))}`);
+    if (Number((order as any)?.rounding || 0)) lines.push(`Pembulatan: ${formatIDR(Number((order as any).rounding))}`);
+    lines.push(`*Total: ${formatIDR(Number(order?.total_amount || 0))}*`);
+    lines.push("");
+    lines.push(`Status Pembayaran: ${isLunas ? "LUNAS" : "BELUM LUNAS"}`);
+    lines.push("");
+    lines.push("Terima kasih! 🙏");
+    return lines.join("\n");
+  };
+
+  const sendWhatsApp = () => {
+    const raw = (customerPhone || "").replace(/[\s\-\(\)+]/g, "");
+    let phone = raw;
+    if (phone.startsWith("0")) phone = "62" + phone.slice(1);
+    else if (!phone.startsWith("62")) phone = phone ? "62" + phone : "";
+    const msg = encodeURIComponent(buildReceiptMessage());
+    const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    window.open(url, "_blank");
+  };
+
+  const sendEmail = () => {
+    const email = (order as any)?.customer_email || "";
+    const subject = encodeURIComponent(`Nota ${order?.bid || ""}`);
+    const body = encodeURIComponent(buildReceiptMessage());
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank");
+  };
+
   const savePatch = async (patch: Record<string, any>) => {
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) { toast.error("Gagal menyimpan"); return; }
@@ -691,8 +735,8 @@ export default function PosOrderDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => toast.info("Belum tersedia")}>Kirim WhatsApp</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info("Belum tersedia")}>Kirim Email</DropdownMenuItem>
+                <DropdownMenuItem onClick={sendWhatsApp}>Kirim WhatsApp</DropdownMenuItem>
+                <DropdownMenuItem onClick={sendEmail}>Kirim Email</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" size="sm" className="gap-2" onClick={doPrint}>
