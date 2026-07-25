@@ -735,8 +735,8 @@ export default function PosOrderDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => toast.info("Belum tersedia")}>Kirim WhatsApp</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info("Belum tersedia")}>Kirim Email</DropdownMenuItem>
+                <DropdownMenuItem onClick={sendWhatsApp}>Kirim WhatsApp</DropdownMenuItem>
+                <DropdownMenuItem onClick={sendEmail}>Kirim Email</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" size="sm" className="gap-2" onClick={doPrint}>
