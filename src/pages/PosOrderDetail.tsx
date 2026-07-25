@@ -116,8 +116,13 @@ export default function PosOrderDetail() {
   }, [order?.id]);
 
   const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate("/dashboard");
+    // react-router sets location.key to "default" only on the very first entry.
+    // Using window.history.length is unreliable inside embedded/iframe previews.
+    if (location.key && location.key !== "default") {
+      navigate(-1);
+    } else {
+      navigate("/dashboard?tab=list-booking");
+    }
   };
 
   const saveNote = async () => {
