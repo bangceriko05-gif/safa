@@ -77,11 +77,25 @@ export default function BookingReceipt() {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (bookingId) {
-      fetchData();
-    } else if (orderId) {
-      fetchOrderOnly();
-    }
+    if (!bookingId && !orderId) return;
+    let ran = false;
+    const doFetch = () => {
+      if (ran) return;
+      ran = true;
+      if (bookingId) fetchData();
+      else if (orderId) fetchOrderOnly();
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) doFetch();
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) doFetch();
+      else {
+        // No session (opened in a fresh tab without auth) — try anyway; RLS may still allow it.
+        doFetch();
+      }
+    });
+    return () => subscription.unsubscribe();
   }, [bookingId, orderId]);
 
   const fetchOrderOnly = async () => {
