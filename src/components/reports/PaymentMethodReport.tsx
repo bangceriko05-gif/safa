@@ -69,6 +69,7 @@ export default function PaymentMethodReport() {
           .from("incomes")
           .select("id, customer_name, amount, payment_method, date, bid, description")
           .eq("store_id", currentStore.id)
+          .in("process_status", ["proses", "selesai"])
           .gte("date", startDateStr)
           .lte("date", endDateStr),
       ]);
