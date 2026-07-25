@@ -37,7 +37,7 @@ interface PaymentDetail {
 
 export default function PaymentMethodReport() {
   const { currentStore } = useStore();
-  const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([]);
