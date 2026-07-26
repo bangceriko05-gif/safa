@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { MoneyInput } from "@/components/ui/money-input";
 
 interface StoreFeature {
   id: string;
@@ -22,14 +23,18 @@ export default function FeatureMetaEditor({ feature, onSave, onCancel }: Feature
   const [price, setPrice] = useState(feature.activation_price || "");
   const [description, setDescription] = useState(feature.activation_description || "");
 
+  // Parse initial price to a number if it's a plain digit string; otherwise keep raw.
+  const isNumericPrice = /^\d+$/.test((price || "").replace(/[.\s]/g, ""));
+  const numericValue = isNumericPrice ? Number((price || "").replace(/[^\d]/g, "")) : 0;
+
   return (
     <div className="ml-6 p-3 rounded-md border border-dashed border-primary/20 bg-muted/30 space-y-2">
       <div>
         <label className="text-xs text-muted-foreground">Harga Aktivasi</label>
-        <Input
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="Contoh: Biaya aktivasi: Rp 250.000 / bulan"
+        <MoneyInput
+          value={numericValue}
+          onChange={(n) => setPrice(n ? String(n) : "")}
+          placeholder="0"
           className="h-8 text-sm"
         />
       </div>
