@@ -2107,15 +2107,29 @@ export default function BookingModal({
                     <Label htmlFor="discount_value" className="text-xs">
                       {formData.discount_type === "percentage" ? "Persentase" : "Jumlah"}
                     </Label>
-                    <Input
-                      id="discount_value"
-                      type="number"
-                      value={formData.discount_value}
-                      onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                      placeholder={formData.discount_type === "percentage" ? "10" : "50000"}
-                      min="0"
-                      max={formData.discount_type === "percentage" ? "100" : undefined}
-                    />
+                    {formData.discount_type === "percentage" ? (
+                      <Input
+                        id="discount_value"
+                        type="number"
+                        value={formData.discount_value}
+                        onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
+                        placeholder="10"
+                        min="0"
+                        max="100"
+                      />
+                    ) : (
+                      <Input
+                        id="discount_value"
+                        inputMode="numeric"
+                        value={formData.discount_value ? new Intl.NumberFormat("id-ID").format(Number(String(formData.discount_value).replace(/[^\d]/g, "")) || 0) : ""}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^\d]/g, "");
+                          setFormData({ ...formData, discount_value: raw });
+                        }}
+                        placeholder="50.000"
+                        className="tabular-nums"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
