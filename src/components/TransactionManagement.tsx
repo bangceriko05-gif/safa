@@ -213,9 +213,18 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         </TabsContent>
 
         <TabsContent value="purchases" className="mt-4">
-          <Suspense fallback={<AnkaLoader />}>
-            <PurchaseManagement />
-          </Suspense>
+          {isFeatureEnabled("pos") ? (
+            <Suspense fallback={<AnkaLoader />}>
+              <PurchaseManagement />
+            </Suspense>
+          ) : (
+            <FeatureInactiveNotice
+              featureName="Pembelian (bagian dari Point of Sale)"
+              icon={ShoppingCart}
+              price={getFeatureInfo("pos").price}
+              description={getFeatureInfo("pos").description}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
