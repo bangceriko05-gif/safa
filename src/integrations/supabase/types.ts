@@ -458,6 +458,7 @@ export type Database = {
           payment_method_2: string | null
           payment_proof_urls: string[]
           payment_status: string
+          process_status: string
           reference_no: string | null
           reference_no_2: string | null
           rounding: number
@@ -496,6 +497,7 @@ export type Database = {
           payment_method_2?: string | null
           payment_proof_urls?: string[]
           payment_status?: string
+          process_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
           rounding?: number
@@ -534,6 +536,7 @@ export type Database = {
           payment_method_2?: string | null
           payment_proof_urls?: string[]
           payment_status?: string
+          process_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
           rounding?: number

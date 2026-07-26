@@ -354,23 +354,24 @@ export default function PosOrderDetail() {
 
   const cancelOrder = async () => {
     const { error } = await supabase
-      .from("booking_order_items").delete().eq("booking_order_id", id!);
+      .from("booking_orders").update({ process_status: "batal" } as any).eq("id", id!);
     if (error) { toast.error("Gagal membatalkan"); return; }
-    const { error: e2 } = await supabase.from("booking_orders").delete().eq("id", id!);
-    if (e2) { toast.error("Gagal membatalkan"); return; }
     toast.success("Order dibatalkan");
-    goBack();
+    load({ silent: true });
   };
 
   const setStatus = async (label: "Proses" | "Selesai") => {
-    const next = label === "Selesai" ? "lunas" : "belum_lunas";
+    const next = label === "Selesai" ? "selesai" : "proses";
     const { error } = await supabase
-      .from("booking_orders").update({ payment_status: next }).eq("id", id!);
+      .from("booking_orders").update({ process_status: next } as any).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
     else { toast.success(`Status: ${label}`); load({ silent: true }); }
   };
 
-  const currentStatusLabel = isLunas ? "Selesai" : "Proses";
+  const currentStatusLabel =
+    order?.process_status === "batal" ? "Batal"
+      : order?.process_status === "selesai" ? "Selesai"
+      : "Proses";
 
   const applyPayment = async (r: PaymentDialogResult) => {
     const patch: any = {

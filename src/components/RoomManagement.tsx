@@ -606,11 +606,20 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       )}
 
       {/* Inventory Section - controlled by POS master feature */}
-      {showInventory && isFeatureEnabled("pos") && (
+      {showInventory && (
         <div id="pi-section-inventory" className="scroll-mt-4">
-          <Suspense fallback={<AnkaLoader />}>
-            <InventoryManagement />
-          </Suspense>
+          {isFeatureEnabled("pos") ? (
+            <Suspense fallback={<AnkaLoader />}>
+              <InventoryManagement />
+            </Suspense>
+          ) : (
+            <FeatureInactiveNotice
+              featureName="Inventori (bagian dari Point of Sale)"
+              icon={Boxes}
+              price={getFeatureInfo("pos").price}
+              description={getFeatureInfo("pos").description}
+            />
+          )}
         </div>
       )}
 
