@@ -596,7 +596,7 @@ export default function Dashboard() {
 
   const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
     { key: "products", label: "Produk", icon: ShoppingCart },
-    ...(isFeatureEnabled("pos") ? [{ key: "inventory" as const, label: "Inventori", icon: Boxes }] : []),
+    { key: "inventory" as const, label: "Inventori", icon: Boxes },
     { key: "rooms", label: "Kamar", icon: Bed },
   ];
 
