@@ -714,9 +714,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                           <PopoverContent className="w-56 p-3" align="end">
                             <Label className="text-xs">Harga Satuan</Label>
                             <Input
-                              type="number"
-                              value={priceDraft}
-                              onChange={(e) => setPriceDraft(Number(e.target.value))}
+                              inputMode="numeric"
+                              value={priceDraft ? new Intl.NumberFormat("id-ID").format(priceDraft) : ""}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^\d]/g, "");
+                                setPriceDraft(raw ? parseInt(raw, 10) : 0);
+                              }}
                               className="h-8 mt-1"
                               autoFocus
                             />
