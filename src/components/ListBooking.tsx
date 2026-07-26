@@ -84,6 +84,7 @@ interface BookingOrderRow {
   date: string;
   total_amount: number;
   payment_status: string;
+  process_status?: string;
   payment_method: string | null;
   note: string | null;
   created_at: string;
@@ -295,7 +296,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
       // Fetch booking_orders (POS + additional orders) for the same date range
       let ordersQuery = supabase
         .from("booking_orders")
-        .select("id, bid, booking_id, date, total_amount, payment_status, payment_method, note, created_at")
+        .select("id, bid, booking_id, date, total_amount, payment_status, process_status, payment_method, note, created_at")
         .eq("store_id", currentStore.id);
       if (dateFilter !== "allTime") {
         const { startDate: sd, endDate: ed } = getDateRange(dateFilter, customDateRange);
@@ -315,6 +316,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           date: o.date,
           total_amount: Number(o.total_amount || 0),
           payment_status: o.payment_status || "belum_lunas",
+          process_status: o.process_status || "proses",
           payment_method: o.payment_method,
           note: o.note,
           created_at: o.created_at,
@@ -551,9 +553,11 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
 
   // Standalone POS orders (booking_id null) for the current sub-tab
   const filteredPosOrders = posOrders.filter((o) => {
-    if (activeSubTab === "proses") { if (o.payment_status === "lunas") return false; }
-    else if (activeSubTab === "selesai") { if (o.payment_status !== "lunas") return false; }
-    else return false; // batal tab does not include POS
+    const ps = o.process_status || "proses";
+    if (activeSubTab === "proses") { if (ps !== "proses") return false; }
+    else if (activeSubTab === "selesai") { if (ps !== "selesai") return false; }
+    else if (activeSubTab === "batal") { if (ps !== "batal") return false; }
+    else return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (o.bid || "").toLowerCase().includes(q);
