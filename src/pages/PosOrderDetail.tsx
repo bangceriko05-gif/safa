@@ -1403,14 +1403,26 @@ function EditItemDialog({
                   className={`px-3 py-1 text-sm rounded ${discMode === "pct" ? "bg-primary text-foreground-foreground" : ""}`}
                 >%</button>
               </div>
-              <Input
-                type="number"
-                min={0}
-                max={discMode === "pct" ? 100 : undefined}
-                value={discValue || ""}
-                onChange={(e) => setDiscValue(parseFloat(e.target.value) || 0)}
-                className="flex-1"
-              />
+              {discMode === "rp" ? (
+                <Input
+                  inputMode="numeric"
+                  value={discValue ? new Intl.NumberFormat("id-ID").format(discValue) : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^\d]/g, "");
+                    setDiscValue(raw ? parseInt(raw, 10) : 0);
+                  }}
+                  className="flex-1 tabular-nums"
+                />
+              ) : (
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={discValue || ""}
+                  onChange={(e) => setDiscValue(parseFloat(e.target.value) || 0)}
+                  className="flex-1"
+                />
+              )}
             </div>
           </div>
           <div className="rounded-md bg-muted px-3 py-2 text-sm flex items-center justify-between">
