@@ -141,9 +141,13 @@ export default function ProductPriceTiersTab({ productId }: Props) {
                   </TableCell>
                   <TableCell>
                     <Input
-                      type="number"
-                      value={t.price}
-                      onChange={(e) => update(i, { price: Number(e.target.value) })}
+                      inputMode="numeric"
+                      value={t.price ? new Intl.NumberFormat("id-ID").format(t.price) : ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, "");
+                        update(i, { price: raw ? parseInt(raw, 10) : 0 });
+                      }}
+                      className="tabular-nums"
                     />
                   </TableCell>
                   <TableCell>
