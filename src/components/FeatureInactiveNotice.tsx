@@ -13,6 +13,14 @@ export default function FeatureInactiveNotice({
   price, 
   description 
 }: FeatureInactiveNoticeProps) {
+  const formattedPrice = (() => {
+    if (!price) return price;
+    const digits = String(price).replace(/[^\d]/g, "");
+    if (!digits) return price;
+    const isPlainNumber = /^[\d.\s]+$/.test(String(price).trim());
+    const formatted = new Intl.NumberFormat("id-ID").format(Number(digits));
+    return isPlainNumber ? `Rp ${formatted}` : String(price).replace(/\d[\d.]*/, formatted);
+  })();
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -22,7 +30,7 @@ export default function FeatureInactiveNotice({
         Fitur ini tidak aktif
       </h3>
       {price && (
-        <p className="text-sm font-medium text-foreground mb-1">{price}</p>
+        <p className="text-sm font-medium text-foreground mb-1">{formattedPrice}</p>
       )}
       {description && (
         <p className="text-sm text-muted-foreground max-w-md mb-2 whitespace-pre-line">{description}</p>
