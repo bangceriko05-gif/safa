@@ -1658,6 +1658,108 @@ export type Database = {
           },
         ]
       }
+      loyalty_settings: {
+        Row: {
+          created_at: string
+          earn_per_amount: number
+          expiry_months: number
+          id: string
+          is_enabled: boolean
+          min_redeem_points: number
+          points_per_earn: number
+          points_per_visit: number
+          redeem_point_value: number
+          store_id: string
+          tier_gold_points: number
+          tier_platinum_points: number
+          tier_silver_points: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          earn_per_amount?: number
+          expiry_months?: number
+          id?: string
+          is_enabled?: boolean
+          min_redeem_points?: number
+          points_per_earn?: number
+          points_per_visit?: number
+          redeem_point_value?: number
+          store_id: string
+          tier_gold_points?: number
+          tier_platinum_points?: number
+          tier_silver_points?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          earn_per_amount?: number
+          expiry_months?: number
+          id?: string
+          is_enabled?: boolean
+          min_redeem_points?: number
+          points_per_earn?: number
+          points_per_visit?: number
+          redeem_point_value?: number
+          store_id?: string
+          tier_gold_points?: number
+          tier_platinum_points?: number
+          tier_silver_points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          points: number
+          reference_bid: string | null
+          store_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          points?: number
+          reference_bid?: string | null
+          store_id: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          points?: number
+          reference_bid?: string | null
+          store_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string
