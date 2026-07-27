@@ -53,6 +53,7 @@ const UserManagement = lazy(() => import("./UserManagement"));
 const RoomManagement = lazy(() => import("./RoomManagement"));
 const CustomerManagement = lazy(() => import("./CustomerManagement"));
 const SupplierManagement = lazy(() => import("./suppliers/SupplierManagement"));
+const CRMDashboard = lazy(() => import("./crm/CRMDashboard"));
 const ActivityLog = lazy(() => import("./ActivityLog").then(m => ({ default: m.ActivityLog })));
 const Reports = lazy(() => import("./Reports"));
 const PermissionManagement = lazy(() => import("./PermissionManagement"));
@@ -927,13 +928,7 @@ export default function Dashboard() {
               customersSection === "suppliers" ? (
                 <SupplierManagement />
               ) : customersSection === "crm" ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-border rounded-lg">
-                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <UserCircle className="h-7 w-7 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">CRM</h3>
-                  <p className="text-sm text-muted-foreground max-w-md">Customer Relationship Management akan segera hadir.</p>
-                </div>
+                <CRMDashboard />
               ) : (
                 <CustomerManagement />
               )
