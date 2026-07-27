@@ -53,6 +53,7 @@ const UserManagement = lazy(() => import("./UserManagement"));
 const RoomManagement = lazy(() => import("./RoomManagement"));
 const CustomerManagement = lazy(() => import("./CustomerManagement"));
 const SupplierManagement = lazy(() => import("./suppliers/SupplierManagement"));
+const CRMDashboard = lazy(() => import("./crm/CRMDashboard"));
 const ActivityLog = lazy(() => import("./ActivityLog").then(m => ({ default: m.ActivityLog })));
 const Reports = lazy(() => import("./Reports"));
 const PermissionManagement = lazy(() => import("./PermissionManagement"));
