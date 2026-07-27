@@ -11,8 +11,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LoyaltyProgram from "./LoyaltyProgram";
 import {
-  Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock,
+  Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock, Award, LayoutDashboard,
 } from "lucide-react";
 
 interface CustomerRow {
@@ -221,7 +223,13 @@ export default function CRMDashboard() {
   ];
 
   return (
-    <div className="space-y-4">
+    <Tabs defaultValue="ringkasan" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="ringkasan"><LayoutDashboard className="h-4 w-4 mr-1.5" /> Ringkasan CRM</TabsTrigger>
+        <TabsTrigger value="loyalitas"><Award className="h-4 w-4 mr-1.5" /> Poin Loyalitas</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="ringkasan" className="space-y-4 mt-0">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map((s) => (
           <Card key={s.label}>
@@ -366,6 +374,11 @@ export default function CRMDashboard() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="loyalitas" className="mt-0">
+        <LoyaltyProgram />
+      </TabsContent>
+    </Tabs>
   );
 }
