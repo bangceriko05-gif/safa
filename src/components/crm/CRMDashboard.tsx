@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoyaltyProgram from "./LoyaltyProgram";
+import CustomerDetailDialog, { DetailCustomer } from "./CustomerDetailDialog";
 import {
   Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock, Award, LayoutDashboard,
 } from "lucide-react";
@@ -33,6 +34,8 @@ interface Txn {
   date: string;
   amount: number;
   source: "booking" | "pos";
+  bid?: string | null;
+  status?: string | null;
 }
 
 type Segment = "vip" | "loyal" | "baru" | "tidak_aktif";
@@ -78,6 +81,7 @@ export default function CRMDashboard() {
   const [segment, setSegment] = useState<"all" | Segment>("all");
   const [sortBy, setSortBy] = useState<"spend" | "visits" | "recent" | "name">("spend");
   const [limit, setLimit] = useState(50);
+  const [selected, setSelected] = useState<DetailCustomer | null>(null);
 
   useEffect(() => {
     if (!currentStore?.id) return;
@@ -87,19 +91,19 @@ export default function CRMDashboard() {
       if (!silent) setLoading(true);
       const [cRes, bRes, oRes] = await Promise.all([
         supabase.from("customers").select("id,name,phone,email,birth_date,domicile,created_at").eq("store_id", currentStore.id),
-        supabase.from("bookings").select("customer_name,phone,date,price,status").eq("store_id", currentStore.id),
-        supabase.from("booking_orders").select("customer_name,customer_phone,date,total_amount,process_status").eq("store_id", currentStore.id),
+        supabase.from("bookings").select("customer_name,phone,date,price,status,bid").eq("store_id", currentStore.id),
+        supabase.from("booking_orders").select("customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore.id),
       ]);
       if (!active) return;
 
       const all: Txn[] = [];
       (bRes.data || []).forEach((b: any) => {
         if ((b.status || "").toUpperCase() === "BATAL") return;
-        all.push({ phone: normalizePhone(b.phone), name: b.customer_name || "", date: b.date, amount: Number(b.price) || 0, source: "booking" });
+        all.push({ phone: normalizePhone(b.phone), name: b.customer_name || "", date: b.date, amount: Number(b.price) || 0, source: "booking", bid: b.bid, status: b.status });
       });
       (oRes.data || []).forEach((o: any) => {
         if ((o.process_status || "") === "batal") return;
-        all.push({ phone: normalizePhone(o.customer_phone), name: o.customer_name || "", date: o.date, amount: Number(o.total_amount) || 0, source: "pos" });
+        all.push({ phone: normalizePhone(o.customer_phone), name: o.customer_name || "", date: o.date, amount: Number(o.total_amount) || 0, source: "pos", bid: o.bid, status: o.process_status });
       });
 
       setCustomers((cRes.data as CustomerRow[]) || []);
@@ -337,7 +341,17 @@ export default function CRMDashboard() {
               </TableHeader>
               <TableBody>
                 {filtered.slice(0, limit).map((c) => (
-                  <TableRow key={c.id}>
+                  <TableRow
+                    key={c.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() =>
+                      setSelected({
+                        ...c,
+                        segmentLabel: SEGMENT_META[c.segment].label,
+                        segmentClass: SEGMENT_META[c.segment].className,
+                      })
+                    }
+                  >
                     <TableCell>
                       <p className="font-medium">{c.name}</p>
                       <p className="text-xs text-muted-foreground tabular-nums">{c.phone}</p>
@@ -348,7 +362,7 @@ export default function CRMDashboard() {
                     <TableCell className="text-right tabular-nums">{c.visits}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatIDR(c.totalSpend)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(c.lastVisit)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" asChild>
                         <a href={waLink(c)} target="_blank" rel="noreferrer">
                           <MessageCircle className="h-4 w-4" />
@@ -379,6 +393,14 @@ export default function CRMDashboard() {
       <TabsContent value="loyalitas" className="mt-0">
         <LoyaltyProgram />
       </TabsContent>
+
+      <CustomerDetailDialog
+        customer={selected}
+        txns={txns}
+        storeId={currentStore?.id}
+        storeName={currentStore?.name}
+        onClose={() => setSelected(null)}
+      />
     </Tabs>
   );
 }
