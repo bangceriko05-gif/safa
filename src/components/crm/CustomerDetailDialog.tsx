@@ -284,13 +284,16 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
           </Card>
         </div>
       </DialogContent>
-      <TransactionBidPopup
-        open={!!bidPreview}
-        onClose={() => setBidPreview(null)}
-        type="booking"
-        data={bidPreview}
-        onEdit={() => setBidPreview(null)}
-      />
+      {bidPreview && userId && (
+        <BookingModal
+          isOpen={!!bidPreview}
+          onClose={() => setBidPreview(null)}
+          selectedDate={new Date(bidPreview.date)}
+          selectedSlot={null}
+          editingBooking={bidPreview}
+          userId={userId}
+        />
+      )}
     </Dialog>
   );
 }
