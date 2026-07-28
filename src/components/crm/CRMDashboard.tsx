@@ -36,6 +36,7 @@ interface Txn {
   source: "booking" | "pos";
   bid?: string | null;
   status?: string | null;
+  id?: string;
 }
 
 type Segment = "vip" | "loyal" | "baru" | "tidak_aktif";
@@ -91,19 +92,19 @@ export default function CRMDashboard() {
       if (!silent) setLoading(true);
       const [cRes, bRes, oRes] = await Promise.all([
         supabase.from("customers").select("id,name,phone,email,birth_date,domicile,created_at").eq("store_id", currentStore.id),
-        supabase.from("bookings").select("customer_name,phone,date,price,status,bid").eq("store_id", currentStore.id),
-        supabase.from("booking_orders").select("customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore.id),
+        supabase.from("bookings").select("id,customer_name,phone,date,price,status,bid").eq("store_id", currentStore.id),
+        supabase.from("booking_orders").select("id,customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore.id),
       ]);
       if (!active) return;
 
       const all: Txn[] = [];
       (bRes.data || []).forEach((b: any) => {
         if ((b.status || "").toUpperCase() === "BATAL") return;
-        all.push({ phone: normalizePhone(b.phone), name: b.customer_name || "", date: b.date, amount: Number(b.price) || 0, source: "booking", bid: b.bid, status: b.status });
+        all.push({ phone: normalizePhone(b.phone), name: b.customer_name || "", date: b.date, amount: Number(b.price) || 0, source: "booking", bid: b.bid, status: b.status, id: b.id });
       });
       (oRes.data || []).forEach((o: any) => {
         if ((o.process_status || "") === "batal") return;
-        all.push({ phone: normalizePhone(o.customer_phone), name: o.customer_name || "", date: o.date, amount: Number(o.total_amount) || 0, source: "pos", bid: o.bid, status: o.process_status });
+        all.push({ phone: normalizePhone(o.customer_phone), name: o.customer_name || "", date: o.date, amount: Number(o.total_amount) || 0, source: "pos", bid: o.bid, status: o.process_status, id: o.id });
       });
 
       setCustomers((cRes.data as CustomerRow[]) || []);
