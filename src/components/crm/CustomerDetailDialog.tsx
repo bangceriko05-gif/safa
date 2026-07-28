@@ -8,8 +8,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  User, Phone, Mail, Cake, MapPin, Award, Wallet, Repeat, CalendarDays, MessageCircle, Star,
+  User, Phone, Mail, Cake, MapPin, Award, Wallet, Repeat, CalendarDays, MessageCircle, Star, ArrowLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 
 type TierKey = "bronze" | "silver" | "gold" | "platinum";
 
@@ -35,6 +37,7 @@ export interface DetailTxn {
   source: "booking" | "pos";
   bid?: string | null;
   status?: string | null;
+  id?: string;
 }
 
 export interface DetailCustomer {
@@ -64,6 +67,19 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
   const [settings, setSettings] = useState<any>(null);
   const [ledger, setLedger] = useState<any[]>([]);
   const [extra, setExtra] = useState<any>(null);
+  const [bidPreview, setBidPreview] = useState<any>(null);
+  const navigate = useNavigate();
+
+  const openTxn = async (t: DetailTxn) => {
+    if (!t.id) return;
+    if (t.source === "pos") {
+      onClose();
+      navigate(`/pos-order/${t.id}`);
+      return;
+    }
+    const { data } = await supabase.from("bookings").select("*").eq("id", t.id).maybeSingle();
+    if (data) setBidPreview(data);
+  };
 
   useEffect(() => {
     if (!customer || !storeId) return;
@@ -126,9 +142,14 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
       <DialogContent className="max-w-none w-screen h-screen sm:rounded-none p-0 gap-0 overflow-y-auto">
         <DialogHeader className="px-6 py-4 border-b sticky top-0 bg-background z-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
+            <div className="flex items-center gap-3">
+              <Button size="sm" variant="ghost" onClick={onClose}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Kembali
+              </Button>
+              <div>
               <DialogTitle className="text-lg">{customer.name}</DialogTitle>
               <p className="text-sm text-muted-foreground tabular-nums">{customer.phone}</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={customer.segmentClass}>{customer.segmentLabel}</Badge>
@@ -230,9 +251,15 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
                   </TableHeader>
                   <TableBody>
                     {history.map((t, i) => (
-                      <TableRow key={`${t.bid || t.date}-${i}`}>
+                      <TableRow key={`${t.bid || t.date}-${i}`} className={t.id ? "cursor-pointer hover:bg-muted/50" : ""} onClick={() => openTxn(t)}>
                         <TableCell className="text-sm">{formatDate(t.date)}</TableCell>
-                        <TableCell className="text-sm tabular-nums">{t.bid || "-"}</TableCell>
+                        <TableCell className="text-sm tabular-nums">
+                          {t.bid ? (
+                            <button type="button" className="text-primary font-medium hover:underline" onClick={(e) => { e.stopPropagation(); openTxn(t); }}>
+                              {t.bid}
+                            </button>
+                          ) : "-"}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{t.source === "booking" ? "Booking" : "POS"}</Badge>
                         </TableCell>
@@ -252,6 +279,13 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
           </Card>
         </div>
       </DialogContent>
+      <TransactionBidPopup
+        open={!!bidPreview}
+        onClose={() => setBidPreview(null)}
+        type="booking"
+        data={bidPreview}
+        onEdit={() => setBidPreview(null)}
+      />
     </Dialog>
   );
 }
