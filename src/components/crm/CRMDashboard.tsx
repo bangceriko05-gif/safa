@@ -393,6 +393,14 @@ export default function CRMDashboard() {
       <TabsContent value="loyalitas" className="mt-0">
         <LoyaltyProgram />
       </TabsContent>
+
+      <CustomerDetailDialog
+        customer={selected}
+        txns={txns}
+        storeId={currentStore?.id}
+        storeName={currentStore?.name}
+        onClose={() => setSelected(null)}
+      />
     </Tabs>
   );
 }
