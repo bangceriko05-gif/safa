@@ -11,7 +11,7 @@ import {
   User, Phone, Mail, Cake, MapPin, Award, Wallet, Repeat, CalendarDays, MessageCircle, Star, ArrowLeft,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
+import BookingModal from "@/components/BookingModal";
 
 type TierKey = "bronze" | "silver" | "gold" | "platinum";
 
@@ -68,6 +68,7 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
   const [ledger, setLedger] = useState<any[]>([]);
   const [extra, setExtra] = useState<any>(null);
   const [bidPreview, setBidPreview] = useState<any>(null);
+  const [userId, setUserId] = useState<string>("");
   const navigate = useNavigate();
 
   const openTxn = async (t: DetailTxn) => {
@@ -80,6 +81,10 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
     const { data } = await supabase.from("bookings").select("*").eq("id", t.id).maybeSingle();
     if (data) setBidPreview(data);
   };
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || ""));
+  }, []);
 
   useEffect(() => {
     if (!customer || !storeId) return;
