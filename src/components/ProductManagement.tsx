@@ -136,6 +136,7 @@ export default function ProductManagement() {
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
   const [filterCollection, setFilterCollection] = useState<string | null>(null);
   const [filterMaterial, setFilterMaterial] = useState<string | null>(null);
+  const [colFilters, setColFilters] = useState<Record<string, string | null>>({});
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
