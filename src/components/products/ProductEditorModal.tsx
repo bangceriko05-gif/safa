@@ -108,6 +108,8 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const [storages, setStorages] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   const [savedId, setSavedId] = useState<string | null>(copyMode ? null : productId);
+  const originalNameRef = useRef<string>("");
+  const originalSkuRef = useRef<string>("");
   const [copySyncImages, setCopySyncImages] = useState(true);
   const [managerTable, setManagerTable] = useState<
     null | "product_categories" | "product_brands" | "product_collections" | "product_materials" | "product_storages"
@@ -163,6 +165,8 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         dynamic_price: (p as any).dynamic_price ?? false,
       });
       setSavedId(copyMode ? null : p.id);
+      originalNameRef.current = copyMode ? "" : (p.name ?? "").trim().toLowerCase();
+      originalSkuRef.current = copyMode ? "" : ((p as any).sku ?? "").trim().toLowerCase();
     }
     setLoading(false);
   };
@@ -278,6 +282,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
     {
       const trimmedName = data.name.trim();
       const trimmedSku = data.sku.trim();
+      const nameChanged = !savedId || trimmedName.toLowerCase() !== originalNameRef.current;
+      const skuChanged = !savedId || trimmedSku.toLowerCase() !== originalSkuRef.current;
+      if (nameChanged) {
       let nameQ = supabase
         .from("products")
         .select("id, name, sku")
@@ -289,7 +296,8 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         toast.error(`Nama produk "${trimmedName}" sudah ada di cabang ini`);
         return;
       }
-      if (trimmedSku) {
+      }
+      if (trimmedSku && skuChanged) {
         let skuQ = supabase
           .from("products")
           .select("id, sku")
