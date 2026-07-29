@@ -662,7 +662,40 @@ export default function ProductManagement() {
     setBulkDeleteOpen(true);
   };
 
-  const filteredProducts = useMemo(() => products.filter((p) => {
+  const colValue = (p: Product, key: string): string => {
+    switch (key) {
+      case "name":
+        return p.name || "-";
+      case "variant": {
+        if (recipeProductIds.has(p.id)) return "Resep";
+        const vs = variantsByProductMap.get(p.id) || [];
+        return vs.length > 0 ? `${vs.length} varian` : "Tanpa Varian";
+      }
+      case "sku":
+        return p.sku || "Tanpa SKU";
+      case "barcode":
+        return p.barcode || "Tanpa Barcode";
+      case "stock":
+        if (!p.track_inventory) return "Tidak terbatas";
+        return String(Number(p.stock_qty) || 0);
+      case "unit":
+        return getBaseUnit(p.id) || "-";
+      case "purchase_price":
+        return formatRp(p.purchase_price);
+      case "price":
+        return formatRp(p.price);
+      case "online_price":
+        return formatRp(p.show_on_website ? p.price : 0);
+      case "track_inventory":
+        return p.track_inventory ? "Aktif" : "Off";
+      case "show_on_website":
+        return p.show_on_website ? "Ya" : "Tidak";
+      default:
+        return "";
+    }
+  };
+
+  const baseFilteredProducts = useMemo(() => products.filter((p) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hit =
@@ -677,6 +710,28 @@ export default function ProductManagement() {
     if (filterMaterial && p.material_id !== filterMaterial) return false;
     return true;
   }), [products, searchQuery, filterCategory, filterBrand, filterCollection, filterMaterial]);
+
+  const filteredProducts = useMemo(
+    () =>
+      baseFilteredProducts.filter((p) =>
+        Object.entries(colFilters).every(
+          ([key, val]) => !val || colValue(p, key) === val
+        )
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [baseFilteredProducts, colFilters, variantsByProductMap, recipeProductIds, unitConversions]
+  );
+
+  const colOptions = (key: string): string[] => {
+    const set = new Set<string>();
+    baseFilteredProducts.forEach((p) => {
+      const v = colValue(p, key);
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "id-ID", { numeric: true })
+    );
+  };
 
   const variantsByProduct = (productId: string) =>
     variantsByProductMap.get(productId) || [];
