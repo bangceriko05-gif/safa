@@ -1,0 +1,1 @@
+ALTER TABLE public.income_products ALTER COLUMN product_id DROP NOT NULL;

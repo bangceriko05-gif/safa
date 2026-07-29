@@ -1173,7 +1173,7 @@ export type Database = {
           dpp_amount: number
           id: string
           income_id: string
-          product_id: string
+          product_id: string | null
           product_name: string
           product_price: number
           quantity: number
@@ -1188,7 +1188,7 @@ export type Database = {
           dpp_amount?: number
           id?: string
           income_id: string
-          product_id: string
+          product_id?: string | null
           product_name: string
           product_price: number
           quantity?: number
@@ -1203,7 +1203,7 @@ export type Database = {
           dpp_amount?: number
           id?: string
           income_id?: string
-          product_id?: string
+          product_id?: string | null
           product_name?: string
           product_price?: number
           quantity?: number
