@@ -998,17 +998,34 @@ export default function ProductManagement() {
                 </TableHead>
               )}
               <TableHead className="w-16">Foto</TableHead>
-              <TableHead>Nama Produk</TableHead>
-              <TableHead>Variant</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Barcode</TableHead>
-              <TableHead>Qty Stok</TableHead>
-              <TableHead>Satuan</TableHead>
-              <TableHead>Harga Beli</TableHead>
-              <TableHead>Harga Jual di Toko</TableHead>
-              <TableHead>Harga Jual Online</TableHead>
-              <TableHead>Lacak Inventori</TableHead>
-              <TableHead>Tersedia Online</TableHead>
+              {[
+                { key: "name", label: "Nama Produk" },
+                { key: "variant", label: "Variant" },
+                { key: "sku", label: "SKU" },
+                { key: "barcode", label: "Barcode" },
+                { key: "stock", label: "Qty Stok" },
+                { key: "unit", label: "Satuan" },
+                { key: "purchase_price", label: "Harga Beli" },
+                { key: "price", label: "Harga Jual di Toko" },
+                { key: "online_price", label: "Harga Jual Online" },
+                { key: "track_inventory", label: "Lacak Inventori" },
+                { key: "show_on_website", label: "Tersedia Online" },
+              ].map((c) => (
+                <TableHead key={c.key}>
+                  <span className="inline-flex items-center">
+                    {c.label}
+                    <ColumnFilter
+                      label={c.label}
+                      value={colFilters[c.key] ?? null}
+                      options={colOptions(c.key)}
+                      onChange={(v) => {
+                        setColFilters((prev) => ({ ...prev, [c.key]: v }));
+                        setPage(1);
+                      }}
+                    />
+                  </span>
+                </TableHead>
+              ))}
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
