@@ -110,6 +110,86 @@ const formatRp = (n: number) =>
     maximumFractionDigits: 2,
   }).format(n || 0);
 
+function ColumnFilter({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  options: string[];
+  onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const list = q
+    ? options.filter((o) => o.toLowerCase().includes(q.toLowerCase()))
+    : options;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title={`Filter ${label}`}
+          className={`ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted ${
+            value ? "text-primary" : "text-muted-foreground/60"
+          }`}
+        >
+          <Filter className={`h-3.5 w-3.5 ${value ? "fill-current" : ""}`} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-0">
+        <div className="px-3 py-2 border-b">
+          <p className="text-xs font-semibold">Filter {label}</p>
+        </div>
+        {options.length > 8 && (
+          <div className="p-2 border-b">
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari..."
+              className="h-8 text-xs"
+            />
+          </div>
+        )}
+        <div className="max-h-64 overflow-auto py-1">
+          <button
+            onClick={() => {
+              onChange(null);
+              setOpen(false);
+            }}
+            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted ${
+              !value ? "font-semibold" : ""
+            }`}
+          >
+            Semua
+          </button>
+          {list.map((o) => (
+            <button
+              key={o}
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                value === o ? "font-semibold text-primary" : ""
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+          {list.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">
+              Tidak ada data
+            </p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function ProductManagement() {
   const { currentStore, userStores } = useStore();
   const { hasPermission } = usePermissions();
