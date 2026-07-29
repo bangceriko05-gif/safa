@@ -928,7 +928,16 @@ export default function Dashboard() {
               customersSection === "suppliers" ? (
                 <SupplierManagement />
               ) : customersSection === "crm" ? (
-                <CRMDashboard />
+                isFeatureEnabled("pos") ? (
+                  <CRMDashboard />
+                ) : (
+                  <FeatureInactiveNotice
+                    featureName="CRM (bagian dari Point of Sale)"
+                    icon={UserCircle}
+                    price={getFeatureInfo("pos").price}
+                    description={getFeatureInfo("pos").description}
+                  />
+                )
               ) : (
                 <CustomerManagement />
               )
