@@ -55,6 +55,7 @@ import {
   CheckSquare,
   Download,
   Upload,
+  Filter,
 } from "lucide-react";
 import AnkaLoader from "@/components/AnkaLoader";
 import { logActivity } from "@/utils/activityLogger";
@@ -109,6 +110,86 @@ const formatRp = (n: number) =>
     maximumFractionDigits: 2,
   }).format(n || 0);
 
+function ColumnFilter({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  options: string[];
+  onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const list = q
+    ? options.filter((o) => o.toLowerCase().includes(q.toLowerCase()))
+    : options;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title={`Filter ${label}`}
+          className={`ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted ${
+            value ? "text-primary" : "text-muted-foreground/60"
+          }`}
+        >
+          <Filter className={`h-3.5 w-3.5 ${value ? "fill-current" : ""}`} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-0">
+        <div className="px-3 py-2 border-b">
+          <p className="text-xs font-semibold">Filter {label}</p>
+        </div>
+        {options.length > 8 && (
+          <div className="p-2 border-b">
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari..."
+              className="h-8 text-xs"
+            />
+          </div>
+        )}
+        <div className="max-h-64 overflow-auto py-1">
+          <button
+            onClick={() => {
+              onChange(null);
+              setOpen(false);
+            }}
+            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted ${
+              !value ? "font-semibold" : ""
+            }`}
+          >
+            Semua
+          </button>
+          {list.map((o) => (
+            <button
+              key={o}
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                value === o ? "font-semibold text-primary" : ""
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+          {list.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">
+              Tidak ada data
+            </p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function ProductManagement() {
   const { currentStore, userStores } = useStore();
   const { hasPermission } = usePermissions();
@@ -135,6 +216,7 @@ export default function ProductManagement() {
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
   const [filterCollection, setFilterCollection] = useState<string | null>(null);
   const [filterMaterial, setFilterMaterial] = useState<string | null>(null);
+  const [colFilters, setColFilters] = useState<Record<string, string | null>>({});
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
@@ -660,7 +742,40 @@ export default function ProductManagement() {
     setBulkDeleteOpen(true);
   };
 
-  const filteredProducts = useMemo(() => products.filter((p) => {
+  const colValue = (p: Product, key: string): string => {
+    switch (key) {
+      case "name":
+        return p.name || "-";
+      case "variant": {
+        if (recipeProductIds.has(p.id)) return "Resep";
+        const vs = variantsByProductMap.get(p.id) || [];
+        return vs.length > 0 ? `${vs.length} varian` : "Tanpa Varian";
+      }
+      case "sku":
+        return p.sku || "Tanpa SKU";
+      case "barcode":
+        return p.barcode || "Tanpa Barcode";
+      case "stock":
+        if (!p.track_inventory) return "Tidak terbatas";
+        return String(Number(p.stock_qty) || 0);
+      case "unit":
+        return getBaseUnit(p.id) || "-";
+      case "purchase_price":
+        return formatRp(p.purchase_price);
+      case "price":
+        return formatRp(p.price);
+      case "online_price":
+        return formatRp(p.show_on_website ? p.price : 0);
+      case "track_inventory":
+        return p.track_inventory ? "Aktif" : "Off";
+      case "show_on_website":
+        return p.show_on_website ? "Ya" : "Tidak";
+      default:
+        return "";
+    }
+  };
+
+  const baseFilteredProducts = useMemo(() => products.filter((p) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hit =
@@ -675,6 +790,28 @@ export default function ProductManagement() {
     if (filterMaterial && p.material_id !== filterMaterial) return false;
     return true;
   }), [products, searchQuery, filterCategory, filterBrand, filterCollection, filterMaterial]);
+
+  const filteredProducts = useMemo(
+    () =>
+      baseFilteredProducts.filter((p) =>
+        Object.entries(colFilters).every(
+          ([key, val]) => !val || colValue(p, key) === val
+        )
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [baseFilteredProducts, colFilters, variantsByProductMap, recipeProductIds, unitConversions]
+  );
+
+  const colOptions = (key: string): string[] => {
+    const set = new Set<string>();
+    baseFilteredProducts.forEach((p) => {
+      const v = colValue(p, key);
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "id-ID", { numeric: true })
+    );
+  };
 
   const variantsByProduct = (productId: string) =>
     variantsByProductMap.get(productId) || [];
@@ -861,17 +998,34 @@ export default function ProductManagement() {
                 </TableHead>
               )}
               <TableHead className="w-16">Foto</TableHead>
-              <TableHead>Nama Produk</TableHead>
-              <TableHead>Variant</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Barcode</TableHead>
-              <TableHead>Qty Stok</TableHead>
-              <TableHead>Satuan</TableHead>
-              <TableHead>Harga Beli</TableHead>
-              <TableHead>Harga Jual di Toko</TableHead>
-              <TableHead>Harga Jual Online</TableHead>
-              <TableHead>Lacak Inventori</TableHead>
-              <TableHead>Tersedia Online</TableHead>
+              {[
+                { key: "name", label: "Nama Produk" },
+                { key: "variant", label: "Variant" },
+                { key: "sku", label: "SKU" },
+                { key: "barcode", label: "Barcode" },
+                { key: "stock", label: "Qty Stok" },
+                { key: "unit", label: "Satuan" },
+                { key: "purchase_price", label: "Harga Beli" },
+                { key: "price", label: "Harga Jual di Toko" },
+                { key: "online_price", label: "Harga Jual Online" },
+                { key: "track_inventory", label: "Lacak Inventori" },
+                { key: "show_on_website", label: "Tersedia Online" },
+              ].map((c) => (
+                <TableHead key={c.key}>
+                  <span className="inline-flex items-center">
+                    {c.label}
+                    <ColumnFilter
+                      label={c.label}
+                      value={colFilters[c.key] ?? null}
+                      options={colOptions(c.key)}
+                      onChange={(v) => {
+                        setColFilters((prev) => ({ ...prev, [c.key]: v }));
+                        setPage(1);
+                      }}
+                    />
+                  </span>
+                </TableHead>
+              ))}
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
