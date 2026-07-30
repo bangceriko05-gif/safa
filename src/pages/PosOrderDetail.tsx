@@ -885,6 +885,43 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
+          <SectionCard title="CRM Pelanggan">
+            {crmLoading ? (
+              <div className="p-4 text-sm text-muted-foreground">Memuat data CRM...</div>
+            ) : !crm ? (
+              <div className="p-4 text-sm text-muted-foreground">
+                Pelanggan belum terdaftar di database CRM.
+              </div>
+            ) : (
+              <>
+                <div className="px-4 py-3 border-b flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{crm.segment}</Badge>
+                  <Badge variant="outline">Tier {crm.tier}</Badge>
+                  <Badge variant="outline">{fmt(crm.points)} poin</Badge>
+                </div>
+                <InfoRow label="Total Kunjungan" value={`${fmt(crm.visits)} transaksi`} />
+                <InfoRow label="Total Belanja" value={`IDR ${fmt(crm.totalSpend)}`} />
+                <InfoRow
+                  label="Kunjungan Terakhir"
+                  value={crm.lastVisit ? format(new Date(crm.lastVisit), "dd-MM-yyyy") : "-"}
+                />
+                <InfoRow
+                  label="Tanggal Lahir"
+                  value={crm.birth_date ? format(new Date(crm.birth_date), "dd-MM-yyyy") : "-"}
+                />
+                <InfoRow label="Domisili" value={crm.domicile || "-"} />
+                <InfoRow
+                  label="Terdaftar Sejak"
+                  value={crm.created_at ? format(new Date(crm.created_at), "dd-MM-yyyy") : "-"}
+                  last
+                />
+              </>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* Catatan Pesanan + Info Pembayaran */}
+        <div className="grid md:grid-cols-2 gap-4">
           <SectionCard title="Catatan Pesanan">
             <div className="p-4 space-y-2">
               <Textarea
@@ -899,19 +936,6 @@ export default function PosOrderDetail() {
                 </Button>
               </div>
             </div>
-          </SectionCard>
-        </div>
-
-        {/* Ringkasan Pesanan + Info Pembayaran (replaces shipping/dropship) */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Ringkasan Pesanan">
-            <InfoRow label="Jumlah Item" value={`${items.length} produk`} />
-            <InfoRow
-              label="Total Qty"
-              value={`${items.reduce((s, it) => s + Number(it.quantity || 0), 0)} pcs`}
-            />
-            <InfoRow label="Total Diskon Item" value={`IDR ${fmt(totalDiscount)}`} />
-            <InfoRow label="Subtotal" value={`IDR ${fmt(grossSubtotal - totalDiscount)}`} last />
           </SectionCard>
           <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
             <InfoRow
