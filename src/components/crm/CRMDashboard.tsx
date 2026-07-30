@@ -193,7 +193,6 @@ export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?
   );
 
   const filtered = useMemo(() => {
-    void 0;
     const q = search.trim().toLowerCase();
     let rows = crmCustomers.filter((c) => {
       if (segment !== "all" && c.segment !== segment) return false;
