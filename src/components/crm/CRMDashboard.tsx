@@ -73,7 +73,7 @@ const normalizePhone = (p?: string | null) => (p || "").replace(/\D/g, "").repla
 const daysSince = (d: string | null) =>
   d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : Infinity;
 
-export default function CRMDashboard() {
+export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?: string } = {}) {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
@@ -83,6 +83,7 @@ export default function CRMDashboard() {
   const [sortBy, setSortBy] = useState<"spend" | "visits" | "recent" | "name">("spend");
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<DetailCustomer | null>(null);
+  const autoOpenedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!currentStore?.id) return;
