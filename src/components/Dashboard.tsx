@@ -156,6 +156,13 @@ export default function Dashboard() {
     setCustomersSection(null);
     requestAnimationFrame(() => setCustomersSection(section));
   };
+  const crmCustomerId = searchParams.get("crmCustomer") || undefined;
+  useEffect(() => {
+    if (searchParams.get("customersSection") === "crm") {
+      setCustomersSection("crm");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
   });
