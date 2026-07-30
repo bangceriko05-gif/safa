@@ -885,7 +885,14 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
-          <SectionCard title="CRM Pelanggan">
+          <SectionCard
+            title="CRM Pelanggan"
+            onTitleClick={
+              crm?.id
+                ? () => navigate(`/?tab=customers&customersSection=crm&crmCustomer=${crm.id}`)
+                : undefined
+            }
+          >
             {crmLoading ? (
               <div className="p-4 text-sm text-muted-foreground">Memuat data CRM...</div>
             ) : !crm ? (
