@@ -1530,17 +1530,28 @@ function EditItemDialog({
 }
 
 function SectionCard({
-  title, extra, children, onEdit,
+  title, extra, children, onEdit, onTitleClick,
 }: {
   title: string;
   extra?: React.ReactNode;
   children: React.ReactNode;
   onEdit?: () => void;
+  onTitleClick?: () => void;
 }) {
   return (
     <div className="bg-card rounded-lg border">
       <div className="px-4 py-3 border-b flex items-center justify-between">
-        <div className="font-semibold">{title}</div>
+        {onTitleClick ? (
+          <button
+            type="button"
+            onClick={onTitleClick}
+            className="font-semibold text-primary hover:underline underline-offset-2 cursor-pointer"
+          >
+            {title}
+          </button>
+        ) : (
+          <div className="font-semibold">{title}</div>
+        )}
         <div className="flex items-center gap-2">
           {extra}
           {onEdit && (
