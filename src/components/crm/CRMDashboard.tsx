@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +73,7 @@ const normalizePhone = (p?: string | null) => (p || "").replace(/\D/g, "").repla
 const daysSince = (d: string | null) =>
   d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : Infinity;
 
-export default function CRMDashboard() {
+export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?: string } = {}) {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
@@ -83,6 +83,7 @@ export default function CRMDashboard() {
   const [sortBy, setSortBy] = useState<"spend" | "visits" | "recent" | "name">("spend");
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<DetailCustomer | null>(null);
+  const autoOpenedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!currentStore?.id) return;
@@ -190,6 +191,19 @@ export default function CRMDashboard() {
     () => crmCustomers.filter((c) => c.segment === "tidak_aktif" && c.visits > 0).sort((a, b) => b.totalSpend - a.totalSpend).slice(0, 8),
     [crmCustomers]
   );
+
+  // Auto-open a customer detail when navigated here with a target customer id
+  useEffect(() => {
+    if (!initialCustomerId || autoOpenedRef.current === initialCustomerId) return;
+    const match = crmCustomers.find((c) => c.id === initialCustomerId);
+    if (!match) return;
+    autoOpenedRef.current = initialCustomerId;
+    setSelected({
+      ...match,
+      segmentLabel: SEGMENT_META[match.segment].label,
+      segmentClass: SEGMENT_META[match.segment].className,
+    });
+  }, [initialCustomerId, crmCustomers]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
