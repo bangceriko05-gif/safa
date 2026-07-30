@@ -789,10 +789,6 @@ export default function PosOrderDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              {/* balloon-ish */}
-              <span className="text-foreground text-lg">🎈</span>
-            </div>
             <div className="min-w-0">
               <div className="font-mono text-lg font-semibold truncate">{order.bid || order.id.slice(0, 12)}</div>
               <div className="text-xs text-muted-foreground truncate">Penjualan Oleh {creatorName}</div>
