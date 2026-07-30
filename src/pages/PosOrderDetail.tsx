@@ -108,6 +108,10 @@ export default function PosOrderDetail() {
   const [noteDirty, setNoteDirty] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
 
+  // CRM info for this order's customer
+  const [crm, setCrm] = useState<any | null>(null);
+  const [crmLoading, setCrmLoading] = useState(false);
+
   useEffect(() => {
     if (order) {
       setNoteDraft(String(order.note || ""));
@@ -695,6 +699,66 @@ export default function PosOrderDetail() {
   const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
   const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
+  // ---------- CRM lookup ----------
+  useEffect(() => {
+    const storeId = order?.store_id;
+    const phone = customerPhone !== "-" ? customerPhone : "";
+    const name = customerName !== "-" ? customerName : "";
+    if (!storeId || (!phone && !name)) { setCrm(null); return; }
+    let active = true;
+    setCrmLoading(true);
+    (async () => {
+      const filters: string[] = [];
+      if (phone) filters.push(`phone.eq.${phone}`);
+      if (name) filters.push(`name.ilike.${name}`);
+      const { data: custs } = await supabase
+        .from("customers")
+        .select("id, name, phone, email, birth_date, domicile, created_at")
+        .eq("store_id", storeId)
+        .or(filters.join(","))
+        .limit(1);
+      const cust = custs?.[0];
+      if (!active) { return; }
+      if (!cust) { setCrm(null); setCrmLoading(false); return; }
+
+      const norm = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
+      const target = norm(cust.phone);
+
+      const [ordersRes, setRes, ledgerRes] = await Promise.all([
+        supabase.from("booking_orders").select("id, date, total_amount, customer_phone, customer_name").eq("store_id", storeId),
+        supabase.from("loyalty_settings").select("*").eq("store_id", storeId).maybeSingle(),
+        supabase.from("loyalty_transactions").select("points, type").eq("store_id", storeId).eq("customer_id", cust.id),
+      ]);
+      if (!active) return;
+      const mine = (ordersRes.data || []).filter(
+        (o: any) => (target && norm(o.customer_phone) === target) ||
+          (!target && (o.customer_name || "").toLowerCase() === (cust.name || "").toLowerCase())
+      );
+      const visits = mine.length;
+      const totalSpend = mine.reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
+      const lastVisit = mine.map((o: any) => o.date).sort().reverse()[0] || null;
+
+      const st: any = setRes.data || {};
+      const perAmount = Math.max(st.earn_per_amount || 10000, 1);
+      const earned = Math.floor(totalSpend / perAmount) * (st.points_per_earn ?? 1) + visits * (st.points_per_visit ?? 0);
+      let redeemed = 0, adjusted = 0;
+      (ledgerRes.data || []).forEach((l: any) => {
+        const p = Number(l.points) || 0;
+        if (l.type === "redeem" || l.type === "expire") redeemed += Math.abs(p); else adjusted += p;
+      });
+      const balance = Math.max(earned + adjusted - redeemed, 0);
+      const tier =
+        balance >= (st.tier_platinum_points ?? 1000) ? "Platinum" :
+        balance >= (st.tier_gold_points ?? 500) ? "Gold" :
+        balance >= (st.tier_silver_points ?? 100) ? "Silver" : "Bronze";
+      const segment = visits >= 10 ? "VIP" : visits >= 3 ? "Loyal" : visits >= 1 ? "Baru" : "Tidak Aktif";
+
+      setCrm({ ...cust, visits, totalSpend, lastVisit, points: balance, tier, segment });
+      setCrmLoading(false);
+    })();
+    return () => { active = false; };
+  }, [order?.store_id, customerPhone, customerName]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><AnkaLoader /></div>;
   if (!order) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -725,10 +789,6 @@ export default function PosOrderDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              {/* balloon-ish */}
-              <span className="text-foreground text-lg">🎈</span>
-            </div>
             <div className="min-w-0">
               <div className="font-mono text-lg font-semibold truncate">{order.bid || order.id.slice(0, 12)}</div>
               <div className="text-xs text-muted-foreground truncate">Penjualan Oleh {creatorName}</div>
@@ -825,6 +885,43 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
+          <SectionCard title="CRM Pelanggan">
+            {crmLoading ? (
+              <div className="p-4 text-sm text-muted-foreground">Memuat data CRM...</div>
+            ) : !crm ? (
+              <div className="p-4 text-sm text-muted-foreground">
+                Pelanggan belum terdaftar di database CRM.
+              </div>
+            ) : (
+              <>
+                <div className="px-4 py-3 border-b flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{crm.segment}</Badge>
+                  <Badge variant="outline">Tier {crm.tier}</Badge>
+                  <Badge variant="outline">{fmt(crm.points)} poin</Badge>
+                </div>
+                <InfoRow label="Total Kunjungan" value={`${fmt(crm.visits)} transaksi`} />
+                <InfoRow label="Total Belanja" value={`IDR ${fmt(crm.totalSpend)}`} />
+                <InfoRow
+                  label="Kunjungan Terakhir"
+                  value={crm.lastVisit ? format(new Date(crm.lastVisit), "dd-MM-yyyy") : "-"}
+                />
+                <InfoRow
+                  label="Tanggal Lahir"
+                  value={crm.birth_date ? format(new Date(crm.birth_date), "dd-MM-yyyy") : "-"}
+                />
+                <InfoRow label="Domisili" value={crm.domicile || "-"} />
+                <InfoRow
+                  label="Terdaftar Sejak"
+                  value={crm.created_at ? format(new Date(crm.created_at), "dd-MM-yyyy") : "-"}
+                  last
+                />
+              </>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* Catatan Pesanan + Info Pembayaran */}
+        <div className="grid md:grid-cols-2 gap-4">
           <SectionCard title="Catatan Pesanan">
             <div className="p-4 space-y-2">
               <Textarea
@@ -839,19 +936,6 @@ export default function PosOrderDetail() {
                 </Button>
               </div>
             </div>
-          </SectionCard>
-        </div>
-
-        {/* Ringkasan Pesanan + Info Pembayaran (replaces shipping/dropship) */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Ringkasan Pesanan">
-            <InfoRow label="Jumlah Item" value={`${items.length} produk`} />
-            <InfoRow
-              label="Total Qty"
-              value={`${items.reduce((s, it) => s + Number(it.quantity || 0), 0)} pcs`}
-            />
-            <InfoRow label="Total Diskon Item" value={`IDR ${fmt(totalDiscount)}`} />
-            <InfoRow label="Subtotal" value={`IDR ${fmt(grossSubtotal - totalDiscount)}`} last />
           </SectionCard>
           <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
             <InfoRow
