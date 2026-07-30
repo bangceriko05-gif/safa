@@ -108,6 +108,10 @@ export default function PosOrderDetail() {
   const [noteDirty, setNoteDirty] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
 
+  // CRM info for this order's customer
+  const [crm, setCrm] = useState<any | null>(null);
+  const [crmLoading, setCrmLoading] = useState(false);
+
   useEffect(() => {
     if (order) {
       setNoteDraft(String(order.note || ""));
