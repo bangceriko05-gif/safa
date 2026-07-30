@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,6 +193,7 @@ export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?
   );
 
   const filtered = useMemo(() => {
+    void 0;
     const q = search.trim().toLowerCase();
     let rows = crmCustomers.filter((c) => {
       if (segment !== "all" && c.segment !== segment) return false;
