@@ -699,6 +699,66 @@ export default function PosOrderDetail() {
   const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
   const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
+  // ---------- CRM lookup ----------
+  useEffect(() => {
+    const storeId = order?.store_id;
+    const phone = customerPhone !== "-" ? customerPhone : "";
+    const name = customerName !== "-" ? customerName : "";
+    if (!storeId || (!phone && !name)) { setCrm(null); return; }
+    let active = true;
+    setCrmLoading(true);
+    (async () => {
+      const filters: string[] = [];
+      if (phone) filters.push(`phone.eq.${phone}`);
+      if (name) filters.push(`name.ilike.${name}`);
+      const { data: custs } = await supabase
+        .from("customers")
+        .select("id, name, phone, email, birth_date, domicile, created_at")
+        .eq("store_id", storeId)
+        .or(filters.join(","))
+        .limit(1);
+      const cust = custs?.[0];
+      if (!active) { return; }
+      if (!cust) { setCrm(null); setCrmLoading(false); return; }
+
+      const norm = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
+      const target = norm(cust.phone);
+
+      const [ordersRes, setRes, ledgerRes] = await Promise.all([
+        supabase.from("booking_orders").select("id, date, total_amount, customer_phone, customer_name").eq("store_id", storeId),
+        supabase.from("loyalty_settings").select("*").eq("store_id", storeId).maybeSingle(),
+        supabase.from("loyalty_transactions").select("points, type").eq("store_id", storeId).eq("customer_id", cust.id),
+      ]);
+      if (!active) return;
+      const mine = (ordersRes.data || []).filter(
+        (o: any) => (target && norm(o.customer_phone) === target) ||
+          (!target && (o.customer_name || "").toLowerCase() === (cust.name || "").toLowerCase())
+      );
+      const visits = mine.length;
+      const totalSpend = mine.reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
+      const lastVisit = mine.map((o: any) => o.date).sort().reverse()[0] || null;
+
+      const st: any = setRes.data || {};
+      const perAmount = Math.max(st.earn_per_amount || 10000, 1);
+      const earned = Math.floor(totalSpend / perAmount) * (st.points_per_earn ?? 1) + visits * (st.points_per_visit ?? 0);
+      let redeemed = 0, adjusted = 0;
+      (ledgerRes.data || []).forEach((l: any) => {
+        const p = Number(l.points) || 0;
+        if (l.type === "redeem" || l.type === "expire") redeemed += Math.abs(p); else adjusted += p;
+      });
+      const balance = Math.max(earned + adjusted - redeemed, 0);
+      const tier =
+        balance >= (st.tier_platinum_points ?? 1000) ? "Platinum" :
+        balance >= (st.tier_gold_points ?? 500) ? "Gold" :
+        balance >= (st.tier_silver_points ?? 100) ? "Silver" : "Bronze";
+      const segment = visits >= 10 ? "VIP" : visits >= 3 ? "Loyal" : visits >= 1 ? "Baru" : "Tidak Aktif";
+
+      setCrm({ ...cust, visits, totalSpend, lastVisit, points: balance, tier, segment });
+      setCrmLoading(false);
+    })();
+    return () => { active = false; };
+  }, [order?.store_id, customerPhone, customerName]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><AnkaLoader /></div>;
   if (!order) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
