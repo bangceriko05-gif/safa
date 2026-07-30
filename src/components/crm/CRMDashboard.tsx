@@ -192,6 +192,19 @@ export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?
     [crmCustomers]
   );
 
+  // Auto-open a customer detail when navigated here with a target customer id
+  useEffect(() => {
+    if (!initialCustomerId || autoOpenedRef.current === initialCustomerId) return;
+    const match = crmCustomers.find((c) => c.id === initialCustomerId);
+    if (!match) return;
+    autoOpenedRef.current = initialCustomerId;
+    setSelected({
+      ...match,
+      segmentLabel: SEGMENT_META[match.segment].label,
+      segmentClass: SEGMENT_META[match.segment].className,
+    });
+  }, [initialCustomerId, crmCustomers]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let rows = crmCustomers.filter((c) => {
