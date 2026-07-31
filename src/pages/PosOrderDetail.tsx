@@ -52,6 +52,7 @@ export default function PosOrderDetail() {
   const [creatorName, setCreatorName] = useState<string>("-");
   const [customerName, setCustomerName] = useState<string>("-");
   const [customerPhone, setCustomerPhone] = useState<string>("-");
+  const [stays, setStays] = useState<any[]>([]);
   const [customerEmail, setCustomerEmail] = useState<string>("-");
   const [payOpen, setPayOpen] = useState(false);
   const [payMode, setPayMode] = useState<"edit" | "add">("edit");
