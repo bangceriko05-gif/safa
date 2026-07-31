@@ -1372,6 +1372,24 @@ export default function PosOrderDetail() {
                 <p className="text-xs text-muted-foreground">
                   Atau isi manual. Boleh negatif untuk pembulatan ke bawah.
                 </p>
+                <div className="rounded-md border bg-muted/40 p-3 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Total sebelum pembulatan</span>
+                    <span className="tabular-nums">Rp {new Intl.NumberFormat("id-ID").format(preRoundTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Pembulatan</span>
+                    <span className="tabular-nums">
+                      {adjustValue >= 0 ? "+" : "-"} Rp {new Intl.NumberFormat("id-ID").format(Math.abs(adjustValue))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                    <span>Total dibayar customer</span>
+                    <span className="tabular-nums">
+                      Rp {new Intl.NumberFormat("id-ID").format(preRoundTotal + adjustValue)}
+                    </span>
+                  </div>
+                </div>
               </>
             )}
           </div>
