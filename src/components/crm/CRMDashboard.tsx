@@ -73,7 +73,11 @@ const normalizePhone = (p?: string | null) => (p || "").replace(/\D/g, "").repla
 const daysSince = (d: string | null) =>
   d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : Infinity;
 
-export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?: string } = {}) {
+export default function CRMDashboard({
+  initialCustomerId,
+  initialCustomerPhone,
+  initialCustomerName,
+}: { initialCustomerId?: string; initialCustomerPhone?: string; initialCustomerName?: string } = {}) {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
@@ -194,16 +198,23 @@ export default function CRMDashboard({ initialCustomerId }: { initialCustomerId?
 
   // Auto-open a customer detail when navigated here with a target customer id
   useEffect(() => {
-    if (!initialCustomerId || autoOpenedRef.current === initialCustomerId) return;
-    const match = crmCustomers.find((c) => c.id === initialCustomerId);
+    const key = initialCustomerId || initialCustomerPhone || initialCustomerName;
+    if (!key || autoOpenedRef.current === key) return;
+    if (crmCustomers.length === 0) return;
+    const targetPhone = normalizePhone(initialCustomerPhone || "");
+    const targetName = (initialCustomerName || "").trim().toLowerCase();
+    const match =
+      (initialCustomerId && crmCustomers.find((c) => c.id === initialCustomerId)) ||
+      (targetPhone && crmCustomers.find((c) => normalizePhone(c.phone) === targetPhone)) ||
+      (targetName && crmCustomers.find((c) => (c.name || "").trim().toLowerCase() === targetName));
     if (!match) return;
-    autoOpenedRef.current = initialCustomerId;
+    autoOpenedRef.current = key;
     setSelected({
       ...match,
       segmentLabel: SEGMENT_META[match.segment].label,
       segmentClass: SEGMENT_META[match.segment].className,
     });
-  }, [initialCustomerId, crmCustomers]);
+  }, [initialCustomerId, initialCustomerPhone, initialCustomerName, crmCustomers]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
