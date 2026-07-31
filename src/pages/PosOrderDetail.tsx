@@ -930,13 +930,13 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
-          <SectionCard title="Catatan Pesanan">
-            <div className="p-4 space-y-2">
+          <SectionCard title="Catatan Pesanan" className="flex flex-col">
+            <div className="p-4 space-y-2 flex-1 flex flex-col">
               <Textarea
                 value={noteDraft}
                 onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
                 placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
-                className="h-[92px] min-h-[92px] resize-none text-sm"
+                className="flex-1 h-full min-h-[80px] resize-none text-sm"
               />
               <div className="flex justify-end">
                 <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
@@ -993,7 +993,7 @@ export default function PosOrderDetail() {
             )}
           </SectionCard>
           {stays.length > 0 ? (
-            <SectionCard title="Detail Kamar">
+            <SectionCard title={stayFallback ? "Detail Kamar (Booking Terakhir)" : "Detail Kamar"}>
               {stays.map((s: any, idx: number) => (
                 <div key={s.id}>
                   <div className="px-4 py-2 border-b flex flex-wrap items-center gap-2 bg-muted/30">
