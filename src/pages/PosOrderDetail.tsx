@@ -1639,16 +1639,17 @@ function EditItemDialog({
 }
 
 function SectionCard({
-  title, extra, children, onEdit, onTitleClick,
+  title, extra, children, onEdit, onTitleClick, className,
 }: {
   title: string;
   extra?: React.ReactNode;
   children: React.ReactNode;
   onEdit?: () => void;
   onTitleClick?: () => void;
+  className?: string;
 }) {
   return (
-    <div className="bg-card rounded-lg border">
+    <div className={`bg-card rounded-lg border ${className || ""}`}>
       <div className="px-4 py-3 border-b flex items-center justify-between">
         {onTitleClick ? (
           <button
