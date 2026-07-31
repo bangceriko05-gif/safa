@@ -52,6 +52,7 @@ export default function PosOrderDetail() {
   const [creatorName, setCreatorName] = useState<string>("-");
   const [customerName, setCustomerName] = useState<string>("-");
   const [customerPhone, setCustomerPhone] = useState<string>("-");
+  const [stays, setStays] = useState<any[]>([]);
   const [customerEmail, setCustomerEmail] = useState<string>("-");
   const [payOpen, setPayOpen] = useState(false);
   const [payMode, setPayMode] = useState<"edit" | "add">("edit");
@@ -699,6 +700,35 @@ export default function PosOrderDetail() {
   const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
   const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
+  // ---------- Stay (booking kamar) di tanggal yang sama dengan BID ----------
+  useEffect(() => {
+    const storeId = order?.store_id;
+    const day = order?.date;
+    const phone = customerPhone !== "-" ? customerPhone : "";
+    const name = customerName !== "-" ? customerName : "";
+    if (!storeId || !day || (!phone && !name)) { setStays([]); return; }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("id, bid, date, start_time, end_time, duration, price, status, payment_status, phone, customer_name, rooms(name, room_number)")
+        .eq("store_id", storeId)
+        .eq("date", day)
+        .neq("status", "batal");
+      if (!active) return;
+      const norm = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
+      const target = norm(phone);
+      const nm = name.trim().toLowerCase();
+      setStays(
+        (data || []).filter((b: any) =>
+          (target && norm(b.phone) === target) ||
+          (!!nm && (b.customer_name || "").trim().toLowerCase() === nm)
+        )
+      );
+    })();
+    return () => { active = false; };
+  }, [order?.store_id, order?.date, customerPhone, customerName]);
+
   // ---------- CRM lookup ----------
   useEffect(() => {
     const storeId = order?.store_id;
@@ -892,7 +922,7 @@ export default function PosOrderDetail() {
                 value={noteDraft}
                 onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
                 placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
-                className="min-h-[92px] text-sm"
+                className="h-[92px] min-h-[92px] resize-none text-sm"
               />
               <div className="flex justify-end">
                 <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
@@ -948,18 +978,53 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
-          <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
-            <InfoRow
-              label="Metode Pembayaran"
-              value={(order.payment_method || "-").toString().toUpperCase()}
-            />
-            <InfoRow
-              label="Status"
-              value={isLunas ? "Lunas" : (paid > 0 ? "Sebagian" : "Belum Bayar")}
-            />
-            <InfoRow label="Referensi" value={order.reference_no || "-"} />
-            <InfoRow label="Sisa Tagihan" value={`IDR ${fmt(outstanding)}`} last />
-          </SectionCard>
+          {stays.length > 0 ? (
+            <SectionCard title="Detail Kamar">
+              {stays.map((s: any, idx: number) => (
+                <div key={s.id}>
+                  <div className="px-4 py-2 border-b flex flex-wrap items-center gap-2 bg-muted/30">
+                    <Badge variant="outline" className="font-mono">{s.bid || "-"}</Badge>
+                    <Badge variant="outline" className="uppercase">{s.status || "-"}</Badge>
+                    <Badge variant="outline">
+                      {s.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"}
+                    </Badge>
+                  </div>
+                  <InfoRow
+                    label="Kamar"
+                    value={
+                      s.rooms
+                        ? `${s.rooms.room_number ? `${s.rooms.room_number} · ` : ""}${s.rooms.name || "-"}`
+                        : "-"
+                    }
+                  />
+                  <InfoRow label="Tanggal Menginap" value={format(new Date(s.date), "dd-MM-yyyy")} />
+                  <InfoRow
+                    label="Jam"
+                    value={`${(s.start_time || "").slice(0, 5) || "-"} - ${(s.end_time || "").slice(0, 5) || "-"}`}
+                  />
+                  <InfoRow label="Durasi" value={s.duration || "-"} />
+                  <InfoRow
+                    label="Tarif Kamar"
+                    value={`IDR ${fmt(Number(s.price) || 0)}`}
+                    last={idx === stays.length - 1}
+                  />
+                </div>
+              ))}
+            </SectionCard>
+          ) : (
+            <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
+              <InfoRow
+                label="Metode Pembayaran"
+                value={(order.payment_method || "-").toString().toUpperCase()}
+              />
+              <InfoRow
+                label="Status"
+                value={isLunas ? "Lunas" : (paid > 0 ? "Sebagian" : "Belum Bayar")}
+              />
+              <InfoRow label="Referensi" value={order.reference_no || "-"} />
+              <InfoRow label="Sisa Tagihan" value={`IDR ${fmt(outstanding)}`} last />
+            </SectionCard>
+          )}
           </div>
         </div>
 
