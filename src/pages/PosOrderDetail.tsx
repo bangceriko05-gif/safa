@@ -878,8 +878,8 @@ export default function PosOrderDetail() {
         </div>
 
         {/* Customer + Notes (left) | CRM + Payment (right) */}
-        <div className="grid md:grid-cols-2 gap-4 items-start">
-          <div className="space-y-4">
+        <div className="grid md:grid-cols-2 gap-4 items-stretch">
+          <div className="space-y-4 flex flex-col">
           <SectionCard
             title="Pelanggan"
             onEdit={editingSection === "customer" ? undefined : openCustomerEdit}
