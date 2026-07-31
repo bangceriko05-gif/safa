@@ -936,7 +936,11 @@ export default function Dashboard() {
                 <SupplierManagement />
               ) : customersSection === "crm" ? (
                 isFeatureEnabled("pos") ? (
-                  <CRMDashboard initialCustomerId={crmCustomerId} />
+                  <CRMDashboard
+                    initialCustomerId={crmCustomerId}
+                    initialCustomerPhone={searchParams.get("crmPhone") || undefined}
+                    initialCustomerName={searchParams.get("crmName") || undefined}
+                  />
                 ) : (
                   <FeatureInactiveNotice
                     featureName="CRM (bagian dari Point of Sale)"
