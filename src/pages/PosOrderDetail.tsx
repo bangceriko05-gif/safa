@@ -699,6 +699,35 @@ export default function PosOrderDetail() {
   const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
   const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
+  // ---------- Stay (booking kamar) di tanggal yang sama dengan BID ----------
+  useEffect(() => {
+    const storeId = order?.store_id;
+    const day = order?.date;
+    const phone = customerPhone !== "-" ? customerPhone : "";
+    const name = customerName !== "-" ? customerName : "";
+    if (!storeId || !day || (!phone && !name)) { setStays([]); return; }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("id, bid, date, start_time, end_time, duration, price, status, payment_status, phone, customer_name, rooms(name, room_number)")
+        .eq("store_id", storeId)
+        .eq("date", day)
+        .neq("status", "batal");
+      if (!active) return;
+      const norm = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
+      const target = norm(phone);
+      const nm = name.trim().toLowerCase();
+      setStays(
+        (data || []).filter((b: any) =>
+          (target && norm(b.phone) === target) ||
+          (!!nm && (b.customer_name || "").trim().toLowerCase() === nm)
+        )
+      );
+    })();
+    return () => { active = false; };
+  }, [order?.store_id, order?.date, customerPhone, customerName]);
+
   // ---------- CRM lookup ----------
   useEffect(() => {
     const storeId = order?.store_id;
