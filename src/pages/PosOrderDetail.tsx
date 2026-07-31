@@ -700,7 +700,8 @@ export default function PosOrderDetail() {
   const openFooterEdit = () => { setFooterDraft(order?.invoice_footer || ""); setEditingSection("footer"); };
   const openNoteCardEdit = () => { setNoteCardDraft(order?.note || ""); setEditingSection("note_card"); };
 
-  // ---------- Stay (booking kamar) di tanggal yang sama dengan BID ----------
+  // ---------- Stay (booking kamar) yang beririsan dengan tanggal BID ----------
+  const [stayFallback, setStayFallback] = useState(false);
   useEffect(() => {
     const storeId = order?.store_id;
     const day = order?.date;
@@ -713,18 +714,31 @@ export default function PosOrderDetail() {
         .from("bookings")
         .select("id, bid, date, start_time, end_time, duration, price, status, payment_status, phone, customer_name, rooms(name, room_number)")
         .eq("store_id", storeId)
-        .eq("date", day)
-        .neq("status", "batal");
+        .not("status", "in", '("BATAL","batal")')
+        .order("date", { ascending: false })
+        .limit(400);
       if (!active) return;
       const norm = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
       const target = norm(phone);
       const nm = name.trim().toLowerCase();
-      setStays(
-        (data || []).filter((b: any) =>
-          (target && norm(b.phone) === target) ||
-          (!!nm && (b.customer_name || "").trim().toLowerCase() === nm)
-        )
+      const mine = (data || []).filter((b: any) =>
+        (target && norm(b.phone) === target) ||
+        (!!nm && (b.customer_name || "").trim().toLowerCase() === nm)
       );
+      const dayMs = new Date(`${day}T00:00:00`).getTime();
+      const overlapping = mine.filter((b: any) => {
+        const start = new Date(`${b.date}T00:00:00`).getTime();
+        const nights = Math.max(Number(b.duration) || 1, 1);
+        const end = start + nights * 86400000;
+        return dayMs >= start && dayMs <= end;
+      });
+      if (overlapping.length > 0) {
+        setStayFallback(false);
+        setStays(overlapping);
+      } else {
+        setStayFallback(true);
+        setStays(mine.slice(0, 1));
+      }
     })();
     return () => { active = false; };
   }, [order?.store_id, order?.date, customerPhone, customerName]);
