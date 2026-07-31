@@ -833,8 +833,9 @@ export default function PosOrderDetail() {
           </div>
         </div>
 
-        {/* Customer + Shipping destination */}
-        <div className="grid md:grid-cols-2 gap-4">
+        {/* Customer + Notes (left) | CRM + Payment (right) */}
+        <div className="grid md:grid-cols-2 gap-4 items-start">
+          <div className="space-y-4">
           <SectionCard
             title="Pelanggan"
             onEdit={editingSection === "customer" ? undefined : openCustomerEdit}
@@ -885,11 +886,33 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
+          <SectionCard title="Catatan Pesanan">
+            <div className="p-4 space-y-2">
+              <Textarea
+                value={noteDraft}
+                onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
+                placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
+                className="min-h-[92px] text-sm"
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
+                  {savingNote ? "Menyimpan..." : "Simpan Catatan"}
+                </Button>
+              </div>
+            </div>
+          </SectionCard>
+          </div>
+          <div className="space-y-4">
           <SectionCard
             title="CRM Pelanggan"
             onTitleClick={
               crm?.id
-                ? () => navigate(`/?tab=customers&customersSection=crm&crmCustomer=${crm.id}`)
+                ? () =>
+                    navigate(
+                      `/?tab=customers&customersSection=crm&crmCustomer=${crm.id}` +
+                        `&crmPhone=${encodeURIComponent(crm.phone || customerPhone || "")}` +
+                        `&crmName=${encodeURIComponent(crm.name || customerName || "")}`
+                    )
                 : undefined
             }
           >
@@ -925,25 +948,6 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
-        </div>
-
-        {/* Catatan Pesanan + Info Pembayaran */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Catatan Pesanan">
-            <div className="p-4 space-y-2">
-              <Textarea
-                value={noteDraft}
-                onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
-                placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
-                className="min-h-[92px] text-sm"
-              />
-              <div className="flex justify-end">
-                <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
-                  {savingNote ? "Menyimpan..." : "Simpan Catatan"}
-                </Button>
-              </div>
-            </div>
-          </SectionCard>
           <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
             <InfoRow
               label="Metode Pembayaran"
@@ -956,6 +960,7 @@ export default function PosOrderDetail() {
             <InfoRow label="Referensi" value={order.reference_no || "-"} />
             <InfoRow label="Sisa Tagihan" value={`IDR ${fmt(outstanding)}`} last />
           </SectionCard>
+          </div>
         </div>
 
         {/* Produk Pesanan */}
@@ -1367,6 +1372,24 @@ export default function PosOrderDetail() {
                 <p className="text-xs text-muted-foreground">
                   Atau isi manual. Boleh negatif untuk pembulatan ke bawah.
                 </p>
+                <div className="rounded-md border bg-muted/40 p-3 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Total sebelum pembulatan</span>
+                    <span className="tabular-nums">Rp {new Intl.NumberFormat("id-ID").format(preRoundTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Pembulatan</span>
+                    <span className="tabular-nums">
+                      {adjustValue >= 0 ? "+" : "-"} Rp {new Intl.NumberFormat("id-ID").format(Math.abs(adjustValue))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                    <span>Total dibayar customer</span>
+                    <span className="tabular-nums">
+                      Rp {new Intl.NumberFormat("id-ID").format(preRoundTotal + adjustValue)}
+                    </span>
+                  </div>
+                </div>
               </>
             )}
           </div>
