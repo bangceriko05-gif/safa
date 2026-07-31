@@ -886,11 +886,33 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
+          <SectionCard title="Catatan Pesanan">
+            <div className="p-4 space-y-2">
+              <Textarea
+                value={noteDraft}
+                onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
+                placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
+                className="min-h-[92px] text-sm"
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
+                  {savingNote ? "Menyimpan..." : "Simpan Catatan"}
+                </Button>
+              </div>
+            </div>
+          </SectionCard>
+          </div>
+          <div className="space-y-4">
           <SectionCard
             title="CRM Pelanggan"
             onTitleClick={
               crm?.id
-                ? () => navigate(`/?tab=customers&customersSection=crm&crmCustomer=${crm.id}`)
+                ? () =>
+                    navigate(
+                      `/?tab=customers&customersSection=crm&crmCustomer=${crm.id}` +
+                        `&crmPhone=${encodeURIComponent(crm.phone || customerPhone || "")}` +
+                        `&crmName=${encodeURIComponent(crm.name || customerName || "")}`
+                    )
                 : undefined
             }
           >
@@ -926,25 +948,6 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
-        </div>
-
-        {/* Catatan Pesanan + Info Pembayaran */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <SectionCard title="Catatan Pesanan">
-            <div className="p-4 space-y-2">
-              <Textarea
-                value={noteDraft}
-                onChange={(e) => { setNoteDraft(e.target.value); setNoteDirty(true); }}
-                placeholder="Tulis catatan untuk pesanan ini (misal: permintaan khusus, alergi, request kemasan)..."
-                className="min-h-[92px] text-sm"
-              />
-              <div className="flex justify-end">
-                <Button size="sm" onClick={saveNote} disabled={!noteDirty || savingNote}>
-                  {savingNote ? "Menyimpan..." : "Simpan Catatan"}
-                </Button>
-              </div>
-            </div>
-          </SectionCard>
           <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
             <InfoRow
               label="Metode Pembayaran"
@@ -957,6 +960,7 @@ export default function PosOrderDetail() {
             <InfoRow label="Referensi" value={order.reference_no || "-"} />
             <InfoRow label="Sisa Tagihan" value={`IDR ${fmt(outstanding)}`} last />
           </SectionCard>
+          </div>
         </div>
 
         {/* Produk Pesanan */}
