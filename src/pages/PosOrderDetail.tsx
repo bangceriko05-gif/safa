@@ -204,12 +204,14 @@ export default function PosOrderDetail() {
 
   const saveNote = async () => {
     setSavingNote(true);
+    const prevNote = String(order?.note || "");
     const { error } = await supabase
       .from("booking_orders").update({ note: noteDraft }).eq("id", id!);
     setSavingNote(false);
     if (error) { toast.error("Gagal menyimpan catatan"); return; }
     setNoteDirty(false);
     toast.success("Catatan disimpan");
+    if (prevNote !== noteDraft) logChange(`Catatan pesanan: ${txt(prevNote)} → ${txt(noteDraft)}`);
     load({ silent: true });
   };
 
@@ -268,7 +270,7 @@ export default function PosOrderDetail() {
     if (!opts.silent) setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { load(); fetchHistory(); /* eslint-disable-next-line */ }, [id]);
 
   // Load products for "Tambah Produk"
   useEffect(() => {
