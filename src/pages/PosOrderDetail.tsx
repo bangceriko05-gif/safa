@@ -357,17 +357,26 @@ export default function PosOrderDetail() {
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success("Item diperbarui");
+    {
+      const parts: string[] = [];
+      if (Number(editItem.quantity) !== Number(patch.quantity)) parts.push(`qty ${editItem.quantity} → ${patch.quantity}`);
+      if (Number(editItem.unit_price) !== Number(patch.unit_price)) parts.push(`harga ${money(editItem.unit_price)} → ${money(patch.unit_price)}`);
+      if (Number(editItem.discount) !== Number(patch.discount)) parts.push(`diskon ${money(editItem.discount)} → ${money(patch.discount)}`);
+      if (parts.length) logChange(`Ubah item "${editItem.product_name}": ${parts.join(", ")}`);
+    }
     setEditItem(null);
     load({ silent: true });
   };
 
   const removeItem = async (itemId: string) => {
+    const target = items.find((it) => it.id === itemId);
     const { error } = await supabase.from("booking_order_items").delete().eq("id", itemId);
     if (error) { toast.error("Gagal menghapus"); return; }
     const next = items.filter((it) => it.id !== itemId);
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success("Item dihapus");
+    logChange(`Hapus item "${target?.product_name || itemId}" (qty ${target?.quantity ?? "-"}, ${money(target?.subtotal)})`, "deleted");
     load({ silent: true });
   };
 
@@ -393,6 +402,7 @@ export default function PosOrderDetail() {
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success(`${p.name} ditambahkan`);
+    logChange(`Tambah item "${p.name}" (qty 1, ${money(p.price)})`, "created");
     setAddOpen(false);
     setProductSearch("");
     load({ silent: true });
@@ -420,6 +430,7 @@ export default function PosOrderDetail() {
     setItems(updates as any);
     await recomputeOrderTotal(updates as any);
     toast.success("Diskon diterapkan");
+    logChange(`Diskon order: ${money(totalDiscount)} → ${money(absolute)}${mode === "pct" ? ` (${value}%)` : ""}`);
     load({ silent: true });
   };
 
@@ -428,7 +439,11 @@ export default function PosOrderDetail() {
     const { error } = await supabase
       .from("booking_orders").update({ payment_status: next }).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
-    else { toast.success("Status diperbarui"); load({ silent: true }); }
+    else {
+      toast.success("Status diperbarui");
+      logChange(`Status pembayaran: ${isLunas ? "LUNAS" : "BELUM LUNAS"} → ${next === "lunas" ? "LUNAS" : "BELUM LUNAS"}`);
+      load({ silent: true });
+    }
   };
 
   const cancelOrder = async () => {
@@ -436,15 +451,21 @@ export default function PosOrderDetail() {
       .from("booking_orders").update({ process_status: "batal" } as any).eq("id", id!);
     if (error) { toast.error("Gagal membatalkan"); return; }
     toast.success("Order dibatalkan");
+    logChange(`Status proses: ${txt(order?.process_status || "proses")} → batal`);
     load({ silent: true });
   };
 
   const setStatus = async (label: "Proses" | "Selesai") => {
     const next = label === "Selesai" ? "selesai" : "proses";
+    const prev = String(order?.process_status || "proses");
     const { error } = await supabase
       .from("booking_orders").update({ process_status: next } as any).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
-    else { toast.success(`Status: ${label}`); load({ silent: true }); }
+    else {
+      toast.success(`Status: ${label}`);
+      if (prev !== next) logChange(`Status proses: ${prev} → ${next}`);
+      load({ silent: true });
+    }
   };
 
   const currentStatusLabel =
