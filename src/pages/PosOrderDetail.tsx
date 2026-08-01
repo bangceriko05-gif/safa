@@ -25,8 +25,36 @@ import { id as idLocale } from "date-fns/locale";
 import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/PaymentDialog";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { logActivity } from "@/utils/activityLogger";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
+const money = (n: any) => `Rp ${new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0))}`;
+const txt = (v: any) => (v === null || v === undefined || v === "" ? "(kosong)" : String(v));
+
+const FIELD_LABELS: Record<string, string> = {
+  customer_name: "Nama pelanggan",
+  customer_phone: "Telepon pelanggan",
+  customer_email: "Email pelanggan",
+  attendant_name: "Pelayan POS",
+  due_date: "Jatuh tempo",
+  invoice_footer: "Invoice footer",
+  note: "Catatan pesanan",
+  date: "Tanggal pembayaran",
+  payment_method: "Metode pembayaran",
+  reference_no: "Referensi pembayaran",
+  amount: "Nominal bayar",
+  payment_status: "Status pembayaran",
+  process_status: "Status proses",
+  shipping_amount: "Biaya pengiriman",
+  admin_fee: "Biaya admin",
+  rounding: "Pembulatan",
+  tax_amount: "Pajak",
+  service_charge: "Service charge",
+  total_amount: "Total tagihan",
+};
+const MONEY_FIELDS = new Set([
+  "amount", "shipping_amount", "admin_fee", "rounding", "tax_amount", "service_charge", "total_amount",
+]);
 
 type SectionKey = "customer" | "attendant" | "due_date" | "footer" | "note_card";
 
@@ -113,6 +141,50 @@ export default function PosOrderDetail() {
   const [crm, setCrm] = useState<any | null>(null);
   const [crmLoading, setCrmLoading] = useState(false);
 
+  // Change history (audit log) for this order
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyAll, setHistoryAll] = useState(false);
+
+  const fetchHistory = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("activity_logs")
+      .select("id, user_name, user_role, action_type, description, created_at")
+      .eq("entity_id", id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setHistory(data || []);
+  };
+
+  const logChange = async (description: string, actionType: "created" | "updated" | "deleted" = "updated") => {
+    if (!id) return;
+    await logActivity({
+      actionType,
+      entityType: "pos_order",
+      entityId: id,
+      description,
+      storeId: order?.store_id,
+    });
+    fetchHistory();
+  };
+
+  // Compare a patch against the current order and log every changed field
+  const logPatchDiff = async (patch: Record<string, any>, base?: any) => {
+    const src = base ?? order ?? {};
+    const parts: string[] = [];
+    Object.entries(patch).forEach(([k, v]) => {
+      const label = FIELD_LABELS[k];
+      if (!label) return;
+      const oldV = (src as any)[k];
+      const norm = (x: any) => (x === null || x === undefined ? "" : String(x));
+      if (norm(oldV) === norm(v)) return;
+      const f = MONEY_FIELDS.has(k) ? money : txt;
+      parts.push(`${label}: ${f(oldV)} → ${f(v)}`);
+    });
+    if (parts.length === 0) return;
+    await logChange(parts.join("; "));
+  };
+
   useEffect(() => {
     if (order) {
       setNoteDraft(String(order.note || ""));
@@ -132,12 +204,14 @@ export default function PosOrderDetail() {
 
   const saveNote = async () => {
     setSavingNote(true);
+    const prevNote = String(order?.note || "");
     const { error } = await supabase
       .from("booking_orders").update({ note: noteDraft }).eq("id", id!);
     setSavingNote(false);
     if (error) { toast.error("Gagal menyimpan catatan"); return; }
     setNoteDirty(false);
     toast.success("Catatan disimpan");
+    if (prevNote !== noteDraft) logChange(`Catatan pesanan: ${txt(prevNote)} → ${txt(noteDraft)}`);
     load({ silent: true });
   };
 
@@ -196,7 +270,7 @@ export default function PosOrderDetail() {
     if (!opts.silent) setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { load(); fetchHistory(); /* eslint-disable-next-line */ }, [id]);
 
   // Load products for "Tambah Produk"
   useEffect(() => {
@@ -283,17 +357,26 @@ export default function PosOrderDetail() {
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success("Item diperbarui");
+    {
+      const parts: string[] = [];
+      if (Number(editItem.quantity) !== Number(patch.quantity)) parts.push(`qty ${editItem.quantity} → ${patch.quantity}`);
+      if (Number(editItem.unit_price) !== Number(patch.unit_price)) parts.push(`harga ${money(editItem.unit_price)} → ${money(patch.unit_price)}`);
+      if (Number(editItem.discount) !== Number(patch.discount)) parts.push(`diskon ${money(editItem.discount)} → ${money(patch.discount)}`);
+      if (parts.length) logChange(`Ubah item "${editItem.product_name}": ${parts.join(", ")}`);
+    }
     setEditItem(null);
     load({ silent: true });
   };
 
   const removeItem = async (itemId: string) => {
+    const target = items.find((it) => it.id === itemId);
     const { error } = await supabase.from("booking_order_items").delete().eq("id", itemId);
     if (error) { toast.error("Gagal menghapus"); return; }
     const next = items.filter((it) => it.id !== itemId);
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success("Item dihapus");
+    logChange(`Hapus item "${target?.product_name || itemId}" (qty ${target?.quantity ?? "-"}, ${money(target?.subtotal)})`, "deleted");
     load({ silent: true });
   };
 
@@ -319,6 +402,7 @@ export default function PosOrderDetail() {
     setItems(next);
     await recomputeOrderTotal(next);
     toast.success(`${p.name} ditambahkan`);
+    logChange(`Tambah item "${p.name}" (qty 1, ${money(p.price)})`, "created");
     setAddOpen(false);
     setProductSearch("");
     load({ silent: true });
@@ -346,6 +430,7 @@ export default function PosOrderDetail() {
     setItems(updates as any);
     await recomputeOrderTotal(updates as any);
     toast.success("Diskon diterapkan");
+    logChange(`Diskon order: ${money(totalDiscount)} → ${money(absolute)}${mode === "pct" ? ` (${value}%)` : ""}`);
     load({ silent: true });
   };
 
@@ -354,7 +439,11 @@ export default function PosOrderDetail() {
     const { error } = await supabase
       .from("booking_orders").update({ payment_status: next }).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
-    else { toast.success("Status diperbarui"); load({ silent: true }); }
+    else {
+      toast.success("Status diperbarui");
+      logChange(`Status pembayaran: ${isLunas ? "LUNAS" : "BELUM LUNAS"} → ${next === "lunas" ? "LUNAS" : "BELUM LUNAS"}`);
+      load({ silent: true });
+    }
   };
 
   const cancelOrder = async () => {
@@ -362,15 +451,21 @@ export default function PosOrderDetail() {
       .from("booking_orders").update({ process_status: "batal" } as any).eq("id", id!);
     if (error) { toast.error("Gagal membatalkan"); return; }
     toast.success("Order dibatalkan");
+    logChange(`Status proses: ${txt(order?.process_status || "proses")} → batal`);
     load({ silent: true });
   };
 
   const setStatus = async (label: "Proses" | "Selesai") => {
     const next = label === "Selesai" ? "selesai" : "proses";
+    const prev = String(order?.process_status || "proses");
     const { error } = await supabase
       .from("booking_orders").update({ process_status: next } as any).eq("id", id!);
     if (error) toast.error("Gagal mengubah status");
-    else { toast.success(`Status: ${label}`); load({ silent: true }); }
+    else {
+      toast.success(`Status: ${label}`);
+      if (prev !== next) logChange(`Status proses: ${prev} → ${next}`);
+      load({ silent: true });
+    }
   };
 
   const currentStatusLabel =
@@ -393,7 +488,11 @@ export default function PosOrderDetail() {
     if (patch.amount >= grand) patch.payment_status = "lunas";
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) toast.error("Gagal menyimpan pembayaran");
-    else { toast.success("Pembayaran disimpan"); load({ silent: true }); }
+    else {
+      toast.success("Pembayaran disimpan");
+      logPatchDiff(patch);
+      load({ silent: true });
+    }
   };
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
@@ -446,6 +545,7 @@ export default function PosOrderDetail() {
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) { toast.error("Gagal menyimpan"); return; }
     toast.success("Perubahan disimpan");
+    logPatchDiff(patch);
     setEditingSection(null);
     // Optimistically merge so the UI updates immediately
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
@@ -626,6 +726,7 @@ export default function PosOrderDetail() {
       finalValue = Math.round((sub * adjustValue) / 100);
     }
     const patch: Record<string, any> = { [col]: finalValue };
+    logPatchDiff(patch);
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
@@ -649,6 +750,7 @@ export default function PosOrderDetail() {
       newAmount = type === "percent" ? Math.round((sub * val) / 100) : Math.round(val);
     }
     const patch = { service_charge: newAmount };
+    logPatchDiff(patch);
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
@@ -669,6 +771,7 @@ export default function PosOrderDetail() {
       newAmount = Math.round((sub * storeTax.rate) / 100);
     }
     const patch = { tax_amount: newAmount };
+    logPatchDiff(patch);
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
@@ -1330,7 +1433,10 @@ export default function PosOrderDetail() {
 
         {/* Log */}
         <div className="bg-card rounded-lg border">
-          <div className="px-4 py-3 border-b font-semibold">Log</div>
+          <div className="px-4 py-3 border-b font-semibold flex items-center justify-between">
+            <span>Log</span>
+            <span className="text-xs font-normal text-muted-foreground">{history.length} perubahan</span>
+          </div>
           <div className="p-4 text-sm space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-foreground">Terakhir Diperbarui</span>
@@ -1339,6 +1445,32 @@ export default function PosOrderDetail() {
             <div className="flex items-center justify-between">
               <span className="text-foreground">Waktu Pembuatan</span>
               <span>{creatorName}, {format(new Date(order.created_at), "dd-MMM-yyyy HH:mm:ss", { locale: idLocale })}</span>
+            </div>
+
+            <div className="pt-3 mt-2 border-t">
+              <div className="font-medium mb-2">Riwayat Perubahan</div>
+              {history.length === 0 ? (
+                <p className="text-muted-foreground">Belum ada perubahan tercatat.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {(historyAll ? history : history.slice(0, 10)).map((h) => (
+                    <li key={h.id} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                      <span className="text-foreground break-words">{h.description}</span>
+                      <span className="text-muted-foreground whitespace-nowrap">
+                        {h.user_name}, {format(new Date(h.created_at), "dd-MMM-yyyy HH:mm:ss", { locale: idLocale })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {history.length > 10 && (
+                <button
+                  className="mt-3 text-primary hover:underline text-xs"
+                  onClick={() => setHistoryAll((v) => !v)}
+                >
+                  {historyAll ? "Tampilkan lebih sedikit" : `Lihat semua (${history.length})`}
+                </button>
+              )}
             </div>
           </div>
         </div>
