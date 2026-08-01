@@ -488,7 +488,11 @@ export default function PosOrderDetail() {
     if (patch.amount >= grand) patch.payment_status = "lunas";
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) toast.error("Gagal menyimpan pembayaran");
-    else { toast.success("Pembayaran disimpan"); load({ silent: true }); }
+    else {
+      toast.success("Pembayaran disimpan");
+      logPatchDiff(patch);
+      load({ silent: true });
+    }
   };
 
   const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
@@ -541,6 +545,7 @@ export default function PosOrderDetail() {
     const { error } = await supabase.from("booking_orders").update(patch).eq("id", id!);
     if (error) { toast.error("Gagal menyimpan"); return; }
     toast.success("Perubahan disimpan");
+    logPatchDiff(patch);
     setEditingSection(null);
     // Optimistically merge so the UI updates immediately
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
@@ -721,6 +726,7 @@ export default function PosOrderDetail() {
       finalValue = Math.round((sub * adjustValue) / 100);
     }
     const patch: Record<string, any> = { [col]: finalValue };
+    logPatchDiff(patch);
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
@@ -744,6 +750,7 @@ export default function PosOrderDetail() {
       newAmount = type === "percent" ? Math.round((sub * val) / 100) : Math.round(val);
     }
     const patch = { service_charge: newAmount };
+    logPatchDiff(patch);
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
@@ -764,6 +771,7 @@ export default function PosOrderDetail() {
       newAmount = Math.round((sub * storeTax.rate) / 100);
     }
     const patch = { tax_amount: newAmount };
+    logPatchDiff(patch);
     setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
     await supabase.from("booking_orders").update(patch as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
