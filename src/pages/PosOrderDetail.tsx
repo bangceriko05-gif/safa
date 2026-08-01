@@ -25,8 +25,36 @@ import { id as idLocale } from "date-fns/locale";
 import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/PaymentDialog";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { logActivity } from "@/utils/activityLogger";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
+const money = (n: any) => `Rp ${new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0))}`;
+const txt = (v: any) => (v === null || v === undefined || v === "" ? "(kosong)" : String(v));
+
+const FIELD_LABELS: Record<string, string> = {
+  customer_name: "Nama pelanggan",
+  customer_phone: "Telepon pelanggan",
+  customer_email: "Email pelanggan",
+  attendant_name: "Pelayan POS",
+  due_date: "Jatuh tempo",
+  invoice_footer: "Invoice footer",
+  note: "Catatan pesanan",
+  date: "Tanggal pembayaran",
+  payment_method: "Metode pembayaran",
+  reference_no: "Referensi pembayaran",
+  amount: "Nominal bayar",
+  payment_status: "Status pembayaran",
+  process_status: "Status proses",
+  shipping_amount: "Biaya pengiriman",
+  admin_fee: "Biaya admin",
+  rounding: "Pembulatan",
+  tax_amount: "Pajak",
+  service_charge: "Service charge",
+  total_amount: "Total tagihan",
+};
+const MONEY_FIELDS = new Set([
+  "amount", "shipping_amount", "admin_fee", "rounding", "tax_amount", "service_charge", "total_amount",
+]);
 
 type SectionKey = "customer" | "attendant" | "due_date" | "footer" | "note_card";
 
