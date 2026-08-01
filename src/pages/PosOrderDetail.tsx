@@ -141,6 +141,50 @@ export default function PosOrderDetail() {
   const [crm, setCrm] = useState<any | null>(null);
   const [crmLoading, setCrmLoading] = useState(false);
 
+  // Change history (audit log) for this order
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyAll, setHistoryAll] = useState(false);
+
+  const fetchHistory = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("activity_logs")
+      .select("id, user_name, user_role, action_type, description, created_at")
+      .eq("entity_id", id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setHistory(data || []);
+  };
+
+  const logChange = async (description: string, actionType: "created" | "updated" | "deleted" = "updated") => {
+    if (!id) return;
+    await logActivity({
+      actionType,
+      entityType: "pos_order",
+      entityId: id,
+      description,
+      storeId: order?.store_id,
+    });
+    fetchHistory();
+  };
+
+  // Compare a patch against the current order and log every changed field
+  const logPatchDiff = async (patch: Record<string, any>, base?: any) => {
+    const src = base ?? order ?? {};
+    const parts: string[] = [];
+    Object.entries(patch).forEach(([k, v]) => {
+      const label = FIELD_LABELS[k];
+      if (!label) return;
+      const oldV = (src as any)[k];
+      const norm = (x: any) => (x === null || x === undefined ? "" : String(x));
+      if (norm(oldV) === norm(v)) return;
+      const f = MONEY_FIELDS.has(k) ? money : txt;
+      parts.push(`${label}: ${f(oldV)} → ${f(v)}`);
+    });
+    if (parts.length === 0) return;
+    await logChange(parts.join("; "));
+  };
+
   useEffect(() => {
     if (order) {
       setNoteDraft(String(order.note || ""));
