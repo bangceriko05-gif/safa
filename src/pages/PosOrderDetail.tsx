@@ -1433,7 +1433,10 @@ export default function PosOrderDetail() {
 
         {/* Log */}
         <div className="bg-card rounded-lg border">
-          <div className="px-4 py-3 border-b font-semibold">Log</div>
+          <div className="px-4 py-3 border-b font-semibold flex items-center justify-between">
+            <span>Log</span>
+            <span className="text-xs font-normal text-muted-foreground">{history.length} perubahan</span>
+          </div>
           <div className="p-4 text-sm space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-foreground">Terakhir Diperbarui</span>
@@ -1442,6 +1445,32 @@ export default function PosOrderDetail() {
             <div className="flex items-center justify-between">
               <span className="text-foreground">Waktu Pembuatan</span>
               <span>{creatorName}, {format(new Date(order.created_at), "dd-MMM-yyyy HH:mm:ss", { locale: idLocale })}</span>
+            </div>
+
+            <div className="pt-3 mt-2 border-t">
+              <div className="font-medium mb-2">Riwayat Perubahan</div>
+              {history.length === 0 ? (
+                <p className="text-muted-foreground">Belum ada perubahan tercatat.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {(historyAll ? history : history.slice(0, 10)).map((h) => (
+                    <li key={h.id} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                      <span className="text-foreground break-words">{h.description}</span>
+                      <span className="text-muted-foreground whitespace-nowrap">
+                        {h.user_name}, {format(new Date(h.created_at), "dd-MMM-yyyy HH:mm:ss", { locale: idLocale })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {history.length > 10 && (
+                <button
+                  className="mt-3 text-primary hover:underline text-xs"
+                  onClick={() => setHistoryAll((v) => !v)}
+                >
+                  {historyAll ? "Tampilkan lebih sedikit" : `Lihat semua (${history.length})`}
+                </button>
+              )}
             </div>
           </div>
         </div>
