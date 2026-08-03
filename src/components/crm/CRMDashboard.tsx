@@ -12,10 +12,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import LoyaltyProgram from "./LoyaltyProgram";
 import CustomerDetailDialog, { DetailCustomer } from "./CustomerDetailDialog";
 import {
-  Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock, Award, LayoutDashboard,
+  Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock, Award, LayoutDashboard, Settings2,
 } from "lucide-react";
 
 interface CustomerRow {
@@ -72,6 +75,19 @@ const normalizePhone = (p?: string | null) => (p || "").replace(/\D/g, "").repla
 
 const daysSince = (d: string | null) =>
   d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : Infinity;
+
+const DEFAULT_TEMPLATES = {
+  birthday: "Selamat ulang tahun {nama}! 🎉 Ada hadiah spesial dari {toko} untuk Anda.",
+  followup: "Halo {nama}, sudah lama tidak berkunjung ke {toko}. Kami punya penawaran khusus untuk Anda!",
+  general: "Halo {nama}, terima kasih telah menjadi pelanggan {toko}. Ada penawaran spesial untuk Anda!",
+};
+type TemplateKey = keyof typeof DEFAULT_TEMPLATES;
+const TEMPLATE_META: Record<TemplateKey, { title: string; desc: string }> = {
+  birthday: { title: "Pesan Ucapan Ulang Tahun", desc: "Pesan WhatsApp untuk pelanggan yang berulang tahun." },
+  followup: { title: "Pesan Follow Up", desc: "Pesan WhatsApp untuk pelanggan yang lama tidak berkunjung." },
+  general: { title: "Pesan Umum Pelanggan", desc: "Pesan WhatsApp default dari tabel database pelanggan." },
+};
+const TPL_STORAGE_KEY = "crm_wa_templates";
 
 export default function CRMDashboard({
   initialCustomerId,
