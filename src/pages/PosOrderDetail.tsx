@@ -842,13 +842,8 @@ export default function PosOrderDetail() {
         const end = start + nights * 86400000;
         return dayMs >= start && dayMs <= end;
       });
-      if (overlapping.length > 0) {
-        setStayFallback(false);
-        setStays(overlapping);
-      } else {
-        setStayFallback(true);
-        setStays(mine.slice(0, 1));
-      }
+      setStayFallback(false);
+      setStays(overlapping);
     })();
     return () => { active = false; };
   }, [order?.store_id, order?.date, customerPhone, customerName]);
@@ -1102,9 +1097,13 @@ export default function PosOrderDetail() {
               </>
             )}
           </SectionCard>
-          {stays.length > 0 ? (
-            <SectionCard title={stayFallback ? "Detail Kamar (Booking Terakhir)" : "Detail Kamar"}>
-              {stays.map((s: any, idx: number) => (
+          <SectionCard title="Detail Kamar">
+            {stays.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">
+                Tidak ada pesanan kamar pada tanggal ini.
+              </div>
+            ) : (
+              stays.map((s: any, idx: number) => (
                 <div key={s.id}>
                   <div className="px-4 py-2 border-b flex flex-wrap items-center gap-2 bg-muted/30">
                     <Badge variant="outline" className="font-mono">{s.bid || "-"}</Badge>
@@ -1133,22 +1132,9 @@ export default function PosOrderDetail() {
                     last={idx === stays.length - 1}
                   />
                 </div>
-              ))}
-            </SectionCard>
-          ) : (
-            <SectionCard title="Info Pembayaran" onEdit={() => { setPayMode("edit"); setPayOpen(true); }}>
-              <InfoRow
-                label="Metode Pembayaran"
-                value={(order.payment_method || "-").toString().toUpperCase()}
-              />
-              <InfoRow
-                label="Status"
-                value={isLunas ? "Lunas" : (paid > 0 ? "Sebagian" : "Belum Bayar")}
-              />
-              <InfoRow label="Referensi" value={order.reference_no || "-"} />
-              <InfoRow label="Sisa Tagihan" value={`IDR ${fmt(outstanding)}`} last />
-            </SectionCard>
-          )}
+              ))
+            )}
+          </SectionCard>
           </div>
         </div>
 
