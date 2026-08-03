@@ -12,10 +12,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import LoyaltyProgram from "./LoyaltyProgram";
 import CustomerDetailDialog, { DetailCustomer } from "./CustomerDetailDialog";
 import {
-  Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock, Award, LayoutDashboard,
+  Users, UserPlus, Repeat, Wallet, Search, MessageCircle, Cake, Loader2, Crown, Clock, Award, LayoutDashboard, Settings2,
 } from "lucide-react";
 
 interface CustomerRow {
@@ -73,6 +76,19 @@ const normalizePhone = (p?: string | null) => (p || "").replace(/\D/g, "").repla
 const daysSince = (d: string | null) =>
   d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : Infinity;
 
+const DEFAULT_TEMPLATES = {
+  birthday: "Selamat ulang tahun {nama}! 🎉 Ada hadiah spesial dari {toko} untuk Anda.",
+  followup: "Halo {nama}, sudah lama tidak berkunjung ke {toko}. Kami punya penawaran khusus untuk Anda!",
+  general: "Halo {nama}, terima kasih telah menjadi pelanggan {toko}. Ada penawaran spesial untuk Anda!",
+};
+type TemplateKey = keyof typeof DEFAULT_TEMPLATES;
+const TEMPLATE_META: Record<TemplateKey, { title: string; desc: string }> = {
+  birthday: { title: "Pesan Ucapan Ulang Tahun", desc: "Pesan WhatsApp untuk pelanggan yang berulang tahun." },
+  followup: { title: "Pesan Follow Up", desc: "Pesan WhatsApp untuk pelanggan yang lama tidak berkunjung." },
+  general: { title: "Pesan Umum Pelanggan", desc: "Pesan WhatsApp default dari tabel database pelanggan." },
+};
+const TPL_STORAGE_KEY = "crm_wa_templates";
+
 export default function CRMDashboard({
   initialCustomerId,
   initialCustomerPhone,
@@ -88,6 +104,36 @@ export default function CRMDashboard({
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<DetailCustomer | null>(null);
   const autoOpenedRef = useRef<string | null>(null);
+  const [templates, setTemplates] = useState<Record<TemplateKey, string>>(() => {
+    try {
+      const raw = localStorage.getItem(TPL_STORAGE_KEY);
+      return raw ? { ...DEFAULT_TEMPLATES, ...JSON.parse(raw) } : { ...DEFAULT_TEMPLATES };
+    } catch {
+      return { ...DEFAULT_TEMPLATES };
+    }
+  });
+  const [editingTpl, setEditingTpl] = useState<TemplateKey | null>(null);
+  const [draftTpl, setDraftTpl] = useState("");
+
+  const openTplEditor = (key: TemplateKey) => {
+    setDraftTpl(templates[key] ?? DEFAULT_TEMPLATES[key]);
+    setEditingTpl(key);
+  };
+  const saveTpl = () => {
+    if (!editingTpl) return;
+    const next = { ...templates, [editingTpl]: draftTpl };
+    setTemplates(next);
+    try { localStorage.setItem(TPL_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    setEditingTpl(null);
+    toast.success("Isi pesan berhasil disimpan");
+  };
+  const applyTpl = (key: TemplateKey, c: { name: string; lastVisit?: string | null; totalSpend?: number; birth_date?: string | null }) =>
+    (templates[key] || DEFAULT_TEMPLATES[key])
+      .replace(/\{nama\}/g, c.name || "")
+      .replace(/\{toko\}/g, currentStore?.name || "")
+      .replace(/\{terakhir\}/g, formatDate(c.lastVisit ?? null))
+      .replace(/\{total\}/g, formatIDR(c.totalSpend || 0))
+      .replace(/\{ulangtahun\}/g, formatDate(c.birth_date ?? null));
 
   useEffect(() => {
     if (!currentStore?.id) return;
@@ -234,7 +280,7 @@ export default function CRMDashboard({
 
   const waLink = (c: { phone: string; name: string }, text?: string) =>
     `https://wa.me/${normalizePhone(c.phone)}?text=${encodeURIComponent(
-      text || `Halo ${c.name}, terima kasih telah menjadi pelanggan ${currentStore?.name || ""}. Ada penawaran spesial untuk Anda!`
+      text || applyTpl("general", c as any)
     )}`;
 
   if (loading) {
@@ -280,7 +326,12 @@ export default function CRMDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Cake className="h-4 w-4 text-primary" /> Ulang Tahun Bulan Ini</CardTitle>
+            <CardTitle className="text-sm flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2"><Cake className="h-4 w-4 text-primary" /> Ulang Tahun Bulan Ini</span>
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("birthday")}>
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {birthdays.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada ulang tahun bulan ini.</p>}
@@ -291,7 +342,7 @@ export default function CRMDashboard({
                   <p className="text-xs text-muted-foreground">{formatDate(c.birth_date)}</p>
                 </div>
                 <Button size="sm" variant="outline" asChild>
-                  <a href={waLink(c, `Selamat ulang tahun ${c.name}! Ada hadiah spesial dari ${currentStore?.name || ""} untuk Anda.`)} target="_blank" rel="noreferrer">
+                  <a href={waLink(c, applyTpl("birthday", c))} target="_blank" rel="noreferrer">
                     <MessageCircle className="h-3.5 w-3.5 mr-1" /> Ucapkan
                   </a>
                 </Button>
@@ -302,7 +353,12 @@ export default function CRMDashboard({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari)</CardTitle>
+            <CardTitle className="text-sm flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari)</span>
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("followup")}>
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {inactive.length === 0 && <p className="text-sm text-muted-foreground">Semua pelanggan masih aktif.</p>}
@@ -313,7 +369,7 @@ export default function CRMDashboard({
                   <p className="text-xs text-muted-foreground">Terakhir: {formatDate(c.lastVisit)} · {formatIDR(c.totalSpend)}</p>
                 </div>
                 <Button size="sm" variant="outline" asChild>
-                  <a href={waLink(c, `Halo ${c.name}, sudah lama tidak berkunjung ke ${currentStore?.name || ""}. Kami punya penawaran khusus untuk Anda!`)} target="_blank" rel="noreferrer">
+                  <a href={waLink(c, applyTpl("followup", c))} target="_blank" rel="noreferrer">
                     <MessageCircle className="h-3.5 w-3.5 mr-1" /> Hubungi
                   </a>
                 </Button>
@@ -325,7 +381,12 @@ export default function CRMDashboard({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> Database Pelanggan</CardTitle>
+          <CardTitle className="text-sm flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> Database Pelanggan</span>
+            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("general")}>
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -427,6 +488,28 @@ export default function CRMDashboard({
         storeName={currentStore?.name}
         onClose={() => setSelected(null)}
       />
+
+      <Dialog open={!!editingTpl} onOpenChange={(o) => !o && setEditingTpl(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingTpl ? TEMPLATE_META[editingTpl].title : ""}</DialogTitle>
+            <DialogDescription>{editingTpl ? TEMPLATE_META[editingTpl].desc : ""}</DialogDescription>
+          </DialogHeader>
+          <Textarea rows={6} value={draftTpl} onChange={(e) => setDraftTpl(e.target.value)} />
+          <p className="text-xs text-muted-foreground">
+            Variabel: <code>{"{nama}"}</code>, <code>{"{toko}"}</code>, <code>{"{terakhir}"}</code>, <code>{"{total}"}</code>, <code>{"{ulangtahun}"}</code>
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => editingTpl && setDraftTpl(DEFAULT_TEMPLATES[editingTpl])}
+            >
+              Reset Default
+            </Button>
+            <Button onClick={saveTpl}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 }
