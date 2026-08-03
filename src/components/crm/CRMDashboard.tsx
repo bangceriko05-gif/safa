@@ -488,6 +488,28 @@ export default function CRMDashboard({
         storeName={currentStore?.name}
         onClose={() => setSelected(null)}
       />
+
+      <Dialog open={!!editingTpl} onOpenChange={(o) => !o && setEditingTpl(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingTpl ? TEMPLATE_META[editingTpl].title : ""}</DialogTitle>
+            <DialogDescription>{editingTpl ? TEMPLATE_META[editingTpl].desc : ""}</DialogDescription>
+          </DialogHeader>
+          <Textarea rows={6} value={draftTpl} onChange={(e) => setDraftTpl(e.target.value)} />
+          <p className="text-xs text-muted-foreground">
+            Variabel: <code>{"{nama}"}</code>, <code>{"{toko}"}</code>, <code>{"{terakhir}"}</code>, <code>{"{total}"}</code>, <code>{"{ulangtahun}"}</code>
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => editingTpl && setDraftTpl(DEFAULT_TEMPLATES[editingTpl])}
+            >
+              Reset Default
+            </Button>
+            <Button onClick={saveTpl}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 }
