@@ -104,6 +104,36 @@ export default function CRMDashboard({
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<DetailCustomer | null>(null);
   const autoOpenedRef = useRef<string | null>(null);
+  const [templates, setTemplates] = useState<Record<TemplateKey, string>>(() => {
+    try {
+      const raw = localStorage.getItem(TPL_STORAGE_KEY);
+      return raw ? { ...DEFAULT_TEMPLATES, ...JSON.parse(raw) } : { ...DEFAULT_TEMPLATES };
+    } catch {
+      return { ...DEFAULT_TEMPLATES };
+    }
+  });
+  const [editingTpl, setEditingTpl] = useState<TemplateKey | null>(null);
+  const [draftTpl, setDraftTpl] = useState("");
+
+  const openTplEditor = (key: TemplateKey) => {
+    setDraftTpl(templates[key] ?? DEFAULT_TEMPLATES[key]);
+    setEditingTpl(key);
+  };
+  const saveTpl = () => {
+    if (!editingTpl) return;
+    const next = { ...templates, [editingTpl]: draftTpl };
+    setTemplates(next);
+    try { localStorage.setItem(TPL_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    setEditingTpl(null);
+    toast.success("Isi pesan berhasil disimpan");
+  };
+  const applyTpl = (key: TemplateKey, c: { name: string; lastVisit?: string | null; totalSpend?: number; birth_date?: string | null }) =>
+    (templates[key] || DEFAULT_TEMPLATES[key])
+      .replace(/\{nama\}/g, c.name || "")
+      .replace(/\{toko\}/g, currentStore?.name || "")
+      .replace(/\{terakhir\}/g, formatDate(c.lastVisit ?? null))
+      .replace(/\{total\}/g, formatIDR(c.totalSpend || 0))
+      .replace(/\{ulangtahun\}/g, formatDate(c.birth_date ?? null));
 
   useEffect(() => {
     if (!currentStore?.id) return;
