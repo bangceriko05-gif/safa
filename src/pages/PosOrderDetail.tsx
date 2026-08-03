@@ -158,24 +158,31 @@ export default function PosOrderDetail() {
 
   const logChange = async (description: string, actionType: "created" | "updated" | "deleted" = "updated") => {
     if (!id) return;
-    await logActivity({
+    const ok = await logActivity({
       actionType,
       entityType: "pos_order",
       entityId: id,
       description,
       storeId: order?.store_id,
     });
+    if (!ok) toast.error("Gagal mencatat riwayat perubahan");
     fetchHistory();
   };
 
   // Compare a patch against the current order and log every changed field
   const logPatchDiff = async (patch: Record<string, any>, base?: any) => {
     const src = base ?? order ?? {};
+    // Displayed customer values may come from the linked booking, not the order row
+    const fallback: Record<string, any> = {
+      customer_name: customerName === "-" ? "" : customerName,
+      customer_phone: customerPhone === "-" ? "" : customerPhone,
+      customer_email: customerEmail === "-" ? "" : customerEmail,
+    };
     const parts: string[] = [];
     Object.entries(patch).forEach(([k, v]) => {
       const label = FIELD_LABELS[k];
       if (!label) return;
-      const oldV = (src as any)[k];
+      const oldV = (src as any)[k] ?? fallback[k];
       const norm = (x: any) => (x === null || x === undefined ? "" : String(x));
       if (norm(oldV) === norm(v)) return;
       const f = MONEY_FIELDS.has(k) ? money : txt;

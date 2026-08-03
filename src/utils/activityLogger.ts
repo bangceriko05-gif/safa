@@ -49,16 +49,16 @@ export async function logActivity({
   entityId,
   description,
   storeId,
-}: LogActivityParams) {
+}: LogActivityParams): Promise<boolean> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
-    if (!user) return;
+    if (!user) return false;
 
     const userContext = await getCachedUserContext(user);
-    if (userContext.isSuperAdmin) return;
+    if (userContext.isSuperAdmin) return true;
 
-    await supabase.from('activity_logs').insert({
+    const { error } = await supabase.from('activity_logs').insert({
       user_id: user.id,
       user_name: userContext.name,
       user_role: userContext.role,
@@ -68,7 +68,13 @@ export async function logActivity({
       description,
       store_id: storeId,
     });
+    if (error) {
+      console.error('Failed to insert activity log:', error);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error('Failed to log activity:', error);
+    return false;
   }
 }
