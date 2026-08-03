@@ -280,7 +280,7 @@ export default function CRMDashboard({
 
   const waLink = (c: { phone: string; name: string }, text?: string) =>
     `https://wa.me/${normalizePhone(c.phone)}?text=${encodeURIComponent(
-      text || `Halo ${c.name}, terima kasih telah menjadi pelanggan ${currentStore?.name || ""}. Ada penawaran spesial untuk Anda!`
+      text || applyTpl("general", c as any)
     )}`;
 
   if (loading) {
@@ -326,7 +326,12 @@ export default function CRMDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Cake className="h-4 w-4 text-primary" /> Ulang Tahun Bulan Ini</CardTitle>
+            <CardTitle className="text-sm flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2"><Cake className="h-4 w-4 text-primary" /> Ulang Tahun Bulan Ini</span>
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("birthday")}>
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {birthdays.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada ulang tahun bulan ini.</p>}
@@ -337,7 +342,7 @@ export default function CRMDashboard({
                   <p className="text-xs text-muted-foreground">{formatDate(c.birth_date)}</p>
                 </div>
                 <Button size="sm" variant="outline" asChild>
-                  <a href={waLink(c, `Selamat ulang tahun ${c.name}! Ada hadiah spesial dari ${currentStore?.name || ""} untuk Anda.`)} target="_blank" rel="noreferrer">
+                  <a href={waLink(c, applyTpl("birthday", c))} target="_blank" rel="noreferrer">
                     <MessageCircle className="h-3.5 w-3.5 mr-1" /> Ucapkan
                   </a>
                 </Button>
@@ -348,7 +353,12 @@ export default function CRMDashboard({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari)</CardTitle>
+            <CardTitle className="text-sm flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari)</span>
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("followup")}>
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {inactive.length === 0 && <p className="text-sm text-muted-foreground">Semua pelanggan masih aktif.</p>}
@@ -359,7 +369,7 @@ export default function CRMDashboard({
                   <p className="text-xs text-muted-foreground">Terakhir: {formatDate(c.lastVisit)} · {formatIDR(c.totalSpend)}</p>
                 </div>
                 <Button size="sm" variant="outline" asChild>
-                  <a href={waLink(c, `Halo ${c.name}, sudah lama tidak berkunjung ke ${currentStore?.name || ""}. Kami punya penawaran khusus untuk Anda!`)} target="_blank" rel="noreferrer">
+                  <a href={waLink(c, applyTpl("followup", c))} target="_blank" rel="noreferrer">
                     <MessageCircle className="h-3.5 w-3.5 mr-1" /> Hubungi
                   </a>
                 </Button>
@@ -371,7 +381,12 @@ export default function CRMDashboard({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> Database Pelanggan</CardTitle>
+          <CardTitle className="text-sm flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> Database Pelanggan</span>
+            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("general")}>
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
