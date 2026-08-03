@@ -842,13 +842,8 @@ export default function PosOrderDetail() {
         const end = start + nights * 86400000;
         return dayMs >= start && dayMs <= end;
       });
-      if (overlapping.length > 0) {
-        setStayFallback(false);
-        setStays(overlapping);
-      } else {
-        setStayFallback(true);
-        setStays(mine.slice(0, 1));
-      }
+      setStayFallback(false);
+      setStays(overlapping);
     })();
     return () => { active = false; };
   }, [order?.store_id, order?.date, customerPhone, customerName]);
