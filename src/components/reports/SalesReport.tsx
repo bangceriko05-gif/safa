@@ -100,6 +100,7 @@ export default function SalesReport() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
+  const [posItems, setPosItems] = useState<PosItemData[]>([]);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
