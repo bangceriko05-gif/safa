@@ -1121,40 +1121,47 @@ export default function SalesReport() {
                             <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
                           </TableRow>
                         ) : (
-                          itemRows.map(({ p, b, hpp, total, profit }) => (
-                            <TableRow key={p.id}>
+                          itemRows.map((r) => (
+                            <TableRow key={r.key}>
                               <TableCell>
                                 <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
                                   <button
                                     type="button"
                                     className="underline hover:text-blue-800 text-left"
-                                    onClick={() => { setSelectedBookingId(b.id); setDetailPopupOpen(true); }}
+                                    onClick={() => {
+                                      if (r.source === "pos" && r.orderId) {
+                                        window.open(`/pos-order/${r.orderId}`, "_blank");
+                                      } else if (r.bookingId) {
+                                        setSelectedBookingId(r.bookingId);
+                                        setDetailPopupOpen(true);
+                                      }
+                                    }}
                                   >
-                                    {b.bid}
+                                    {r.bid}
                                   </button>
                                   <button
                                     type="button"
                                     className="text-muted-foreground hover:text-foreground"
-                                    onClick={() => { navigator.clipboard.writeText(b.bid); toastSonner.success("BID disalin"); }}
+                                    onClick={() => { navigator.clipboard.writeText(r.bid); toastSonner.success("BID disalin"); }}
                                   >
                                     <CopyIcon className="h-3 w-3" />
                                   </button>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-xs">{format(new Date(b.date), "d MMM yyyy", { locale: localeId })}</TableCell>
-                              <TableCell className="text-xs">{b.customer_name}</TableCell>
-                              <TableCell className="text-xs">{p.product_name} (x{p.quantity})</TableCell>
-                              <TableCell className="text-right text-xs text-orange-600">{hpp > 0 ? formatCurrency(hpp) : "-"}</TableCell>
-                              <TableCell className="text-right text-xs">{formatCurrency(total)}</TableCell>
-                              <TableCell className="text-right text-xs text-blue-600">{formatCurrency(profit)}</TableCell>
-                              <TableCell className="text-right text-xs text-green-600 font-medium">{formatCurrency(total)}</TableCell>
-                              <TableCell className="text-xs">{b.payment_method || "-"}</TableCell>
+                              <TableCell className="text-xs">{r.date ? format(new Date(r.date), "d MMM yyyy", { locale: localeId }) : "-"}</TableCell>
+                              <TableCell className="text-xs">{r.customerName}</TableCell>
+                              <TableCell className="text-xs">{r.itemLabel}</TableCell>
+                              <TableCell className="text-right text-xs text-orange-600">{r.hpp > 0 ? formatCurrency(r.hpp) : "-"}</TableCell>
+                              <TableCell className="text-right text-xs">{formatCurrency(r.total)}</TableCell>
+                              <TableCell className="text-right text-xs text-blue-600">{formatCurrency(r.profit)}</TableCell>
+                              <TableCell className="text-right text-xs text-green-600 font-medium">{formatCurrency(r.total)}</TableCell>
+                              <TableCell className="text-xs">{r.paymentMethod || "-"}</TableCell>
                               <TableCell className="text-xs">
-                                {b.payment_proof_url || b.payment_proof_url_2 ? (
+                                {r.proofUrl || r.proofUrl2 ? (
                                   <button
                                     type="button"
                                     className="text-blue-600 underline hover:text-blue-800"
-                                    onClick={() => setProofPreview({ url: b.payment_proof_url || b.payment_proof_url_2 || "", url2: b.payment_proof_url_2 })}
+                                    onClick={() => setProofPreview({ url: r.proofUrl || r.proofUrl2 || "", url2: r.proofUrl2 })}
                                   >
                                     Lihat
                                   </button>
