@@ -76,7 +76,7 @@ interface ExpenseData {
   date: string;
 }
 
-type SalesTab = "details" | "source" | "profit-loss" | "cancelled" | "items" | "tax";
+type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax";
 
 export default function SalesReport() {
   const { currentStore } = useStore();
@@ -604,6 +604,51 @@ export default function SalesReport() {
       .reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
   };
 
+  // ===== Laporan Penjualan Kamar (room only) =====
+  const roomStats = filteredDetailBookings.reduce(
+    (acc, b) => {
+      const total = b.price + b.price_2;
+      acc.count += 1;
+      acc.totalBiaya += total;
+      acc.jumlahBayar += (b.payment_method ? b.price : 0) + (b.payment_method_2 ? b.price_2 : 0);
+      return acc;
+    },
+    { count: 0, totalBiaya: 0, jumlahBayar: 0 }
+  );
+
+  // ===== Laporan Penjualan Item (per item rows) =====
+  const bookingById = activeBookings.reduce((acc, b) => { acc[b.id] = b; return acc; }, {} as Record<string, BookingData>);
+  const itemRows = bookingProducts
+    .filter((p) => bookingById[p.booking_id])
+    .filter((p) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const b = bookingById[p.booking_id];
+      return (
+        p.product_name?.toLowerCase().includes(q) ||
+        b.bid?.toLowerCase().includes(q) ||
+        b.customer_name?.toLowerCase().includes(q) ||
+        b.room_name?.toLowerCase().includes(q)
+      );
+    })
+    .map((p) => {
+      const b = bookingById[p.booking_id];
+      const hpp = (p.purchase_price || 0) * p.quantity;
+      return { p, b, hpp, total: p.subtotal, profit: p.subtotal - hpp };
+    })
+    .sort((a, c) => (c.b.date || "").localeCompare(a.b.date || ""));
+
+  const itemStats = itemRows.reduce(
+    (acc, r) => {
+      acc.count += 1;
+      acc.totalBiaya += r.total;
+      acc.totalHPP += r.hpp;
+      acc.totalLaba += r.profit;
+      return acc;
+    },
+    { count: 0, totalBiaya: 0, totalHPP: 0, totalLaba: 0 }
+  );
+
   return (
     <div className="space-y-4">
       {loading ? (
@@ -629,6 +674,12 @@ export default function SalesReport() {
                   <SelectItem value="details">
                     <div className="flex items-center gap-2"><FileText className="h-4 w-4" />Laporan Rincian Penjualan</div>
                   </SelectItem>
+                  <SelectItem value="rooms">
+                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />Laporan Penjualan Kamar</div>
+                  </SelectItem>
+                  <SelectItem value="item-detail">
+                    <div className="flex items-center gap-2"><Package className="h-4 w-4" />Laporan Penjualan Item</div>
+                  </SelectItem>
                   <SelectItem value="source">
                     <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />Laporan Sumber Penjualan</div>
                   </SelectItem>
@@ -639,7 +690,7 @@ export default function SalesReport() {
                     <div className="flex items-center gap-2"><XCircle className="h-4 w-4" />Laporan Dibatalkan</div>
                   </SelectItem>
                   <SelectItem value="items">
-                    <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" />Laporan Penjualan Item</div>
+                    <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" />Laporan Rekap Item</div>
                   </SelectItem>
                   <SelectItem value="tax">
                     <div className="flex items-center gap-2"><Receipt className="h-4 w-4" />Laporan PPN</div>
@@ -802,6 +853,218 @@ export default function SalesReport() {
                               </TableRow>
                             );
                           })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Penjualan Kamar */}
+            <TabsContent value="rooms" className="space-y-4">
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Transaksi</CardTitle></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{roomStats.count}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Biaya</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(roomStats.totalBiaya)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Jumlah Bayar</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(roomStats.jumlahBayar)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total HPP</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-orange-600">{formatCurrency(0)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Laba</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-blue-600">{formatCurrency(roomStats.totalBiaya)}</div></CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>No. Booking</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Pelanggan</TableHead>
+                          <TableHead>Room</TableHead>
+                          <TableHead>Durasi/Qty</TableHead>
+                          <TableHead className="text-right">Total Biaya</TableHead>
+                          <TableHead className="text-right">Jumlah Bayar</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Metode Bayar</TableHead>
+                          <TableHead>Bukti Bayar</TableHead>
+                          <TableHead className="text-right">HPP</TableHead>
+                          <TableHead className="text-right">Laba</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDetailBookings.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={12} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredDetailBookings.map((booking) => {
+                            const totalBiaya = booking.price + booking.price_2;
+                            const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
+                            return (
+                              <TableRow key={booking.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
+                                    <button
+                                      type="button"
+                                      className="underline hover:text-blue-800 text-left"
+                                      onClick={() => { setSelectedBookingId(booking.id); setDetailPopupOpen(true); }}
+                                    >
+                                      {booking.bid}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="text-muted-foreground hover:text-foreground"
+                                      onClick={() => { navigator.clipboard.writeText(booking.bid); toastSonner.success("BID disalin"); }}
+                                    >
+                                      <CopyIcon className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}</TableCell>
+                                <TableCell className="text-xs">{booking.customer_name}</TableCell>
+                                <TableCell className="text-xs">{booking.room_name}</TableCell>
+                                <TableCell className="text-xs">{formatDuration(booking)}</TableCell>
+                                <TableCell className="text-right text-xs">{formatCurrency(totalBiaya)}</TableCell>
+                                <TableCell className="text-right text-xs">{formatCurrency(jumlahBayar)}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                    {booking.status === "Selesai" || booking.checked_out_at ? "Selesai" : (booking.status || "-")}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs">{booking.payment_method || "-"}</TableCell>
+                                <TableCell className="text-xs">
+                                  {booking.payment_proof_url || booking.payment_proof_url_2 ? (
+                                    <button
+                                      type="button"
+                                      className="text-blue-600 underline hover:text-blue-800"
+                                      onClick={() => setProofPreview({ url: booking.payment_proof_url || booking.payment_proof_url_2 || "", url2: booking.payment_proof_url_2 })}
+                                    >
+                                      Lihat
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right text-xs text-orange-600">-</TableCell>
+                                <TableCell className="text-right text-xs text-blue-600 font-medium">{formatCurrency(totalBiaya)}</TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Penjualan Item (rincian per item) */}
+            <TabsContent value="item-detail" className="space-y-4">
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Transaksi</CardTitle></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{itemStats.count}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Biaya</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(itemStats.totalBiaya)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Jumlah Bayar</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(itemStats.totalBiaya)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total HPP</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-orange-600">{formatCurrency(itemStats.totalHPP)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Laba</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-blue-600">{formatCurrency(itemStats.totalLaba)}</div></CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>No. Booking</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Pelanggan</TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="text-right">HPP</TableHead>
+                          <TableHead className="text-right">Harga Jual</TableHead>
+                          <TableHead className="text-right">Profit</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Metode Bayar</TableHead>
+                          <TableHead>Bukti Bayar</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itemRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
+                          </TableRow>
+                        ) : (
+                          itemRows.map(({ p, b, hpp, total, profit }) => (
+                            <TableRow key={p.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
+                                  <button
+                                    type="button"
+                                    className="underline hover:text-blue-800 text-left"
+                                    onClick={() => { setSelectedBookingId(b.id); setDetailPopupOpen(true); }}
+                                  >
+                                    {b.bid}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground"
+                                    onClick={() => { navigator.clipboard.writeText(b.bid); toastSonner.success("BID disalin"); }}
+                                  >
+                                    <CopyIcon className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs">{format(new Date(b.date), "d MMM yyyy", { locale: localeId })}</TableCell>
+                              <TableCell className="text-xs">{b.customer_name}</TableCell>
+                              <TableCell className="text-xs">{p.product_name} (x{p.quantity})</TableCell>
+                              <TableCell className="text-right text-xs text-orange-600">{hpp > 0 ? formatCurrency(hpp) : "-"}</TableCell>
+                              <TableCell className="text-right text-xs">{formatCurrency(total)}</TableCell>
+                              <TableCell className="text-right text-xs text-blue-600">{formatCurrency(profit)}</TableCell>
+                              <TableCell className="text-right text-xs text-green-600 font-medium">{formatCurrency(total)}</TableCell>
+                              <TableCell className="text-xs">{b.payment_method || "-"}</TableCell>
+                              <TableCell className="text-xs">
+                                {b.payment_proof_url || b.payment_proof_url_2 ? (
+                                  <button
+                                    type="button"
+                                    className="text-blue-600 underline hover:text-blue-800"
+                                    onClick={() => setProofPreview({ url: b.payment_proof_url || b.payment_proof_url_2 || "", url2: b.payment_proof_url_2 })}
+                                  >
+                                    Lihat
+                                  </button>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
                         )}
                       </TableBody>
                     </Table>
