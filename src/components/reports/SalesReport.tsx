@@ -375,6 +375,7 @@ export default function SalesReport() {
 
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
+      setPosItems(mappedPosItems);
       setExpenses(mappedExpenses);
       setStats({
         totalBookings: activeBookings.length,
