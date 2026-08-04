@@ -76,7 +76,7 @@ interface ExpenseData {
   date: string;
 }
 
-type SalesTab = "details" | "source" | "profit-loss" | "cancelled" | "items" | "tax";
+type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax";
 
 export default function SalesReport() {
   const { currentStore } = useStore();
@@ -604,6 +604,51 @@ export default function SalesReport() {
       .reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
   };
 
+  // ===== Laporan Penjualan Kamar (room only) =====
+  const roomStats = filteredDetailBookings.reduce(
+    (acc, b) => {
+      const total = b.price + b.price_2;
+      acc.count += 1;
+      acc.totalBiaya += total;
+      acc.jumlahBayar += (b.payment_method ? b.price : 0) + (b.payment_method_2 ? b.price_2 : 0);
+      return acc;
+    },
+    { count: 0, totalBiaya: 0, jumlahBayar: 0 }
+  );
+
+  // ===== Laporan Penjualan Item (per item rows) =====
+  const bookingById = activeBookings.reduce((acc, b) => { acc[b.id] = b; return acc; }, {} as Record<string, BookingData>);
+  const itemRows = bookingProducts
+    .filter((p) => bookingById[p.booking_id])
+    .filter((p) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const b = bookingById[p.booking_id];
+      return (
+        p.product_name?.toLowerCase().includes(q) ||
+        b.bid?.toLowerCase().includes(q) ||
+        b.customer_name?.toLowerCase().includes(q) ||
+        b.room_name?.toLowerCase().includes(q)
+      );
+    })
+    .map((p) => {
+      const b = bookingById[p.booking_id];
+      const hpp = (p.purchase_price || 0) * p.quantity;
+      return { p, b, hpp, total: p.subtotal, profit: p.subtotal - hpp };
+    })
+    .sort((a, c) => (c.b.date || "").localeCompare(a.b.date || ""));
+
+  const itemStats = itemRows.reduce(
+    (acc, r) => {
+      acc.count += 1;
+      acc.totalBiaya += r.total;
+      acc.totalHPP += r.hpp;
+      acc.totalLaba += r.profit;
+      return acc;
+    },
+    { count: 0, totalBiaya: 0, totalHPP: 0, totalLaba: 0 }
+  );
+
   return (
     <div className="space-y-4">
       {loading ? (
@@ -629,6 +674,12 @@ export default function SalesReport() {
                   <SelectItem value="details">
                     <div className="flex items-center gap-2"><FileText className="h-4 w-4" />Laporan Rincian Penjualan</div>
                   </SelectItem>
+                  <SelectItem value="rooms">
+                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />Laporan Penjualan Kamar</div>
+                  </SelectItem>
+                  <SelectItem value="item-detail">
+                    <div className="flex items-center gap-2"><Package className="h-4 w-4" />Laporan Penjualan Item</div>
+                  </SelectItem>
                   <SelectItem value="source">
                     <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />Laporan Sumber Penjualan</div>
                   </SelectItem>
@@ -639,7 +690,7 @@ export default function SalesReport() {
                     <div className="flex items-center gap-2"><XCircle className="h-4 w-4" />Laporan Dibatalkan</div>
                   </SelectItem>
                   <SelectItem value="items">
-                    <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" />Laporan Penjualan Item</div>
+                    <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" />Laporan Rekap Item</div>
                   </SelectItem>
                   <SelectItem value="tax">
                     <div className="flex items-center gap-2"><Receipt className="h-4 w-4" />Laporan PPN</div>
@@ -812,6 +863,7 @@ export default function SalesReport() {
 
             {/* Sumber Penjualan */}
             <TabsContent value="source" className="space-y-4">
+            </TabsContent>
               <div className="flex justify-end">
                 <Button
                   variant="outline"
