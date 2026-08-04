@@ -666,25 +666,76 @@ export default function SalesReport() {
 
   // ===== Laporan Penjualan Item (per item rows) =====
   const bookingById = activeBookings.reduce((acc, b) => { acc[b.id] = b; return acc; }, {} as Record<string, BookingData>);
-  const itemRows = bookingProducts
+
+  type ItemRow = {
+    key: string;
+    source: "booking" | "pos";
+    bookingId?: string;
+    orderId?: string;
+    bid: string;
+    date: string;
+    customerName: string;
+    itemLabel: string;
+    paymentMethod: string;
+    proofUrl: string | null;
+    proofUrl2: string | null;
+    hpp: number;
+    total: number;
+    profit: number;
+  };
+
+  const bookingItemRows: ItemRow[] = bookingProducts
     .filter((p) => bookingById[p.booking_id])
-    .filter((p) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      const b = bookingById[p.booking_id];
-      return (
-        p.product_name?.toLowerCase().includes(q) ||
-        b.bid?.toLowerCase().includes(q) ||
-        b.customer_name?.toLowerCase().includes(q) ||
-        b.room_name?.toLowerCase().includes(q)
-      );
-    })
     .map((p) => {
       const b = bookingById[p.booking_id];
       const hpp = (p.purchase_price || 0) * p.quantity;
-      return { p, b, hpp, total: p.subtotal, profit: p.subtotal - hpp };
+      return {
+        key: `bp-${p.id}`,
+        source: "booking" as const,
+        bookingId: b.id,
+        bid: b.bid,
+        date: b.date,
+        customerName: b.customer_name,
+        itemLabel: `${p.product_name} (x${p.quantity})`,
+        paymentMethod: b.payment_method || "",
+        proofUrl: b.payment_proof_url || null,
+        proofUrl2: b.payment_proof_url_2 || null,
+        hpp,
+        total: p.subtotal,
+        profit: p.subtotal - hpp,
+      };
+    });
+
+  const posItemRows: ItemRow[] = posItems.map((p) => {
+    const hpp = (p.purchase_price || 0) * p.quantity;
+    return {
+      key: `pos-${p.id}`,
+      source: "pos" as const,
+      orderId: p.order_id,
+      bid: p.bid,
+      date: p.date,
+      customerName: p.customer_name,
+      itemLabel: `${p.product_name} (x${p.quantity})`,
+      paymentMethod: p.payment_method,
+      proofUrl: p.proof_url,
+      proofUrl2: null,
+      hpp,
+      total: p.subtotal,
+      profit: p.subtotal - hpp,
+    };
+  });
+
+  const itemRows: ItemRow[] = [...bookingItemRows, ...posItemRows]
+    .filter((r) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        r.itemLabel.toLowerCase().includes(q) ||
+        r.bid?.toLowerCase().includes(q) ||
+        r.customerName?.toLowerCase().includes(q)
+      );
     })
-    .sort((a, c) => (c.b.date || "").localeCompare(a.b.date || ""));
+    .sort((a, c) => (c.date || "").localeCompare(a.date || ""));
 
   const itemStats = itemRows.reduce(
     (acc, r) => {
