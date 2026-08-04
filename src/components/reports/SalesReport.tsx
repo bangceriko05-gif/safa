@@ -227,6 +227,38 @@ export default function SalesReport() {
         }
       }
 
+      // Fetch POS / booking orders items (penjualan item dari POS)
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("booking_orders")
+        .select(`
+          id, bid, date, customer_name, payment_method, payment_proof_urls, process_status,
+          booking_order_items ( id, product_name, quantity, subtotal, product_id, products(purchase_price) )
+        `)
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr);
+
+      if (ordersError) console.error("Error fetching POS orders:", ordersError);
+
+      const mappedPosItems: PosItemData[] = (ordersData || [])
+        .filter((o: any) => (o.process_status || "").toLowerCase() !== "batal")
+        .flatMap((o: any) => {
+          const proofs = Array.isArray(o.payment_proof_urls) ? o.payment_proof_urls : [];
+          return (o.booking_order_items || []).map((it: any) => ({
+            id: it.id,
+            order_id: o.id,
+            bid: o.bid || "-",
+            date: o.date,
+            customer_name: o.customer_name || "Walk-in POS",
+            payment_method: o.payment_method || "",
+            proof_url: proofs.length > 0 ? String(proofs[0]) : null,
+            product_name: it.product_name,
+            quantity: Number(it.quantity) || 0,
+            subtotal: Number(it.subtotal) || 0,
+            purchase_price: Number(it.products?.purchase_price) || 0,
+          }));
+        });
+
       // Fetch expenses for profit/loss
       const { data: expensesData, error: expensesError } = await supabase
         .from("expenses")
