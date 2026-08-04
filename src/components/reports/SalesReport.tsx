@@ -68,6 +68,20 @@ interface BookingProductData {
   purchase_price?: number;
 }
 
+interface PosItemData {
+  id: string;
+  order_id: string;
+  bid: string;
+  date: string;
+  customer_name: string;
+  payment_method: string;
+  proof_url: string | null;
+  product_name: string;
+  quantity: number;
+  subtotal: number;
+  purchase_price: number;
+}
+
 interface ExpenseData {
   id: string;
   amount: number;
