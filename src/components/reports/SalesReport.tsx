@@ -68,6 +68,20 @@ interface BookingProductData {
   purchase_price?: number;
 }
 
+interface PosItemData {
+  id: string;
+  order_id: string;
+  bid: string;
+  date: string;
+  customer_name: string;
+  payment_method: string;
+  proof_url: string | null;
+  product_name: string;
+  quantity: number;
+  subtotal: number;
+  purchase_price: number;
+}
+
 interface ExpenseData {
   id: string;
   amount: number;
@@ -86,6 +100,7 @@ export default function SalesReport() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
+  const [posItems, setPosItems] = useState<PosItemData[]>([]);
   const [expenses, setExpenses] = useState<ExpenseData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [detailPopupOpen, setDetailPopupOpen] = useState(false);
@@ -212,6 +227,38 @@ export default function SalesReport() {
         }
       }
 
+      // Fetch POS / booking orders items (penjualan item dari POS)
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("booking_orders")
+        .select(`
+          id, bid, date, customer_name, payment_method, payment_proof_urls, process_status,
+          booking_order_items ( id, product_name, quantity, subtotal, product_id, products(purchase_price) )
+        `)
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr);
+
+      if (ordersError) console.error("Error fetching POS orders:", ordersError);
+
+      const mappedPosItems: PosItemData[] = (ordersData || [])
+        .filter((o: any) => (o.process_status || "").toLowerCase() !== "batal")
+        .flatMap((o: any) => {
+          const proofs = Array.isArray(o.payment_proof_urls) ? o.payment_proof_urls : [];
+          return (o.booking_order_items || []).map((it: any) => ({
+            id: it.id,
+            order_id: o.id,
+            bid: o.bid || "-",
+            date: o.date,
+            customer_name: o.customer_name || "Walk-in POS",
+            payment_method: o.payment_method || "",
+            proof_url: proofs.length > 0 ? String(proofs[0]) : null,
+            product_name: it.product_name,
+            quantity: Number(it.quantity) || 0,
+            subtotal: Number(it.subtotal) || 0,
+            purchase_price: Number(it.products?.purchase_price) || 0,
+          }));
+        });
+
       // Fetch expenses for profit/loss
       const { data: expensesData, error: expensesError } = await supabase
         .from("expenses")
@@ -328,6 +375,7 @@ export default function SalesReport() {
 
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
+      setPosItems(mappedPosItems);
       setExpenses(mappedExpenses);
       setStats({
         totalBookings: activeBookings.length,
@@ -618,25 +666,76 @@ export default function SalesReport() {
 
   // ===== Laporan Penjualan Item (per item rows) =====
   const bookingById = activeBookings.reduce((acc, b) => { acc[b.id] = b; return acc; }, {} as Record<string, BookingData>);
-  const itemRows = bookingProducts
+
+  type ItemRow = {
+    key: string;
+    source: "booking" | "pos";
+    bookingId?: string;
+    orderId?: string;
+    bid: string;
+    date: string;
+    customerName: string;
+    itemLabel: string;
+    paymentMethod: string;
+    proofUrl: string | null;
+    proofUrl2: string | null;
+    hpp: number;
+    total: number;
+    profit: number;
+  };
+
+  const bookingItemRows: ItemRow[] = bookingProducts
     .filter((p) => bookingById[p.booking_id])
-    .filter((p) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      const b = bookingById[p.booking_id];
-      return (
-        p.product_name?.toLowerCase().includes(q) ||
-        b.bid?.toLowerCase().includes(q) ||
-        b.customer_name?.toLowerCase().includes(q) ||
-        b.room_name?.toLowerCase().includes(q)
-      );
-    })
     .map((p) => {
       const b = bookingById[p.booking_id];
       const hpp = (p.purchase_price || 0) * p.quantity;
-      return { p, b, hpp, total: p.subtotal, profit: p.subtotal - hpp };
+      return {
+        key: `bp-${p.id}`,
+        source: "booking" as const,
+        bookingId: b.id,
+        bid: b.bid,
+        date: b.date,
+        customerName: b.customer_name,
+        itemLabel: `${p.product_name} (x${p.quantity})`,
+        paymentMethod: b.payment_method || "",
+        proofUrl: b.payment_proof_url || null,
+        proofUrl2: b.payment_proof_url_2 || null,
+        hpp,
+        total: p.subtotal,
+        profit: p.subtotal - hpp,
+      };
+    });
+
+  const posItemRows: ItemRow[] = posItems.map((p) => {
+    const hpp = (p.purchase_price || 0) * p.quantity;
+    return {
+      key: `pos-${p.id}`,
+      source: "pos" as const,
+      orderId: p.order_id,
+      bid: p.bid,
+      date: p.date,
+      customerName: p.customer_name,
+      itemLabel: `${p.product_name} (x${p.quantity})`,
+      paymentMethod: p.payment_method,
+      proofUrl: p.proof_url,
+      proofUrl2: null,
+      hpp,
+      total: p.subtotal,
+      profit: p.subtotal - hpp,
+    };
+  });
+
+  const itemRows: ItemRow[] = [...bookingItemRows, ...posItemRows]
+    .filter((r) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        r.itemLabel.toLowerCase().includes(q) ||
+        r.bid?.toLowerCase().includes(q) ||
+        r.customerName?.toLowerCase().includes(q)
+      );
     })
-    .sort((a, c) => (c.b.date || "").localeCompare(a.b.date || ""));
+    .sort((a, c) => (c.date || "").localeCompare(a.date || ""));
 
   const itemStats = itemRows.reduce(
     (acc, r) => {
@@ -1022,40 +1121,47 @@ export default function SalesReport() {
                             <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
                           </TableRow>
                         ) : (
-                          itemRows.map(({ p, b, hpp, total, profit }) => (
-                            <TableRow key={p.id}>
+                          itemRows.map((r) => (
+                            <TableRow key={r.key}>
                               <TableCell>
                                 <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
                                   <button
                                     type="button"
                                     className="underline hover:text-blue-800 text-left"
-                                    onClick={() => { setSelectedBookingId(b.id); setDetailPopupOpen(true); }}
+                                    onClick={() => {
+                                      if (r.source === "pos" && r.orderId) {
+                                        window.open(`/pos-order/${r.orderId}`, "_blank");
+                                      } else if (r.bookingId) {
+                                        setSelectedBookingId(r.bookingId);
+                                        setDetailPopupOpen(true);
+                                      }
+                                    }}
                                   >
-                                    {b.bid}
+                                    {r.bid}
                                   </button>
                                   <button
                                     type="button"
                                     className="text-muted-foreground hover:text-foreground"
-                                    onClick={() => { navigator.clipboard.writeText(b.bid); toastSonner.success("BID disalin"); }}
+                                    onClick={() => { navigator.clipboard.writeText(r.bid); toastSonner.success("BID disalin"); }}
                                   >
                                     <CopyIcon className="h-3 w-3" />
                                   </button>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-xs">{format(new Date(b.date), "d MMM yyyy", { locale: localeId })}</TableCell>
-                              <TableCell className="text-xs">{b.customer_name}</TableCell>
-                              <TableCell className="text-xs">{p.product_name} (x{p.quantity})</TableCell>
-                              <TableCell className="text-right text-xs text-orange-600">{hpp > 0 ? formatCurrency(hpp) : "-"}</TableCell>
-                              <TableCell className="text-right text-xs">{formatCurrency(total)}</TableCell>
-                              <TableCell className="text-right text-xs text-blue-600">{formatCurrency(profit)}</TableCell>
-                              <TableCell className="text-right text-xs text-green-600 font-medium">{formatCurrency(total)}</TableCell>
-                              <TableCell className="text-xs">{b.payment_method || "-"}</TableCell>
+                              <TableCell className="text-xs">{r.date ? format(new Date(r.date), "d MMM yyyy", { locale: localeId }) : "-"}</TableCell>
+                              <TableCell className="text-xs">{r.customerName}</TableCell>
+                              <TableCell className="text-xs">{r.itemLabel}</TableCell>
+                              <TableCell className="text-right text-xs text-orange-600">{r.hpp > 0 ? formatCurrency(r.hpp) : "-"}</TableCell>
+                              <TableCell className="text-right text-xs">{formatCurrency(r.total)}</TableCell>
+                              <TableCell className="text-right text-xs text-blue-600">{formatCurrency(r.profit)}</TableCell>
+                              <TableCell className="text-right text-xs text-green-600 font-medium">{formatCurrency(r.total)}</TableCell>
+                              <TableCell className="text-xs">{r.paymentMethod || "-"}</TableCell>
                               <TableCell className="text-xs">
-                                {b.payment_proof_url || b.payment_proof_url_2 ? (
+                                {r.proofUrl || r.proofUrl2 ? (
                                   <button
                                     type="button"
                                     className="text-blue-600 underline hover:text-blue-800"
-                                    onClick={() => setProofPreview({ url: b.payment_proof_url || b.payment_proof_url_2 || "", url2: b.payment_proof_url_2 })}
+                                    onClick={() => setProofPreview({ url: r.proofUrl || r.proofUrl2 || "", url2: r.proofUrl2 })}
                                   >
                                     Lihat
                                   </button>
