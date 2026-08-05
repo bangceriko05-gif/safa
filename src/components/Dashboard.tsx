@@ -1,4 +1,5 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { readCachedUser } from "@/utils/fastSession";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -96,7 +97,9 @@ import { id as idLocale } from "date-fns/locale";
 export default function Dashboard() {
   const { currentStore, isLoading: storeLoading, isStoreInactive, inactiveStoreName, userRole: contextUserRole } = useStore();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
-  const [user, setUser] = useState<User | null>(null);
+  // Hydrate from the persisted session synchronously so the dashboard paints
+  // immediately instead of waiting for an async getSession() round trip.
+  const [user, setUser] = useState<User | null>(() => readCachedUser() as User | null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
