@@ -981,11 +981,11 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                 <TableCell>
                                   {hasPermission("edit_bookings") ? (
                                     <Select
-                                      value={o.payment_status === "lunas" ? "lunas" : "belum_lunas"}
+                                      value={o.process_status || "proses"}
                                       onValueChange={async (val) => {
                                         const { error } = await supabase
                                           .from("booking_orders")
-                                          .update({ payment_status: val })
+                                          .update({ process_status: val })
                                           .eq("id", o.id);
                                         if (error) toast.error("Gagal ubah status");
                                         else {
@@ -998,12 +998,19 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="belum_lunas">Proses</SelectItem>
-                                        <SelectItem value="lunas">Selesai</SelectItem>
+                                        <SelectItem value="proses">Proses</SelectItem>
+                                        <SelectItem value="selesai">Selesai</SelectItem>
+                                        <SelectItem value="batal">Batal</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   ) : (
-                                    <Badge variant="outline">{o.payment_status === "lunas" ? "Selesai" : "Proses"}</Badge>
+                                    <Badge variant="outline">
+                                      {(o.process_status || "proses") === "selesai"
+                                        ? "Selesai"
+                                        : (o.process_status || "proses") === "batal"
+                                        ? "Batal"
+                                        : "Proses"}
+                                    </Badge>
                                   )}
                                 </TableCell>
                                 <TableCell></TableCell>
