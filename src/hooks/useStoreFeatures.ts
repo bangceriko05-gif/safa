@@ -11,15 +11,38 @@ interface StoreFeatureMap {
   [key: string]: StoreFeatureData;
 }
 
+const FEATURE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function readFeatureCache(key: string | null): StoreFeatureMap {
+  if (!key) return {};
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed?.map || Date.now() - (parsed.at || 0) > FEATURE_CACHE_TTL_MS) return {};
+    return parsed.map as StoreFeatureMap;
+  } catch {
+    return {};
+  }
+}
+
 export function useStoreFeatures(storeId: string | undefined) {
-  const [features, setFeatures] = useState<StoreFeatureMap>({});
-  const [loading, setLoading] = useState(true);
+  const cacheKey = storeId ? `anka_store_features_${storeId}` : null;
+  const [features, setFeatures] = useState<StoreFeatureMap>(() => readFeatureCache(cacheKey));
+  const [loading, setLoading] = useState(() => Object.keys(readFeatureCache(cacheKey)).length === 0);
 
   useEffect(() => {
     if (!storeId) {
       setFeatures({});
       setLoading(false);
       return;
+    }
+
+    // Paint instantly from cache, then silently revalidate in the background.
+    const cached = readFeatureCache(`anka_store_features_${storeId}`);
+    if (Object.keys(cached).length > 0) {
+      setFeatures(cached);
+      setLoading(false);
     }
 
     const fetchFeatures = async () => {
@@ -40,9 +63,14 @@ export function useStoreFeatures(storeId: string | undefined) {
           };
         });
         setFeatures(map);
+        try {
+          sessionStorage.setItem(
+            `anka_store_features_${storeId}`,
+            JSON.stringify({ at: Date.now(), map })
+          );
+        } catch { /* ignore quota errors */ }
       } catch (error) {
         console.error("Error fetching store features:", error);
-        setFeatures({});
       } finally {
         setLoading(false);
       }
