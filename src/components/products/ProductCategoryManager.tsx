@@ -84,7 +84,16 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
     if (!user) return;
     const { error } = await supabase
       .from(table as any)
-      .insert([{ name: newName.trim(), store_id: currentStore.id, created_by: user.id }]);
+      .insert([
+        {
+          name: newName.trim(),
+          store_id: currentStore.id,
+          created_by: user.id,
+          ...(isCategory
+            ? { sort_order: items.reduce((m, i) => Math.max(m, i.sort_order || 0), 0) + 1 }
+            : {}),
+        },
+      ]);
     if (error) {
       toast.error(error.message);
       return;
@@ -131,6 +140,56 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const persistOrder = async (list: Item[]) => {
+    setItems(list);
+    await Promise.all(
+      list.map((it, idx) =>
+        supabase
+          .from(table as any)
+          .update({ sort_order: idx + 1 })
+          .eq("id", it.id)
+      )
+    );
+    onChanged?.();
+  };
+
+  const moveItem = (id: string, dir: -1 | 1) => {
+    const idx = items.findIndex((i) => i.id === id);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= items.length) return;
+    const list = [...items];
+    [list[idx], list[target]] = [list[target], list[idx]];
+    persistOrder(list);
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    const from = items.findIndex((i) => i.id === dragId);
+    const to = items.findIndex((i) => i.id === targetId);
+    if (from < 0 || to < 0) return;
+    const list = [...items];
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    setDragId(null);
+    persistOrder(list);
+  };
+
+  const toggleVisible = async (item: Item) => {
+    const next = !(item.pos_visible ?? true);
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pos_visible: next } : i)));
+    const { error } = await supabase
+      .from(table as any)
+      .update({ pos_visible: next })
+      .eq("id", item.id);
+    if (error) {
+      toast.error("Gagal mengubah tampilan kategori");
+      fetchItems();
+      return;
+    }
+    toast.success(next ? "Kategori tampil di POS" : "Kategori disembunyikan dari POS");
+    onChanged?.();
+  };
 
   return (
     <div className="space-y-4">
