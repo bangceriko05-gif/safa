@@ -189,7 +189,9 @@ export default function Dashboard() {
     setSearchParams(params, { replace: true });
   };
   const navigate = useNavigate();
+  const contextUserRoleRef = useRef<string | null>(contextUserRole ?? null);
   useEffect(() => {
+    contextUserRoleRef.current = contextUserRole ?? null;
     if (contextUserRole) setUserRole(contextUserRole);
   }, [contextUserRole]);
 
@@ -249,7 +251,8 @@ export default function Dashboard() {
           // Defer role fetch to avoid deadlock with auth state
           setTimeout(() => {
             if (!isMounted) return;
-            if (contextUserRole) setUserRole(contextUserRole);
+            const role = contextUserRoleRef.current;
+            if (role) setUserRole(role);
             else fetchUserRole(session.user.id);
           }, 0);
         }
@@ -271,7 +274,7 @@ export default function Dashboard() {
             } else {
               setSession(retrySession);
               setUser(retrySession.user);
-              if (contextUserRole) setUserRole(contextUserRole);
+              if (contextUserRoleRef.current) setUserRole(contextUserRoleRef.current);
               void fetchProfile(retrySession.user.id);
             }
           });
@@ -281,7 +284,7 @@ export default function Dashboard() {
 
       setSession(session);
       setUser(session.user);
-      if (contextUserRole) setUserRole(contextUserRole);
+      if (contextUserRoleRef.current) setUserRole(contextUserRoleRef.current);
       void fetchProfile(session.user.id);
     });
 
@@ -296,7 +299,10 @@ export default function Dashboard() {
       subscription.unsubscribe();
       window.removeEventListener("display-size-changed", handleDisplaySizeChange);
     };
-  }, [navigate, contextUserRole]);
+    // Run once: re-subscribing on role changes caused duplicate auth listeners
+    // and extra getSession() round trips that slowed the dashboard boot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchUserRole = async (userId: string) => {
     try {
