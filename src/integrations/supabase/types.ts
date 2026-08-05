@@ -2021,6 +2021,8 @@ export type Database = {
           created_by: string
           id: string
           name: string
+          pos_visible: boolean
+          sort_order: number
           store_id: string
           updated_at: string
         }
@@ -2029,6 +2031,8 @@ export type Database = {
           created_by: string
           id?: string
           name: string
+          pos_visible?: boolean
+          sort_order?: number
           store_id: string
           updated_at?: string
         }
@@ -2037,6 +2041,8 @@ export type Database = {
           created_by?: string
           id?: string
           name?: string
+          pos_visible?: boolean
+          sort_order?: number
           store_id?: string
           updated_at?: string
         }
