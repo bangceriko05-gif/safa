@@ -206,6 +206,13 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
         </Button>
       </div>
 
+      {isCategory && (
+        <p className="text-xs text-muted-foreground">
+          Geser kategori untuk mengatur urutan tampil di POS, dan gunakan tombol mata untuk
+          menampilkan / menyembunyikan kategori.
+        </p>
+      )}
+
       <div className="border rounded-md divide-y">
         {adding && (
           <div className="flex items-center gap-2 p-3">
@@ -245,7 +252,39 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
           </div>
         ) : (
           filtered.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 p-3">
+            <div
+              key={item.id}
+              draggable={isCategory && !search && editingId !== item.id}
+              onDragStart={() => setDragId(item.id)}
+              onDragOver={(e) => isCategory && e.preventDefault()}
+              onDrop={() => isCategory && handleDrop(item.id)}
+              className={`flex items-center gap-2 p-3 ${
+                isCategory && dragId === item.id ? "opacity-50" : ""
+              } ${isCategory && item.pos_visible === false ? "bg-muted/40" : ""}`}
+            >
+              {isCategory && editingId !== item.id && (
+                <div className="flex items-center gap-1">
+                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => moveItem(item.id, -1)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Naikkan"
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveItem(item.id, 1)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Turunkan"
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
               {editingId === item.id ? (
                 <>
                   <Input
@@ -277,6 +316,11 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 <>
                   <span className="flex-1 text-sm">
                     {item.name}
+                    {isCategory && item.pos_visible === false && (
+                      <span className="ml-2 text-[10px] uppercase text-muted-foreground">
+                        (disembunyikan)
+                      </span>
+                    )}
                     {table === "product_materials" && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         (qty. {item.qty || 0} produk)
@@ -286,6 +330,20 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                       <span className="ml-2 text-[10px] uppercase text-muted-foreground">(default)</span>
                     )}
                   </span>
+                  {isCategory && (
+                    <div className="flex items-center gap-2 mr-1">
+                      <Switch
+                        checked={item.pos_visible ?? true}
+                        onCheckedChange={() => toggleVisible(item)}
+                        aria-label="Tampilkan di POS"
+                      />
+                      {item.pos_visible === false ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  )}
                   {!item.is_default && (
                     <>
                       <Button
