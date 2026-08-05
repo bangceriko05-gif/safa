@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, GripVertical, Eye, EyeOff, ArrowUp, ArrowDown } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useStore } from "@/contexts/StoreContext";
 
 interface Item {
@@ -11,6 +12,8 @@ interface Item {
   name: string;
   is_default?: boolean;
   qty?: number;
+  sort_order?: number;
+  pos_visible?: boolean;
 }
 
 interface Props {
@@ -32,15 +35,25 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const isCategory = table === "product_categories";
 
   const fetchItems = async () => {
     if (!currentStore) return;
-    const selectCols = table === "product_materials" ? "id, name, is_default" : "id, name";
-    const { data, error } = await supabase
+    const selectCols =
+      table === "product_materials"
+        ? "id, name, is_default"
+        : isCategory
+        ? "id, name, sort_order, pos_visible"
+        : "id, name";
+    let query = supabase
       .from(table as any)
       .select(selectCols)
-      .eq("store_id", currentStore.id)
-      .order("name");
+      .eq("store_id", currentStore.id);
+    query = isCategory
+      ? query.order("sort_order", { ascending: true }).order("name")
+      : query.order("name");
+    const { data, error } = await query;
     if (error) {
       toast.error("Gagal memuat data");
       return;
