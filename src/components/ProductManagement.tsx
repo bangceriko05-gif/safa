@@ -56,6 +56,7 @@ import {
   Download,
   Upload,
   Filter,
+  Settings2,
 } from "lucide-react";
 import AnkaLoader from "@/components/AnkaLoader";
 import { logActivity } from "@/utils/activityLogger";
@@ -72,6 +73,9 @@ import {
 } from "@/components/ui/select";
 const ProductEditorModal = lazy(() => import("./products/ProductEditorModal"));
 const ImportProductsDialog = lazy(() => import("./products/ImportProductsDialog"));
+const ProductCategoryManager = lazy(
+  () => import("./products/ProductCategoryManager")
+);
 
 interface Product {
   id: string;
@@ -218,6 +222,7 @@ export default function ProductManagement() {
   const [filterMaterial, setFilterMaterial] = useState<string | null>(null);
   const [colFilters, setColFilters] = useState<Record<string, string | null>>({});
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [targetStoreId, setTargetStoreId] = useState<string>("");
 
@@ -917,6 +922,10 @@ export default function ProductManagement() {
               <Upload className="h-4 w-4 mr-2" />
               Import
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsCategoryManagerOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-2" />
+              Kelola Kategori POS
+            </DropdownMenuItem>
             {canCreate && (
               <DropdownMenuItem onClick={handleOpenSalinProduk}>
                 <Copy className="h-4 w-4 mr-2" />
@@ -980,6 +989,21 @@ export default function ProductManagement() {
           </Button>
         )}
       </div>
+
+      <Dialog open={isCategoryManagerOpen} onOpenChange={setIsCategoryManagerOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Kelola Kategori POS</DialogTitle>
+          </DialogHeader>
+          <Suspense fallback={<AnkaLoader />}>
+            <ProductCategoryManager
+              table="product_categories"
+              searchPlaceholder="Cari kategori..."
+              onChanged={fetchAll}
+            />
+          </Suspense>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
       <div className="border rounded-md bg-card overflow-x-auto">
