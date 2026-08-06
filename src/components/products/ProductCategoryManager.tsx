@@ -163,7 +163,6 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
     persistOrder(list);
   };
 
-  const handleDrop = (targetId: string) => {
   const handleDragOverItem = (targetId: string) => {
     if (!dragId || dragId === targetId) return;
     setItems((prev) => {
