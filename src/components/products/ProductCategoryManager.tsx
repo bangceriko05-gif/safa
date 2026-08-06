@@ -164,15 +164,23 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   };
 
   const handleDrop = (targetId: string) => {
+  const handleDragOverItem = (targetId: string) => {
     if (!dragId || dragId === targetId) return;
-    const from = items.findIndex((i) => i.id === dragId);
-    const to = items.findIndex((i) => i.id === targetId);
-    if (from < 0 || to < 0) return;
-    const list = [...items];
-    const [moved] = list.splice(from, 1);
-    list.splice(to, 0, moved);
+    setItems((prev) => {
+      const from = prev.findIndex((i) => i.id === dragId);
+      const to = prev.findIndex((i) => i.id === targetId);
+      if (from < 0 || to < 0) return prev;
+      const list = [...prev];
+      const [moved] = list.splice(from, 1);
+      list.splice(to, 0, moved);
+      return list;
+    });
+  };
+
+  const handleDrop = () => {
+    if (!dragId) return;
     setDragId(null);
-    persistOrder(list);
+    persistOrder(items);
   };
 
   const toggleVisible = async (item: Item) => {
@@ -256,10 +264,21 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
               key={item.id}
               draggable={isCategory && !search && editingId !== item.id}
               onDragStart={() => setDragId(item.id)}
-              onDragOver={(e) => isCategory && e.preventDefault()}
-              onDrop={() => isCategory && handleDrop(item.id)}
+              onDragEnd={() => {
+                if (isCategory) handleDrop();
+              }}
+              onDragOver={(e) => {
+                if (!isCategory) return;
+                e.preventDefault();
+                handleDragOverItem(item.id);
+              }}
+              onDrop={(e) => {
+                if (!isCategory) return;
+                e.preventDefault();
+                handleDrop();
+              }}
               className={`flex items-center gap-2 p-3 ${
-                isCategory && dragId === item.id ? "opacity-50" : ""
+                isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""
               } ${isCategory && item.pos_visible === false ? "bg-muted/40" : ""}`}
             >
               {isCategory && editingId !== item.id && (
