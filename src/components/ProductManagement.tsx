@@ -56,6 +56,7 @@ import {
   Download,
   Upload,
   Filter,
+  Settings2,
 } from "lucide-react";
 import AnkaLoader from "@/components/AnkaLoader";
 import { logActivity } from "@/utils/activityLogger";
@@ -998,7 +999,7 @@ export default function ProductManagement() {
             <ProductCategoryManager
               table="product_categories"
               searchPlaceholder="Cari kategori..."
-              onChanged={fetchProducts}
+              onChanged={fetchAll}
             />
           </Suspense>
         </DialogContent>
