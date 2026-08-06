@@ -611,6 +611,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 Print
               </button>
             )}
+            {posMode && (
+              <button
+                type="button"
+                onClick={() => setCatManagerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
+                title="Pengaturan kategori POS"
+              >
+                <Settings2 className="h-4 w-4" />
+                Kategori
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -621,6 +632,19 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </button>
           </div>
         </div>
+
+        <Dialog open={catManagerOpen} onOpenChange={setCatManagerOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Kelola Kategori POS</DialogTitle>
+            </DialogHeader>
+            <ProductCategoryManager
+              table="product_categories"
+              searchPlaceholder="Cari kategori..."
+              onChanged={reloadCategories}
+            />
+          </DialogContent>
+        </Dialog>
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
