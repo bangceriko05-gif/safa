@@ -185,6 +185,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     })();
   }, [open, currentStore]);
 
+  const reloadCategories = async () => {
+    if (!currentStore) return;
+    const { data: cats } = await supabase
+      .from("product_categories")
+      .select("id, name, sort_order, pos_visible")
+      .eq("store_id", currentStore.id)
+      .eq("pos_visible", true)
+      .order("sort_order", { ascending: true })
+      .order("name");
+    setCategories((cats as any) || []);
+  };
+
   useEffect(() => {
     if (!open || !currentStore) return;
     (async () => {
