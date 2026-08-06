@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
+import ProductCategoryManager from "@/components/products/ProductCategoryManager";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Product {
@@ -183,6 +184,20 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }
     })();
   }, [open, currentStore]);
+
+  const [catManagerOpen, setCatManagerOpen] = useState(false);
+
+  const reloadCategories = async () => {
+    if (!currentStore) return;
+    const { data: cats } = await supabase
+      .from("product_categories")
+      .select("id, name, sort_order, pos_visible")
+      .eq("store_id", currentStore.id)
+      .eq("pos_visible", true)
+      .order("sort_order", { ascending: true })
+      .order("name");
+    setCategories((cats as any) || []);
+  };
 
   useEffect(() => {
     if (!open || !currentStore) return;
@@ -596,6 +611,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 Print
               </button>
             )}
+            {posMode && (
+              <button
+                type="button"
+                onClick={() => setCatManagerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
+                title="Pengaturan kategori POS"
+              >
+                <Settings2 className="h-4 w-4" />
+                Kategori
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -606,6 +632,19 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </button>
           </div>
         </div>
+
+        <Dialog open={catManagerOpen} onOpenChange={setCatManagerOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Kelola Kategori POS</DialogTitle>
+            </DialogHeader>
+            <ProductCategoryManager
+              table="product_categories"
+              searchPlaceholder="Cari kategori..."
+              onChanged={reloadCategories}
+            />
+          </DialogContent>
+        </Dialog>
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
