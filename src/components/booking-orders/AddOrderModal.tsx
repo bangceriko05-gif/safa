@@ -185,6 +185,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     })();
   }, [open, currentStore]);
 
+  const [catManagerOpen, setCatManagerOpen] = useState(false);
+
   const reloadCategories = async () => {
     if (!currentStore) return;
     const { data: cats } = await supabase
