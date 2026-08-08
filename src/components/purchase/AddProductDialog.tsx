@@ -223,7 +223,10 @@ export default function AddProductDialog({
     const q = search.trim().toLowerCase();
     if (!q) return products;
     return products.filter(
-      (p) => p.display_name.toLowerCase().includes(q) || (p.sku || "").toLowerCase().includes(q)
+      (p) =>
+        p.display_name.toLowerCase().includes(q) ||
+        (p.sku || "").toLowerCase().includes(q) ||
+        (p.material_name || "").toLowerCase().includes(q)
     );
   }, [products, search]);
 
