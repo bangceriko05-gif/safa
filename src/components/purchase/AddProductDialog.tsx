@@ -34,6 +34,7 @@ interface PickItem {
   price: number;
   stock_qty: number;
   has_variants: boolean;
+  material_name?: string | null;
 }
 
 interface UnitOpt {
@@ -81,11 +82,24 @@ export default function AddProductDialog({
     (async () => {
       const { data: prods } = await supabase
         .from("products")
-        .select("id,name,purchase_price,price,sku,stock_qty")
+        .select("id,name,purchase_price,price,sku,stock_qty,material_id")
         .eq("store_id", currentStore.id)
         .order("name");
       const rawProducts = (prods as any[]) || [];
       const productIds = rawProducts.map((p) => p.id);
+      const materialIds = Array.from(
+        new Set(rawProducts.map((p) => p.material_id).filter(Boolean))
+      ) as string[];
+      const materialNames: Record<string, string> = {};
+      if (materialIds.length > 0) {
+        const { data: mats } = await supabase
+          .from("product_materials")
+          .select("id, name")
+          .in("id", materialIds);
+        (mats as any[] | null)?.forEach((m) => {
+          materialNames[m.id] = m.name;
+        });
+      }
       let variantsByProduct: Record<string, any[]> = {};
       if (productIds.length > 0) {
         const { data: vars } = await supabase
@@ -100,6 +114,7 @@ export default function AddProductDialog({
       const list: PickItem[] = [];
       rawProducts.forEach((p: any) => {
         const vs = variantsByProduct[p.id] || [];
+        const matName = p.material_id ? materialNames[p.material_id] || null : null;
         if (vs.length > 0) {
           vs.forEach((v: any) => {
             list.push({
@@ -113,6 +128,7 @@ export default function AddProductDialog({
               price: Number(v.price) || Number(p.price) || 0,
               stock_qty: Number(v.stock) || 0,
               has_variants: true,
+              material_name: matName,
             });
           });
         } else {
@@ -127,6 +143,7 @@ export default function AddProductDialog({
             price: Number(p.price) || 0,
             stock_qty: Number(p.stock_qty) || 0,
             has_variants: false,
+            material_name: matName,
           });
         }
       });
@@ -206,7 +223,10 @@ export default function AddProductDialog({
     const q = search.trim().toLowerCase();
     if (!q) return products;
     return products.filter(
-      (p) => p.display_name.toLowerCase().includes(q) || (p.sku || "").toLowerCase().includes(q)
+      (p) =>
+        p.display_name.toLowerCase().includes(q) ||
+        (p.sku || "").toLowerCase().includes(q) ||
+        (p.material_name || "").toLowerCase().includes(q)
     );
   }, [products, search]);
 
@@ -314,7 +334,12 @@ export default function AddProductDialog({
                     } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"}`}
                   >
                     <div>
-                      <div className="font-medium">{p.display_name}</div>
+                      <div className="font-medium">
+                        {p.display_name}
+                        {p.material_name ? (
+                          <span className="ml-1 font-normal text-muted-foreground">({p.material_name})</span>
+                        ) : null}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {p.sku ? `SKU: ${p.sku} · ` : ""}Stok: {p.stock_qty}
                         {isAlreadyAdded ? " · Sudah ditambahkan" : ""}
