@@ -16,8 +16,9 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import MonthlyPurchaseAnalysis from "./MonthlyPurchaseAnalysis";
 
-type SubView = "active" | "cancelled" | "items";
+type SubView = "active" | "cancelled" | "items" | "monthly";
 
 interface PurchaseRow {
   id: string;
@@ -52,6 +53,7 @@ export default function PurchaseTransactionReport() {
 
   useEffect(() => {
     if (!currentStore) return;
+    if (subView === "monthly") return;
     fetchData();
   }, [timeRange, customDateRange, currentStore, subView]);
 
@@ -217,10 +219,12 @@ export default function PurchaseTransactionReport() {
             <SelectContent>
               <SelectItem value="active">Laporan Pembelian</SelectItem>
               <SelectItem value="items">Laporan Pembelian Item</SelectItem>
+              <SelectItem value="monthly">Laporan Analisa Pembelian Bulanan</SelectItem>
               <SelectItem value="cancelled">Laporan Pembatalan Pembelian</SelectItem>
             </SelectContent>
           </Select>
         </div>
+        {subView !== "monthly" && (
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -247,9 +251,12 @@ export default function PurchaseTransactionReport() {
             Export
           </Button>
         </div>
+        )}
       </div>
 
-      {loading ? (
+      {subView === "monthly" ? (
+        <MonthlyPurchaseAnalysis />
+      ) : loading ? (
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
