@@ -197,23 +197,12 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       if (!currentStore) return;
       setLoading(true);
       try {
-      // Products
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id, name, price, stock_qty, purchase_price, material_id")
-        .eq("store_id", currentStore.id)
-        .order("name");
-      const materialIds = Array.from(
-        new Set(((prods || []) as any[]).map((p) => p.material_id).filter(Boolean))
-      ) as string[];
-      const materialNames: Record<string, string> = {};
-      if (materialIds.length > 0) {
-        const { data: mats } = await supabase
-          .from("product_materials")
-          .select("id, name")
-          .in("id", materialIds);
-        (mats || []).forEach((m: any) => { materialNames[m.id] = m.name; });
-      }
+      // Products + materials (cached)
+      const { fetchProductsCached, fetchMaterialNamesCached } = await import("@/utils/catalogCache");
+      const [prods, materialNames] = await Promise.all([
+        fetchProductsCached(currentStore.id),
+        fetchMaterialNamesCached(currentStore.id),
+      ]);
       setProducts(((prods || []) as any[]).map((p) => ({
         ...p,
         material_name: p.material_id ? materialNames[p.material_id] || null : null,
