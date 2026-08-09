@@ -61,6 +61,7 @@ interface Product {
   price: number;
   stock_qty: number;
   purchase_price?: number;
+  material_name?: string | null;
 }
 
 interface Item {
@@ -199,10 +200,24 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
       // Products
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, stock_qty, purchase_price")
+        .select("id, name, price, stock_qty, purchase_price, material_id")
         .eq("store_id", currentStore.id)
         .order("name");
-      setProducts((prods || []) as Product[]);
+      const materialIds = Array.from(
+        new Set(((prods || []) as any[]).map((p) => p.material_id).filter(Boolean))
+      ) as string[];
+      const materialNames: Record<string, string> = {};
+      if (materialIds.length > 0) {
+        const { data: mats } = await supabase
+          .from("product_materials")
+          .select("id, name")
+          .in("id", materialIds);
+        (mats || []).forEach((m: any) => { materialNames[m.id] = m.name; });
+      }
+      setProducts(((prods || []) as any[]).map((p) => ({
+        ...p,
+        material_name: p.material_id ? materialNames[p.material_id] || null : null,
+      })) as Product[]);
 
       // Active unit conversions for these products
       const pids = ((prods || []) as Product[]).map((p) => p.id);
@@ -889,9 +904,13 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                       <CommandEmpty>Produk tidak ditemukan</CommandEmpty>
                       <CommandGroup>
                         {products
-                          .filter((p) =>
-                            p.name.toLowerCase().includes(newProductSearch.toLowerCase())
-                          )
+                          .filter((p) => {
+                            const q = newProductSearch.toLowerCase();
+                            return (
+                              p.name.toLowerCase().includes(q) ||
+                              (p.material_name || "").toLowerCase().includes(q)
+                            );
+                          })
                           .map((p) => {
                           const isSelected = selectedProductIds.includes(p.id);
                           const outOfStock = (Number(p.stock_qty) || 0) <= 0;
@@ -942,7 +961,12 @@ export default function StockOutForm({ stockOutId, onBack }: Props) {
                             >
                               <Check className={`h-4 w-4 mr-2 ${isSelected ? "opacity-100" : "opacity-0"}`} />
                               <div className="flex justify-between w-full">
-                                <span>{p.name}</span>
+                                <span>
+                                  {p.name}
+                                  {p.material_name && (
+                                    <span className="ml-1 text-muted-foreground">({p.material_name})</span>
+                                  )}
+                                </span>
                                 <span className={`text-xs ${outOfStock ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                                   Stok: {getBaseStock(p)}{baseUnitLabel ? ` ${baseUnitLabel}` : ""}
                                 </span>
