@@ -3628,6 +3628,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accessible_store_ids: { Args: { _user_id: string }; Returns: string[] }
       check_and_expire_booking_request: {
         Args: { p_request_id: string }
         Returns: boolean
