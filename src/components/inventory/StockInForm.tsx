@@ -187,40 +187,18 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       if (!currentStore) return;
       setLoading(true);
       try {
-      // Products
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id, name, price, purchase_price, stock_qty, material_id")
-        .eq("store_id", currentStore.id)
-        .order("name");
+      // Products + materials (cached)
+      const { fetchProductsCached, fetchMaterialNamesCached, fetchActiveVariantsCached } =
+        await import("@/utils/catalogCache");
+      const [prods, materialNames] = await Promise.all([
+        fetchProductsCached(currentStore.id),
+        fetchMaterialNamesCached(currentStore.id),
+      ]);
       setProducts(prods || []);
 
-      // Material (jenis bahan) names
-      const materialIds = Array.from(
-        new Set((prods || []).map((p: any) => p.material_id).filter(Boolean))
-      ) as string[];
-      const materialNames: Record<string, string> = {};
-      if (materialIds.length > 0) {
-        const { data: mats } = await supabase
-          .from("product_materials")
-          .select("id, name")
-          .in("id", materialIds);
-        (mats || []).forEach((m: any) => { materialNames[m.id] = m.name; });
-      }
-
-      // Variants for these products
+      // Variants for these products (cached)
       const productIds = (prods || []).map((p: any) => p.id);
-      let variantsByProduct: Record<string, any[]> = {};
-      if (productIds.length > 0) {
-        const { data: vars } = await supabase
-          .from("product_variants")
-          .select("id, product_id, variant_name, sku, price, purchase_price, stock, is_active")
-          .in("product_id", productIds)
-          .eq("is_active", true);
-        (vars || []).forEach((v: any) => {
-          (variantsByProduct[v.product_id] ||= []).push(v);
-        });
-      }
+      const variantsByProduct = await fetchActiveVariantsCached(currentStore.id, productIds);
       const list: VariantOpt[] = [];
       (prods || []).forEach((p: any) => {
         const vs = variantsByProduct[p.id] || [];

@@ -80,34 +80,20 @@ export default function AddProductDialog({
     setSearch("");
     setDiscountMode("rp"); setDiscountInput(0);
     (async () => {
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id,name,purchase_price,price,sku,stock_qty,material_id")
-        .eq("store_id", currentStore.id)
-        .order("name");
+      const { fetchProductsCached, fetchMaterialNamesCached, fetchActiveVariantsCached } =
+        await import("@/utils/catalogCache");
+      const [prods, materialNames] = await Promise.all([
+        fetchProductsCached(currentStore.id),
+        fetchMaterialNamesCached(currentStore.id),
+      ]);
       const rawProducts = (prods as any[]) || [];
       const productIds = rawProducts.map((p) => p.id);
-      const materialIds = Array.from(
-        new Set(rawProducts.map((p) => p.material_id).filter(Boolean))
-      ) as string[];
-      const materialNames: Record<string, string> = {};
-      if (materialIds.length > 0) {
-        const { data: mats } = await supabase
-          .from("product_materials")
-          .select("id, name")
-          .in("id", materialIds);
-        (mats as any[] | null)?.forEach((m) => {
-          materialNames[m.id] = m.name;
-        });
-      }
       let variantsByProduct: Record<string, any[]> = {};
       if (productIds.length > 0) {
-        const { data: vars } = await supabase
-          .from("product_variants")
-          .select("id, product_id, variant_name, sku, price, purchase_price, stock, is_active")
-          .in("product_id", productIds)
-          .eq("is_active", true);
-        (vars as any[] | null)?.forEach((v) => {
+        const vars = Object.values(
+          await fetchActiveVariantsCached(currentStore.id, productIds)
+        ).flat();
+        (vars as any[]).forEach((v) => {
           (variantsByProduct[v.product_id] ||= []).push(v);
         });
       }
