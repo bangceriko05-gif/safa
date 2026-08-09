@@ -16,7 +16,7 @@ export interface CachedRoomVariant {
   [key: string]: any;
 }
 
-const TTL_MS = 30_000;
+const TTL_MS = 300_000;
 const cache = new Map<string, { at: number; data: CachedRoomVariant[] }>();
 const inflight = new Map<string, Promise<CachedRoomVariant[]>>();
 

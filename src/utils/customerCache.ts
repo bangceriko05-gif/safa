@@ -6,7 +6,7 @@ export interface CachedCustomer {
   phone: string | null;
 }
 
-const TTL_MS = 30_000;
+const TTL_MS = 300_000;
 const cache = new Map<string, { at: number; data: CachedCustomer[] }>();
 const inflight = new Map<string, Promise<CachedCustomer[]>>();
 
