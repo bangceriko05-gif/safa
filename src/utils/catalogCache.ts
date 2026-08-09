@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const TTL_MS = 300_000;
+const TTL_MS = 60_000;
 
 type Entry<T> = { at: number; data: T };
 const cache = new Map<string, Entry<any>>();
