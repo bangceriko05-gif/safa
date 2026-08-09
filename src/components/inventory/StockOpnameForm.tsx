@@ -72,6 +72,7 @@ interface Product {
   name: string;
   price: number;
   stock_qty: number;
+  material_name?: string | null;
 }
 
 interface Item {
@@ -185,10 +186,24 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
       try {
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, stock_qty")
+        .select("id, name, price, stock_qty, material_id")
         .eq("store_id", currentStore.id)
         .order("name");
-      setProducts((prods || []) as Product[]);
+      const materialIds = Array.from(
+        new Set(((prods || []) as any[]).map((p) => p.material_id).filter(Boolean))
+      ) as string[];
+      const materialNames: Record<string, string> = {};
+      if (materialIds.length > 0) {
+        const { data: mats } = await supabase
+          .from("product_materials")
+          .select("id, name")
+          .in("id", materialIds);
+        (mats || []).forEach((m: any) => { materialNames[m.id] = m.name; });
+      }
+      setProducts(((prods || []) as any[]).map((p) => ({
+        ...p,
+        material_name: p.material_id ? materialNames[p.material_id] || null : null,
+      })) as Product[]);
 
       // Load active unit conversions to derive fallback HPP (per base unit)
       const prodIds = (prods || []).map((p: any) => p.id);
@@ -517,7 +532,11 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
   const filteredAddProducts = useMemo(() => {
     const q = addSearch.toLowerCase().trim();
     if (!q) return products;
-    return products.filter((p) => p.name.toLowerCase().includes(q));
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.material_name || "").toLowerCase().includes(q)
+    );
   }, [products, addSearch]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAddProducts.length / addPageSize));
@@ -1002,7 +1021,12 @@ export default function StockOpnameForm({ stockOpnameId, onBack }: Props) {
                             <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
                               <Package className="h-4 w-4 text-blue-500" />
                             </div>
-                            <span className="font-semibold">{p.name}</span>
+                            <span className="font-semibold">
+                              {p.name}
+                              {p.material_name && (
+                                <span className="ml-1 font-normal text-muted-foreground">({p.material_name})</span>
+                              )}
+                            </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">{p.stock_qty}</td>
