@@ -71,6 +71,7 @@ interface VariantOpt {
   price: number;
   purchase_price: number;
   stock: number;
+  material_name?: string | null;
 }
 
 interface Supplier {
@@ -189,10 +190,23 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       // Products
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, purchase_price, stock_qty")
+        .select("id, name, price, purchase_price, stock_qty, material_id")
         .eq("store_id", currentStore.id)
         .order("name");
       setProducts(prods || []);
+
+      // Material (jenis bahan) names
+      const materialIds = Array.from(
+        new Set((prods || []).map((p: any) => p.material_id).filter(Boolean))
+      ) as string[];
+      const materialNames: Record<string, string> = {};
+      if (materialIds.length > 0) {
+        const { data: mats } = await supabase
+          .from("product_materials")
+          .select("id, name")
+          .in("id", materialIds);
+        (mats || []).forEach((m: any) => { materialNames[m.id] = m.name; });
+      }
 
       // Variants for these products
       const productIds = (prods || []).map((p: any) => p.id);
@@ -210,6 +224,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
       const list: VariantOpt[] = [];
       (prods || []).forEach((p: any) => {
         const vs = variantsByProduct[p.id] || [];
+        const matName = p.material_id ? materialNames[p.material_id] || null : null;
         if (vs.length > 0) {
           vs.forEach((v: any) => {
             list.push({
@@ -220,6 +235,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
               price: Number(v.price) || Number(p.price) || 0,
               purchase_price: Number(v.purchase_price) || Number(p.purchase_price) || 0,
               stock: Number(v.stock) || 0,
+              material_name: matName,
             });
           });
         } else {
@@ -231,6 +247,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
             price: Number(p.price) || 0,
             purchase_price: Number(p.purchase_price) || 0,
             stock: Number(p.stock_qty) || 0,
+            material_name: matName,
           });
         }
       });
@@ -808,7 +825,8 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                             const q = newProductSearch.toLowerCase();
                             return (
                               p.display_name.toLowerCase().includes(q) ||
-                              (p.sku || "").toLowerCase().includes(q)
+                              (p.sku || "").toLowerCase().includes(q) ||
+                              (p.material_name || "").toLowerCase().includes(q)
                             );
                           })
                           .map((p) => {
@@ -836,7 +854,12 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                               <Check className={`h-4 w-4 mr-2 ${isSelected ? "opacity-100" : "opacity-0"}`} />
                               <div className="flex justify-between w-full gap-2">
                                 <div className="min-w-0">
-                                  <div className="truncate">{p.display_name}</div>
+                                  <div className="truncate">
+                                    {p.display_name}
+                                    {p.material_name && (
+                                      <span className="ml-1 text-muted-foreground">({p.material_name})</span>
+                                    )}
+                                  </div>
                                   {p.sku && (
                                     <div className="text-[11px] text-muted-foreground truncate">
                                       SKU: {p.sku} · Stok: {p.stock}
