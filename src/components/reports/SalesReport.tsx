@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ReportPagination, { usePagination } from "./ReportPagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
