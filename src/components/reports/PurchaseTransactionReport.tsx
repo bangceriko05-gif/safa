@@ -404,7 +404,7 @@ export default function PurchaseTransactionReport() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((r) => {
+                    rowPg.paginated.map((r) => {
                       const it = items[r.id] || [];
                       const itemLabel = it.length > 0 ? it.map((i) => i.product_name).join(", ") : (r.supplier_name || "-");
                       const totalQty = it.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
