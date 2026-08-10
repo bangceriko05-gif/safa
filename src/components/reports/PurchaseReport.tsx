@@ -11,6 +11,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import { DateRange } from "react-day-picker";
 import { exportPurchaseReport, PurchaseExportData } from "@/utils/reportExport";
 import { toast } from "sonner";
+import ReportPagination, { usePagination } from "./ReportPagination";
 
 interface ProductSale {
   product_id: string;
@@ -37,6 +38,7 @@ export default function PurchaseReport() {
   const [loading, setLoading] = useState(true);
   const [productSales, setProductSales] = useState<ProductSale[]>([]);
   const [transactions, setTransactions] = useState<IncomeProductData[]>([]);
+  const txPg = usePagination(transactions, [transactions]);
   const [stats, setStats] = useState({
     totalTransactions: 0,
     totalProductsSold: 0,
@@ -281,8 +283,8 @@ export default function PurchaseReport() {
               {transactions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Tidak ada transaksi</p>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {transactions.map((t, index) => (
+                <div className="space-y-2">
+                  {txPg.paginated.map((t, index) => (
                     <div key={`${t.income_id}-${t.product_id}-${index}`} className="flex justify-between items-start p-2 bg-muted/50 rounded text-sm">
                       <div>
                         <div className="font-medium">{t.product_name}</div>
@@ -300,6 +302,15 @@ export default function PurchaseReport() {
               )}
             </CardContent>
           </Card>
+
+          <ReportPagination
+            page={txPg.page}
+            totalPages={txPg.totalPages}
+            total={txPg.total}
+            pageSize={txPg.pageSize}
+            onPageChange={txPg.setPage}
+            onPageSizeChange={txPg.setPageSize}
+          />
         </>
       )}
     </div>

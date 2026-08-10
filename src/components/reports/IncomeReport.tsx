@@ -15,6 +15,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import ReportPagination, { usePagination } from "./ReportPagination";
 
 interface IncomeRow {
   id: string;
@@ -93,6 +94,9 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
         (r.description || "").toLowerCase().includes(q),
     );
   }, [rows, searchQuery]);
+
+  const pg = usePagination(filtered, [searchQuery, timeRange, customDateRange, processStatusFilter]);
+  const paginated = pg.paginated;
 
   const stats = useMemo(() => {
     const total = filtered.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -217,14 +221,14 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.length === 0 ? (
+                    {paginated.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           Tidak ada data pemasukan
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filtered.map((r) => {
+                      paginated.map((r) => {
                         const isDone = r.process_status === "selesai";
                         return (
                           <TableRow key={r.id}>
@@ -285,6 +289,15 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
               </div>
             </CardContent>
           </Card>
+
+          <ReportPagination
+            page={pg.page}
+            totalPages={pg.totalPages}
+            total={pg.total}
+            pageSize={pg.pageSize}
+            onPageChange={pg.setPage}
+            onPageSizeChange={pg.setPageSize}
+          />
         </>
       )}
 

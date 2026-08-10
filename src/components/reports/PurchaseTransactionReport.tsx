@@ -17,6 +17,7 @@ import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import MonthlyPurchaseAnalysis from "./MonthlyPurchaseAnalysis";
+import ReportPagination, { usePagination } from "./ReportPagination";
 
 type SubView = "active" | "cancelled" | "items" | "monthly";
 
@@ -158,10 +159,14 @@ export default function PurchaseTransactionReport() {
   }, [filtered, items, subView, searchQuery]);
 
   const itemStats = useMemo(() => {
+    // stats always computed on the full filtered set
     const totalQty = itemRows.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
     const totalAmt = itemRows.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
     return { count: itemRows.length, totalQty, totalAmt };
   }, [itemRows]);
+
+  const itemPg = usePagination(itemRows, [searchQuery, timeRange, customDateRange, subView]);
+  const rowPg = usePagination(filtered, [searchQuery, timeRange, customDateRange, subView]);
 
   const handleExport = () => {
     if (!currentStore) return;
@@ -330,14 +335,14 @@ export default function PurchaseTransactionReport() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {itemRows.length === 0 ? (
+                    {itemPg.paginated.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           Tidak ada item pembelian
                         </TableCell>
                       </TableRow>
                     ) : (
-                      itemRows.map((r, idx) => (
+                      itemPg.paginated.map((r, idx) => (
                         <TableRow key={`${r.purchase_id}-${idx}`}>
                           <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-1">
@@ -392,14 +397,14 @@ export default function PurchaseTransactionReport() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.length === 0 ? (
+                  {rowPg.paginated.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Tidak ada data pembelian
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((r) => {
+                    rowPg.paginated.map((r) => {
                       const it = items[r.id] || [];
                       const itemLabel = it.length > 0 ? it.map((i) => i.product_name).join(", ") : (r.supplier_name || "-");
                       const totalQty = it.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
@@ -459,6 +464,26 @@ export default function PurchaseTransactionReport() {
               )}
             </CardContent>
           </Card>
+
+          {subView === "items" ? (
+            <ReportPagination
+              page={itemPg.page}
+              totalPages={itemPg.totalPages}
+              total={itemPg.total}
+              pageSize={itemPg.pageSize}
+              onPageChange={itemPg.setPage}
+              onPageSizeChange={itemPg.setPageSize}
+            />
+          ) : (
+            <ReportPagination
+              page={rowPg.page}
+              totalPages={rowPg.totalPages}
+              total={rowPg.total}
+              pageSize={rowPg.pageSize}
+              onPageChange={rowPg.setPage}
+              onPageSizeChange={rowPg.setPageSize}
+            />
+          )}
         </>
       )}
 
