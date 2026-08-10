@@ -748,6 +748,10 @@ export default function SalesReport() {
     { count: 0, totalBiaya: 0, totalHPP: 0, totalLaba: 0 }
   );
 
+  const detailsPg = usePagination(filteredDetailBookings, [searchQuery, filteredDetailBookings.length]);
+  const roomsPg = usePagination(filteredDetailBookings, [searchQuery, filteredDetailBookings.length]);
+  const itemsPg = usePagination(itemRows, [searchQuery, itemRows.length]);
+
   return (
     <div className="space-y-4">
       {loading ? (
@@ -879,14 +883,14 @@ export default function SalesReport() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredDetailBookings.length === 0 ? (
+                        {detailsPg.paginated.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={13} className="text-center text-sm text-muted-foreground py-8">
                               Tidak ada data
                             </TableCell>
                           </TableRow>
                         ) : (
-                          filteredDetailBookings.map((booking) => {
+                          detailsPg.paginated.map((booking) => {
                             const totalBiaya = booking.price + booking.price_2;
                             const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
                             const hpp = getBookingHPP(booking.id);
@@ -958,6 +962,14 @@ export default function SalesReport() {
                   </div>
                 </CardContent>
               </Card>
+              <ReportPagination
+                page={detailsPg.page}
+                totalPages={detailsPg.totalPages}
+                total={detailsPg.total}
+                pageSize={detailsPg.pageSize}
+                onPageChange={detailsPg.setPage}
+                onPageSizeChange={detailsPg.setPageSize}
+              />
             </TabsContent>
 
             {/* Penjualan Kamar */}
@@ -1006,12 +1018,12 @@ export default function SalesReport() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredDetailBookings.length === 0 ? (
+                        {roomsPg.paginated.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={12} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
                           </TableRow>
                         ) : (
-                          filteredDetailBookings.map((booking) => {
+                          roomsPg.paginated.map((booking) => {
                             const totalBiaya = booking.price + booking.price_2;
                             const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
                             return (
@@ -1070,6 +1082,14 @@ export default function SalesReport() {
                   </div>
                 </CardContent>
               </Card>
+              <ReportPagination
+                page={roomsPg.page}
+                totalPages={roomsPg.totalPages}
+                total={roomsPg.total}
+                pageSize={roomsPg.pageSize}
+                onPageChange={roomsPg.setPage}
+                onPageSizeChange={roomsPg.setPageSize}
+              />
             </TabsContent>
 
             {/* Penjualan Item (rincian per item) */}
@@ -1116,12 +1136,12 @@ export default function SalesReport() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {itemRows.length === 0 ? (
+                        {itemsPg.paginated.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
                           </TableRow>
                         ) : (
-                          itemRows.map((r) => (
+                          itemsPg.paginated.map((r) => (
                             <TableRow key={r.key}>
                               <TableCell>
                                 <div className="flex items-center gap-1 text-blue-600 font-medium text-xs">
@@ -1177,6 +1197,14 @@ export default function SalesReport() {
                   </div>
                 </CardContent>
               </Card>
+              <ReportPagination
+                page={itemsPg.page}
+                totalPages={itemsPg.totalPages}
+                total={itemsPg.total}
+                pageSize={itemsPg.pageSize}
+                onPageChange={itemsPg.setPage}
+                onPageSizeChange={itemsPg.setPageSize}
+              />
             </TabsContent>
 
             {/* Sumber Penjualan */}
