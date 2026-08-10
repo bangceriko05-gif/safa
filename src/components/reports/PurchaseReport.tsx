@@ -38,6 +38,7 @@ export default function PurchaseReport() {
   const [loading, setLoading] = useState(true);
   const [productSales, setProductSales] = useState<ProductSale[]>([]);
   const [transactions, setTransactions] = useState<IncomeProductData[]>([]);
+  const txPg = usePagination(transactions, [transactions]);
   const [stats, setStats] = useState({
     totalTransactions: 0,
     totalProductsSold: 0,
