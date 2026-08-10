@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ReportPagination, { usePagination } from "./ReportPagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -43,9 +43,6 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const [pageSize, setPageSize] = useState(30);
-  const [page, setPage] = useState(1);
-  const [pageInput, setPageInput] = useState("");
 
   useEffect(() => {
     if (!currentStore) return;
@@ -107,16 +104,8 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
     );
   }, [rows, searchQuery]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = useMemo(
-    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [filtered, currentPage, pageSize],
-  );
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, timeRange, customDateRange, pageSize, processStatusFilter]);
+  const pg = usePagination(filtered, [searchQuery, timeRange, customDateRange, processStatusFilter]);
+  const paginated = pg.paginated;
 
   const stats = useMemo(() => {
     const total = filtered.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -310,55 +299,14 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
             </CardContent>
           </Card>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Tampilkan</span>
-              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-                <SelectTrigger className="w-[80px] h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[30, 50, 100].map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span>dari {filtered.length} data</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-                Sebelumnya
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Halaman {currentPage} / {totalPages}
-              </span>
-              <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
-                Berikutnya
-              </Button>
-              <form
-                className="flex items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const n = parseInt(pageInput, 10);
-                  if (!isNaN(n) && n >= 1 && n <= totalPages) {
-                    setPage(n);
-                    setPageInput("");
-                  } else {
-                    toast.error(`Masukkan halaman 1 - ${totalPages}`);
-                  }
-                }}
-              >
-                <Input
-                  type="number"
-                  min={1}
-                  max={totalPages}
-                  value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value)}
-                  placeholder="Ke hal."
-                  className="w-[90px] h-9"
-                />
-                <Button type="submit" variant="outline" size="sm">Pergi</Button>
-              </form>
-            </div>
-          </div>
+          <ReportPagination
+            page={pg.page}
+            totalPages={pg.totalPages}
+            total={pg.total}
+            pageSize={pg.pageSize}
+            onPageChange={pg.setPage}
+            onPageSizeChange={pg.setPageSize}
+          />
         </>
       )}
 
