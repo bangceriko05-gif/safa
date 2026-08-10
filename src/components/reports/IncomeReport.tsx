@@ -42,7 +42,8 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<IncomeRow[]>([]);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const [pgReady] = useState(true);
+  const pg = usePagination(filtered, [searchQuery, timeRange, customDateRange, processStatusFilter]);
+  const paginated = pg.paginated;
 
   useEffect(() => {
     if (!currentStore) return;
