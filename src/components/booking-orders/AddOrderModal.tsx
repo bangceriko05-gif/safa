@@ -1154,10 +1154,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   <Button
                     size="sm"
                     onClick={() => {
+                      const nm = manualCustomerName.trim();
+                      const exists = dbCustomers.some(
+                        (c) => (c.name || "").trim().toLowerCase() === nm.toLowerCase()
+                      );
                       setMatchedBooking(null);
                       setPosCustomerName("");
                       setPickedCustomerPhone("");
                       setCustomerPickerOpen(false);
+                      if (!exists) {
+                        setNewCustomerPhone("");
+                        setConfirmSaveCustomer({ name: nm });
+                      }
                     }}
                     disabled={!manualCustomerName.trim()}
                   >
