@@ -120,6 +120,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [customerSearch, setCustomerSearch] = useState("");
   const [manualCustomerName, setManualCustomerName] = useState("");
   const [pickedCustomerPhone, setPickedCustomerPhone] = useState("");
+  const [confirmSaveCustomer, setConfirmSaveCustomer] = useState<{ name: string } | null>(null);
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [savingNewCustomer, setSavingNewCustomer] = useState(false);
 
   // Transaction-wide discount
   const [txDiscountMode, setTxDiscountMode] = useState<"rp" | "pct">("rp");
