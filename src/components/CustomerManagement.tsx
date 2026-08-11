@@ -46,6 +46,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface Customer {
   id: string;
@@ -64,6 +65,8 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -675,7 +678,7 @@ export default function CustomerManagement() {
                               });
                               if (customer.phone) params.set("crmPhone", customer.phone);
                               if (customer.name) params.set("crmName", customer.name);
-                              window.location.href = `/?${params.toString()}`;
+                              navigate(`${location.pathname}?${params.toString()}`);
                             }}
                           >
                             {customer.name}
