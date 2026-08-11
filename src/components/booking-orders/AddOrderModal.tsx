@@ -120,6 +120,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [customerSearch, setCustomerSearch] = useState("");
   const [manualCustomerName, setManualCustomerName] = useState("");
   const [pickedCustomerPhone, setPickedCustomerPhone] = useState("");
+  const [confirmSaveCustomer, setConfirmSaveCustomer] = useState<{ name: string } | null>(null);
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [savingNewCustomer, setSavingNewCustomer] = useState(false);
 
   // Transaction-wide discount
   const [txDiscountMode, setTxDiscountMode] = useState<"rp" | "pct">("rp");
@@ -1151,10 +1154,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   <Button
                     size="sm"
                     onClick={() => {
+                      const nm = manualCustomerName.trim();
+                      const exists = dbCustomers.some(
+                        (c) => (c.name || "").trim().toLowerCase() === nm.toLowerCase()
+                      );
                       setMatchedBooking(null);
                       setPosCustomerName("");
                       setPickedCustomerPhone("");
                       setCustomerPickerOpen(false);
+                      if (!exists) {
+                        setNewCustomerPhone("");
+                        setConfirmSaveCustomer({ name: nm });
+                      }
                     }}
                     disabled={!manualCustomerName.trim()}
                   >
@@ -1247,6 +1258,68 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Offer to save a new customer to the database */}
+        <Dialog open={!!confirmSaveCustomer} onOpenChange={(v) => !v && setConfirmSaveCustomer(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Simpan Pelanggan Baru?</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Nama <span className="font-medium text-foreground">{confirmSaveCustomer?.name}</span> belum ada di
+                Data Pelanggan. Simpan ke database pelanggan?
+              </p>
+              <div>
+                <Label className="text-xs text-muted-foreground">Nomor HP (opsional)</Label>
+                <Input
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(e.target.value)}
+                  placeholder="08xxxxxxxxxx"
+                  className="h-9"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setConfirmSaveCustomer(null)}>
+                  Tidak
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={savingNewCustomer}
+                  onClick={async () => {
+                    if (!confirmSaveCustomer || !currentStore) return;
+                    setSavingNewCustomer(true);
+                    try {
+                      const { data: userRes } = await supabase.auth.getUser();
+                      const uid = userRes?.user?.id;
+                      const { error } = await supabase.from("customers").insert({
+                        name: confirmSaveCustomer.name,
+                        phone: newCustomerPhone.trim() || null,
+                        store_id: currentStore.id,
+                        created_by: uid,
+                      } as any);
+                      if (error) throw error;
+                      const { invalidateCustomerCache, fetchCustomersCached } = await import(
+                        "@/utils/customerCache"
+                      );
+                      invalidateCustomerCache(currentStore.id);
+                      setDbCustomers((await fetchCustomersCached(currentStore.id)) as any);
+                      if (newCustomerPhone.trim()) setPickedCustomerPhone(newCustomerPhone.trim());
+                      toast.success("Pelanggan disimpan ke Data Pelanggan");
+                      setConfirmSaveCustomer(null);
+                    } catch (e: any) {
+                      toast.error("Gagal menyimpan pelanggan: " + (e?.message || ""));
+                    } finally {
+                      setSavingNewCustomer(false);
+                    }
+                  }}
+                >
+                  {savingNewCustomer ? "Menyimpan..." : "Ya, Simpan"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Finish action popup: Print or WhatsApp */}
         <Dialog open={finishOpen} onOpenChange={(o) => !saving && setFinishOpen(o)}>
