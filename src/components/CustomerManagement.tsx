@@ -662,7 +662,25 @@ export default function CustomerManagement() {
                             />
                           </TableCell>
                         )}
-                        <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            type="button"
+                            className="text-left text-primary hover:underline"
+                            title="Lihat detail pelanggan (CRM)"
+                            onClick={() => {
+                              const params = new URLSearchParams({
+                                tab: "customers",
+                                customersSection: "crm",
+                                crmCustomer: customer.id,
+                              });
+                              if (customer.phone) params.set("crmPhone", customer.phone);
+                              if (customer.name) params.set("crmName", customer.name);
+                              window.location.href = `/?${params.toString()}`;
+                            }}
+                          >
+                            {customer.name}
+                          </button>
+                        </TableCell>
                         <TableCell>{customer.phone}</TableCell>
                         <TableCell>
                           {customer.identity_type && customer.identity_number ? (
