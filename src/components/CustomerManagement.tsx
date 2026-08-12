@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download, Sparkles } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -44,6 +44,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { validateCustomerInput } from "@/utils/customerValidation";
 import { usePermissions } from "@/hooks/usePermissions";
 import CustomerDetailDialog, { DetailCustomer, DetailTxn } from "@/components/crm/CustomerDetailDialog";
+import DuplicatePrediction from "@/components/crm/DuplicatePrediction";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
@@ -100,6 +101,7 @@ export default function CustomerManagement() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [crmCustomer, setCrmCustomer] = useState<DetailCustomer | null>(null);
   const [crmTxns, setCrmTxns] = useState<DetailTxn[]>([]);
+  const [dupOpen, setDupOpen] = useState(false);
 
   const normPhone = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
 
@@ -549,6 +551,10 @@ export default function CustomerManagement() {
           <p className="text-muted-foreground mt-1">Kelola database pelanggan {currentStore?.name}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setDupOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Prediksi Ganda
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -1106,6 +1112,14 @@ export default function CustomerManagement() {
         storeId={currentStore?.id}
         storeName={currentStore?.name}
         onClose={() => setCrmCustomer(null)}
+      />
+
+      <DuplicatePrediction
+        open={dupOpen}
+        onOpenChange={setDupOpen}
+        customers={customers as any}
+        storeId={currentStore?.id}
+        onMerged={fetchCustomers}
       />
     </div>
   );
