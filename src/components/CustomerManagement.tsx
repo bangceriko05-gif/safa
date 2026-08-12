@@ -98,6 +98,51 @@ export default function CustomerManagement() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [crmCustomer, setCrmCustomer] = useState<DetailCustomer | null>(null);
+  const [crmTxns, setCrmTxns] = useState<DetailTxn[]>([]);
+
+  const normPhone = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
+
+  const openCrmDetail = async (customer: Customer) => {
+    const phone = normPhone(customer.phone);
+    const [bRes, oRes] = await Promise.all([
+      supabase.from("bookings").select("id,customer_name,phone,date,price,status,bid").eq("store_id", currentStore?.id || ""),
+      supabase.from("booking_orders").select("id,customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore?.id || ""),
+    ]);
+    const all: DetailTxn[] = [];
+    (bRes.data || []).forEach((b: any) => {
+      if ((b.status || "").toUpperCase() === "BATAL") return;
+      all.push({ phone: normPhone(b.phone), name: b.customer_name || "", date: b.date, amount: Number(b.price) || 0, source: "booking", bid: b.bid, status: b.status, id: b.id });
+    });
+    (oRes.data || []).forEach((o: any) => {
+      if ((o.process_status || "") === "batal") return;
+      all.push({ phone: normPhone(o.customer_phone), name: o.customer_name || "", date: o.date, amount: Number(o.total_amount) || 0, source: "pos", bid: o.bid, status: o.process_status, id: o.id });
+    });
+    const mine = all.filter((t) => phone && t.phone === phone);
+    const visits = mine.length;
+    const totalSpend = mine.reduce((s, t) => s + t.amount, 0);
+    const lastVisit = mine.reduce<string | null>((acc, t) => (!acc || t.date > acc ? t.date : acc), null);
+    let segmentLabel = "Baru";
+    let segmentClass = "bg-sky-500/15 text-sky-700 border-sky-500/30";
+    if (visits >= 5) { segmentLabel = "VIP"; segmentClass = "bg-amber-500/15 text-amber-700 border-amber-500/30"; }
+    else if (visits >= 2) { segmentLabel = "Loyal"; segmentClass = "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"; }
+    if (visits === 0) { segmentLabel = "Belum Ada Transaksi"; segmentClass = "bg-muted text-muted-foreground border-border"; }
+    setCrmTxns(all);
+    setCrmCustomer({
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email,
+      birth_date: customer.birth_date,
+      domicile: customer.domicile,
+      createdAt: customer.created_at,
+      visits,
+      totalSpend,
+      lastVisit,
+      segmentLabel,
+      segmentClass,
+    });
+  };
 
   useEffect(() => {
     if (!currentStore) return;
