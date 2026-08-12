@@ -1099,6 +1099,14 @@ export default function CustomerManagement() {
           )}
         </DialogContent>
       </Dialog>
+
+      <CustomerDetailDialog
+        customer={crmCustomer}
+        txns={crmTxns}
+        storeId={currentStore?.id}
+        storeName={currentStore?.name}
+        onClose={() => setCrmCustomer(null)}
+      />
     </div>
   );
 }
