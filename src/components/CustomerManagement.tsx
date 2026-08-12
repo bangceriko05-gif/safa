@@ -716,16 +716,7 @@ export default function CustomerManagement() {
                             type="button"
                             className="text-left text-primary hover:underline"
                             title="Lihat detail pelanggan (CRM)"
-                            onClick={() => {
-                              const params = new URLSearchParams({
-                                tab: "customers",
-                                customersSection: "crm",
-                                crmCustomer: customer.id,
-                              });
-                              if (customer.phone) params.set("crmPhone", customer.phone);
-                              if (customer.name) params.set("crmName", customer.name);
-                              navigate(`${location.pathname}?${params.toString()}`);
-                            }}
+                            onClick={() => openCrmDetail(customer)}
                           >
                             {customer.name}
                           </button>
