@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download, Sparkles } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -1112,6 +1112,14 @@ export default function CustomerManagement() {
         storeId={currentStore?.id}
         storeName={currentStore?.name}
         onClose={() => setCrmCustomer(null)}
+      />
+
+      <DuplicatePrediction
+        open={dupOpen}
+        onOpenChange={setDupOpen}
+        customers={customers as any}
+        storeId={currentStore?.id}
+        onMerged={fetchCustomers}
       />
     </div>
   );
