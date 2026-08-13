@@ -175,12 +175,23 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
         />
         {crm.identity_document_url && (
           <div className="pt-2 space-y-2">
-            <img
-              src={crm.identity_document_url}
-              alt={`Foto identitas ${crm.name}`}
-              loading="lazy"
-              className="h-28 w-auto rounded-md border object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => window.open(crm.identity_document_url!, "_blank")}
+              className="block rounded-md border bg-background overflow-hidden"
+              title="Klik untuk memperbesar"
+            >
+              <img
+                src={crm.identity_document_url}
+                alt={`Foto identitas ${crm.name}`}
+                loading="lazy"
+                decoding="async"
+                className="h-24 w-40 object-contain bg-muted"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </button>
             <Button
               type="button"
               size="sm"
