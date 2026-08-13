@@ -1792,6 +1792,18 @@ export default function BookingModal({
           )}
 
           {/* OTA Manual Price Input */}
+          </div>
+
+            <div className="lg:sticky lg:top-2">
+              {(formData.phone || formData.customer_name) && (
+                <BookingCustomerCRMCard
+                  storeId={currentStore?.id}
+                  name={formData.customer_name}
+                  phone={formData.phone}
+                />
+              )}
+            </div>
+          </div>
           {formData.room_id && formData.booking_type === "ota" && (
             <div className="space-y-2">
               <Label htmlFor="ota_price">Harga (Input Manual) *</Label>
