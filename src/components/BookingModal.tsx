@@ -1595,6 +1595,8 @@ export default function BookingModal({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+           <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="customer_name">Nama Pelanggan</Label>
             <div className="relative">
@@ -1638,14 +1640,6 @@ export default function BookingModal({
               />
             </div>
           </div>
-
-          {(formData.phone || formData.customer_name) && (
-            <BookingCustomerCRMCard
-              storeId={currentStore?.id}
-              name={formData.customer_name}
-              phone={formData.phone}
-            />
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="room_id">Ruangan *</Label>
