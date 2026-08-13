@@ -40,6 +40,42 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [crm, setCrm] = useState<CrmData | null>(null);
+  const [idThumbUrl, setIdThumbUrl] = useState<string | null>(null);
+  const [idFullUrl, setIdFullUrl] = useState<string | null>(null);
+
+  // Resolve identity document (stored as a storage path) into signed URLs.
+  // A small transformed thumbnail loads fast; the full URL is pre-signed so
+  // "Lihat Identitas" opens instantly without waiting for a request.
+  useEffect(() => {
+    let cancelled = false;
+    const path = crm?.identity_document_url || "";
+    setIdThumbUrl(null);
+    setIdFullUrl(null);
+    if (!path) return;
+
+    if (path.startsWith("http")) {
+      setIdThumbUrl(path);
+      setIdFullUrl(path);
+      return;
+    }
+
+    const run = async () => {
+      const [thumb, full] = await Promise.all([
+        supabase.storage
+          .from("identity-documents")
+          .createSignedUrl(path, 3600, { transform: { width: 320, quality: 50 } } as any),
+        supabase.storage.from("identity-documents").createSignedUrl(path, 3600),
+      ]);
+      if (cancelled) return;
+      const fullUrl = full.data?.signedUrl || null;
+      setIdFullUrl(fullUrl);
+      setIdThumbUrl(thumb.data?.signedUrl || fullUrl);
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [crm?.identity_document_url]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,29 +211,36 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
         />
         {crm.identity_document_url && (
           <div className="pt-2 space-y-2">
-            <button
-              type="button"
-              onClick={() => window.open(crm.identity_document_url!, "_blank")}
-              className="block rounded-md border bg-background overflow-hidden"
-              title="Klik untuk memperbesar"
-            >
-              <img
-                src={crm.identity_document_url}
-                alt={`Foto identitas ${crm.name}`}
-                loading="lazy"
-                decoding="async"
-                className="h-24 w-40 object-contain bg-muted"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </button>
+            {idThumbUrl ? (
+              <button
+                type="button"
+                onClick={() => idFullUrl && window.open(idFullUrl, "_blank")}
+                className="block rounded-md border bg-background overflow-hidden"
+                title="Klik untuk memperbesar"
+              >
+                <img
+                  src={idThumbUrl}
+                  alt={`Foto identitas ${crm.name}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-24 w-40 object-contain bg-muted"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (idFullUrl && img.src !== idFullUrl) img.src = idFullUrl;
+                    else img.style.display = "none";
+                  }}
+                />
+              </button>
+            ) : (
+              <div className="h-24 w-40 rounded-md border bg-muted animate-pulse" />
+            )}
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="h-7 text-xs"
-              onClick={() => window.open(crm.identity_document_url!, "_blank")}
+              disabled={!idFullUrl}
+              onClick={() => idFullUrl && window.open(idFullUrl, "_blank")}
             >
               <ExternalLink className="h-3 w-3 mr-1" /> Lihat Identitas
             </Button>
