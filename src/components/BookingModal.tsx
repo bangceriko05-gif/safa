@@ -47,6 +47,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { validateBookingInputs } from "@/utils/bookingValidation";
 import { cn } from "@/lib/utils";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
+import BookingCustomerCRMCard from "@/components/booking/BookingCustomerCRMCard";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -1637,6 +1638,14 @@ export default function BookingModal({
               />
             </div>
           </div>
+
+          {(formData.phone || formData.customer_name) && (
+            <BookingCustomerCRMCard
+              storeId={currentStore?.id}
+              name={formData.customer_name}
+              phone={formData.phone}
+            />
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="room_id">Ruangan *</Label>
