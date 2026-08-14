@@ -1566,9 +1566,22 @@ export default function BookingModal({
         }
       >
         <DialogHeader>
-          <DialogTitle>
-            {editingBooking ? "Ubah Booking" : "Tambah Booking"}
-          </DialogTitle>
+          <div className="flex items-start justify-between gap-2">
+            <DialogTitle>
+              {editingBooking ? "Ubah Booking" : "Tambah Booking"}
+            </DialogTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              disabled={deleting}
+              className="h-8 gap-1"
+            >
+              <X className="h-4 w-4" />
+              Tutup
+            </Button>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
