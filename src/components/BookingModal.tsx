@@ -48,6 +48,8 @@ import { validateBookingInputs } from "@/utils/bookingValidation";
 import { cn } from "@/lib/utils";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import BookingCustomerCRMCard from "@/components/booking/BookingCustomerCRMCard";
+import FeatureInactiveNotice from "@/components/FeatureInactiveNotice";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface BookingModalProps {
   isOpen: boolean;
