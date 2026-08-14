@@ -1811,13 +1811,22 @@ export default function BookingModal({
           </div>
 
             <div className="lg:sticky lg:top-2">
-              {(formData.phone || formData.customer_name) && (
+              {!isFeatureEnabled("pos") ? (
+                <div className="rounded-lg border bg-card">
+                  <div className="px-3 py-2 border-b text-sm font-semibold">CRM Pelanggan</div>
+                  <FeatureInactiveNotice
+                    featureName="CRM Pelanggan (bagian dari Point of Sale)"
+                    price={getFeatureInfo("pos").price}
+                    description={getFeatureInfo("pos").description}
+                  />
+                </div>
+              ) : (formData.phone || formData.customer_name) ? (
                 <BookingCustomerCRMCard
                   storeId={currentStore?.id}
                   name={formData.customer_name}
                   phone={formData.phone}
                 />
-              )}
+              ) : null}
             </div>
           </div>
           {formData.room_id && formData.booking_type === "ota" && (
