@@ -195,11 +195,19 @@ export default function PaymentProofUpload({
         <div className="relative">
           <div className="border rounded-lg p-2 bg-muted/50">
             <div className="relative group">
-              <img
-                src={value}
-                alt="Bukti bayar"
-                className="w-full h-40 object-contain rounded-md"
-              />
+              <a
+                href={value}
+                target="_blank"
+                rel="noreferrer"
+                title="Klik untuk melihat bukti bayar ukuran penuh"
+                className="block cursor-zoom-in"
+              >
+                <img
+                  src={value}
+                  alt="Bukti bayar"
+                  className="w-full h-40 object-contain rounded-md transition-opacity hover:opacity-90"
+                />
+              </a>
               {!disabled && (
                 <Button
                   type="button"
@@ -213,7 +221,7 @@ export default function PaymentProofUpload({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Bukti bayar berhasil diupload
+              Bukti bayar berhasil diupload — klik gambar untuk melihat ukuran penuh
             </p>
           </div>
         </div>
