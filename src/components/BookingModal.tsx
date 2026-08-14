@@ -110,6 +110,7 @@ export default function BookingModal({
   fullscreen = false,
 }: BookingModalProps) {
   const { currentStore } = useStore();
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
