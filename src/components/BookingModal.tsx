@@ -28,7 +28,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +48,8 @@ import { validateBookingInputs } from "@/utils/bookingValidation";
 import { cn } from "@/lib/utils";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import BookingCustomerCRMCard from "@/components/booking/BookingCustomerCRMCard";
+import FeatureInactiveNotice from "@/components/FeatureInactiveNotice";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -108,6 +110,7 @@ export default function BookingModal({
   fullscreen = false,
 }: BookingModalProps) {
   const { currentStore } = useStore();
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
   const [loading, setLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -1566,9 +1569,22 @@ export default function BookingModal({
         }
       >
         <DialogHeader>
-          <DialogTitle>
-            {editingBooking ? "Ubah Booking" : "Tambah Booking"}
-          </DialogTitle>
+          <div className="flex items-start justify-between gap-2">
+            <DialogTitle>
+              {editingBooking ? "Ubah Booking" : "Tambah Booking"}
+            </DialogTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              disabled={deleting}
+              className="h-8 gap-1"
+            >
+              <X className="h-4 w-4" />
+              Tutup
+            </Button>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -1795,13 +1811,22 @@ export default function BookingModal({
           </div>
 
             <div className="lg:sticky lg:top-2">
-              {(formData.phone || formData.customer_name) && (
+              {!isFeatureEnabled("pos") ? (
+                <div className="rounded-lg border bg-card">
+                  <div className="px-3 py-2 border-b text-sm font-semibold">CRM Pelanggan</div>
+                  <FeatureInactiveNotice
+                    featureName="CRM Pelanggan (bagian dari Point of Sale)"
+                    price={getFeatureInfo("pos").price}
+                    description={getFeatureInfo("pos").description}
+                  />
+                </div>
+              ) : (formData.phone || formData.customer_name) ? (
                 <BookingCustomerCRMCard
                   storeId={currentStore?.id}
                   name={formData.customer_name}
                   phone={formData.phone}
                 />
-              )}
+              ) : null}
             </div>
           </div>
           {formData.room_id && formData.booking_type === "ota" && (
