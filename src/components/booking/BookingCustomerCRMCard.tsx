@@ -30,6 +30,10 @@ interface CrmData {
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 
+// Session-level caches so re-opening a booking shows CRM data instantly.
+const crmCache = new Map<string, CrmData>();
+const signedUrlCache = new Map<string, { thumb: string; full: string }>();
+
 const segmentOf = (visits: number, spend: number) => {
   if (spend >= 5_000_000 || visits >= 10) return "VIP";
   if (visits >= 3) return "Loyal";
@@ -49,15 +53,26 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
   useEffect(() => {
     let cancelled = false;
     const path = crm?.identity_document_url || "";
-    setIdThumbUrl(null);
-    setIdFullUrl(null);
-    if (!path) return;
+    if (!path) {
+      setIdThumbUrl(null);
+      setIdFullUrl(null);
+      return;
+    }
 
     if (path.startsWith("http")) {
       setIdThumbUrl(path);
       setIdFullUrl(path);
       return;
     }
+
+    const cachedUrl = signedUrlCache.get(path);
+    if (cachedUrl) {
+      setIdThumbUrl(cachedUrl.thumb);
+      setIdFullUrl(cachedUrl.full);
+      return;
+    }
+    setIdThumbUrl(null);
+    setIdFullUrl(null);
 
     const run = async () => {
       const [thumb, full] = await Promise.all([
@@ -66,10 +81,12 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
           .createSignedUrl(path, 3600, { transform: { width: 320, quality: 50 } } as any),
         supabase.storage.from("identity-documents").createSignedUrl(path, 3600),
       ]);
-      if (cancelled) return;
       const fullUrl = full.data?.signedUrl || null;
+      const thumbUrl = thumb.data?.signedUrl || fullUrl;
+      if (fullUrl && thumbUrl) signedUrlCache.set(path, { thumb: thumbUrl, full: fullUrl });
+      if (cancelled) return;
       setIdFullUrl(fullUrl);
-      setIdThumbUrl(thumb.data?.signedUrl || fullUrl);
+      setIdThumbUrl(thumbUrl);
     };
     run();
     return () => {
@@ -79,6 +96,14 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
 
   useEffect(() => {
     let cancelled = false;
+    const cleanPhoneKey = (phone || "").trim();
+    const cleanNameKey = (name || "").trim();
+    const cacheKey = `${storeId || ""}|${cleanPhoneKey || cleanNameKey.toLowerCase()}`;
+    const cached = crmCache.get(cacheKey);
+    if (cached) {
+      setCrm(cached);
+      setLoading(false);
+    }
     const run = async () => {
       const cleanPhone = (phone || "").trim();
       const cleanName = (name || "").trim();
@@ -86,15 +111,36 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
         setCrm(null);
         return;
       }
-      setLoading(true);
+      if (!cached) setLoading(true);
       try {
-        let query = supabase.from("customers").select("*").eq("store_id", storeId).limit(1);
+        let query = supabase
+          .from("customers")
+          .select(
+            "id, name, phone, email, birth_date, domicile, created_at, identity_type, identity_number, identity_document_url"
+          )
+          .eq("store_id", storeId)
+          .limit(1);
         query = cleanPhone ? query.eq("phone", cleanPhone) : query.ilike("name", cleanName);
         const { data } = await query;
         const cust = data?.[0];
         if (!cust) {
-          if (!cancelled) setCrm(null);
+          if (!cancelled) {
+            crmCache.delete(cacheKey);
+            setCrm(null);
+          }
           return;
+        }
+
+        // Render identity + profile immediately; aggregates stream in after.
+        const base: CrmData = {
+          ...(cust as any),
+          visits: cached?.visits ?? 0,
+          totalSpend: cached?.totalSpend ?? 0,
+          lastVisit: cached?.lastVisit ?? null,
+        };
+        if (!cancelled) {
+          setCrm(base);
+          setLoading(false);
         }
 
         const [{ data: bookings }, { data: orders }] = await Promise.all([
@@ -123,18 +169,19 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
           .sort()
           .pop() as string | undefined;
 
-        if (!cancelled)
-          setCrm({
-            ...(cust as any),
-            visits: rows.length,
-            totalSpend,
-            lastVisit: lastVisit || null,
-          });
+        const full: CrmData = {
+          ...base,
+          visits: rows.length,
+          totalSpend,
+          lastVisit: lastVisit || null,
+        };
+        crmCache.set(cacheKey, full);
+        if (!cancelled) setCrm(full);
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
-    const t = setTimeout(run, 400);
+    const t = setTimeout(run, cached ? 0 : 120);
     return () => {
       cancelled = true;
       clearTimeout(t);
