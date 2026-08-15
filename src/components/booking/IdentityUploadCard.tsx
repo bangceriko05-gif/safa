@@ -84,9 +84,17 @@ export default function IdentityUploadCard({ storeId, customerId, name, phone, o
       }
 
       if (!targetId) {
+        const { data: auth } = await supabase.auth.getUser();
         const { data: created, error: insErr } = await supabase
           .from("customers")
-          .insert([{ name: cleanName || cleanPhone, phone: cleanPhone || null, store_id: storeId }])
+          .insert([
+            {
+              name: cleanName || cleanPhone,
+              phone: cleanPhone,
+              store_id: storeId,
+              created_by: auth.user?.id as string,
+            },
+          ])
           .select("id")
           .single();
         if (insErr) throw insErr;
