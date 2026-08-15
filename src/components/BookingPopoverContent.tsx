@@ -14,6 +14,10 @@ import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield, Pr
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import BookingOrdersSection from "./booking-orders/BookingOrdersSection";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
+import FeatureInactiveNotice from "@/components/FeatureInactiveNotice";
+import { IdCard } from "lucide-react";
 
 interface BookingPopoverContentProps {
   booking: any;
@@ -62,6 +66,44 @@ export default function BookingPopoverContent({
   const [variantDurationValue, setVariantDurationValue] = useState<number | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [orderBids, setOrderBids] = useState<{ id: string; bid: string | null }[]>([]);
+  const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(booking.store_id);
+  const [showPosNotice, setShowPosNotice] = useState(false);
+  const [loadingIdentity, setLoadingIdentity] = useState(false);
+
+  const handleOpenDataId = async () => {
+    if (!isFeatureEnabled("pos")) {
+      setShowPosNotice(true);
+      return;
+    }
+    setLoadingIdentity(true);
+    try {
+      let query = supabase
+        .from("customers")
+        .select("identity_document_url")
+        .eq("store_id", booking.store_id)
+        .limit(1);
+      query = booking.phone
+        ? query.eq("phone", booking.phone)
+        : query.ilike("name", booking.customer_name || "");
+      const { data } = await query;
+      const path = data?.[0]?.identity_document_url;
+      if (!path) {
+        toast.error("Data identitas pelanggan tidak ditemukan");
+        return;
+      }
+      if (String(path).startsWith("http")) {
+        window.open(path, "_blank");
+        return;
+      }
+      const { data: signed } = await supabase.storage
+        .from("identity-documents")
+        .createSignedUrl(path, 3600);
+      if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
+      else toast.error("Gagal membuka data identitas");
+    } finally {
+      setLoadingIdentity(false);
+    }
+  };
 
   useEffect(() => {
     fetchPaymentDetails();
@@ -258,6 +300,23 @@ export default function BookingPopoverContent({
           <p className="text-xs text-muted-foreground">Booking ID</p>
           <div className="flex items-center justify-between">
             <p className="font-mono font-bold text-primary">{booking.bid}</p>
+            <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenDataId();
+              }}
+              disabled={loadingIdentity}
+              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline disabled:opacity-60"
+            >
+              {loadingIdentity ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <IdCard className="h-3 w-3" />
+              )}
+              Data ID
+            </button>
             <Button
               size="sm"
               variant="ghost"
@@ -270,9 +329,20 @@ export default function BookingPopoverContent({
             >
               <Copy className="h-3 w-3" />
             </Button>
+            </div>
           </div>
         </div>
       )}
+
+      <Dialog open={showPosNotice} onOpenChange={setShowPosNotice}>
+        <DialogContent className="max-w-md">
+          <FeatureInactiveNotice
+            featureName="Point of Sale"
+            price={getFeatureInfo("pos").price}
+            description={getFeatureInfo("pos").description}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Customer & Booking Info */}
       <div className="space-y-2">
