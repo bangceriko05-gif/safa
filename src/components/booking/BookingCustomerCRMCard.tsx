@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { IdCard, ExternalLink, Loader2, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import IdentityUploadCard from "@/components/booking/IdentityUploadCard";
 
 interface Props {
   storeId?: string;
@@ -46,6 +47,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
   const [crm, setCrm] = useState<CrmData | null>(null);
   const [idThumbUrl, setIdThumbUrl] = useState<string | null>(null);
   const [idFullUrl, setIdFullUrl] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Resolve identity document (stored as a storage path) into signed URLs.
   // A small transformed thumbnail loads fast; the full URL is pre-signed so
@@ -186,7 +188,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
       cancelled = true;
       clearTimeout(t);
     };
-  }, [storeId, name, phone]);
+  }, [storeId, name, phone, refreshKey]);
 
   const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex items-center justify-between gap-3 py-1.5 border-b last:border-b-0 text-sm">
@@ -202,10 +204,24 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
       </div>
     );
 
-  if (!crm)
+  if (!crm || !crm.identity_document_url)
     return (
-      <div className="rounded-lg border bg-card p-3 text-sm text-muted-foreground flex items-center gap-2">
-        <UserRound className="h-4 w-4" /> Pelanggan belum terdaftar di database CRM.
+      <div className="space-y-2">
+        {!crm && (
+          <div className="rounded-lg border bg-card p-3 text-sm text-muted-foreground flex items-center gap-2">
+            <UserRound className="h-4 w-4" /> Pelanggan belum terdaftar di database CRM.
+          </div>
+        )}
+        <IdentityUploadCard
+          storeId={storeId}
+          customerId={crm?.id ?? null}
+          name={name}
+          phone={phone}
+          onUploaded={() => {
+            crmCache.clear();
+            setRefreshKey((k) => k + 1);
+          }}
+        />
       </div>
     );
 
