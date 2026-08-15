@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { IdCard, ExternalLink, Loader2, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import IdentityUploadCard from "@/components/booking/IdentityUploadCard";
 
 interface Props {
   storeId?: string;
@@ -202,10 +203,23 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
       </div>
     );
 
-  if (!crm)
+  if (!crm || !crm.identity_document_url)
     return (
-      <div className="rounded-lg border bg-card p-3 text-sm text-muted-foreground flex items-center gap-2">
-        <UserRound className="h-4 w-4" /> Pelanggan belum terdaftar di database CRM.
+      <div className="space-y-2">
+        {!crm && (
+          <div className="rounded-lg border bg-card p-3 text-sm text-muted-foreground flex items-center gap-2">
+            <UserRound className="h-4 w-4" /> Pelanggan belum terdaftar di database CRM.
+          </div>
+        )}
+        <IdentityUploadCard
+          storeId={storeId}
+          customerId={crm?.id ?? null}
+          name={name}
+          phone={phone}
+          onUploaded={(path) =>
+            setCrm((prev) => (prev ? { ...prev, identity_document_url: path } : prev))
+          }
+        />
       </div>
     );
 
