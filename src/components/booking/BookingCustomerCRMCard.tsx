@@ -47,6 +47,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
   const [crm, setCrm] = useState<CrmData | null>(null);
   const [idThumbUrl, setIdThumbUrl] = useState<string | null>(null);
   const [idFullUrl, setIdFullUrl] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Resolve identity document (stored as a storage path) into signed URLs.
   // A small transformed thumbnail loads fast; the full URL is pre-signed so
@@ -187,7 +188,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
       cancelled = true;
       clearTimeout(t);
     };
-  }, [storeId, name, phone]);
+  }, [storeId, name, phone, refreshKey]);
 
   const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex items-center justify-between gap-3 py-1.5 border-b last:border-b-0 text-sm">
@@ -216,9 +217,10 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
           customerId={crm?.id ?? null}
           name={name}
           phone={phone}
-          onUploaded={(path) =>
-            setCrm((prev) => (prev ? { ...prev, identity_document_url: path } : prev))
-          }
+          onUploaded={() => {
+            crmCache.clear();
+            setRefreshKey((k) => k + 1);
+          }}
         />
       </div>
     );
