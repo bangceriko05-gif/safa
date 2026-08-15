@@ -1565,7 +1565,7 @@ export default function BookingModal({
         className={
           fullscreen || editingBooking
             ? "max-w-none w-screen h-screen sm:rounded-none p-6 overflow-y-auto"
-            : "max-w-md max-h-[90vh] overflow-y-auto"
+            : "max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto"
         }
       >
         <DialogHeader>
