@@ -141,10 +141,23 @@ export default function CRMDashboard({
 
     const load = async (silent = false) => {
       if (!silent) setLoading(true);
+      const fetchAll = async (build: (from: number, to: number) => any) => {
+        const size = 1000;
+        let from = 0;
+        const rows: any[] = [];
+        for (;;) {
+          const { data, error } = await build(from, from + size - 1);
+          if (error || !data) break;
+          rows.push(...data);
+          if (data.length < size) break;
+          from += size;
+        }
+        return { data: rows };
+      };
       const [cRes, bRes, oRes] = await Promise.all([
-        supabase.from("customers").select("id,name,phone,email,birth_date,domicile,created_at").eq("store_id", currentStore.id),
-        supabase.from("bookings").select("id,customer_name,phone,date,price,status,bid").eq("store_id", currentStore.id),
-        supabase.from("booking_orders").select("id,customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore.id),
+        fetchAll((f, t) => supabase.from("customers").select("id,name,phone,email,birth_date,domicile,created_at").eq("store_id", currentStore.id).order("id").range(f, t)),
+        fetchAll((f, t) => supabase.from("bookings").select("id,customer_name,phone,date,price,status,bid").eq("store_id", currentStore.id).order("id").range(f, t)),
+        fetchAll((f, t) => supabase.from("booking_orders").select("id,customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore.id).order("id").range(f, t)),
       ]);
       if (!active) return;
 
