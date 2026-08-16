@@ -244,10 +244,16 @@ export default function CRMDashboard({
   }, [crmCustomers]);
 
   const birthdays = useMemo(() => {
-    const m = new Date().getMonth();
+    const m = new Date().getMonth() + 1;
+    const monthOf = (d: string) => {
+      const s = String(d);
+      const mm = Number(s.slice(5, 7));
+      return Number.isFinite(mm) && mm >= 1 && mm <= 12 ? mm : new Date(s).getMonth() + 1;
+    };
+    const dayOf = (d: string) => Number(String(d).slice(8, 10)) || new Date(d).getDate();
     return crmCustomers
-      .filter((c) => c.birth_date && new Date(c.birth_date).getMonth() === m)
-      .sort((a, b) => new Date(a.birth_date!).getDate() - new Date(b.birth_date!).getDate());
+      .filter((c) => c.birth_date && monthOf(c.birth_date) === m)
+      .sort((a, b) => dayOf(a.birth_date!) - dayOf(b.birth_date!));
   }, [crmCustomers]);
 
   const inactive = useMemo(
@@ -340,15 +346,15 @@ export default function CRMDashboard({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2"><Cake className="h-4 w-4 text-primary" /> Ulang Tahun Bulan Ini</span>
+              <span className="flex items-center gap-2"><Cake className="h-4 w-4 text-primary" /> Ulang Tahun Bulan Ini ({birthdays.length})</span>
               <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("birthday")}>
                 <Settings2 className="h-4 w-4" />
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 max-h-80 overflow-y-auto">
             {birthdays.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada ulang tahun bulan ini.</p>}
-            {birthdays.slice(0, 6).map((c) => (
+            {birthdays.map((c) => (
               <div key={c.id} className="flex items-center justify-between text-sm">
                 <div>
                   <p className="font-medium">{c.name}</p>
