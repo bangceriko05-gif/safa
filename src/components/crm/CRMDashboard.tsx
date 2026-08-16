@@ -259,9 +259,9 @@ export default function CRMDashboard({
   const inactive = useMemo(
     () =>
       crmCustomers
-        .filter((c) => c.visits > 0 && c.lastVisit && daysSince(c.lastVisit) > 90)
+        .filter((c) => c.visits > 0 && c.lastVisit && daysSince(c.lastVisit) > followUpDays)
         .sort((a, b) => (a.lastVisit || "").localeCompare(b.lastVisit || "")),
-    [crmCustomers]
+    [crmCustomers, followUpDays]
   );
 
   // Auto-open a customer detail when navigated here with a target customer id
