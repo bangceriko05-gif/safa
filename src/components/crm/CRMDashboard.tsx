@@ -376,19 +376,19 @@ export default function CRMDashboard({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari)</span>
+              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari) · {inactive.length}</span>
               <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("followup")}>
                 <Settings2 className="h-4 w-4" />
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 max-h-80 overflow-y-auto">
             {inactive.length === 0 && <p className="text-sm text-muted-foreground">Semua pelanggan masih aktif.</p>}
             {inactive.map((c) => (
               <div key={c.id} className="flex items-center justify-between text-sm">
                 <div>
                   <p className="font-medium">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">Terakhir: {formatDate(c.lastVisit)} · {formatIDR(c.totalSpend)}</p>
+                  <p className="text-xs text-muted-foreground">Terakhir: {formatDate(c.lastVisit)} · {daysSince(c.lastVisit)} hari · {formatIDR(c.totalSpend)}</p>
                 </div>
                 <Button size="sm" variant="outline" asChild>
                   <a href={waLink(c, applyTpl("followup", c))} target="_blank" rel="noreferrer">
