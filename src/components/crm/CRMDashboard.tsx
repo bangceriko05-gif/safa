@@ -257,7 +257,10 @@ export default function CRMDashboard({
   }, [crmCustomers]);
 
   const inactive = useMemo(
-    () => crmCustomers.filter((c) => c.segment === "tidak_aktif" && c.visits > 0).sort((a, b) => b.totalSpend - a.totalSpend).slice(0, 8),
+    () =>
+      crmCustomers
+        .filter((c) => c.visits > 0 && c.lastVisit && daysSince(c.lastVisit) > 90)
+        .sort((a, b) => (a.lastVisit || "").localeCompare(b.lastVisit || "")),
     [crmCustomers]
   );
 
