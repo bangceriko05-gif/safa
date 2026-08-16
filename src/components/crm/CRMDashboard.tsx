@@ -383,11 +383,22 @@ export default function CRMDashboard({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; 90 hari) · {inactive.length}</span>
-              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("followup")}>
-                <Settings2 className="h-4 w-4" />
-              </Button>
+            <CardTitle className="text-sm flex items-center justify-between gap-2 flex-wrap">
+              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Perlu Follow Up (&gt; {followUpDays} hari) · {inactive.length}</span>
+              <span className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={1}
+                  value={followUpDays}
+                  onChange={(e) => setFollowUpDays(Math.max(1, Number(e.target.value) || 1))}
+                  className="h-7 w-16 text-xs"
+                  title="Jumlah hari tidak kembali"
+                />
+                <span className="text-xs font-normal text-muted-foreground mr-1">hari</span>
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openTplEditor("followup")}>
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 max-h-80 overflow-y-auto">
