@@ -244,7 +244,6 @@ export default function CRMDashboard({
   }, [crmCustomers]);
 
   const birthdays = useMemo(() => {
-    // eslint-disable-next-line
     const m = new Date().getMonth() + 1;
     const monthOf = (d: string) => {
       const s = String(d);
