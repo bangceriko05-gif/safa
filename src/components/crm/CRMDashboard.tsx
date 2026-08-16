@@ -256,6 +256,14 @@ export default function CRMDashboard({
       .sort((a, b) => dayOf(a.birth_date!) - dayOf(b.birth_date!));
   }, [crmCustomers]);
 
+  const [followUpDays, setFollowUpDays] = useState<number>(() => {
+    const v = Number(localStorage.getItem("crm_followup_days"));
+    return Number.isFinite(v) && v > 0 ? v : 90;
+  });
+  useEffect(() => {
+    localStorage.setItem("crm_followup_days", String(followUpDays));
+  }, [followUpDays]);
+
   const inactive = useMemo(
     () =>
       crmCustomers
