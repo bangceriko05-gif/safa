@@ -905,6 +905,23 @@ export default function CustomerManagement() {
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+              <Select
+                value={formData.customer_type || "Reguler"}
+                onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+              >
+                <SelectTrigger id="customer_type">
+                  <SelectValue placeholder="Pilih tipe pelanggan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CUSTOMER_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="birth_date">Tanggal Lahir</Label>
