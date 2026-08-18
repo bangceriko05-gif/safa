@@ -10,6 +10,7 @@ import {
 import {
   User, Phone, Mail, Cake, MapPin, Award, Wallet, Repeat, CalendarDays, MessageCircle, Star, ArrowLeft,
 } from "lucide-react";
+import { Pencil, Trash2, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "@/components/BookingModal";
 
@@ -61,9 +62,12 @@ interface Props {
   storeId?: string;
   storeName?: string;
   onClose: () => void;
+  customerType?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export default function CustomerDetailDialog({ customer, txns, storeId, storeName, onClose }: Props) {
+export default function CustomerDetailDialog({ customer, txns, storeId, storeName, onClose, customerType, onEdit, onDelete }: Props) {
   const [settings, setSettings] = useState<any>(null);
   const [ledger, setLedger] = useState<any[]>([]);
   const [extra, setExtra] = useState<any>(null);
@@ -139,6 +143,7 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
     { icon: MapPin, label: "Alamat / Domisili", value: customer.domicile || "-" },
     { icon: CalendarDays, label: "Terdaftar Sejak", value: formatDate(customer.createdAt) },
     { icon: User, label: "Identitas", value: extra?.identity_number ? `${extra.identity_type || "ID"} · ${extra.identity_number}` : "-" },
+    { icon: Tag, label: "Tipe Pelanggan", value: customerType || "Reguler" },
     { icon: MessageCircle, label: "Catatan", value: extra?.notes || "-" },
   ];
 
@@ -159,11 +164,22 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={customer.segmentClass}>{customer.segmentLabel}</Badge>
               <Badge variant="outline" className={TIERS[loyalty.tier].className}>{TIERS[loyalty.tier].label}</Badge>
+              {customerType && <Badge variant="outline">{customerType}</Badge>}
               <Button size="sm" variant="outline" asChild>
                 <a href={`https://wa.me/${normalizePhone(customer.phone)}?text=${encodeURIComponent(`Halo ${customer.name}, terima kasih telah menjadi pelanggan ${storeName || ""}.`)}`} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
                 </a>
               </Button>
+              {onEdit && (
+                <Button size="sm" variant="outline" onClick={onEdit}>
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              )}
+              {onDelete && (
+                <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={onDelete}>
+                  <Trash2 className="h-4 w-4 mr-1" /> Hapus
+                </Button>
+              )}
             </div>
           </div>
         </DialogHeader>
