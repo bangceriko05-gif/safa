@@ -166,7 +166,14 @@ export default function CustomerManagement() {
     if (!currentStore) return;
     fetchCustomers();
     getCurrentUser();
+    loadCustomerTypes();
   }, [currentStore]);
+
+  const loadCustomerTypes = async () => {
+    if (!currentStore) return;
+    const rows = await fetchCustomerTypes(currentStore.id);
+    if (rows.length) setCustomerTypes(rows.map((r) => r.name));
+  };
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
