@@ -50,6 +50,17 @@ import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { useNavigate, useLocation } from "react-router-dom";
 
+const CUSTOMER_TYPES = ["Reguler", "Member", "VIP", "Korporat", "OTA", "Grup"];
+
+const CUSTOMER_TYPE_CLASS: Record<string, string> = {
+  Reguler: "bg-slate-500/10 text-slate-700 border-slate-500/30",
+  Member: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  VIP: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  Korporat: "bg-sky-500/10 text-sky-700 border-sky-500/30",
+  OTA: "bg-violet-500/10 text-violet-700 border-violet-500/30",
+  Grup: "bg-rose-500/10 text-rose-700 border-rose-500/30",
+};
+
 interface Customer {
   id: string;
 
