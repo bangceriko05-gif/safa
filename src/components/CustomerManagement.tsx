@@ -915,7 +915,12 @@ export default function CustomerManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setTypeManagerOpen(true)}>
+                  <Settings className="h-4 w-4 mr-1" /> Kelola Tipe
+                </Button>
+              </div>
               <Select
                 value={formData.customer_type || "Reguler"}
                 onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
@@ -924,7 +929,7 @@ export default function CustomerManagement() {
                   <SelectValue placeholder="Pilih tipe pelanggan" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CUSTOMER_TYPES.map((t) => (
+                  {Array.from(new Set([...customerTypes, formData.customer_type].filter(Boolean) as string[])).map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
                 </SelectContent>
