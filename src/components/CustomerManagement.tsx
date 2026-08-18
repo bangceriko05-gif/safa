@@ -1164,6 +1164,13 @@ export default function CustomerManagement() {
         storeId={currentStore?.id}
         onMerged={fetchCustomers}
       />
+
+      <CustomerTypeManager
+        open={typeManagerOpen}
+        onOpenChange={setTypeManagerOpen}
+        storeId={currentStore?.id}
+        onChanged={loadCustomerTypes}
+      />
     </div>
   );
 }
