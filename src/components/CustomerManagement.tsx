@@ -1128,6 +1128,19 @@ export default function CustomerManagement() {
         storeId={currentStore?.id}
         storeName={currentStore?.name}
         onClose={() => setCrmCustomer(null)}
+        customerType={customers.find((c) => c.id === crmCustomer?.id)?.customer_type || "Reguler"}
+        onEdit={hasPermission("manage_customers") ? () => {
+          const c = customers.find((x) => x.id === crmCustomer?.id);
+          if (!c) return;
+          setCrmCustomer(null);
+          handleEdit(c);
+        } : undefined}
+        onDelete={hasPermission("manage_customers") ? () => {
+          const id = crmCustomer?.id;
+          if (!id) return;
+          setCrmCustomer(null);
+          setDeleteCustomerId(id);
+        } : undefined}
       />
 
       <DuplicatePrediction
