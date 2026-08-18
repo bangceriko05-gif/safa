@@ -968,6 +968,38 @@ export type Database = {
           },
         ]
       }
+      customer_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_types_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           birth_date: string | null

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Upload, Eye, X, CreditCard, Search, Filter, CheckSquare, Download, Sparkles, Settings } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -50,7 +50,7 @@ import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const CUSTOMER_TYPES = ["Reguler", "Member", "VIP", "Korporat", "OTA", "Grup"];
+import CustomerTypeManager, { fetchCustomerTypes, DEFAULT_CUSTOMER_TYPES } from "@/components/crm/CustomerTypeManager";
 
 const CUSTOMER_TYPE_CLASS: Record<string, string> = {
   Reguler: "bg-slate-500/10 text-slate-700 border-slate-500/30",
@@ -80,6 +80,8 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
+  const [customerTypes, setCustomerTypes] = useState<string[]>(DEFAULT_CUSTOMER_TYPES);
+  const [typeManagerOpen, setTypeManagerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
@@ -164,7 +166,14 @@ export default function CustomerManagement() {
     if (!currentStore) return;
     fetchCustomers();
     getCurrentUser();
+    loadCustomerTypes();
   }, [currentStore]);
+
+  const loadCustomerTypes = async () => {
+    if (!currentStore) return;
+    const rows = await fetchCustomerTypes(currentStore.id);
+    if (rows.length) setCustomerTypes(rows.map((r) => r.name));
+  };
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -906,7 +915,12 @@ export default function CustomerManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setTypeManagerOpen(true)}>
+                  <Settings className="h-4 w-4 mr-1" /> Kelola Tipe
+                </Button>
+              </div>
               <Select
                 value={formData.customer_type || "Reguler"}
                 onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
@@ -915,7 +929,7 @@ export default function CustomerManagement() {
                   <SelectValue placeholder="Pilih tipe pelanggan" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CUSTOMER_TYPES.map((t) => (
+                  {Array.from(new Set([...customerTypes, formData.customer_type].filter(Boolean) as string[])).map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1149,6 +1163,13 @@ export default function CustomerManagement() {
         customers={customers as any}
         storeId={currentStore?.id}
         onMerged={fetchCustomers}
+      />
+
+      <CustomerTypeManager
+        open={typeManagerOpen}
+        onOpenChange={setTypeManagerOpen}
+        storeId={currentStore?.id}
+        onChanged={loadCustomerTypes}
       />
     </div>
   );
