@@ -50,7 +50,7 @@ import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const CUSTOMER_TYPES = ["Reguler", "Member", "VIP", "Korporat", "OTA", "Grup"];
+import CustomerTypeManager, { fetchCustomerTypes, DEFAULT_CUSTOMER_TYPES } from "@/components/crm/CustomerTypeManager";
 
 const CUSTOMER_TYPE_CLASS: Record<string, string> = {
   Reguler: "bg-slate-500/10 text-slate-700 border-slate-500/30",
@@ -80,6 +80,8 @@ interface Customer {
 
 export default function CustomerManagement() {
   const { currentStore } = useStore();
+  const [customerTypes, setCustomerTypes] = useState<string[]>(DEFAULT_CUSTOMER_TYPES);
+  const [typeManagerOpen, setTypeManagerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
