@@ -52,6 +52,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 interface Customer {
   id: string;
+
   name: string;
   phone: string;
   email: string | null;
