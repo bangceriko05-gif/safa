@@ -55,6 +55,7 @@ interface Customer {
   name: string;
   phone: string;
   email: string | null;
+  customer_type: string | null;
   notes: string | null;
   birth_date: string | null;
   domicile: string | null;
@@ -80,6 +81,7 @@ export default function CustomerManagement() {
     name: "",
     phone: "",
     email: "",
+    customer_type: "Reguler",
     notes: "",
     birth_date: "",
     domicile: "",
