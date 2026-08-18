@@ -693,17 +693,16 @@ export default function CustomerManagement() {
                   <TableHead>Nama</TableHead>
                   <TableHead>Nomor HP</TableHead>
                   <TableHead>Identitas</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Tipe Pelanggan</TableHead>
                   <TableHead>Tgl Lahir</TableHead>
                   <TableHead>Domisili</TableHead>
                   <TableHead>Catatan</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isSelectionMode ? 9 : 8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={isSelectionMode ? 8 : 7} className="text-center text-muted-foreground py-8">
                       {customers.length === 0 ? "Belum ada data pelanggan" : "Tidak ada pelanggan yang cocok dengan filter"}
                     </TableCell>
                   </TableRow>
@@ -759,7 +758,11 @@ export default function CustomerManagement() {
                             <span className="text-gray-400">-</span>
                           )}
                         </TableCell>
-                        <TableCell>{customer.email || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={CUSTOMER_TYPE_CLASS[customer.customer_type || "Reguler"] || CUSTOMER_TYPE_CLASS.Reguler}>
+                            {customer.customer_type || "Reguler"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           {customer.birth_date
                             ? new Date(customer.birth_date).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })
@@ -768,28 +771,6 @@ export default function CustomerManagement() {
                         <TableCell>{customer.domicile || "-"}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {customer.notes || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {canModify ? (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(customer)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeleteCustomerId(customer.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
                         </TableCell>
                       </TableRow>
                     );
