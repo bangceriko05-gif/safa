@@ -50,11 +50,24 @@ import AnkaLoader from "./AnkaLoader";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { useNavigate, useLocation } from "react-router-dom";
 
+const CUSTOMER_TYPES = ["Reguler", "Member", "VIP", "Korporat", "OTA", "Grup"];
+
+const CUSTOMER_TYPE_CLASS: Record<string, string> = {
+  Reguler: "bg-slate-500/10 text-slate-700 border-slate-500/30",
+  Member: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  VIP: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  Korporat: "bg-sky-500/10 text-sky-700 border-sky-500/30",
+  OTA: "bg-violet-500/10 text-violet-700 border-violet-500/30",
+  Grup: "bg-rose-500/10 text-rose-700 border-rose-500/30",
+};
+
 interface Customer {
   id: string;
+
   name: string;
   phone: string;
   email: string | null;
+  customer_type: string | null;
   notes: string | null;
   birth_date: string | null;
   domicile: string | null;
@@ -80,6 +93,7 @@ export default function CustomerManagement() {
     name: "",
     phone: "",
     email: "",
+    customer_type: "Reguler",
     notes: "",
     birth_date: "",
     domicile: "",
@@ -297,6 +311,7 @@ export default function CustomerManagement() {
             name: formData.name,
             phone: formData.phone,
             email: formData.email || null,
+            customer_type: formData.customer_type || "Reguler",
             notes: formData.notes || null,
             birth_date: formData.birth_date || null,
             domicile: formData.domicile || null,
@@ -330,6 +345,7 @@ export default function CustomerManagement() {
             name: formData.name,
             phone: formData.phone,
             email: formData.email || null,
+            customer_type: formData.customer_type || "Reguler",
             notes: formData.notes || null,
             birth_date: formData.birth_date || null,
             domicile: formData.domicile || null,
@@ -385,6 +401,7 @@ export default function CustomerManagement() {
       name: customer.name,
       phone: customer.phone,
       email: customer.email || "",
+      customer_type: customer.customer_type || "Reguler",
       notes: customer.notes || "",
       birth_date: customer.birth_date || "",
       domicile: customer.domicile || "",
@@ -495,6 +512,7 @@ export default function CustomerManagement() {
       name: "",
       phone: "",
       email: "",
+      customer_type: "Reguler",
       notes: "",
       birth_date: "",
       domicile: "",
@@ -687,17 +705,16 @@ export default function CustomerManagement() {
                   <TableHead>Nama</TableHead>
                   <TableHead>Nomor HP</TableHead>
                   <TableHead>Identitas</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Tipe Pelanggan</TableHead>
                   <TableHead>Tgl Lahir</TableHead>
                   <TableHead>Domisili</TableHead>
                   <TableHead>Catatan</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isSelectionMode ? 9 : 8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={isSelectionMode ? 8 : 7} className="text-center text-muted-foreground py-8">
                       {customers.length === 0 ? "Belum ada data pelanggan" : "Tidak ada pelanggan yang cocok dengan filter"}
                     </TableCell>
                   </TableRow>
@@ -753,7 +770,11 @@ export default function CustomerManagement() {
                             <span className="text-gray-400">-</span>
                           )}
                         </TableCell>
-                        <TableCell>{customer.email || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={CUSTOMER_TYPE_CLASS[customer.customer_type || "Reguler"] || CUSTOMER_TYPE_CLASS.Reguler}>
+                            {customer.customer_type || "Reguler"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           {customer.birth_date
                             ? new Date(customer.birth_date).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })
@@ -762,28 +783,6 @@ export default function CustomerManagement() {
                         <TableCell>{customer.domicile || "-"}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {customer.notes || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {canModify ? (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(customer)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeleteCustomerId(customer.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -904,6 +903,23 @@ export default function CustomerManagement() {
               {formErrors.email && (
                 <p className="text-sm text-red-500">{formErrors.email}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+              <Select
+                value={formData.customer_type || "Reguler"}
+                onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+              >
+                <SelectTrigger id="customer_type">
+                  <SelectValue placeholder="Pilih tipe pelanggan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CUSTOMER_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1112,6 +1128,19 @@ export default function CustomerManagement() {
         storeId={currentStore?.id}
         storeName={currentStore?.name}
         onClose={() => setCrmCustomer(null)}
+        customerType={customers.find((c) => c.id === crmCustomer?.id)?.customer_type || "Reguler"}
+        onEdit={hasPermission("manage_customers") ? () => {
+          const c = customers.find((x) => x.id === crmCustomer?.id);
+          if (!c) return;
+          setCrmCustomer(null);
+          handleEdit(c);
+        } : undefined}
+        onDelete={hasPermission("manage_customers") ? () => {
+          const id = crmCustomer?.id;
+          if (!id) return;
+          setCrmCustomer(null);
+          setDeleteCustomerId(id);
+        } : undefined}
       />
 
       <DuplicatePrediction

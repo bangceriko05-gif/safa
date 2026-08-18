@@ -973,6 +973,7 @@ export type Database = {
           birth_date: string | null
           created_at: string
           created_by: string
+          customer_type: string
           domicile: string | null
           email: string | null
           id: string
@@ -989,6 +990,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           created_by: string
+          customer_type?: string
           domicile?: string | null
           email?: string | null
           id?: string
@@ -1005,6 +1007,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           created_by?: string
+          customer_type?: string
           domicile?: string | null
           email?: string | null
           id?: string
