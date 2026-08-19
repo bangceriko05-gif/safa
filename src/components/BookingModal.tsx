@@ -463,6 +463,7 @@ export default function BookingModal({
       setFormData({
         customer_name: "",
         phone: "",
+        customer_type: "Reguler",
         reference_no: "",
         room_id: "",
         variant_id: "",
