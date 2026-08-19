@@ -28,7 +28,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2859,6 +2859,19 @@ export default function BookingModal({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <CustomerTypeManager
+          open={typeManagerOpen}
+          onOpenChange={setTypeManagerOpen}
+          storeId={currentStore?.id}
+          onChanged={() => {
+            if (currentStore?.id) {
+              fetchCustomerTypes(currentStore.id).then((rows) =>
+                setCustomerTypes(rows.map((r) => ({ id: r.id, name: r.name }))),
+              );
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
