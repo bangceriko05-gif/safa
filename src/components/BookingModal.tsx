@@ -1213,7 +1213,6 @@ export default function BookingModal({
           console.error("Error updating customer type:", error);
         }
       }
-      }
 
       const roomName = rooms.find(r => r.id === formData.room_id)?.name || 'Unknown';
       const previousStatus = editingBooking?.status || "BO";
