@@ -362,6 +362,7 @@ export default function BookingModal({
       setFormData({
         customer_name: editingBooking.customer_name,
         phone: editingBooking.phone,
+        customer_type: (editingBooking as any).customer_type || "Reguler",
         reference_no: editingBooking.reference_no,
         room_id: editingBooking.room_id,
         variant_id: editingBooking.variant_id || "",
