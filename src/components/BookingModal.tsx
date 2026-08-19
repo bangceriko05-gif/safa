@@ -1670,6 +1670,23 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+            <Select
+              value={formData.customer_type || "Reguler"}
+              onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+            >
+              <SelectTrigger id="customer_type">
+                <SelectValue placeholder="Pilih tipe pelanggan" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                {customerTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="room_id">Ruangan *</Label>
             <Select
               value={formData.room_id}
