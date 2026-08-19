@@ -150,9 +150,11 @@ export default function BookingModal({
   const [depositIdentityType, setDepositIdentityType] = useState("KTP");
   
   const [otaSources, setOtaSources] = useState<{ id: string; name: string }[]>([]);
+  const [customerTypes, setCustomerTypes] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
+    customer_type: "Reguler",
     reference_no: "",
     room_id: "",
     variant_id: "",
