@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { logActivity } from "@/utils/activityLogger";
+import { fetchCustomerTypes } from "@/components/crm/CustomerTypeManager";
 import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -72,6 +73,7 @@ interface Customer {
   id: string;
   name: string;
   phone: string;
+  customer_type?: string | null;
 }
 
 interface RoomVariant {
@@ -148,9 +150,11 @@ export default function BookingModal({
   const [depositIdentityType, setDepositIdentityType] = useState("KTP");
   
   const [otaSources, setOtaSources] = useState<{ id: string; name: string }[]>([]);
+  const [customerTypes, setCustomerTypes] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
+    customer_type: "Reguler",
     reference_no: "",
     room_id: "",
     variant_id: "",
@@ -194,6 +198,11 @@ export default function BookingModal({
     }
     if (storeChanged || otaSources.length === 0) {
       fetchOtaSources();
+    }
+    if (storeChanged || customerTypes.length === 0) {
+      fetchCustomerTypes(currentStore.id).then((rows) =>
+        setCustomerTypes(rows.map((r) => ({ id: r.id, name: r.name }))),
+      ).catch(() => {});
     }
     
     if (storeChanged) {
@@ -355,9 +364,11 @@ export default function BookingModal({
       
       isLoadingEditDataRef.current = true;
       isPriceProtectedRef.current = true;
+      const matchedCust = customers.find((c) => c.phone === editingBooking.phone);
       setFormData({
         customer_name: editingBooking.customer_name,
         phone: editingBooking.phone,
+        customer_type: matchedCust?.customer_type || "Reguler",
         reference_no: editingBooking.reference_no,
         room_id: editingBooking.room_id,
         variant_id: editingBooking.variant_id || "",
@@ -412,6 +423,7 @@ export default function BookingModal({
       setFormData({
         customer_name: "",
         phone: "",
+        customer_type: "Reguler",
         reference_no: "",
         room_id: selectedSlot.roomId,
         variant_id: "",
@@ -457,6 +469,7 @@ export default function BookingModal({
       setFormData({
         customer_name: "",
         phone: "",
+        customer_type: "Reguler",
         reference_no: "",
         room_id: "",
         variant_id: "",
@@ -709,7 +722,7 @@ export default function BookingModal({
       c => c.name.toLowerCase() === value.toLowerCase()
     );
     if (matchedCustomer) {
-      setFormData({ ...formData, customer_name: value, phone: matchedCustomer.phone });
+      setFormData({ ...formData, customer_name: value, phone: matchedCustomer.phone, customer_type: matchedCustomer.customer_type || "Reguler" });
       setShowNameSuggestions(false);
     }
   };
@@ -722,14 +735,14 @@ export default function BookingModal({
     if (value.length >= 10) {
       const match = customers.find((c) => c.phone === value);
       if (match) {
-        setFormData({ ...formData, phone: value, customer_name: match.name });
+        setFormData({ ...formData, phone: value, customer_name: match.name, customer_type: match.customer_type || "Reguler" });
         setShowPhoneSuggestions(false);
       }
     }
   };
 
   const selectCustomer = (customer: Customer) => {
-    setFormData({ ...formData, customer_name: customer.name, phone: customer.phone });
+    setFormData({ ...formData, customer_name: customer.name, phone: customer.phone, customer_type: customer.customer_type || "Reguler" });
     setShowNameSuggestions(false);
     setShowPhoneSuggestions(false);
   };
@@ -1173,6 +1186,7 @@ export default function BookingModal({
           await supabase.from("customers").insert([{
             name: formData.customer_name,
             phone: formData.phone,
+            customer_type: formData.customer_type || "Reguler",
             created_by: userId,
             store_id: currentStore.id,
           }]);
@@ -1185,6 +1199,18 @@ export default function BookingModal({
           if (error.code !== '23505') {
             console.error("Error saving customer:", error);
           }
+        }
+      } else if (existingCustomer && (existingCustomer.customer_type || "Reguler") !== (formData.customer_type || "Reguler")) {
+        // Update existing customer's type if it changed
+        try {
+          await supabase.from("customers")
+            .update({ customer_type: formData.customer_type || "Reguler" })
+            .eq("id", existingCustomer.id);
+          const { invalidateCustomerCache } = await import("@/utils/customerCache");
+          invalidateCustomerCache(currentStore.id);
+          fetchCustomers();
+        } catch (error) {
+          console.error("Error updating customer type:", error);
         }
       }
 
@@ -1521,6 +1547,7 @@ export default function BookingModal({
       setFormData({
         customer_name: "",
         phone: "",
+        customer_type: "Reguler",
         reference_no: "",
         room_id: "",
         variant_id: "",
@@ -1655,6 +1682,23 @@ export default function BookingModal({
                 required={formData.booking_type !== "ota"}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+            <Select
+              value={formData.customer_type || "Reguler"}
+              onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+            >
+              <SelectTrigger id="customer_type">
+                <SelectValue placeholder="Pilih tipe pelanggan" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                {customerTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
