@@ -734,7 +734,7 @@ export default function BookingModal({
     if (value.length >= 10) {
       const match = customers.find((c) => c.phone === value);
       if (match) {
-        setFormData({ ...formData, phone: value, customer_name: match.name });
+        setFormData({ ...formData, phone: value, customer_name: match.name, customer_type: match.customer_type || "Reguler" });
         setShowPhoneSuggestions(false);
       }
     }
