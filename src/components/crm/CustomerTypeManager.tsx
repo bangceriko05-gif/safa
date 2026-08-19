@@ -47,6 +47,7 @@ interface Props {
 
 export default function CustomerTypeManager({ open, onOpenChange, storeId, onChanged }: Props) {
   const [types, setTypes] = useState<CustomerTypeRow[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,8 +55,20 @@ export default function CustomerTypeManager({ open, onOpenChange, storeId, onCha
   const load = async () => {
     if (!storeId) return;
     setLoading(true);
-    setTypes(await fetchCustomerTypes(storeId));
+    const rows = await fetchCustomerTypes(storeId);
+    setTypes(rows);
     setLoading(false);
+    const { data: custs } = await supabase
+      .from("customers")
+      .select("customer_type")
+      .eq("store_id", storeId)
+      .limit(20000);
+    const map: Record<string, number> = {};
+    (custs || []).forEach((c: any) => {
+      const key = (c.customer_type || "Reguler").trim();
+      map[key] = (map[key] || 0) + 1;
+    });
+    setCounts(map);
   };
 
   useEffect(() => {
@@ -126,7 +139,12 @@ export default function CustomerTypeManager({ open, onOpenChange, storeId, onCha
           ) : (
             types.map((t) => (
               <div key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                <Badge variant="outline">{t.name}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{t.name}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {counts[t.name] || 0} pelanggan
+                  </span>
+                </div>
                 <Button variant="ghost" size="sm" onClick={() => remove(t)}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
