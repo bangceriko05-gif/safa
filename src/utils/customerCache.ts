@@ -4,6 +4,7 @@ export interface CachedCustomer {
   id: string;
   name: string;
   phone: string | null;
+  customer_type?: string | null;
 }
 
 const TTL_MS = 300_000;
