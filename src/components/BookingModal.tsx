@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { logActivity } from "@/utils/activityLogger";
+import { fetchCustomerTypes } from "@/components/crm/CustomerTypeManager";
 import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
