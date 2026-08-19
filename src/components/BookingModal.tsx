@@ -199,6 +199,11 @@ export default function BookingModal({
     if (storeChanged || otaSources.length === 0) {
       fetchOtaSources();
     }
+    if (storeChanged || customerTypes.length === 0) {
+      fetchCustomerTypes(currentStore.id).then((rows) =>
+        setCustomerTypes(rows.map((r) => ({ id: r.id, name: r.name }))),
+      ).catch(() => {});
+    }
     
     if (storeChanged) {
       setLastFetchedStoreId(currentStore.id);
