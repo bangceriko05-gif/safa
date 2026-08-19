@@ -741,7 +741,7 @@ export default function BookingModal({
   };
 
   const selectCustomer = (customer: Customer) => {
-    setFormData({ ...formData, customer_name: customer.name, phone: customer.phone });
+    setFormData({ ...formData, customer_name: customer.name, phone: customer.phone, customer_type: customer.customer_type || "Reguler" });
     setShowNameSuggestions(false);
     setShowPhoneSuggestions(false);
   };
