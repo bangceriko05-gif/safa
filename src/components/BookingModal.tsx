@@ -72,6 +72,7 @@ interface Customer {
   id: string;
   name: string;
   phone: string;
+  customer_type?: string | null;
 }
 
 interface RoomVariant {
