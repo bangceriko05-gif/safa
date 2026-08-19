@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { logActivity } from "@/utils/activityLogger";
-import { fetchCustomerTypes } from "@/components/crm/CustomerTypeManager";
+import CustomerTypeManager, { fetchCustomerTypes } from "@/components/crm/CustomerTypeManager";
 import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -151,6 +151,7 @@ export default function BookingModal({
   
   const [otaSources, setOtaSources] = useState<{ id: string; name: string }[]>([]);
   const [customerTypes, setCustomerTypes] = useState<{ id: string; name: string }[]>([]);
+  const [typeManagerOpen, setTypeManagerOpen] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
@@ -1685,7 +1686,18 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="customer_type">Tipe Pelanggan</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setTypeManagerOpen(true)}
+              >
+                <Settings className="h-3.5 w-3.5 mr-1" /> Kelola Tipe
+              </Button>
+            </div>
             <Select
               value={formData.customer_type || "Reguler"}
               onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
