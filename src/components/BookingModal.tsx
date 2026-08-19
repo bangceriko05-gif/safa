@@ -1185,6 +1185,7 @@ export default function BookingModal({
           await supabase.from("customers").insert([{
             name: formData.customer_name,
             phone: formData.phone,
+            customer_type: formData.customer_type || "Reguler",
             created_by: userId,
             store_id: currentStore.id,
           }]);
@@ -1198,6 +1199,19 @@ export default function BookingModal({
             console.error("Error saving customer:", error);
           }
         }
+      } else if (existingCustomer && (existingCustomer.customer_type || "Reguler") !== (formData.customer_type || "Reguler")) {
+        // Update existing customer's type if it changed
+        try {
+          await supabase.from("customers")
+            .update({ customer_type: formData.customer_type || "Reguler" })
+            .eq("id", existingCustomer.id);
+          const { invalidateCustomerCache } = await import("@/utils/customerCache");
+          invalidateCustomerCache(currentStore.id);
+          fetchCustomers();
+        } catch (error) {
+          console.error("Error updating customer type:", error);
+        }
+      }
       }
 
       const roomName = rooms.find(r => r.id === formData.room_id)?.name || 'Unknown';
