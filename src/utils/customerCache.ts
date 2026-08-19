@@ -22,7 +22,7 @@ export async function fetchCustomersCached(storeId: string): Promise<CachedCusto
   const p = (async () => {
     const { data } = await supabase
       .from("customers")
-      .select("id, name, phone")
+      .select("id, name, phone, customer_type")
       .eq("store_id", storeId)
       .order("name");
     const rows = (data || []) as CachedCustomer[];
