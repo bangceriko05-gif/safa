@@ -721,7 +721,7 @@ export default function BookingModal({
       c => c.name.toLowerCase() === value.toLowerCase()
     );
     if (matchedCustomer) {
-      setFormData({ ...formData, customer_name: value, phone: matchedCustomer.phone });
+      setFormData({ ...formData, customer_name: value, phone: matchedCustomer.phone, customer_type: matchedCustomer.customer_type || "Reguler" });
       setShowNameSuggestions(false);
     }
   };
