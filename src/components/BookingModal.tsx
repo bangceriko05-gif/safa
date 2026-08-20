@@ -733,14 +733,15 @@ export default function BookingModal({
     // Fallback: the local cache may not contain this customer (large stores /
     // stale cache). Look the name up in the database so the phone still fills.
     const term = value.trim();
-    if (term.length >= 3 && storeId) {
+    const sid = currentStore?.id;
+    if (term.length >= 3 && sid) {
       const seq = ++nameLookupSeq.current;
       window.clearTimeout(nameLookupTimer.current);
       nameLookupTimer.current = window.setTimeout(async () => {
         const { data } = await supabase
           .from("customers")
           .select("id, name, phone, customer_type")
-          .eq("store_id", storeId)
+          .eq("store_id", sid)
           .ilike("name", term)
           .limit(1);
         const cust = data?.[0];
