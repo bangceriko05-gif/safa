@@ -27,6 +27,8 @@ import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
+import CustomerNameInput from "@/components/customers/CustomerNameInput";
+
 
 interface Income {
   id: string;
@@ -620,8 +622,21 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nama Pelanggan</Label>
-                  <Input value={editIncomeForm.customer_name} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
+                  <CustomerNameInput
+                    storeId={currentStore?.id}
+                    value={editIncomeForm.customer_name}
+                    onChange={(v) => setEditIncomeForm({ ...editIncomeForm, customer_name: v })}
+                    onSelect={(c) =>
+                      setEditIncomeForm({
+                        ...editIncomeForm,
+                        customer_name: c.name,
+                        customer_phone: c.phone || editIncomeForm.customer_phone,
+                      })
+                    }
+                    placeholder="Nama pelanggan"
+                  />
                 </div>
+
                 <div className="space-y-2">
                   <Label>No. HP</Label>
                   <Input value={editIncomeForm.customer_phone} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_phone: e.target.value })} placeholder="Nomor HP" />
@@ -907,41 +922,22 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           <CardContent className="space-y-5">
             {/* Nama Pelanggan & No. HP */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 relative">
+              <div className="space-y-2">
                 <Label>Nama Pelanggan</Label>
-                <Input
-                  value={customerSearch || incomeForm.customer_name}
-                  onChange={(e) => {
-                    setCustomerSearch(e.target.value);
-                    setShowCustomerDropdown(true);
-                  }}
-                  onFocus={() => { setCustomerSearch(""); setShowCustomerDropdown(true); }}
-                  placeholder="Ketik nama pelanggan..."
+                <CustomerNameInput
+                  storeId={currentStore?.id}
+                  value={incomeForm.customer_name}
+                  onChange={(v) => setIncomeForm({ ...incomeForm, customer_name: v })}
+                  onSelect={(c) =>
+                    setIncomeForm({
+                      ...incomeForm,
+                      customer_name: c.name,
+                      customer_phone: c.phone || incomeForm.customer_phone,
+                    })
+                  }
                 />
-                {showCustomerDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-popover border rounded-md shadow-md">
-                    {customers
-                      .filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || ""))
-                      .map(c => (
-                        <div
-                          key={c.id}
-                          className="px-3 py-2 cursor-pointer hover:bg-accent text-sm"
-                          onClick={() => {
-                            setIncomeForm({ ...incomeForm, customer_name: c.name, customer_phone: c.phone });
-                            setCustomerSearch("");
-                            setShowCustomerDropdown(false);
-                          }}
-                        >
-                          <div className="font-medium">{c.name}</div>
-                          <div className="text-xs text-muted-foreground">{c.phone}</div>
-                        </div>
-                      ))}
-                    {customers.filter(c => c.name.toLowerCase().includes((customerSearch || "").toLowerCase()) || c.phone.includes(customerSearch || "")).length === 0 && (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan</div>
-                    )}
-                  </div>
-                )}
               </div>
+
               <div className="space-y-2">
                 <Label>No. HP</Label>
                 <Input
