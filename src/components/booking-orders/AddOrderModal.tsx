@@ -16,6 +16,7 @@ import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import ProductCategoryManager from "@/components/products/ProductCategoryManager";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import CustomerNameInput from "@/components/customers/CustomerNameInput";
 
 interface Product {
   id: string;
@@ -1147,7 +1148,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <CustomerNameInput
-                      storeId={storeId}
+                      storeId={currentStore?.id}
                       value={manualCustomerName}
                       onChange={setManualCustomerName}
                       placeholder="Atau ketik manual / cari pelanggan"
