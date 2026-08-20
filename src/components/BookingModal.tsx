@@ -720,11 +720,39 @@ export default function BookingModal({
     
     // Auto-fill phone if exact match found
     const matchedCustomer = customers.find(
-      c => c.name.toLowerCase() === value.toLowerCase()
+      c => (c.name || "").trim().toLowerCase() === value.trim().toLowerCase()
     );
     if (matchedCustomer) {
       setFormData({ ...formData, customer_name: value, phone: matchedCustomer.phone, customer_type: matchedCustomer.customer_type || "Reguler" });
       setShowNameSuggestions(false);
+      return;
+    }
+
+    // Fallback: the local cache may not contain this customer (large stores /
+    // stale cache). Look the name up in the database so the phone still fills.
+    const term = value.trim();
+    if (term.length >= 3 && storeId) {
+      const seq = ++nameLookupSeq.current;
+      window.clearTimeout(nameLookupTimer.current);
+      nameLookupTimer.current = window.setTimeout(async () => {
+        const { data } = await supabase
+          .from("customers")
+          .select("id, name, phone, customer_type")
+          .eq("store_id", storeId)
+          .ilike("name", term)
+          .limit(1);
+        const cust = data?.[0];
+        if (!cust || seq !== nameLookupSeq.current) return;
+        setFormData((prev: any) =>
+          (prev.customer_name || "").trim().toLowerCase() !== term.toLowerCase() || prev.phone
+            ? prev
+            : {
+                ...prev,
+                phone: cust.phone || "",
+                customer_type: cust.customer_type || prev.customer_type || "Reguler",
+              }
+        );
+      }, 300);
     }
   };
 
