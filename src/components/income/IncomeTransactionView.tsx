@@ -27,6 +27,8 @@ import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
+import CustomerNameInput from "@/components/customers/CustomerNameInput";
+
 
 interface Income {
   id: string;
