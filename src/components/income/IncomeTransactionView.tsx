@@ -620,8 +620,21 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nama Pelanggan</Label>
-                  <Input value={editIncomeForm.customer_name} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_name: e.target.value })} placeholder="Nama pelanggan" />
+                  <CustomerNameInput
+                    storeId={currentStore?.id}
+                    value={editIncomeForm.customer_name}
+                    onChange={(v) => setEditIncomeForm({ ...editIncomeForm, customer_name: v })}
+                    onSelect={(c) =>
+                      setEditIncomeForm({
+                        ...editIncomeForm,
+                        customer_name: c.name,
+                        customer_phone: c.phone || editIncomeForm.customer_phone,
+                      })
+                    }
+                    placeholder="Nama pelanggan"
+                  />
                 </div>
+
                 <div className="space-y-2">
                   <Label>No. HP</Label>
                   <Input value={editIncomeForm.customer_phone} onChange={(e) => setEditIncomeForm({ ...editIncomeForm, customer_phone: e.target.value })} placeholder="Nomor HP" />
