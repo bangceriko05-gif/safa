@@ -1145,12 +1145,16 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   className="h-9"
                 />
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Atau ketik manual (tidak tersimpan)"
-                    value={manualCustomerName}
-                    onChange={(e) => setManualCustomerName(e.target.value)}
-                    className="h-9"
-                  />
+                  <div className="flex-1">
+                    <CustomerNameInput
+                      storeId={storeId}
+                      value={manualCustomerName}
+                      onChange={setManualCustomerName}
+                      placeholder="Atau ketik manual / cari pelanggan"
+                      className="h-9"
+                    />
+                  </div>
+
                   <Button
                     size="sm"
                     onClick={() => {
