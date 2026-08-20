@@ -1716,8 +1716,11 @@ export default function BookingModal({
                 value={formData.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
                 placeholder={formData.booking_type === "ota" ? "Opsional untuk OTA..." : "Ketik nomor HP..."}
+                autoComplete="off"
+                name="booking-customer-phone"
                 required={formData.booking_type !== "ota"}
               />
+
             </div>
           </div>
 
