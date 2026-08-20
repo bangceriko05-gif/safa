@@ -1682,8 +1682,13 @@ export default function BookingModal({
                 onFocus={() => setShowNameSuggestions(formData.customer_name.length > 0)}
                 onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
                 placeholder="Ketik nama pelanggan..."
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                name="booking-customer-name"
                 required
               />
+
               {showNameSuggestions && filteredCustomersByName.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredCustomersByName.map((customer) => (
