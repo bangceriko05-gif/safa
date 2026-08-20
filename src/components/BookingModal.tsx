@@ -135,6 +135,8 @@ export default function BookingModal({
   const [isPrice2ManuallyEdited, setIsPrice2ManuallyEdited] = useState(false);
   const isLoadingEditDataRef = useRef(false);
   const isPriceProtectedRef = useRef(false);
+  const nameLookupSeq = useRef(0);
+  const nameLookupTimer = useRef<number | undefined>(undefined);
   const [lastFetchedStoreId, setLastFetchedStoreId] = useState<string | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
