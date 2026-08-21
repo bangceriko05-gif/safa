@@ -278,7 +278,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
               <button
                 type="button"
                 onClick={() => idFullUrl && window.open(idFullUrl, "_blank")}
-                className="block rounded-md border bg-background overflow-hidden"
+                className="block w-full rounded-md border bg-background overflow-hidden"
                 title="Klik untuk memperbesar"
               >
                 <img
@@ -286,7 +286,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
                   alt={`Foto identitas ${crm.name}`}
                   loading="lazy"
                   decoding="async"
-                  className="h-24 w-40 object-contain bg-muted"
+                  className="w-full h-auto max-h-72 object-contain bg-muted"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement;
                     if (idFullUrl && img.src !== idFullUrl) img.src = idFullUrl;
@@ -295,7 +295,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
                 />
               </button>
             ) : (
-              <div className="h-24 w-40 rounded-md border bg-muted animate-pulse" />
+              <div className="w-full h-24 rounded-md border bg-muted animate-pulse" />
             )}
             <Button
               type="button"
