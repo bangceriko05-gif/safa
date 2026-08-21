@@ -80,7 +80,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
       const [thumb, full] = await Promise.all([
         supabase.storage
           .from("identity-documents")
-          .createSignedUrl(path, 3600, { transform: { width: 320, quality: 50 } } as any),
+          .createSignedUrl(path, 3600, { transform: { width: 320, quality: 50, resize: "contain" } } as any),
         supabase.storage.from("identity-documents").createSignedUrl(path, 3600),
       ]);
       const fullUrl = full.data?.signedUrl || null;
@@ -278,7 +278,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
               <button
                 type="button"
                 onClick={() => idFullUrl && window.open(idFullUrl, "_blank")}
-                className="block w-full rounded-md border bg-background overflow-hidden"
+                className="block w-full h-28 rounded-md border bg-background overflow-hidden"
                 title="Klik untuk memperbesar"
               >
                 <img
@@ -286,7 +286,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
                   alt={`Foto identitas ${crm.name}`}
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-auto max-h-72 object-contain bg-muted"
+                  className="w-full h-full object-contain bg-muted"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement;
                     if (idFullUrl && img.src !== idFullUrl) img.src = idFullUrl;
