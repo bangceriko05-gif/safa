@@ -761,6 +761,8 @@ export default function BookingModal({
 
   const handlePhoneChange = async (value: string) => {
     setFormData({ ...formData, phone: value });
+    setShowPhoneSuggestions(value.length > 0);
+
     
     // Auto-fill name if phone matches — lookup from local state instead of
     // hitting the database on every keystroke (was a major source of load).
