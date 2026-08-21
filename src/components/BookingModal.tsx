@@ -1725,12 +1725,30 @@ export default function BookingModal({
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
+                onFocus={() => setShowPhoneSuggestions(formData.phone.length > 0)}
+                onBlur={() => setTimeout(() => setShowPhoneSuggestions(false), 200)}
                 placeholder={formData.booking_type === "ota" ? "Opsional untuk OTA..." : "Ketik nomor HP..."}
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 name="booking-customer-phone"
                 required={formData.booking_type !== "ota"}
               />
 
+              {showPhoneSuggestions && filteredCustomersByPhone.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredCustomersByPhone.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="px-3 py-2 hover:bg-accent cursor-pointer"
+                      onMouseDown={() => selectCustomer(customer)}
+                    >
+                      <div className="font-medium">{customer.phone || "-"}</div>
+                      <div className="text-sm text-muted-foreground">{customer.name}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
