@@ -278,7 +278,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
               <button
                 type="button"
                 onClick={() => idFullUrl && window.open(idFullUrl, "_blank")}
-                className="block w-full h-28 rounded-md border bg-background overflow-hidden"
+                className="block w-44 h-28 rounded-md border bg-background overflow-hidden"
                 title="Klik untuk memperbesar"
               >
                 <img
