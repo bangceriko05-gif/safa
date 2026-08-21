@@ -914,13 +914,23 @@ export default function BookingModal({
     };
   };
 
-  const filteredCustomersByName = customers.filter(c =>
-    c.name.toLowerCase().includes(formData.customer_name.toLowerCase())
-  ).slice(0, 5);
+  const filteredCustomersByName = customers.filter((c) => {
+    const q = formData.customer_name.trim().toLowerCase();
+    if (!q) return false;
+    return (
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
 
-  const filteredCustomersByPhone = customers.filter(c =>
-    c.phone.includes(formData.phone)
-  ).slice(0, 5);
+  const filteredCustomersByPhone = customers.filter((c) => {
+    const q = formData.phone.trim().toLowerCase();
+    if (!q) return false;
+    return (
+      (c.phone || "").toLowerCase().includes(q) ||
+      (c.name || "").toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
 
   const calculateDuration = (start: string, end: string) => {
     if (!start || !end) return 0;
