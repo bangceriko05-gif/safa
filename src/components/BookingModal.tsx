@@ -761,6 +761,8 @@ export default function BookingModal({
 
   const handlePhoneChange = async (value: string) => {
     setFormData({ ...formData, phone: value });
+    setShowPhoneSuggestions(value.length > 0);
+
     
     // Auto-fill name if phone matches — lookup from local state instead of
     // hitting the database on every keystroke (was a major source of load).
@@ -914,13 +916,23 @@ export default function BookingModal({
     };
   };
 
-  const filteredCustomersByName = customers.filter(c =>
-    c.name.toLowerCase().includes(formData.customer_name.toLowerCase())
-  ).slice(0, 5);
+  const filteredCustomersByName = customers.filter((c) => {
+    const q = formData.customer_name.trim().toLowerCase();
+    if (!q) return false;
+    return (
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
 
-  const filteredCustomersByPhone = customers.filter(c =>
-    c.phone.includes(formData.phone)
-  ).slice(0, 5);
+  const filteredCustomersByPhone = customers.filter((c) => {
+    const q = formData.phone.trim().toLowerCase();
+    if (!q) return false;
+    return (
+      (c.phone || "").toLowerCase().includes(q) ||
+      (c.name || "").toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
 
   const calculateDuration = (start: string, end: string) => {
     if (!start || !end) return 0;
@@ -1715,12 +1727,30 @@ export default function BookingModal({
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
+                onFocus={() => setShowPhoneSuggestions(formData.phone.length > 0)}
+                onBlur={() => setTimeout(() => setShowPhoneSuggestions(false), 200)}
                 placeholder={formData.booking_type === "ota" ? "Opsional untuk OTA..." : "Ketik nomor HP..."}
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 name="booking-customer-phone"
                 required={formData.booking_type !== "ota"}
               />
 
+              {showPhoneSuggestions && filteredCustomersByPhone.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredCustomersByPhone.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="px-3 py-2 hover:bg-accent cursor-pointer"
+                      onMouseDown={() => selectCustomer(customer)}
+                    >
+                      <div className="font-medium">{customer.phone || "-"}</div>
+                      <div className="text-sm text-muted-foreground">{customer.name}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
