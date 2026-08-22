@@ -22,9 +22,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return;
-          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
-          if (id.includes("xlsx")) return "vendor-xlsx";
-          if (id.includes("jspdf") || id.includes("html2canvas")) return "vendor-pdf";
+          // Charts / PDF / spreadsheet libs are intentionally NOT split here so
+          // they stay inside the lazy route chunks that use them.
+
           if (id.includes("@supabase")) return "vendor-supabase";
           if (id.includes("date-fns")) return "vendor-date";
           if (id.includes("@radix-ui")) return "vendor-radix";
