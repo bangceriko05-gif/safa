@@ -62,26 +62,39 @@ const SettingsPage = lazy(() => import("./SettingsPage"));
 const TransactionManagement = lazy(() => import("./TransactionManagement"));
 const DepositFormModal = lazy(() => import("./deposit/DepositFormModal"));
 
-// Eagerly prefetch all lazy dashboard chunks in the background so switching
-// between menus is instant (no Suspense fallback delay on first click).
-const __prefetchDashboardChunks = () => {
+// Prefetch is tiered so the boot path stays light:
+// tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
+// that are only pulled in once the browser is truly idle (and never on
+// data-saver / slow connections).
+const __prefetchCoreChunks = () => {
   void import("./DateNavigation");
   void import("./RoomSummary");
   void import("./PMSCalendar");
   void import("./ScheduleTable");
   void import("./BookingModal");
+};
+
+const __prefetchHeavyChunks = () => {
   void import("./booking-orders/AddOrderModal");
-  void import("./UserManagement");
-  void import("./RoomManagement");
+  void import("./TransactionManagement");
   void import("./CustomerManagement");
+  void import("./RoomManagement");
+  void import("./deposit/DepositFormModal");
   void import("./suppliers/SupplierManagement");
   void import("./ActivityLog");
-  void import("./Reports");
+  void import("./UserManagement");
   void import("./PermissionManagement");
   void import("./SettingsPage");
-  void import("./TransactionManagement");
-  void import("./deposit/DepositFormModal");
+  void import("./Reports");
 };
+
+const __connectionAllowsPrefetch = () => {
+  const conn = (navigator as any)?.connection;
+  if (!conn) return true;
+  if (conn.saveData) return false;
+  return !["slow-2g", "2g", "3g"].includes(conn.effectiveType);
+};
+
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
