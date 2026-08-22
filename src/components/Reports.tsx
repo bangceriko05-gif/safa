@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,25 +24,85 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
-const IncomeExpenseReport = lazy(() => import("./reports/IncomeExpenseReport"));
-const PurchaseReport = lazy(() => import("./reports/PurchaseReport"));
-const PurchaseTransactionReport = lazy(() => import("./reports/PurchaseTransactionReport"));
+const IncomeExpenseReportLazy = lazy(() => import("./reports/IncomeExpenseReport"));
+const IncomeExpenseReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <IncomeExpenseReportLazy {...props} />
+  </Suspense>
+);
+const PurchaseReportLazy = lazy(() => import("./reports/PurchaseReport"));
+const PurchaseReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <PurchaseReportLazy {...props} />
+  </Suspense>
+);
+const PurchaseTransactionReportLazy = lazy(() => import("./reports/PurchaseTransactionReport"));
+const PurchaseTransactionReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <PurchaseTransactionReportLazy {...props} />
+  </Suspense>
+);
 import IncomeReport from "./reports/IncomeReport";
 import ExpenseReport from "./reports/ExpenseReport";
-const ExpenseChartReport = lazy(() => import("./reports/ExpenseChartReport"));
-const EmployeePerformanceReport = lazy(() => import("./reports/EmployeePerformanceReport"));
+const ExpenseChartReportLazy = lazy(() => import("./reports/ExpenseChartReport"));
+const ExpenseChartReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <ExpenseChartReportLazy {...props} />
+  </Suspense>
+);
+const EmployeePerformanceReportLazy = lazy(() => import("./reports/EmployeePerformanceReport"));
+const EmployeePerformanceReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <EmployeePerformanceReportLazy {...props} />
+  </Suspense>
+);
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
-const OccupancyChart = lazy(() => import("./reports/OccupancyChart"));
+const OccupancyChartLazy = lazy(() => import("./reports/OccupancyChart"));
+const OccupancyChart = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <OccupancyChartLazy {...props} />
+  </Suspense>
+);
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
-const AccountingReport = lazy(() => import("./reports/AccountingReport"));
-const PaymentMethodReport = lazy(() => import("./reports/PaymentMethodReport"));
-const TaxReport = lazy(() => import("./reports/TaxReport"));
+const AccountingReportLazy = lazy(() => import("./reports/AccountingReport"));
+const AccountingReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <AccountingReportLazy {...props} />
+  </Suspense>
+);
+const PaymentMethodReportLazy = lazy(() => import("./reports/PaymentMethodReport"));
+const PaymentMethodReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <PaymentMethodReportLazy {...props} />
+  </Suspense>
+);
+const TaxReportLazy = lazy(() => import("./reports/TaxReport"));
+const TaxReport = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <TaxReportLazy {...props} />
+  </Suspense>
+);
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
-const ProfitLoss = lazy(() => import("./reports/accounting/ProfitLoss"));
-const CashFlow = lazy(() => import("./reports/accounting/CashFlow"));
-const BalanceSheet = lazy(() => import("./reports/accounting/BalanceSheet"));
+const ProfitLossLazy = lazy(() => import("./reports/accounting/ProfitLoss"));
+const ProfitLoss = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <ProfitLossLazy {...props} />
+  </Suspense>
+);
+const CashFlowLazy = lazy(() => import("./reports/accounting/CashFlow"));
+const CashFlow = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <CashFlowLazy {...props} />
+  </Suspense>
+);
+const BalanceSheetLazy = lazy(() => import("./reports/accounting/BalanceSheet"));
+const BalanceSheet = (props: any) => (
+  <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
+    <BalanceSheetLazy {...props} />
+  </Suspense>
+);
 
 interface ReportStats {
   totalTransactions: number;
