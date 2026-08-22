@@ -1,0 +1,15 @@
+DROP INDEX IF EXISTS public.idx_booking_order_items_order_id;
+DROP INDEX IF EXISTS public.idx_customers_store_id_name;
+DROP INDEX IF EXISTS public.idx_customers_store_id;
+DROP INDEX IF EXISTS public.idx_bookings_store_id;
+DROP INDEX IF EXISTS public.idx_bookings_store_status;
+DROP INDEX IF EXISTS public.idx_room_daily_status_room_date;
+DROP INDEX IF EXISTS public.idx_room_daily_status_date_room_updated;
+DROP INDEX IF EXISTS public.idx_user_store_access_user;
+DROP INDEX IF EXISTS public.idx_user_store_access_store;
+DROP INDEX IF EXISTS public.idx_booking_orders_store_id;
+CREATE INDEX IF NOT EXISTS idx_rooms_store_name ON public.rooms (store_id, name);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_store_active ON public.payment_methods (store_id, is_active, sort_order);
+ANALYZE public.bookings;
+ANALYZE public.room_daily_status;
+ANALYZE public.rooms;
