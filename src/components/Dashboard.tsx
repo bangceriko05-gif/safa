@@ -62,30 +62,42 @@ const SettingsPage = lazy(() => import("./SettingsPage"));
 const TransactionManagement = lazy(() => import("./TransactionManagement"));
 const DepositFormModal = lazy(() => import("./deposit/DepositFormModal"));
 
-// Eagerly prefetch all lazy dashboard chunks in the background so switching
-// between menus is instant (no Suspense fallback delay on first click).
-const __prefetchDashboardChunks = () => {
+// Prefetch is tiered so the boot path stays light:
+// tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
+// that are only pulled in once the browser is truly idle (and never on
+// data-saver / slow connections).
+const __prefetchCoreChunks = () => {
   void import("./DateNavigation");
   void import("./RoomSummary");
   void import("./PMSCalendar");
   void import("./ScheduleTable");
   void import("./BookingModal");
+};
+
+const __prefetchHeavyChunks = () => {
   void import("./booking-orders/AddOrderModal");
-  void import("./UserManagement");
-  void import("./RoomManagement");
+  void import("./TransactionManagement");
   void import("./CustomerManagement");
+  void import("./RoomManagement");
+  void import("./deposit/DepositFormModal");
   void import("./suppliers/SupplierManagement");
   void import("./ActivityLog");
-  void import("./Reports");
+  void import("./UserManagement");
   void import("./PermissionManagement");
   void import("./SettingsPage");
-  void import("./TransactionManagement");
-  void import("./deposit/DepositFormModal");
+  void import("./Reports");
 };
+
+const __connectionAllowsPrefetch = () => {
+  const conn = (navigator as any)?.connection;
+  if (!conn) return true;
+  if (conn.saveData) return false;
+  return !["slow-2g", "2g", "3g"].includes(conn.effectiveType);
+};
+
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
-import * as XLSX from "xlsx";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
@@ -134,26 +146,30 @@ export default function Dashboard() {
     return () => window.removeEventListener("anka:goto-inventory-stock-in", handler);
   }, []);
 
-  // Prefetch every lazy-loaded dashboard chunk shortly after mount so subsequent
-  // tab switches render instantly (no Suspense fallback spinner).
+  // Prefetch lazy chunks in two tiers so the first paint is never competing
+  // with megabytes of rarely used report/settings code.
   useEffect(() => {
-    const schedulePrefetch = () => __prefetchDashboardChunks();
-    let idleId: number | null = null;
-    const timeoutId = window.setTimeout(() => {
-      if ("requestIdleCallback" in window) {
-        idleId = window.requestIdleCallback(schedulePrefetch, { timeout: 3000 });
-      } else {
-        schedulePrefetch();
-      }
-    }, 2500);
+    if (!__connectionAllowsPrefetch()) return;
 
-    return () => {
-      window.clearTimeout(timeoutId);
-      if (idleId !== null && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleId);
+    const timers: number[] = [];
+    const idleIds: number[] = [];
+    const runIdle = (fn: () => void, timeout: number) => {
+      if ("requestIdleCallback" in window) {
+        idleIds.push(window.requestIdleCallback(fn, { timeout }));
+      } else {
+        fn();
       }
     };
+
+    timers.push(window.setTimeout(() => runIdle(__prefetchCoreChunks, 2000), 1200));
+    timers.push(window.setTimeout(() => runIdle(__prefetchHeavyChunks, 8000), 6000));
+
+    return () => {
+      timers.forEach(t => window.clearTimeout(t));
+      if ("cancelIdleCallback" in window) idleIds.forEach(id => window.cancelIdleCallback(id));
+    };
   }, []);
+
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
     setCustomersSection(null);
@@ -449,6 +465,8 @@ export default function Dashboard() {
 
   const handleExportToExcel = async () => {
     try {
+      // Load the spreadsheet library on demand (keeps ~400KB out of dashboard boot)
+      const XLSX = await import("xlsx");
       if (!currentStore) {
         toast.error("Silakan pilih cabang terlebih dahulu");
         return;
