@@ -85,7 +85,6 @@ const __prefetchDashboardChunks = () => {
 import StoreInactiveNotice from "./StoreInactiveNotice";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import { useStore } from "@/contexts/StoreContext";
-import * as XLSX from "xlsx";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
@@ -449,6 +448,8 @@ export default function Dashboard() {
 
   const handleExportToExcel = async () => {
     try {
+      // Load the spreadsheet library on demand (keeps ~400KB out of dashboard boot)
+      const XLSX = await import("xlsx");
       if (!currentStore) {
         toast.error("Silakan pilih cabang terlebih dahulu");
         return;
