@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,25 +24,25 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
-import IncomeExpenseReport from "./reports/IncomeExpenseReport";
-import PurchaseReport from "./reports/PurchaseReport";
-import PurchaseTransactionReport from "./reports/PurchaseTransactionReport";
+const IncomeExpenseReport = lazy(() => import("./reports/IncomeExpenseReport"));
+const PurchaseReport = lazy(() => import("./reports/PurchaseReport"));
+const PurchaseTransactionReport = lazy(() => import("./reports/PurchaseTransactionReport"));
 import IncomeReport from "./reports/IncomeReport";
 import ExpenseReport from "./reports/ExpenseReport";
-import ExpenseChartReport from "./reports/ExpenseChartReport";
-import EmployeePerformanceReport from "./reports/EmployeePerformanceReport";
+const ExpenseChartReport = lazy(() => import("./reports/ExpenseChartReport"));
+const EmployeePerformanceReport = lazy(() => import("./reports/EmployeePerformanceReport"));
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
-import OccupancyChart from "./reports/OccupancyChart";
+const OccupancyChart = lazy(() => import("./reports/OccupancyChart"));
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
-import AccountingReport from "./reports/AccountingReport";
-import PaymentMethodReport from "./reports/PaymentMethodReport";
-import TaxReport from "./reports/TaxReport";
+const AccountingReport = lazy(() => import("./reports/AccountingReport"));
+const PaymentMethodReport = lazy(() => import("./reports/PaymentMethodReport"));
+const TaxReport = lazy(() => import("./reports/TaxReport"));
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
-import ProfitLoss from "./reports/accounting/ProfitLoss";
-import CashFlow from "./reports/accounting/CashFlow";
-import BalanceSheet from "./reports/accounting/BalanceSheet";
+const ProfitLoss = lazy(() => import("./reports/accounting/ProfitLoss"));
+const CashFlow = lazy(() => import("./reports/accounting/CashFlow"));
+const BalanceSheet = lazy(() => import("./reports/accounting/BalanceSheet"));
 
 interface ReportStats {
   totalTransactions: number;
