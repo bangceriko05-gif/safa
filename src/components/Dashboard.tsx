@@ -146,26 +146,30 @@ export default function Dashboard() {
     return () => window.removeEventListener("anka:goto-inventory-stock-in", handler);
   }, []);
 
-  // Prefetch every lazy-loaded dashboard chunk shortly after mount so subsequent
-  // tab switches render instantly (no Suspense fallback spinner).
+  // Prefetch lazy chunks in two tiers so the first paint is never competing
+  // with megabytes of rarely used report/settings code.
   useEffect(() => {
-    const schedulePrefetch = () => __prefetchDashboardChunks();
-    let idleId: number | null = null;
-    const timeoutId = window.setTimeout(() => {
-      if ("requestIdleCallback" in window) {
-        idleId = window.requestIdleCallback(schedulePrefetch, { timeout: 3000 });
-      } else {
-        schedulePrefetch();
-      }
-    }, 2500);
+    if (!__connectionAllowsPrefetch()) return;
 
-    return () => {
-      window.clearTimeout(timeoutId);
-      if (idleId !== null && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleId);
+    const timers: number[] = [];
+    const idleIds: number[] = [];
+    const runIdle = (fn: () => void, timeout: number) => {
+      if ("requestIdleCallback" in window) {
+        idleIds.push(window.requestIdleCallback(fn, { timeout }));
+      } else {
+        fn();
       }
     };
+
+    timers.push(window.setTimeout(() => runIdle(__prefetchCoreChunks, 2000), 1200));
+    timers.push(window.setTimeout(() => runIdle(__prefetchHeavyChunks, 8000), 6000));
+
+    return () => {
+      timers.forEach(t => window.clearTimeout(t));
+      if ("cancelIdleCallback" in window) idleIds.forEach(id => window.cancelIdleCallback(id));
+    };
   }, []);
+
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
     setCustomersSection(null);
