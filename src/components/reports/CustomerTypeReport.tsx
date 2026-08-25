@@ -846,26 +846,43 @@ export default function CustomerTypeReport() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        pg.paginated.map((r) => (
-                          <TableRow key={`${r.source}-${r.id}`}>
-                            <TableCell className="whitespace-nowrap">
-                              {format(parseISO(r.date), "d MMM yyyy", { locale: localeId })}
+                        <>
+                          {pg.paginated.map((r) => (
+                            <TableRow key={`${r.source}-${r.id}`}>
+                              <TableCell className="whitespace-nowrap">
+                                {format(parseISO(r.date), "d MMM yyyy", { locale: localeId })}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">{r.bid}</TableCell>
+                              <TableCell>
+                                <Badge variant={r.source === "Kamar" ? "default" : "secondary"}>{r.source}</Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">{r.customerName}</TableCell>
+                              <TableCell className="tabular-nums">{r.phone}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{r.customerType}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">{fmtIDR(r.roomRevenue)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmtIDR(r.productRevenue)}</TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold">{fmtIDR(r.total)}</TableCell>
+                              <TableCell>{r.paymentMethod}</TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="bg-muted/50 border-t-2 font-semibold sticky bottom-0">
+                            <TableCell colSpan={6} className="text-right">
+                              Total ({filteredRows.length} transaksi)
                             </TableCell>
-                            <TableCell className="font-mono text-xs">{r.bid}</TableCell>
-                            <TableCell>
-                              <Badge variant={r.source === "Kamar" ? "default" : "secondary"}>{r.source}</Badge>
+                            <TableCell className="text-right tabular-nums">
+                              {fmtIDR(filteredRows.reduce((s, r) => s + r.roomRevenue, 0))}
                             </TableCell>
-                            <TableCell className="font-medium">{r.customerName}</TableCell>
-                            <TableCell className="tabular-nums">{r.phone}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{r.customerType}</Badge>
+                            <TableCell className="text-right tabular-nums">
+                              {fmtIDR(filteredRows.reduce((s, r) => s + r.productRevenue, 0))}
                             </TableCell>
-                            <TableCell className="text-right tabular-nums">{fmtIDR(r.roomRevenue)}</TableCell>
-                            <TableCell className="text-right tabular-nums">{fmtIDR(r.productRevenue)}</TableCell>
-                            <TableCell className="text-right tabular-nums font-semibold">{fmtIDR(r.total)}</TableCell>
-                            <TableCell>{r.paymentMethod}</TableCell>
+                            <TableCell className="text-right tabular-nums text-green-600">
+                              {fmtIDR(filteredRows.reduce((s, r) => s + r.total, 0))}
+                            </TableCell>
+                            <TableCell />
                           </TableRow>
-                        ))
+                        </>
                       )}
                     </TableBody>
                   </Table>
