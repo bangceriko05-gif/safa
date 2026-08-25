@@ -721,14 +721,45 @@ export default function CustomerTypeReport() {
                       <TableRow>
                         <TableHead>Tanggal</TableHead>
                         <TableHead>BID</TableHead>
-                        <TableHead>Sumber</TableHead>
+                        <TableHead>
+                          <span className="inline-flex items-center">
+                            Sumber
+                            <ColumnFilter
+                              label="Sumber"
+                              value={colFilters.source}
+                              options={colOptions("source")}
+                              onChange={(v) => setColFilters((p) => ({ ...p, source: v }))}
+                            />
+                          </span>
+                        </TableHead>
                         <TableHead>Pelanggan</TableHead>
                         <TableHead>No. HP</TableHead>
-                        <TableHead>Tipe</TableHead>
+                        <TableHead>
+                          <span className="inline-flex items-center">
+                            Tipe
+                            <ColumnFilter
+                              label="Tipe"
+                              value={colFilters.customerType}
+                              options={colOptions("customerType")}
+                              onChange={(v) => setColFilters((p) => ({ ...p, customerType: v }))}
+                            />
+                          </span>
+                        </TableHead>
                         <TableHead className="text-right">Kamar</TableHead>
                         <TableHead className="text-right">Produk</TableHead>
                         <TableHead className="text-right">Total</TableHead>
-                        <TableHead>Metode Bayar</TableHead>
+                        <TableHead>
+                          <span className="inline-flex items-center">
+                            Metode Bayar
+                            <ColumnFilter
+                              label="Metode Bayar"
+                              value={colFilters.paymentMethod}
+                              options={colOptions("paymentMethod")}
+                              onChange={(v) => setColFilters((p) => ({ ...p, paymentMethod: v }))}
+                            />
+                          </span>
+                        </TableHead>
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
