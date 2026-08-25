@@ -283,10 +283,24 @@ export default function CustomerTypeReport() {
     });
   }, [rows, summaries]);
 
+  const [colFilters, setColFilters] = useState<Record<string, string | null>>({
+    source: null,
+    customerType: null,
+    paymentMethod: null,
+  });
+
+  const colOptions = (key: keyof TxRow) =>
+    Array.from(new Set(rows.map((r) => String(r[key] || "-")))).sort((a, b) =>
+      a.localeCompare(b, "id"),
+    );
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (typeFilter !== "all" && r.customerType !== typeFilter) return false;
+      if (colFilters.source && r.source !== colFilters.source) return false;
+      if (colFilters.customerType && r.customerType !== colFilters.customerType) return false;
+      if (colFilters.paymentMethod && (r.paymentMethod || "-") !== colFilters.paymentMethod) return false;
       if (!q) return true;
       return (
         r.bid.toLowerCase().includes(q) ||
@@ -295,9 +309,10 @@ export default function CustomerTypeReport() {
         r.customerType.toLowerCase().includes(q)
       );
     });
-  }, [rows, typeFilter, search]);
+  }, [rows, typeFilter, search, colFilters]);
 
-  const pg = usePagination(filteredRows, [typeFilter, search, filteredRows.length]);
+  const pg = usePagination(filteredRows, [typeFilter, search, colFilters, filteredRows.length]);
+
 
   const topCustomers = useMemo(() => {
     const map = new Map<string, { name: string; type: string; tx: number; total: number }>();
