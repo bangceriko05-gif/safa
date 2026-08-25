@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { Download, Search, Users, TrendingUp, Repeat, Wallet } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Download, Search, Users, TrendingUp, Repeat, Wallet, Filter } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { DateRange } from "react-day-picker";
@@ -62,7 +63,82 @@ const CHART_COLORS = [
 
 const UNSET = "Tanpa Tipe";
 
+function ColumnFilter({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  options: string[];
+  onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const list = q ? options.filter((o) => o.toLowerCase().includes(q.toLowerCase())) : options;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title={`Filter ${label}`}
+          className={`ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted ${
+            value ? "text-primary" : "text-muted-foreground/60"
+          }`}
+        >
+          <Filter className={`h-3.5 w-3.5 ${value ? "fill-current" : ""}`} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-0 bg-popover z-50">
+        <div className="px-3 py-2 border-b">
+          <p className="text-xs font-semibold">Filter {label}</p>
+        </div>
+        {options.length > 8 && (
+          <div className="p-2 border-b">
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari..."
+              className="h-8 text-xs"
+            />
+          </div>
+        )}
+        <div className="max-h-64 overflow-auto py-1">
+          <button
+            onClick={() => {
+              onChange(null);
+              setOpen(false);
+            }}
+            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted ${!value ? "font-semibold" : ""}`}
+          >
+            Semua {label}
+          </button>
+          {list.map((o) => (
+            <button
+              key={o}
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                value === o ? "font-semibold text-primary" : ""
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+          {list.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">Tidak ada data</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const normPhone = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0+/, "").replace(/^62/, "");
+
 
 interface TxRow {
   id: string;
@@ -283,10 +359,24 @@ export default function CustomerTypeReport() {
     });
   }, [rows, summaries]);
 
+  const [colFilters, setColFilters] = useState<Record<string, string | null>>({
+    source: null,
+    customerType: null,
+    paymentMethod: null,
+  });
+
+  const colOptions = (key: keyof TxRow) =>
+    Array.from(new Set(rows.map((r) => String(r[key] || "-")))).sort((a, b) =>
+      a.localeCompare(b, "id"),
+    );
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (typeFilter !== "all" && r.customerType !== typeFilter) return false;
+      if (colFilters.source && r.source !== colFilters.source) return false;
+      if (colFilters.customerType && r.customerType !== colFilters.customerType) return false;
+      if (colFilters.paymentMethod && (r.paymentMethod || "-") !== colFilters.paymentMethod) return false;
       if (!q) return true;
       return (
         r.bid.toLowerCase().includes(q) ||
@@ -295,9 +385,10 @@ export default function CustomerTypeReport() {
         r.customerType.toLowerCase().includes(q)
       );
     });
-  }, [rows, typeFilter, search]);
+  }, [rows, typeFilter, search, colFilters]);
 
-  const pg = usePagination(filteredRows, [typeFilter, search, filteredRows.length]);
+  const pg = usePagination(filteredRows, [typeFilter, search, colFilters, filteredRows.length]);
+
 
   const topCustomers = useMemo(() => {
     const map = new Map<string, { name: string; type: string; tx: number; total: number }>();
@@ -706,14 +797,45 @@ export default function CustomerTypeReport() {
                       <TableRow>
                         <TableHead>Tanggal</TableHead>
                         <TableHead>BID</TableHead>
-                        <TableHead>Sumber</TableHead>
+                        <TableHead>
+                          <span className="inline-flex items-center">
+                            Sumber
+                            <ColumnFilter
+                              label="Sumber"
+                              value={colFilters.source}
+                              options={colOptions("source")}
+                              onChange={(v) => setColFilters((p) => ({ ...p, source: v }))}
+                            />
+                          </span>
+                        </TableHead>
                         <TableHead>Pelanggan</TableHead>
                         <TableHead>No. HP</TableHead>
-                        <TableHead>Tipe</TableHead>
+                        <TableHead>
+                          <span className="inline-flex items-center">
+                            Tipe
+                            <ColumnFilter
+                              label="Tipe"
+                              value={colFilters.customerType}
+                              options={colOptions("customerType")}
+                              onChange={(v) => setColFilters((p) => ({ ...p, customerType: v }))}
+                            />
+                          </span>
+                        </TableHead>
                         <TableHead className="text-right">Kamar</TableHead>
                         <TableHead className="text-right">Produk</TableHead>
                         <TableHead className="text-right">Total</TableHead>
-                        <TableHead>Metode Bayar</TableHead>
+                        <TableHead>
+                          <span className="inline-flex items-center">
+                            Metode Bayar
+                            <ColumnFilter
+                              label="Metode Bayar"
+                              value={colFilters.paymentMethod}
+                              options={colOptions("paymentMethod")}
+                              onChange={(v) => setColFilters((p) => ({ ...p, paymentMethod: v }))}
+                            />
+                          </span>
+                        </TableHead>
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
