@@ -17,6 +17,8 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import BookingDetailPopup from "@/components/BookingDetailPopup";
 import {
   ResponsiveContainer,
   BarChart,
@@ -178,6 +180,23 @@ export default function CustomerTypeReport() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"ringkasan" | "grafik" | "detail">("ringkasan");
+  const [bookingPopupId, setBookingPopupId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const openBid = (r: TxRow) => {
+    if (r.source === "POS") {
+      navigate(`/pos-order/${r.id}`);
+    } else {
+      setBookingPopupId(r.id);
+    }
+  };
+
+  const openCrm = (r: TxRow) => {
+    const params = new URLSearchParams({ customersSection: "crm" });
+    if (r.phone && r.phone !== "-") params.set("crmPhone", r.phone);
+    if (r.customerName) params.set("crmName", r.customerName);
+    navigate(`/dashboard?${params.toString()}`);
+  };
 
   const { startDate, endDate } = getDateRange(timeRange, customDateRange);
   const rangeLabel = getDateRangeDisplay(timeRange, customDateRange);
@@ -852,11 +871,29 @@ export default function CustomerTypeReport() {
                               <TableCell className="whitespace-nowrap">
                                 {format(parseISO(r.date), "d MMM yyyy", { locale: localeId })}
                               </TableCell>
-                              <TableCell className="font-mono text-xs">{r.bid}</TableCell>
+                              <TableCell className="font-mono text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => openBid(r)}
+                                  className="text-primary hover:underline font-medium"
+                                  title="Buka detail BID"
+                                >
+                                  {r.bid}
+                                </button>
+                              </TableCell>
                               <TableCell>
                                 <Badge variant={r.source === "Kamar" ? "default" : "secondary"}>{r.source}</Badge>
                               </TableCell>
-                              <TableCell className="font-medium">{r.customerName}</TableCell>
+                              <TableCell className="font-medium">
+                                <button
+                                  type="button"
+                                  onClick={() => openCrm(r)}
+                                  className="text-primary hover:underline text-left"
+                                  title="Buka CRM pelanggan"
+                                >
+                                  {r.customerName}
+                                </button>
+                              </TableCell>
                               <TableCell className="tabular-nums">{r.phone}</TableCell>
                               <TableCell>
                                 <Badge variant="outline">{r.customerType}</Badge>
@@ -899,6 +936,16 @@ export default function CustomerTypeReport() {
             </TabsContent>
           </Tabs>
         </>
+      )}
+
+      {bookingPopupId && (
+        <BookingDetailPopup
+          isOpen={!!bookingPopupId}
+          onClose={() => setBookingPopupId(null)}
+          bookingId={bookingPopupId}
+          statusColors={{ BO: "#87CEEB", CI: "#90EE90", CO: "#6B7280", BATAL: "#9CA3AF" }}
+          onStatusChange={() => void load()}
+        />
       )}
     </div>
   );
