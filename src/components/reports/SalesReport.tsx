@@ -100,7 +100,7 @@ export default function SalesReport() {
   const navigate = useNavigate();
   const goToCRM = (name?: string, phone?: string) => {
     if (!name) return;
-    const params = new URLSearchParams({ customersSection: "crm" });
+    const params = new URLSearchParams({ tab: "customers", customersSection: "crm" });
     if (phone && phone !== "-") params.set("crmPhone", phone);
     params.set("crmName", name);
     navigate(`/dashboard?${params.toString()}`);

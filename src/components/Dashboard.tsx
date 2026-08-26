@@ -177,11 +177,24 @@ export default function Dashboard() {
   };
   const crmCustomerId = searchParams.get("crmCustomer") || undefined;
   useEffect(() => {
-    if (searchParams.get("customersSection") === "crm") {
-      setCustomersSection("crm");
+    const tabParam = searchParams.get("tab");
+    const customerSectionParam = searchParams.get("customersSection");
+
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTabRaw(tabParam);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    if (
+      customerSectionParam === "customers" ||
+      customerSectionParam === "suppliers" ||
+      customerSectionParam === "crm"
+    ) {
+      if (!tabParam || tabParam === "customers") {
+        setActiveTabRaw("customers");
+      }
+      setCustomersSection(customerSectionParam);
+    }
+  }, [searchParams, activeTab]);
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
   });

@@ -192,7 +192,7 @@ export default function CustomerTypeReport() {
   };
 
   const openCrm = (r: TxRow) => {
-    const params = new URLSearchParams({ customersSection: "crm" });
+    const params = new URLSearchParams({ tab: "customers", customersSection: "crm" });
     if (r.phone && r.phone !== "-") params.set("crmPhone", r.phone);
     if (r.customerName) params.set("crmName", r.customerName);
     navigate(`/dashboard?${params.toString()}`);

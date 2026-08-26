@@ -1058,7 +1058,7 @@ export default function PosOrderDetail() {
               crm?.id
                 ? () =>
                     navigate(
-                      `/?tab=customers&customersSection=crm&crmCustomer=${crm.id}` +
+                      `/dashboard?tab=customers&customersSection=crm&crmCustomer=${crm.id}` +
                         `&crmPhone=${encodeURIComponent(crm.phone || customerPhone || "")}` +
                         `&crmName=${encodeURIComponent(crm.name || customerName || "")}`
                     )
