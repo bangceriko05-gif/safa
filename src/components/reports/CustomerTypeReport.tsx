@@ -180,6 +180,23 @@ export default function CustomerTypeReport() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"ringkasan" | "grafik" | "detail">("ringkasan");
+  const [bookingPopupId, setBookingPopupId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const openBid = (r: TxRow) => {
+    if (r.source === "POS") {
+      navigate(`/pos-order/${r.id}`);
+    } else {
+      setBookingPopupId(r.id);
+    }
+  };
+
+  const openCrm = (r: TxRow) => {
+    const params = new URLSearchParams({ customersSection: "crm" });
+    if (r.phone && r.phone !== "-") params.set("crmPhone", r.phone);
+    if (r.customerName) params.set("crmName", r.customerName);
+    navigate(`/dashboard?${params.toString()}`);
+  };
 
   const { startDate, endDate } = getDateRange(timeRange, customDateRange);
   const rangeLabel = getDateRangeDisplay(timeRange, customDateRange);
