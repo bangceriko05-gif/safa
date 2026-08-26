@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,6 +97,14 @@ type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" |
 
 export default function SalesReport() {
   const { currentStore } = useStore();
+  const navigate = useNavigate();
+  const goToCRM = (name?: string, phone?: string) => {
+    if (!name) return;
+    const params = new URLSearchParams({ customersSection: "crm" });
+    if (phone && phone !== "-") params.set("crmPhone", phone);
+    params.set("crmName", name);
+    navigate(`/dashboard?${params.toString()}`);
+  };
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState<SalesTab>("details");
