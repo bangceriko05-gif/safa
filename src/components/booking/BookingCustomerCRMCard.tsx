@@ -235,7 +235,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
           className="text-sm font-semibold text-blue-600 hover:underline"
           onClick={() =>
             navigate(
-              `/?tab=customers&customersSection=crm&crmCustomer=${crm.id}` +
+              `/dashboard?tab=customers&customersSection=crm&crmCustomer=${crm.id}` +
                 `&crmPhone=${encodeURIComponent(crm.phone || "")}` +
                 `&crmName=${encodeURIComponent(crm.name || "")}`
             )
