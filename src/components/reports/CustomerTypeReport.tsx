@@ -871,11 +871,29 @@ export default function CustomerTypeReport() {
                               <TableCell className="whitespace-nowrap">
                                 {format(parseISO(r.date), "d MMM yyyy", { locale: localeId })}
                               </TableCell>
-                              <TableCell className="font-mono text-xs">{r.bid}</TableCell>
+                              <TableCell className="font-mono text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => openBid(r)}
+                                  className="text-primary hover:underline font-medium"
+                                  title="Buka detail BID"
+                                >
+                                  {r.bid}
+                                </button>
+                              </TableCell>
                               <TableCell>
                                 <Badge variant={r.source === "Kamar" ? "default" : "secondary"}>{r.source}</Badge>
                               </TableCell>
-                              <TableCell className="font-medium">{r.customerName}</TableCell>
+                              <TableCell className="font-medium">
+                                <button
+                                  type="button"
+                                  onClick={() => openCrm(r)}
+                                  className="text-primary hover:underline text-left"
+                                  title="Buka CRM pelanggan"
+                                >
+                                  {r.customerName}
+                                </button>
+                              </TableCell>
                               <TableCell className="tabular-nums">{r.phone}</TableCell>
                               <TableCell>
                                 <Badge variant="outline">{r.customerType}</Badge>
