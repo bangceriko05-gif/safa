@@ -937,6 +937,16 @@ export default function CustomerTypeReport() {
           </Tabs>
         </>
       )}
+
+      {bookingPopupId && (
+        <BookingDetailPopup
+          isOpen={!!bookingPopupId}
+          onClose={() => setBookingPopupId(null)}
+          bookingId={bookingPopupId}
+          statusColors={{ BO: "#87CEEB", CI: "#90EE90", CO: "#6B7280", BATAL: "#9CA3AF" }}
+          onStatusChange={() => void load()}
+        />
+      )}
     </div>
   );
 }
