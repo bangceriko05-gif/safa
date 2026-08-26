@@ -17,6 +17,8 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import BookingDetailPopup from "@/components/BookingDetailPopup";
 import {
   ResponsiveContainer,
   BarChart,
