@@ -942,7 +942,11 @@ export default function SalesReport() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs">{format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}</TableCell>
-                                <TableCell className="text-xs">{booking.customer_name}</TableCell>
+                                <TableCell className="text-xs">
+                                  <button type="button" className="text-blue-600 underline hover:text-blue-800 text-left" onClick={() => goToCRM(booking.customer_name, booking.phone)}>
+                                    {booking.customer_name}
+                                  </button>
+                                </TableCell>
                                 <TableCell className="text-xs max-w-[200px] truncate" title={itemsLabel}>{itemsLabel}</TableCell>
                                 <TableCell className="text-xs">{booking.room_name}</TableCell>
                                 <TableCell className="text-xs">{formatDuration(booking)}</TableCell>
@@ -1063,7 +1067,11 @@ export default function SalesReport() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs">{format(new Date(booking.date), "d MMM yyyy", { locale: localeId })}</TableCell>
-                                <TableCell className="text-xs">{booking.customer_name}</TableCell>
+                                <TableCell className="text-xs">
+                                  <button type="button" className="text-blue-600 underline hover:text-blue-800 text-left" onClick={() => goToCRM(booking.customer_name, booking.phone)}>
+                                    {booking.customer_name}
+                                  </button>
+                                </TableCell>
                                 <TableCell className="text-xs">{booking.room_name}</TableCell>
                                 <TableCell className="text-xs">{formatDuration(booking)}</TableCell>
                                 <TableCell className="text-right text-xs">{formatCurrency(totalBiaya)}</TableCell>
@@ -1185,7 +1193,11 @@ export default function SalesReport() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs">{r.date ? format(new Date(r.date), "d MMM yyyy", { locale: localeId }) : "-"}</TableCell>
-                              <TableCell className="text-xs">{r.customerName}</TableCell>
+                              <TableCell className="text-xs">
+                                <button type="button" className="text-blue-600 underline hover:text-blue-800 text-left" onClick={() => goToCRM(r.customerName)}>
+                                  {r.customerName}
+                                </button>
+                              </TableCell>
                               <TableCell className="text-xs">{r.itemLabel}</TableCell>
                               <TableCell className="text-right text-xs text-orange-600">{r.hpp > 0 ? formatCurrency(r.hpp) : "-"}</TableCell>
                               <TableCell className="text-right text-xs">{formatCurrency(r.total)}</TableCell>
