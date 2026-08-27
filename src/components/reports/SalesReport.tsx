@@ -417,7 +417,7 @@ export default function SalesReport() {
       setBookingProducts(mappedProducts);
       setPosItems(mappedPosItems);
       setExpenses(mappedExpenses);
-      setStats({
+      const nextStats = {
         totalBookings: activeBookings.length,
         totalRevenue,
         walkInCount: walkInBookings.length,
@@ -435,6 +435,14 @@ export default function SalesReport() {
         jumlahBayar,
         totalHPP,
         totalLaba,
+      };
+      setStats(nextStats);
+      setReportCache(salesCacheKey, {
+        bookings: mappedBookings,
+        bookingProducts: mappedProducts,
+        posItems: mappedPosItems,
+        expenses: mappedExpenses,
+        stats: nextStats,
       });
     } catch (error) {
       console.error("Error fetching sales data:", error);
