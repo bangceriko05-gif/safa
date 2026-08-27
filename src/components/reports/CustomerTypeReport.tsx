@@ -17,6 +17,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { getReportCache, setReportCache } from "@/utils/reportCache";
 import { useNavigate } from "react-router-dom";
 import BookingDetailPopup from "@/components/BookingDetailPopup";
 import {
@@ -201,15 +202,27 @@ export default function CustomerTypeReport() {
   const { startDate, endDate } = getDateRange(timeRange, customDateRange);
   const rangeLabel = getDateRangeDisplay(timeRange, customDateRange);
 
+  const cacheKey = currentStore
+    ? `ctr:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`
+    : "";
+
   useEffect(() => {
     if (!currentStore) return;
-    void load();
+    const cached = getReportCache<{ rows: TxRow[]; registeredByType: Record<string, number> }>(cacheKey);
+    if (cached) {
+      setRows(cached.rows);
+      setRegisteredByType(cached.registeredByType);
+      setLoading(false);
+      void load(true); // refresh diam-diam
+    } else {
+      void load();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStore?.id, timeRange, customDateRange]);
 
-  const load = async () => {
+  const load = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
@@ -310,6 +323,7 @@ export default function CustomerTypeReport() {
 
       const all = [...bookingRows, ...orderRows].sort((a, b) => (a.date < b.date ? 1 : -1));
       setRows(all);
+      setReportCache(cacheKey, { rows: all, registeredByType: regCount });
     } catch (e) {
       console.error(e);
       toast.error("Gagal memuat laporan tipe pelanggan");
