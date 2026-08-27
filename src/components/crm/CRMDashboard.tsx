@@ -531,7 +531,16 @@ export default function CRMDashboard({
         txns={txns}
         storeId={currentStore?.id}
         storeName={currentStore?.name}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          setSelected(null);
+          // Jika detail dibuka dari halaman lain (mis. laporan), tombol
+          // "Kembali" mengembalikan pengguna ke halaman asal, bukan ke daftar CRM.
+          if (deepLinkedRef.current) {
+            deepLinkedRef.current = false;
+            autoOpenedRef.current = null;
+            if (window.history.length > 1) navigate(-1);
+          }
+        }}
       />
 
       <Dialog open={!!editingTpl} onOpenChange={(o) => !o && setEditingTpl(null)}>
