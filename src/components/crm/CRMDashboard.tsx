@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,8 @@ export default function CRMDashboard({
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<DetailCustomer | null>(null);
   const autoOpenedRef = useRef<string | null>(null);
+  const deepLinkedRef = useRef(false);
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<Record<TemplateKey, string>>(() => {
     try {
       const raw = localStorage.getItem(TPL_STORAGE_KEY);
@@ -285,6 +288,7 @@ export default function CRMDashboard({
       (targetName && crmCustomers.find((c) => (c.name || "").trim().toLowerCase() === targetName));
     if (!match) return;
     autoOpenedRef.current = key;
+    deepLinkedRef.current = true;
     setSelected({
       ...match,
       segmentLabel: SEGMENT_META[match.segment].label,
@@ -527,7 +531,16 @@ export default function CRMDashboard({
         txns={txns}
         storeId={currentStore?.id}
         storeName={currentStore?.name}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          setSelected(null);
+          // Jika detail dibuka dari halaman lain (mis. laporan), tombol
+          // "Kembali" mengembalikan pengguna ke halaman asal, bukan ke daftar CRM.
+          if (deepLinkedRef.current) {
+            deepLinkedRef.current = false;
+            autoOpenedRef.current = null;
+            if (window.history.length > 1) navigate(-1);
+          }
+        }}
       />
 
       <Dialog open={!!editingTpl} onOpenChange={(o) => !o && setEditingTpl(null)}>
