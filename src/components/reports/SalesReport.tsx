@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,7 +107,17 @@ export default function SalesReport() {
   };
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
-  const [activeTab, setActiveTab] = useState<SalesTab>("details");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTabRaw] = useState<SalesTab>(() => (searchParams.get("salesSub") as SalesTab) || "details");
+  // Simpan sub-tab di URL agar tombol "Kembali" dari CRM/laporan lain
+  // mengembalikan pengguna ke sub-menu yang sama (mis. "customer-type").
+  const setActiveTab = (v: SalesTab) => {
+    setActiveTabRaw(v);
+    const params = new URLSearchParams(searchParams);
+    if (v === "details") params.delete("salesSub");
+    else params.set("salesSub", v);
+    setSearchParams(params, { replace: true });
+  };
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
