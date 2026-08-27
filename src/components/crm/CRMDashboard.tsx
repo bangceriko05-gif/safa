@@ -105,6 +105,8 @@ export default function CRMDashboard({
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<DetailCustomer | null>(null);
   const autoOpenedRef = useRef<string | null>(null);
+  const deepLinkedRef = useRef(false);
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<Record<TemplateKey, string>>(() => {
     try {
       const raw = localStorage.getItem(TPL_STORAGE_KEY);
