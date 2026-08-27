@@ -410,10 +410,10 @@ export default function CustomerTypeReport() {
 
 
   const topCustomers = useMemo(() => {
-    const map = new Map<string, { name: string; type: string; tx: number; total: number }>();
+    const map = new Map<string, { name: string; type: string; tx: number; total: number; phone: string }>();
     rows.forEach((r) => {
       const key = normPhone(r.phone) || r.customerName.trim().toLowerCase();
-      const cur = map.get(key) || { name: r.customerName, type: r.customerType, tx: 0, total: 0 };
+      const cur = map.get(key) || { name: r.customerName, type: r.customerType, tx: 0, total: 0, phone: r.phone };
       cur.tx += 1;
       cur.total += r.total;
       map.set(key, cur);
@@ -695,7 +695,15 @@ export default function CustomerTypeReport() {
                         topCustomers.map((c, i) => (
                           <TableRow key={`${c.name}-${i}`}>
                             <TableCell>{i + 1}</TableCell>
-                            <TableCell className="font-medium">{c.name}</TableCell>
+                            <TableCell className="font-medium">
+                              <button
+                                type="button"
+                                className="text-blue-600 hover:underline text-left"
+                                onClick={() => openCrm({ phone: c.phone, customerName: c.name } as TxRow)}
+                              >
+                                {c.name}
+                              </button>
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline">{c.type}</Badge>
                             </TableCell>
