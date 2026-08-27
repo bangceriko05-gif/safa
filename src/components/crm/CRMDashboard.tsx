@@ -288,6 +288,7 @@ export default function CRMDashboard({
       (targetName && crmCustomers.find((c) => (c.name || "").trim().toLowerCase() === targetName));
     if (!match) return;
     autoOpenedRef.current = key;
+    deepLinkedRef.current = true;
     setSelected({
       ...match,
       segmentLabel: SEGMENT_META[match.segment].label,
