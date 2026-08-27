@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import TaxReport from "./TaxReport";
 import CustomerTypeReport from "./CustomerTypeReport";
 import { Receipt } from "lucide-react";
+import { getReportCache, setReportCache } from "@/utils/reportCache";
 
 interface BookingData {
   id: string;
@@ -150,9 +151,27 @@ export default function SalesReport() {
     totalLaba: 0,
   });
 
+  const salesCacheKey = (() => {
+    if (!currentStore) return "";
+    const { startDate, endDate } = getDateRange(timeRange, customDateRange);
+    return `sales:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
+  })();
+
   useEffect(() => {
     if (!currentStore) return;
-    fetchData();
+    const cached = getReportCache<any>(salesCacheKey);
+    if (cached) {
+      setBookings(cached.bookings);
+      setBookingProducts(cached.bookingProducts);
+      setPosItems(cached.posItems);
+      setExpenses(cached.expenses);
+      setStats(cached.stats);
+      setLoading(false);
+      fetchData(true); // refresh diam-diam
+    } else {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange, customDateRange, currentStore]);
 
   useEffect(() => {
@@ -161,9 +180,9 @@ export default function SalesReport() {
     });
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
