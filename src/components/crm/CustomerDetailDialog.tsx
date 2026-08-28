@@ -10,9 +10,12 @@ import {
 import {
   User, Phone, Mail, Cake, MapPin, Award, Wallet, Repeat, CalendarDays, MessageCircle, Star, ArrowLeft,
 } from "lucide-react";
-import { Pencil, Trash2, Tag } from "lucide-react";
+import { Pencil, Trash2, Tag, Save, X, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "@/components/BookingModal";
+
 
 type TierKey = "bronze" | "silver" | "gold" | "platinum";
 
