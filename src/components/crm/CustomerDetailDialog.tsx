@@ -200,10 +200,10 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
     { icon: Phone, label: "No. Telepon", value: cust.phone || "-", key: "phone" },
     { icon: Mail, label: "Email", value: cust.email || "-", key: "email" },
     { icon: Cake, label: "Tanggal Lahir", value: formatDate(cust.birth_date), key: "birth_date", type: "date" },
-    { icon: MapPin, label: "Alamat / Domisili", value: cust.domicile || "-", key: "domicile" },
-    { icon: CalendarDays, label: "Terdaftar Sejak", value: formatDate(cust.createdAt) },
     { icon: User, label: "Identitas", value: extra?.identity_number ? `${extra.identity_type || "ID"} · ${extra.identity_number}` : "-", key: "identity_number" },
     { icon: Tag, label: "Tipe Pelanggan", value: customerType || "Reguler" },
+    { icon: MapPin, label: "Alamat / Domisili", value: cust.domicile || "-", key: "domicile" },
+    { icon: CalendarDays, label: "Terdaftar Sejak", value: formatDate(cust.createdAt) },
     { icon: MessageCircle, label: "Catatan", value: extra?.notes || "-", key: "notes" },
   ] as { icon: any; label: string; value: string; key?: string; type?: string }[];
 
