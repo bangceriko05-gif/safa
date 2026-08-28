@@ -281,13 +281,23 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
               {info.map((i) => (
                 <div key={i.label} className="flex items-start gap-2">
                   <i.icon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">{i.label}</p>
-                    <p className="text-sm font-medium break-words">{i.value}</p>
+                    {editing && i.key ? (
+                      <Input
+                        className="h-8 mt-1"
+                        type={i.type || "text"}
+                        value={form[i.key] || ""}
+                        onChange={(e) => setForm((f) => ({ ...f, [i.key as string]: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm font-medium break-words">{i.value}</p>
+                    )}
                   </div>
                 </div>
               ))}
             </CardContent>
+
           </Card>
 
           <Card>
