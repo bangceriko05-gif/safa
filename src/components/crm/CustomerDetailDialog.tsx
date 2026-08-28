@@ -215,8 +215,8 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
                 <ArrowLeft className="h-4 w-4 mr-1" /> Kembali
               </Button>
               <div>
-              <DialogTitle className="text-lg">{customer.name}</DialogTitle>
-              <p className="text-sm text-muted-foreground tabular-nums">{customer.phone}</p>
+              <DialogTitle className="text-lg">{cust.name}</DialogTitle>
+              <p className="text-sm text-muted-foreground tabular-nums">{cust.phone}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -224,20 +224,30 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
               <Badge variant="outline" className={TIERS[loyalty.tier].className}>{TIERS[loyalty.tier].label}</Badge>
               {customerType && <Badge variant="outline">{customerType}</Badge>}
               <Button size="sm" variant="outline" asChild>
-                <a href={`https://wa.me/${normalizePhone(customer.phone)}?text=${encodeURIComponent(`Halo ${customer.name}, terima kasih telah menjadi pelanggan ${storeName || ""}.`)}`} target="_blank" rel="noreferrer">
+                <a href={`https://wa.me/${normalizePhone(cust.phone)}?text=${encodeURIComponent(`Halo ${cust.name}, terima kasih telah menjadi pelanggan ${storeName || ""}.`)}`} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
                 </a>
               </Button>
-              {onEdit && (
-                <Button size="sm" variant="outline" onClick={onEdit}>
+              {editing ? (
+                <>
+                  <Button size="sm" onClick={saveEdit} disabled={savingEdit}>
+                    {savingEdit ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Simpan
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={savingEdit}>
+                    <X className="h-4 w-4 mr-1" /> Batal
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" onClick={onEdit || startEdit}>
                   <Pencil className="h-4 w-4 mr-1" /> Edit
                 </Button>
               )}
-              {onDelete && (
+              {onDelete && !editing && (
                 <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={onDelete}>
                   <Trash2 className="h-4 w-4 mr-1" /> Hapus
                 </Button>
               )}
+
             </div>
           </div>
         </DialogHeader>
