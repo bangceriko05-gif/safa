@@ -73,7 +73,12 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
   const [extra, setExtra] = useState<any>(null);
   const [bidPreview, setBidPreview] = useState<any>(null);
   const [userId, setUserId] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [local, setLocal] = useState<Partial<DetailCustomer>>({});
   const navigate = useNavigate();
+
 
   const openTxn = async (t: DetailTxn) => {
     if (!t.id) return;
