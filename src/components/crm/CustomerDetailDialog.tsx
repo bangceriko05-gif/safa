@@ -10,9 +10,12 @@ import {
 import {
   User, Phone, Mail, Cake, MapPin, Award, Wallet, Repeat, CalendarDays, MessageCircle, Star, ArrowLeft,
 } from "lucide-react";
-import { Pencil, Trash2, Tag } from "lucide-react";
+import { Pencil, Trash2, Tag, Save, X, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "@/components/BookingModal";
+
 
 type TierKey = "bronze" | "silver" | "gold" | "platinum";
 
@@ -73,7 +76,12 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
   const [extra, setExtra] = useState<any>(null);
   const [bidPreview, setBidPreview] = useState<any>(null);
   const [userId, setUserId] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [local, setLocal] = useState<Partial<DetailCustomer>>({});
   const navigate = useNavigate();
+
 
   const openTxn = async (t: DetailTxn) => {
     if (!t.id) return;
@@ -135,17 +143,70 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
 
   if (!customer) return null;
 
+  const cust = { ...customer, ...local } as DetailCustomer;
+
+  const startEdit = () => {
+    setForm({
+      name: cust.name || "",
+      phone: cust.phone || "",
+      email: cust.email || "",
+      birth_date: cust.birth_date ? String(cust.birth_date).slice(0, 10) : "",
+      domicile: cust.domicile || "",
+      identity_type: extra?.identity_type || "",
+      identity_number: extra?.identity_number || "",
+      notes: extra?.notes || "",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!form.name?.trim()) {
+      toast.error("Nama pelanggan wajib diisi");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const payload: any = {
+        name: form.name.trim(),
+        phone: form.phone?.trim() || null,
+        email: form.email?.trim() || null,
+        birth_date: form.birth_date || null,
+        domicile: form.domicile?.trim() || null,
+        identity_type: form.identity_type?.trim() || null,
+        identity_number: form.identity_number?.trim() || null,
+        notes: form.notes?.trim() || null,
+      };
+      const { error } = await supabase.from("customers").update(payload).eq("id", customer.id);
+      if (error) throw error;
+      setLocal({
+        name: payload.name,
+        phone: payload.phone || "",
+        email: payload.email,
+        birth_date: payload.birth_date,
+        domicile: payload.domicile,
+      });
+      setExtra((e: any) => ({ ...(e || {}), identity_type: payload.identity_type, identity_number: payload.identity_number, notes: payload.notes }));
+      setEditing(false);
+      toast.success("Data pelanggan tersimpan");
+    } catch (e: any) {
+      toast.error(e.message || "Gagal menyimpan data pelanggan");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const info = [
-    { icon: User, label: "Nama Pelanggan", value: customer.name },
-    { icon: Phone, label: "No. Telepon", value: customer.phone || "-" },
-    { icon: Mail, label: "Email", value: customer.email || "-" },
-    { icon: Cake, label: "Tanggal Lahir", value: formatDate(customer.birth_date) },
-    { icon: MapPin, label: "Alamat / Domisili", value: customer.domicile || "-" },
-    { icon: CalendarDays, label: "Terdaftar Sejak", value: formatDate(customer.createdAt) },
-    { icon: User, label: "Identitas", value: extra?.identity_number ? `${extra.identity_type || "ID"} · ${extra.identity_number}` : "-" },
+    { icon: User, label: "Nama Pelanggan", value: cust.name, key: "name" },
+    { icon: Phone, label: "No. Telepon", value: cust.phone || "-", key: "phone" },
+    { icon: Mail, label: "Email", value: cust.email || "-", key: "email" },
+    { icon: Cake, label: "Tanggal Lahir", value: formatDate(cust.birth_date), key: "birth_date", type: "date" },
+    { icon: MapPin, label: "Alamat / Domisili", value: cust.domicile || "-", key: "domicile" },
+    { icon: CalendarDays, label: "Terdaftar Sejak", value: formatDate(cust.createdAt) },
+    { icon: User, label: "Identitas", value: extra?.identity_number ? `${extra.identity_type || "ID"} · ${extra.identity_number}` : "-", key: "identity_number" },
     { icon: Tag, label: "Tipe Pelanggan", value: customerType || "Reguler" },
-    { icon: MessageCircle, label: "Catatan", value: extra?.notes || "-" },
-  ];
+    { icon: MessageCircle, label: "Catatan", value: extra?.notes || "-", key: "notes" },
+  ] as { icon: any; label: string; value: string; key?: string; type?: string }[];
+
 
   return (
     <Dialog open={!!customer} onOpenChange={(o) => !o && onClose()}>
@@ -157,8 +218,8 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
                 <ArrowLeft className="h-4 w-4 mr-1" /> Kembali
               </Button>
               <div>
-              <DialogTitle className="text-lg">{customer.name}</DialogTitle>
-              <p className="text-sm text-muted-foreground tabular-nums">{customer.phone}</p>
+              <DialogTitle className="text-lg">{cust.name}</DialogTitle>
+              <p className="text-sm text-muted-foreground tabular-nums">{cust.phone}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -166,20 +227,30 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
               <Badge variant="outline" className={TIERS[loyalty.tier].className}>{TIERS[loyalty.tier].label}</Badge>
               {customerType && <Badge variant="outline">{customerType}</Badge>}
               <Button size="sm" variant="outline" asChild>
-                <a href={`https://wa.me/${normalizePhone(customer.phone)}?text=${encodeURIComponent(`Halo ${customer.name}, terima kasih telah menjadi pelanggan ${storeName || ""}.`)}`} target="_blank" rel="noreferrer">
+                <a href={`https://wa.me/${normalizePhone(cust.phone)}?text=${encodeURIComponent(`Halo ${cust.name}, terima kasih telah menjadi pelanggan ${storeName || ""}.`)}`} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
                 </a>
               </Button>
-              {onEdit && (
-                <Button size="sm" variant="outline" onClick={onEdit}>
+              {editing ? (
+                <>
+                  <Button size="sm" onClick={saveEdit} disabled={savingEdit}>
+                    {savingEdit ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Simpan
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={savingEdit}>
+                    <X className="h-4 w-4 mr-1" /> Batal
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" onClick={onEdit || startEdit}>
                   <Pencil className="h-4 w-4 mr-1" /> Edit
                 </Button>
               )}
-              {onDelete && (
+              {onDelete && !editing && (
                 <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={onDelete}>
                   <Trash2 className="h-4 w-4 mr-1" /> Hapus
                 </Button>
               )}
+
             </div>
           </div>
         </DialogHeader>
@@ -213,13 +284,23 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
               {info.map((i) => (
                 <div key={i.label} className="flex items-start gap-2">
                   <i.icon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">{i.label}</p>
-                    <p className="text-sm font-medium break-words">{i.value}</p>
+                    {editing && i.key ? (
+                      <Input
+                        className="h-8 mt-1"
+                        type={i.type || "text"}
+                        value={form[i.key] || ""}
+                        onChange={(e) => setForm((f) => ({ ...f, [i.key as string]: e.target.value }))}
+                      />
+                    ) : (
+                      <p className="text-sm font-medium break-words">{i.value}</p>
+                    )}
                   </div>
                 </div>
               ))}
             </CardContent>
+
           </Card>
 
           <Card>
