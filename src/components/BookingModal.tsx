@@ -333,7 +333,7 @@ export default function BookingModal({
       const { data: logs } = await supabase
         .from('activity_logs')
         .select('id, action_type, user_name, user_role, description, created_at')
-        .eq('entity_type', 'booking')
+        .in('entity_type', ['booking', 'Booking'])
         .eq('entity_id', editingBooking.id)
         .order('created_at', { ascending: false })
         .limit(50);
