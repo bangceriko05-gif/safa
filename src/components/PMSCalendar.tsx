@@ -1323,12 +1323,20 @@ export default function PMSCalendar({
                                           ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
                                         </span>
                                       </div>
-                                      {booking.phone && (
-                                        <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
-                                          <Phone className="w-2 h-2" />
-                                          {booking.phone}
-                                        </div>
-                                      )}
+                                      <div className="flex items-center justify-between gap-1">
+                                        {booking.phone ? (
+                                          <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
+                                            <Phone className="w-2 h-2" />
+                                            {booking.phone}
+                                          </div>
+                                        ) : <span />}
+                                        {(booking as any).admin_name && (booking as any).admin_name !== "Unknown" && (
+                                          <div className="text-[10px] text-muted-foreground truncate flex items-center gap-0.5 ml-auto" title={`Dibuat oleh ${(booking as any).admin_name}`}>
+                                            <User className="w-2.5 h-2.5" />
+                                            {(booking as any).admin_name}
+                                          </div>
+                                        )}
+                                      </div>
                                     </Card>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-80 p-4 bg-card border-2 shadow-xl z-50" side="right" align="start">
