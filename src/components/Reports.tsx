@@ -433,17 +433,16 @@ export default function Reports() {
           .select("subtotal, income_id, incomes!inner(date, store_id)")
           .eq("incomes.store_id", currentStore.id)
           .gte("incomes.date", startDateStr)
-          .lte("incomes.date", endDateStr)
+          .lte("incomes.date", endDateStr),
+        // Purchases (only proses + selesai)
+        supabase
+          .from("purchases" as any)
+          .select("amount")
+          .eq("store_id", currentStore.id)
+          .in("process_status", ["proses", "selesai"])
+          .gte("date", startDateStr)
+          .lte("date", endDateStr)
       ]);
-
-      // Purchases (only proses + selesai)
-      const purchasesResult = await supabase
-        .from("purchases" as any)
-        .select("amount")
-        .eq("store_id", currentStore.id)
-        .in("process_status", ["proses", "selesai"])
-        .gte("date", startDateStr)
-        .lte("date", endDateStr);
 
       if (bookingsResult.error) throw bookingsResult.error;
       if (customersResult.error) throw customersResult.error;
