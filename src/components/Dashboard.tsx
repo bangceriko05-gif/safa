@@ -86,7 +86,6 @@ const __prefetchHeavyChunks = () => {
   void import("./UserManagement");
   void import("./PermissionManagement");
   void import("./SettingsPage");
-  void import("./Reports");
 };
 
 const __connectionAllowsPrefetch = () => {
