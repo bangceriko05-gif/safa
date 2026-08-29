@@ -72,6 +72,7 @@ const __prefetchCoreChunks = () => {
   void import("./PMSCalendar");
   void import("./ScheduleTable");
   void import("./BookingModal");
+  void import("./Reports");
 };
 
 const __prefetchHeavyChunks = () => {

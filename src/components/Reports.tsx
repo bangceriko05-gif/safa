@@ -399,7 +399,7 @@ export default function Reports() {
       const startTimestamp = startOfDay(startDate).toISOString();
       const endTimestamp = endOfDay(endDate).toISOString();
 
-      const [bookingsResult, customersResult, expensesResult, incomesResult, incomeProductsResult] = await Promise.all([
+      const [bookingsResult, customersResult, expensesResult, incomesResult, incomeProductsResult, purchasesResult] = await Promise.all([
         supabase
           .from("bookings")
           .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status")
