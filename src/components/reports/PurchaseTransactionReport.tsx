@@ -58,9 +58,26 @@ export default function PurchaseTransactionReport() {
     fetchData();
   }, [timeRange, customDateRange, currentStore, subView]);
 
-  const fetchData = async () => {
+  // Realtime: silently refresh when purchases change so the report never
+  // shows stale data (no loading spinner on background refresh).
+  useEffect(() => {
+    if (!currentStore || subView === "monthly") return;
+    const channel = supabase
+      .channel(`purchase-report-${currentStore.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "purchases", filter: `store_id=eq.${currentStore.id}` },
+        () => fetchData(true)
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentStore, subView, timeRange, customDateRange]);
+
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
@@ -69,44 +86,33 @@ export default function PurchaseTransactionReport() {
       const statusFilter =
         subView === "cancelled" ? ["batal"] : ["proses", "selesai"];
 
+      // Single round-trip: purchases + their items via embedded select
       const { data, error } = await supabase
         .from("purchases" as any)
-        .select("id, bid, date, supplier_name, amount, payment_method, process_status, notes, payment_proof_url")
+        .select("id, bid, date, supplier_name, amount, payment_method, process_status, notes, payment_proof_url, purchase_items(purchase_id, product_name, quantity, unit_price, subtotal)")
         .eq("store_id", currentStore.id)
         .in("process_status", statusFilter)
         .gte("date", startStr)
         .lte("date", endStr)
-        .order("date", { ascending: false });
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      const list = (data || []) as unknown as PurchaseRow[];
-      setRows(list);
-
-      // Fetch items for shown purchases (best-effort, table may not exist)
-      const ids = list.map((r) => r.id);
-      if (ids.length > 0) {
-        try {
-          const { data: itemsData } = await supabase
-            .from("purchase_items" as any)
-            .select("purchase_id, product_name, quantity, unit_price, subtotal")
-            .in("purchase_id", ids);
-          const map: Record<string, PurchaseItemRow[]> = {};
-          (itemsData || []).forEach((it: any) => {
-            if (!map[it.purchase_id]) map[it.purchase_id] = [];
-            map[it.purchase_id].push(it);
-          });
-          setItems(map);
-        } catch {
-          setItems({});
+      const rawList = (data || []) as any[];
+      const list = rawList.map(({ purchase_items, ...r }) => r) as PurchaseRow[];
+      const map: Record<string, PurchaseItemRow[]> = {};
+      rawList.forEach((r) => {
+        if (Array.isArray(r.purchase_items) && r.purchase_items.length > 0) {
+          map[r.id] = r.purchase_items;
         }
-      } else {
-        setItems({});
-      }
+      });
+      setRows(list);
+      setItems(map);
     } catch (err) {
       console.error("Error loading purchases:", err);
-      toast.error("Gagal memuat data pembelian");
+      if (!silent) toast.error("Gagal memuat data pembelian");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
