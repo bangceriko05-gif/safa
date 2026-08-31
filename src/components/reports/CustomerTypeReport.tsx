@@ -916,27 +916,63 @@ export default function CustomerTypeReport() {
                                 {format(parseISO(r.date), "d MMM yyyy", { locale: localeId })}
                               </TableCell>
                               <TableCell className="font-mono text-xs">
-                                <button
-                                  type="button"
-                                  onClick={() => openBid(r)}
-                                  className="text-primary hover:underline font-medium"
-                                  title="Buka detail BID"
-                                >
-                                  {r.bid}
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openBid(r)}
+                                    className="text-primary hover:underline font-medium"
+                                    title="Buka detail BID"
+                                  >
+                                    {r.bid}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void handleCopy(r.bid, "BID");
+                                    }}
+                                    className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    title="Salin BID"
+                                    aria-label="Salin BID"
+                                  >
+                                    {copiedText === r.bid ? (
+                                      <Check className="h-3 w-3 text-green-500" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <Badge variant={r.source === "Kamar" ? "default" : "secondary"}>{r.source}</Badge>
                               </TableCell>
                               <TableCell className="font-medium">
-                                <button
-                                  type="button"
-                                  onClick={() => openCrm(r)}
-                                  className="text-primary hover:underline text-left"
-                                  title="Buka CRM pelanggan"
-                                >
-                                  {r.customerName}
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openCrm(r)}
+                                    className="text-primary hover:underline text-left"
+                                    title="Buka CRM pelanggan"
+                                  >
+                                    {r.customerName}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void handleCopy(r.customerName, "Nama pelanggan");
+                                    }}
+                                    className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    title="Salin nama pelanggan"
+                                    aria-label="Salin nama pelanggan"
+                                  >
+                                    {copiedText === r.customerName ? (
+                                      <Check className="h-3 w-3 text-green-500" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                </div>
                               </TableCell>
                               <TableCell className="tabular-nums">{r.phone}</TableCell>
                               <TableCell>
