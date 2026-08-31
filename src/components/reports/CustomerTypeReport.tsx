@@ -12,7 +12,7 @@ import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, Users, TrendingUp, Repeat, Wallet, Filter } from "lucide-react";
+import { Download, Search, Users, TrendingUp, Repeat, Wallet, Filter, Copy, Check } from "lucide-react";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
 import ReportPagination, { usePagination } from "./ReportPagination";
 import { DateRange } from "react-day-picker";
