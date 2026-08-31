@@ -182,7 +182,20 @@ export default function CustomerTypeReport() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"ringkasan" | "grafik" | "detail">("ringkasan");
   const [bookingPopupId, setBookingPopupId] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const handleCopy = async (text: string, label: string) => {
+    if (!text || text === "-") return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      toast.success(`${label} disalin`);
+      setTimeout(() => setCopiedText((prev) => (prev === text ? null : prev)), 1500);
+    } catch {
+      toast.error("Gagal menyalin ke clipboard");
+    }
+  };
 
   const openBid = (r: TxRow) => {
     if (r.source === "POS") {
