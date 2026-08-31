@@ -854,6 +854,20 @@ export default function SuperAdminStoreManagement() {
               </Popover>
             </div>
 
+            {/* Nominal */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nominal Langganan</Label>
+              <MoneyInput
+                value={subscriptionForm.price}
+                onChange={(n) => setSubscriptionForm((prev) => ({ ...prev, price: n }))}
+                placeholder="0"
+                className="h-11"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Biaya langganan outlet per periode ini. Kosongkan (0) jika gratis.
+              </p>
+            </div>
+
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setSubscriptionEditStore(null)}>
                 Batal
