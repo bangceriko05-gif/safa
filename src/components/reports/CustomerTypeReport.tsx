@@ -829,8 +829,17 @@ export default function CustomerTypeReport() {
             {/* Detail */}
             <TabsContent value="detail" className="space-y-4">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <CardTitle className="text-base">Detail Transaksi ({filteredRows.length})</CardTitle>
+                  <div className="relative w-full sm:w-[260px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari BID, pelanggan, tipe..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4 overflow-x-auto">
                   <Table>
