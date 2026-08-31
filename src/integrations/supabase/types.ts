@@ -3439,6 +3439,7 @@ export type Database = {
           room_limit: number
           slug: string
           subscription_end_date: string | null
+          subscription_price: number | null
           subscription_start_date: string | null
           tax_enabled: boolean
           tax_modes_allowed: string[]
@@ -3457,6 +3458,7 @@ export type Database = {
           room_limit?: number
           slug: string
           subscription_end_date?: string | null
+          subscription_price?: number | null
           subscription_start_date?: string | null
           tax_enabled?: boolean
           tax_modes_allowed?: string[]
@@ -3475,6 +3477,7 @@ export type Database = {
           room_limit?: number
           slug?: string
           subscription_end_date?: string | null
+          subscription_price?: number | null
           subscription_start_date?: string | null
           tax_enabled?: boolean
           tax_modes_allowed?: string[]

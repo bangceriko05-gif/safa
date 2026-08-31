@@ -1,0 +1,2 @@
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS subscription_price numeric DEFAULT 0;
+COMMENT ON COLUMN public.stores.subscription_price IS 'Nominal biaya langganan outlet (diatur oleh Super Admin)';

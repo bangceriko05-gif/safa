@@ -32,6 +32,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { id as localeId } from "date-fns/locale";
 import { logActivity } from "@/utils/activityLogger";
+import { MoneyInput } from "@/components/ui/money-input";
 import StoreFeatureToggle from "./StoreFeatureToggle";
 
 interface Store {
@@ -45,6 +46,7 @@ interface Store {
   updated_at: string;
   subscription_start_date: string | null;
   subscription_end_date: string | null;
+  subscription_price: number | null;
   room_limit: number;
 }
 
@@ -77,7 +79,7 @@ export default function SuperAdminStoreManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
   const [subscriptionEditStore, setSubscriptionEditStore] = useState<Store | null>(null);
-  const [subscriptionForm, setSubscriptionForm] = useState({ start: "", end: "" });
+  const [subscriptionForm, setSubscriptionForm] = useState({ start: "", end: "", price: 0 });
   const [roomLimitEditStore, setRoomLimitEditStore] = useState<Store | null>(null);
   const [roomLimitValue, setRoomLimitValue] = useState("");
   const [formData, setFormData] = useState({
@@ -462,6 +464,7 @@ export default function SuperAdminStoreManagement() {
                               setSubscriptionForm({
                                 start: store.subscription_start_date || "",
                                 end: store.subscription_end_date || "",
+                                price: Number(store.subscription_price) || 0,
                               });
                             }}
                             title="Klik untuk edit tanggal langganan"
@@ -471,6 +474,11 @@ export default function SuperAdminStoreManagement() {
                               <span>{format(parseISO(store.subscription_start_date!), "d MMM yyyy", { locale: localeId })}</span>
                             </div>
                             <div className="text-muted-foreground">s/d {format(parseISO(store.subscription_end_date), "d MMM yyyy", { locale: localeId })}</div>
+                            {Number(store.subscription_price) > 0 && (
+                              <div className="text-[11px] font-medium text-green-600">
+                                {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(Number(store.subscription_price))}
+                              </div>
+                            )}
                             {(() => {
                               const daysLeft = getSubscriptionDaysLeft(store.subscription_end_date) ?? 0;
                               if (daysLeft <= 0) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Expired</Badge>;
@@ -484,7 +492,7 @@ export default function SuperAdminStoreManagement() {
                             className="text-xs text-muted-foreground cursor-pointer hover:text-primary hover:underline"
                             onClick={() => {
                               setSubscriptionEditStore(store);
-                              setSubscriptionForm({ start: "", end: "" });
+                              setSubscriptionForm({ start: "", end: "", price: 0 });
                             }}
                           >
                             Belum diatur
@@ -846,6 +854,20 @@ export default function SuperAdminStoreManagement() {
               </Popover>
             </div>
 
+            {/* Nominal */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nominal Langganan</Label>
+              <MoneyInput
+                value={subscriptionForm.price}
+                onChange={(n) => setSubscriptionForm((prev) => ({ ...prev, price: n }))}
+                placeholder="0"
+                className="h-11"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Biaya langganan outlet per periode ini. Kosongkan (0) jika gratis.
+              </p>
+            </div>
+
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setSubscriptionEditStore(null)}>
                 Batal
@@ -860,6 +882,7 @@ export default function SuperAdminStoreManagement() {
                       .update({
                         subscription_start_date: subscriptionForm.start || null,
                         subscription_end_date: subscriptionForm.end || null,
+                        subscription_price: subscriptionForm.price || 0,
                       })
                       .eq("id", subscriptionEditStore.id);
                     if (error) throw error;
@@ -867,9 +890,9 @@ export default function SuperAdminStoreManagement() {
                       actionType: 'updated',
                       entityType: 'Outlet',
                       entityId: subscriptionEditStore.id,
-                      description: `[Super Admin] Mengubah tanggal langganan outlet ${subscriptionEditStore.name}`,
+                      description: `[Super Admin] Mengubah data langganan outlet ${subscriptionEditStore.name}`,
                     });
-                    toast.success("Tanggal langganan berhasil diupdate");
+                    toast.success("Data langganan berhasil diupdate");
                     setSubscriptionEditStore(null);
                     fetchStores();
                   } catch (error: any) {
