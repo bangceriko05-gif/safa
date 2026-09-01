@@ -17,6 +17,7 @@ import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
+import ThermalPrinterSettings from "./ThermalPrinterSettings";
 import OtaSourceManagement from "./OtaSourceManagement";
 import PaymentMethodSettings from "./PaymentMethodSettings";
 import TaxSettings from "./TaxSettings";
@@ -614,6 +615,14 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             ) : (
               <FeatureInactiveNotice featureName="Nota" icon={Printer} price={getFeatureInfo("settings.print").price} description={getFeatureInfo("settings.print").description} />
             )}
+          </TabsContent>
+        )}
+
+        {/* Room Settings */}
+        {/* Thermal Printer Driver */}
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+          <TabsContent value="printer-driver" className="mt-4">
+            <ThermalPrinterSettings />
           </TabsContent>
         )}
 
