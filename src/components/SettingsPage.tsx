@@ -338,6 +338,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                     <Printer className="mr-1 sm:mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Nota</span>
                   </TabsTrigger>
+                  <TabsTrigger value="printer-driver" className="text-xs sm:text-sm">
+                    <Printer className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Printer</span>
+                  </TabsTrigger>
                   <TabsTrigger value="rooms" className="text-xs sm:text-sm">
                     <Bed className="mr-1 sm:mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Kamar</span>
