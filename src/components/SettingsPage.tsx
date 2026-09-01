@@ -312,68 +312,52 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {(() => {
-          const settingsTabs = ["display", "colors", "notifications"];
-          if (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") {
-            settingsTabs.push("print", "rooms", "ota", "payment-methods", "tax", "pos");
+          const isManager =
+            userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan";
+
+          const tabs: { value: string; label: string; icon: any }[] = [
+            { value: "display", label: "Tampilan", icon: Monitor },
+            { value: "colors", label: "Warna", icon: Palette },
+            { value: "notifications", label: "Notifikasi", icon: Bell },
+          ];
+          if (isManager) {
+            tabs.push(
+              { value: "print", label: "Nota", icon: Printer },
+              { value: "printer-driver", label: "Printer", icon: Printer },
+              { value: "rooms", label: "Kamar", icon: Bed },
+              { value: "ota", label: "OTA", icon: Globe },
+              { value: "payment-methods", label: "Metode Bayar", icon: CreditCard },
+              { value: "tax", label: "PPN", icon: Receipt },
+              { value: "pos", label: "POS", icon: ShoppingCart },
+            );
           }
-          if (userRole === "admin" || userRole === "owner") settingsTabs.push("outlet");
-          const cols = settingsTabs.length;
+          if (userRole === "admin") {
+            tabs.push({ value: "outlet", label: "Outlet", icon: Store });
+          }
 
           return (
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-              <TabsTrigger value="display" className="text-xs sm:text-sm">
-                <Monitor className="mr-1 sm:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Tampilan</span>
-              </TabsTrigger>
-              <TabsTrigger value="colors" className="text-xs sm:text-sm">
-                <Palette className="mr-1 sm:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Warna</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="text-xs sm:text-sm">
-                <Bell className="mr-1 sm:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Notifikasi</span>
-              </TabsTrigger>
-              {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
-                <>
-                  <TabsTrigger value="print" className="text-xs sm:text-sm">
-                    <Printer className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Nota</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="printer-driver" className="text-xs sm:text-sm">
-                    <Printer className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Printer</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="rooms" className="text-xs sm:text-sm">
-                    <Bed className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Kamar</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="ota" className="text-xs sm:text-sm">
-                    <Globe className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">OTA</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="payment-methods" className="text-xs sm:text-sm">
-                    <CreditCard className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Metode Bayar</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="tax" className="text-xs sm:text-sm">
-                    <Receipt className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">PPN</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="pos" className="text-xs sm:text-sm">
-                    <ShoppingCart className="mr-1 sm:mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">POS</span>
-                  </TabsTrigger>
-                </>
-              )}
-              {userRole === "admin" && (
-                <TabsTrigger value="outlet" className="text-xs sm:text-sm">
-                  <Store className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Outlet</span>
-                </TabsTrigger>
-              )}
-            </TabsList>
+            <div className="rounded-xl border bg-card p-1.5 shadow-sm">
+              <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1 bg-transparent p-0">
+                  {tabs.map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <TabsTrigger
+                        key={t.value}
+                        value={t.value}
+                        className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm sm:text-sm"
+                      >
+                        <Icon className="mr-1.5 h-4 w-4 shrink-0" />
+                        <span>{t.label}</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </div>
+            </div>
           );
         })()}
+
 
         {/* Display Settings */}
         <TabsContent value="display" className="mt-4 space-y-4">
