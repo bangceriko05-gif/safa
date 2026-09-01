@@ -17,6 +17,7 @@ import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
+import ThermalPrinterSettings from "./ThermalPrinterSettings";
 import OtaSourceManagement from "./OtaSourceManagement";
 import PaymentMethodSettings from "./PaymentMethodSettings";
 import TaxSettings from "./TaxSettings";
@@ -338,6 +339,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                     <Printer className="mr-1 sm:mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Nota</span>
                   </TabsTrigger>
+                  <TabsTrigger value="printer-driver" className="text-xs sm:text-sm">
+                    <Printer className="mr-1 sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Printer</span>
+                  </TabsTrigger>
                   <TabsTrigger value="rooms" className="text-xs sm:text-sm">
                     <Bed className="mr-1 sm:mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Kamar</span>
@@ -610,6 +615,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             ) : (
               <FeatureInactiveNotice featureName="Nota" icon={Printer} price={getFeatureInfo("settings.print").price} description={getFeatureInfo("settings.print").description} />
             )}
+          </TabsContent>
+        )}
+
+        {/* Thermal Printer Driver */}
+        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+          <TabsContent value="printer-driver" className="mt-4">
+            <ThermalPrinterSettings />
           </TabsContent>
         )}
 
