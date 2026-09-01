@@ -618,7 +618,6 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           </TabsContent>
         )}
 
-        {/* Room Settings */}
         {/* Thermal Printer Driver */}
         {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
           <TabsContent value="printer-driver" className="mt-4">
