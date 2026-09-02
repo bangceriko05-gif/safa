@@ -732,6 +732,24 @@ export default function Dashboard() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+
+                  {sidebarMenuItemsFooter.map((item) => (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        isActive={activeTab === item.key}
+                        onClick={() => setActiveTab(item.key)}
+                        tooltip={item.label}
+                        className={cn(
+                          "gap-3",
+                          activeTab === item.key &&
+                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
 
               </SidebarGroupContent>
