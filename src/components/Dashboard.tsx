@@ -632,8 +632,6 @@ export default function Dashboard() {
   const sidebarMenuItemsTop = [
     { key: "bookings", label: "Kalender", icon: Calendar },
     { key: "transactions", label: "Transaksi", icon: Receipt },
-    { key: "reports", label: "Laporan", icon: FileText },
-    { key: "settings", label: "Pengaturan", icon: Settings },
   ];
   const sidebarMenuItemsBottom = (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan")
     ? [
@@ -641,6 +639,10 @@ export default function Dashboard() {
         { key: "users", label: "Pengguna", icon: UserCog },
       ]
     : [];
+  const sidebarMenuItemsFooter = [
+    { key: "reports", label: "Laporan", icon: FileText },
+    { key: "settings", label: "Pengaturan", icon: Settings },
+  ];
 
   const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
     { key: "products", label: "Produk", icon: ShoppingCart },
