@@ -13,7 +13,6 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
-import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
