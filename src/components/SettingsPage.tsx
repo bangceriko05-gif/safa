@@ -39,6 +39,26 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const check = () => {
+      const overflow = el.scrollWidth > el.clientWidth + 2;
+      const notAtEnd = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+      setShowScrollHint(overflow && notAtEnd);
+    };
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro.disconnect();
+    };
+  }, []);
   
   // Display settings state
   const [displaySize, setDisplaySize] = useState<string>(() => {
