@@ -39,11 +39,11 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
-  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [tabsScrollEl, setTabsScrollEl] = useState<HTMLDivElement | null>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
   useEffect(() => {
-    const el = tabsScrollRef.current;
+    const el = tabsScrollEl;
     if (!el) return;
     const check = () => {
       const overflow = el.scrollWidth > el.clientWidth + 2;
@@ -51,14 +51,22 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
       setShowScrollHint(overflow && notAtEnd);
     };
     check();
+    const raf = requestAnimationFrame(check);
+    const t = setTimeout(check, 300);
     el.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
     const ro = new ResizeObserver(check);
     ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
     return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
       el.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
       ro.disconnect();
     };
-  }, []);
+  }, [tabsScrollEl]);
+
   
   // Display settings state
   const [displaySize, setDisplaySize] = useState<string>(() => {
