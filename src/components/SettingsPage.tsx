@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard, Receipt, ShoppingCart, ChevronRight } from "lucide-react";
+import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard, Receipt, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,7 +40,8 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   const [tabsScrollEl, setTabsScrollEl] = useState<HTMLDivElement | null>(null);
-  const [showScrollHint, setShowScrollHint] = useState(false);
+  const [showLeftScrollHint, setShowLeftScrollHint] = useState(false);
+  const [showRightScrollHint, setShowRightScrollHint] = useState(false);
 
   useEffect(() => {
     const el = tabsScrollEl;
@@ -48,7 +49,8 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     const check = () => {
       const overflow = el.scrollWidth > el.clientWidth + 2;
       const notAtEnd = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
-      setShowScrollHint(overflow && notAtEnd);
+      setShowLeftScrollHint(overflow && el.scrollLeft > 2);
+      setShowRightScrollHint(overflow && notAtEnd);
     };
     check();
     const raf = requestAnimationFrame(check);
@@ -385,7 +387,21 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                   })}
                 </TabsList>
               </div>
-              {showScrollHint && (
+              {showLeftScrollHint && (
+                <div className="absolute inset-y-1.5 left-1.5 flex w-16 items-center justify-start rounded-l-lg bg-gradient-to-r from-card via-card to-transparent">
+                  <button
+                    type="button"
+                    aria-label="Geser tab ke kiri"
+                    onClick={() =>
+                      tabsScrollEl?.scrollBy({ left: -Math.max(160, tabsScrollEl.clientWidth * 0.6), behavior: "smooth" })
+                    }
+                    className="flex h-7 w-7 animate-pulse items-center justify-center rounded-full border bg-background text-primary shadow-sm transition-transform hover:scale-110"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {showRightScrollHint && (
                 <div className="absolute inset-y-1.5 right-1.5 flex w-16 items-center justify-end rounded-r-lg bg-gradient-to-l from-card via-card to-transparent">
                   <button
                     type="button"
