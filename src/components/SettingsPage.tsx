@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard, Receipt, ShoppingCart } from "lucide-react";
+import { Monitor, Bell, Bed, Store, Palette, Type, Printer, Globe, CreditCard, Receipt, ShoppingCart, ChevronRight } from "lucide-react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
-import { useEffect } from "react";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
 import NotificationSettings from "./NotificationSettings";
@@ -39,6 +39,26 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const check = () => {
+      const overflow = el.scrollWidth > el.clientWidth + 2;
+      const notAtEnd = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+      setShowScrollHint(overflow && notAtEnd);
+    };
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro.disconnect();
+    };
+  }, []);
   
   // Display settings state
   const [displaySize, setDisplaySize] = useState<string>(() => {
@@ -336,8 +356,11 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           }
 
           return (
-            <div className="rounded-xl border bg-card p-1.5 shadow-sm">
-              <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="relative rounded-xl border bg-card p-1.5 shadow-sm">
+              <div
+                ref={tabsScrollRef}
+                className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
                 <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1 bg-transparent p-0">
                   {tabs.map((t) => {
                     const Icon = t.icon;
@@ -354,6 +377,11 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                   })}
                 </TabsList>
               </div>
+              {showScrollHint && (
+                <div className="pointer-events-none absolute inset-y-1.5 right-1.5 flex w-10 items-center justify-end rounded-r-lg bg-gradient-to-l from-card via-card/80 to-transparent">
+                  <ChevronRight className="h-4 w-4 animate-pulse text-primary" />
+                </div>
+              )}
             </div>
           );
         })()}

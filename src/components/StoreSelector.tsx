@@ -11,24 +11,26 @@ import { Store } from "lucide-react";
 export default function StoreSelector() {
   const { currentStore, userStores, setCurrentStore } = useStore();
 
-  if (userStores.length <= 1) {
-    return null;
-  }
-
   return (
     <div className="flex items-center gap-2">
       <Store className="h-4 w-4 text-muted-foreground" />
       <Select
-        value={currentStore?.id}
+        value={currentStore?.id || ""}
         onValueChange={(value) => {
           const store = userStores.find(s => s.id === value);
           if (store) setCurrentStore(store);
         }}
+        disabled={userStores.length === 0}
       >
         <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="Pilih Cabang" />
         </SelectTrigger>
         <SelectContent>
+          {userStores.length === 0 && (
+            <SelectItem value="" disabled>
+              Tidak ada outlet
+            </SelectItem>
+          )}
           {userStores.map((store) => (
             <SelectItem key={store.id} value={store.id}>
               {store.name}
