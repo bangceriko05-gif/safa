@@ -366,10 +366,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           return (
             <div className="relative rounded-xl border bg-card p-1.5 shadow-sm">
               <div
-                ref={tabsScrollRef}
+                ref={setTabsScrollEl}
                 className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1 bg-transparent p-0">
+                <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1 bg-transparent p-0 pr-10">
                   {tabs.map((t) => {
                     const Icon = t.icon;
                     return (
@@ -386,12 +386,22 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                 </TabsList>
               </div>
               {showScrollHint && (
-                <div className="pointer-events-none absolute inset-y-1.5 right-1.5 flex w-10 items-center justify-end rounded-r-lg bg-gradient-to-l from-card via-card/80 to-transparent">
-                  <ChevronRight className="h-4 w-4 animate-pulse text-primary" />
+                <div className="absolute inset-y-1.5 right-1.5 flex w-16 items-center justify-end rounded-r-lg bg-gradient-to-l from-card via-card to-transparent">
+                  <button
+                    type="button"
+                    aria-label="Geser tab ke kanan"
+                    onClick={() =>
+                      tabsScrollEl?.scrollBy({ left: Math.max(160, tabsScrollEl.clientWidth * 0.6), behavior: "smooth" })
+                    }
+                    className="flex h-7 w-7 animate-pulse items-center justify-center rounded-full border bg-background text-primary shadow-sm transition-transform hover:scale-110"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
               )}
             </div>
           );
+
         })()}
 
 
