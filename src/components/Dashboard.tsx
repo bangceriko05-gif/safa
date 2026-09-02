@@ -848,44 +848,8 @@ export default function Dashboard() {
               {/* Tabs wrapper - keeps TabsContent working */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <Suspense fallback={null}>
-                {/* Mobile: Dropdown */}
-                <div className="lg:hidden">
-                  <Select value={activeTab} onValueChange={setActiveTab}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bookings">
-                        <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Kalender</span>
-                      </SelectItem>
-                      <SelectItem value="transactions">
-                        <span className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Transaksi</span>
-                      </SelectItem>
-                      <SelectItem value="customers">
-                        <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Pelanggan</span>
-                      </SelectItem>
-                      <SelectItem value="reports">
-                        <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Laporan</span>
-                      </SelectItem>
-                      <SelectItem value="settings">
-                        <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Pengaturan</span>
-                      </SelectItem>
-                      <SelectItem value="rooms">
-                        <span className="flex items-center gap-2"><Package className="h-4 w-4" /> Produk & Inventori</span>
-                      </SelectItem>
-                      {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
-                        <>
-                          <SelectItem value="activity">
-                            <span className="flex items-center gap-2"><History className="h-4 w-4" /> Log</span>
-                          </SelectItem>
-                          <SelectItem value="users">
-                            <span className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Pengguna</span>
-                          </SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+
 
           <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
             {isFeatureEnabled("calendar") ? (
