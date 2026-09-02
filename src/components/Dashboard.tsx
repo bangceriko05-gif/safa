@@ -632,8 +632,6 @@ export default function Dashboard() {
   const sidebarMenuItemsTop = [
     { key: "bookings", label: "Kalender", icon: Calendar },
     { key: "transactions", label: "Transaksi", icon: Receipt },
-    { key: "reports", label: "Laporan", icon: FileText },
-    { key: "settings", label: "Pengaturan", icon: Settings },
   ];
   const sidebarMenuItemsBottom = (userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan")
     ? [
@@ -641,6 +639,10 @@ export default function Dashboard() {
         { key: "users", label: "Pengguna", icon: UserCog },
       ]
     : [];
+  const sidebarMenuItemsFooter = [
+    { key: "reports", label: "Laporan", icon: FileText },
+    { key: "settings", label: "Pengaturan", icon: Settings },
+  ];
 
   const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
     { key: "products", label: "Produk", icon: ShoppingCart },
@@ -714,6 +716,24 @@ export default function Dashboard() {
                   {/* Point of Sale is a master toggle controlled by Super Admin; sub-features appear in their respective menus */}
 
                   {sidebarMenuItemsBottom.map((item) => (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        isActive={activeTab === item.key}
+                        onClick={() => setActiveTab(item.key)}
+                        tooltip={item.label}
+                        className={cn(
+                          "gap-3",
+                          activeTab === item.key &&
+                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+
+                  {sidebarMenuItemsFooter.map((item) => (
                     <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton
                         isActive={activeTab === item.key}
