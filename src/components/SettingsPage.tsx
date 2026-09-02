@@ -39,11 +39,11 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
-  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [tabsScrollEl, setTabsScrollEl] = useState<HTMLDivElement | null>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
   useEffect(() => {
-    const el = tabsScrollRef.current;
+    const el = tabsScrollEl;
     if (!el) return;
     const check = () => {
       const overflow = el.scrollWidth > el.clientWidth + 2;
@@ -51,14 +51,22 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
       setShowScrollHint(overflow && notAtEnd);
     };
     check();
+    const raf = requestAnimationFrame(check);
+    const t = setTimeout(check, 300);
     el.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
     const ro = new ResizeObserver(check);
     ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
     return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
       el.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
       ro.disconnect();
     };
-  }, []);
+  }, [tabsScrollEl]);
+
   
   // Display settings state
   const [displaySize, setDisplaySize] = useState<string>(() => {
@@ -358,10 +366,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           return (
             <div className="relative rounded-xl border bg-card p-1.5 shadow-sm">
               <div
-                ref={tabsScrollRef}
+                ref={setTabsScrollEl}
                 className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1 bg-transparent p-0">
+                <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1 bg-transparent p-0 pr-10">
                   {tabs.map((t) => {
                     const Icon = t.icon;
                     return (
@@ -378,12 +386,22 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                 </TabsList>
               </div>
               {showScrollHint && (
-                <div className="pointer-events-none absolute inset-y-1.5 right-1.5 flex w-10 items-center justify-end rounded-r-lg bg-gradient-to-l from-card via-card/80 to-transparent">
-                  <ChevronRight className="h-4 w-4 animate-pulse text-primary" />
+                <div className="absolute inset-y-1.5 right-1.5 flex w-16 items-center justify-end rounded-r-lg bg-gradient-to-l from-card via-card to-transparent">
+                  <button
+                    type="button"
+                    aria-label="Geser tab ke kanan"
+                    onClick={() =>
+                      tabsScrollEl?.scrollBy({ left: Math.max(160, tabsScrollEl.clientWidth * 0.6), behavior: "smooth" })
+                    }
+                    className="flex h-7 w-7 animate-pulse items-center justify-center rounded-full border bg-background text-primary shadow-sm transition-transform hover:scale-110"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
               )}
             </div>
           );
+
         })()}
 
 
