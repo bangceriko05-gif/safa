@@ -134,11 +134,76 @@ export default function ScheduleTable({
     onConfirmCallback: (() => Promise<void>) | null;
   }>({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null });
 
-  const timeSlots = Array.from({ length: 20 }, (_, i) => {
-    const hour = i + 9;
-    const displayHour = hour >= 24 ? hour - 24 : hour;
-    return `${displayHour.toString().padStart(2, "0")}:00`;
-  });
+  // ===== Konfigurasi slot waktu per outlet =====
+  const isFunfury = /funfury/i.test(currentStore?.name || "");
+  const [scheduleStart, setScheduleStart] = useState("09:00");
+  const [scheduleEnd, setScheduleEnd] = useState("05:00");
+  const [slotMinutes, setSlotMinutes] = useState(60);
+
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(":").map((v) => parseInt(v) || 0);
+    return h * 60 + m;
+  };
+  const fromMinutes = (m: number) => {
+    const total = ((m % 1440) + 1440) % 1440;
+    return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60)
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const startMin = toMinutes(scheduleStart);
+  const rawEndMin = toMinutes(scheduleEnd);
+  const endMinAbs = rawEndMin <= startMin ? rawEndMin + 1440 : rawEndMin;
+  const step = isFunfury ? slotMinutes : 60;
+
+  const timeSlots = (() => {
+    const slots: string[] = [];
+    for (let m = startMin; m < endMinAbs; m += step) slots.push(fromMinutes(m));
+    return slots.length > 0 ? slots : ["09:00"];
+  })();
+
+  // Normalisasi menit agar jam dini hari berada setelah jam mulai
+  const normMin = (t: string) => {
+    const m = toMinutes(t);
+    return m < startMin ? m + 1440 : m;
+  };
+
+  useEffect(() => {
+    if (!currentStore) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("schedule_start_time, schedule_end_time, schedule_slot_minutes")
+        .eq("id", currentStore.id)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setScheduleStart((data as any).schedule_start_time || "09:00");
+      setScheduleEnd((data as any).schedule_end_time || "05:00");
+      setSlotMinutes((data as any).schedule_slot_minutes || 60);
+    })();
+    const handler = () => {
+      if (!cancelled) {
+        supabase
+          .from("stores")
+          .select("schedule_start_time, schedule_end_time, schedule_slot_minutes")
+          .eq("id", currentStore.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (!data) return;
+            setScheduleStart((data as any).schedule_start_time || "09:00");
+            setScheduleEnd((data as any).schedule_end_time || "05:00");
+            setSlotMinutes((data as any).schedule_slot_minutes || 60);
+          });
+      }
+    };
+    window.addEventListener("schedule-settings-changed", handler);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("schedule-settings-changed", handler);
+    };
+  }, [currentStore?.id]);
+
 
   useEffect(() => {
     if (!currentStore) return;
