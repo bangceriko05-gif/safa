@@ -15,6 +15,8 @@ import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
+import ScheduleTimeSettings from "./ScheduleTimeSettings";
+
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
 import ThermalPrinterSettings from "./ThermalPrinterSettings";
