@@ -134,11 +134,76 @@ export default function ScheduleTable({
     onConfirmCallback: (() => Promise<void>) | null;
   }>({ open: false, bookingId: "", bookingData: null, onConfirmCallback: null });
 
-  const timeSlots = Array.from({ length: 20 }, (_, i) => {
-    const hour = i + 9;
-    const displayHour = hour >= 24 ? hour - 24 : hour;
-    return `${displayHour.toString().padStart(2, "0")}:00`;
-  });
+  // ===== Konfigurasi slot waktu per outlet =====
+  const isFunfury = /funfury/i.test(currentStore?.name || "");
+  const [scheduleStart, setScheduleStart] = useState("09:00");
+  const [scheduleEnd, setScheduleEnd] = useState("05:00");
+  const [slotMinutes, setSlotMinutes] = useState(60);
+
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(":").map((v) => parseInt(v) || 0);
+    return h * 60 + m;
+  };
+  const fromMinutes = (m: number) => {
+    const total = ((m % 1440) + 1440) % 1440;
+    return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60)
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const startMin = toMinutes(scheduleStart);
+  const rawEndMin = toMinutes(scheduleEnd);
+  const endMinAbs = rawEndMin <= startMin ? rawEndMin + 1440 : rawEndMin;
+  const step = isFunfury ? slotMinutes : 60;
+
+  const timeSlots = (() => {
+    const slots: string[] = [];
+    for (let m = startMin; m < endMinAbs; m += step) slots.push(fromMinutes(m));
+    return slots.length > 0 ? slots : ["09:00"];
+  })();
+
+  // Normalisasi menit agar jam dini hari berada setelah jam mulai
+  const normMin = (t: string) => {
+    const m = toMinutes(t);
+    return m < startMin ? m + 1440 : m;
+  };
+
+  useEffect(() => {
+    if (!currentStore) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("schedule_start_time, schedule_end_time, schedule_slot_minutes")
+        .eq("id", currentStore.id)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setScheduleStart((data as any).schedule_start_time || "09:00");
+      setScheduleEnd((data as any).schedule_end_time || "05:00");
+      setSlotMinutes((data as any).schedule_slot_minutes || 60);
+    })();
+    const handler = () => {
+      if (!cancelled) {
+        supabase
+          .from("stores")
+          .select("schedule_start_time, schedule_end_time, schedule_slot_minutes")
+          .eq("id", currentStore.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (!data) return;
+            setScheduleStart((data as any).schedule_start_time || "09:00");
+            setScheduleEnd((data as any).schedule_end_time || "05:00");
+            setSlotMinutes((data as any).schedule_slot_minutes || 60);
+          });
+      }
+    };
+    window.addEventListener("schedule-settings-changed", handler);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("schedule-settings-changed", handler);
+    };
+  }, [currentStore?.id]);
+
 
   useEffect(() => {
     if (!currentStore) return;
@@ -874,73 +939,45 @@ export default function ScheduleTable({
     setConfirmReadyRoom(null);
   };
 
-  // Check if a slot is the start of a booking
-  // Also handles bookings that started before the first visible time slot
+  // Check if a slot is the start of a booking (minute-based, supports 30-min slots)
   const isBookingStart = (roomId: string, time: string) => {
-    const slotHour = parseInt(time.split(":")[0]);
-    const firstVisibleHour = 9; // First hour in timeSlots
-    
+    const slot = normMin(time);
+
     return bookings.find((b) => {
       if (b.room_id !== roomId) return false;
-      
-      const bookingStartHour = parseInt(b.start_time.split(":")[0]);
-      let bookingEndHour = parseInt(b.end_time.split(":")[0]);
-      
-      // Handle overnight bookings
-      if (bookingEndHour < bookingStartHour) {
-        bookingEndHour += 24;
-      }
-      
-      // Exact match: booking starts at this slot
-      if (bookingStartHour === slotHour) {
-        return true;
-      }
-      
-      // Booking started before visible hours (e.g., 08:00) but is still active
-      // Show it at the first visible slot
-      if (bookingStartHour < firstVisibleHour && slotHour === firstVisibleHour) {
-        // Check if booking is still active at first visible hour
-        return bookingEndHour > firstVisibleHour;
-      }
-      
+
+      const bStart = normMin(b.start_time.slice(0, 5));
+      let bEnd = normMin(b.end_time.slice(0, 5));
+      if (bEnd <= bStart) bEnd += 1440;
+
+      // Booking dimulai tepat di slot ini (atau di dalam slot ini)
+      if (bStart >= slot && bStart < slot + step) return true;
+
+      // Booking dimulai sebelum jam tampil pertama tapi masih berjalan
+      if (bStart < startMin && slot === startMin) return bEnd > startMin;
+
       return false;
     });
   };
 
   // Check if a slot is occupied by a booking (but not the start)
   const isSlotOccupied = (roomId: string, time: string) => {
-    const firstVisibleHour = 9; // First hour in timeSlots
-    let slotHour = parseInt(time.split(":")[0]);
-    
-    // Convert slot hour to 24+ format if it's in the early morning
-    if (slotHour >= 0 && slotHour <= 5) {
-      slotHour += 24;
-    }
-    
+    const slot = normMin(time);
+
     return bookings.some((b) => {
       if (b.room_id !== roomId) return false;
-      
-      const bookingStartHour = parseInt(b.start_time.split(":")[0]);
-      let startHour = bookingStartHour;
-      let endHour = parseInt(b.end_time.split(":")[0]);
-      
-      if (endHour < startHour) {
-        endHour += 24;
-      }
-      
-      // If booking started before visible hours and we're at the first visible hour,
-      // it's shown as a booking start, not occupied
-      if (startHour < firstVisibleHour && slotHour === firstVisibleHour) {
-        return false;
-      }
-      
-      // For bookings that started before visible hours, treat firstVisibleHour as the effective start
-      const effectiveStart = startHour < firstVisibleHour ? firstVisibleHour : startHour;
-      
-      // Check if this slot is occupied but not the start
-      return slotHour > effectiveStart && slotHour < endHour;
+
+      const bStart = normMin(b.start_time.slice(0, 5));
+      let bEnd = normMin(b.end_time.slice(0, 5));
+      if (bEnd <= bStart) bEnd += 1440;
+
+      if (bStart < startMin && slot === startMin) return false;
+
+      const effectiveStart = bStart < startMin ? startMin : bStart;
+      return slot >= effectiveStart + step && slot < bEnd;
     });
   };
+
 
   // Filter & deduplicate rooms: show only active rooms for regular users
   const roomsByStatus = rooms;
@@ -1142,7 +1179,8 @@ export default function ScheduleTable({
             </thead>
             <tbody>
               {timeSlots.map((time, index) => {
-                const nextTime = timeSlots[index + 1] || "05:00";
+                const nextTime = timeSlots[index + 1] || fromMinutes(normMin(time) + step);
+
                 return (
                   <tr key={time} className="border-b-2 border-border hover:bg-muted/30 transition-colors">
                     <td className={`${size.cellPadding} ${size.fontSize} font-medium sticky left-0 bg-card border-r-2 border-border z-10`}>
@@ -1192,15 +1230,17 @@ export default function ScheduleTable({
                         const bgColor = isBatal ? `${statusColor}20` : `${statusColor}40`; // Add transparency
                         const borderColor = statusColor;
                           
-                        // Calculate the actual rowSpan based on visible time slots
-                        const bookingStartHour = parseInt(booking.start_time.split(":")[0]);
-                        const firstVisibleHour = 9;
-                        const bookingEndHour = parseInt(booking.end_time.split(":")[0]);
-                        
-                        // If booking started before visible hours, calculate rowSpan from first visible hour
-                        const effectiveRowSpan = bookingStartHour < firstVisibleHour 
-                          ? bookingEndHour - firstVisibleHour 
-                          : booking.duration;
+                        // Calculate the actual rowSpan based on visible time slots (minute-based)
+                        const bStartMin = normMin(booking.start_time.slice(0, 5));
+                        let bEndMin = normMin(booking.end_time.slice(0, 5));
+                        if (bEndMin <= bStartMin) bEndMin += 1440;
+                        const effStartMin = bStartMin < startMin ? startMin : bStartMin;
+                        const effEndMin = Math.min(bEndMin, endMinAbs);
+                        const effectiveRowSpan = Math.max(
+                          1,
+                          Math.ceil((effEndMin - effStartMin) / step)
+                        );
+
                           
                         return (
                           <td 

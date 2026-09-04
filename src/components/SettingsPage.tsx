@@ -15,6 +15,8 @@ import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import StoreManagement from "./StoreManagement";
 import VariantScheduleSettings from "./VariantScheduleSettings";
+import ScheduleTimeSettings from "./ScheduleTimeSettings";
+
 import NotificationSettings from "./NotificationSettings";
 import PrintSettingsComponent from "./PrintSettings";
 import ThermalPrinterSettings from "./ThermalPrinterSettings";
@@ -673,10 +675,13 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
 
         {/* Room Settings */}
         {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
-          <TabsContent value="rooms" className="mt-4">
+          <TabsContent value="rooms" className="mt-4 space-y-4">
             {isFeatureEnabled("settings.rooms") ? (
               <>
+                {/^.*funfury.*$/i.test(currentStore?.name || "") && <ScheduleTimeSettings />}
+
                 <Card>
+
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Bed className="h-5 w-5" />
