@@ -1179,7 +1179,8 @@ export default function ScheduleTable({
             </thead>
             <tbody>
               {timeSlots.map((time, index) => {
-                const nextTime = timeSlots[index + 1] || "05:00";
+                const nextTime = timeSlots[index + 1] || fromMinutes(normMin(time) + step);
+
                 return (
                   <tr key={time} className="border-b-2 border-border hover:bg-muted/30 transition-colors">
                     <td className={`${size.cellPadding} ${size.fontSize} font-medium sticky left-0 bg-card border-r-2 border-border z-10`}>
