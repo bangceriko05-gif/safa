@@ -3437,6 +3437,9 @@ export type Database = {
           location: string | null
           name: string
           room_limit: number
+          schedule_end_time: string
+          schedule_slot_minutes: number
+          schedule_start_time: string
           slug: string
           subscription_end_date: string | null
           subscription_price: number | null
@@ -3456,6 +3459,9 @@ export type Database = {
           location?: string | null
           name: string
           room_limit?: number
+          schedule_end_time?: string
+          schedule_slot_minutes?: number
+          schedule_start_time?: string
           slug: string
           subscription_end_date?: string | null
           subscription_price?: number | null
@@ -3475,6 +3481,9 @@ export type Database = {
           location?: string | null
           name?: string
           room_limit?: number
+          schedule_end_time?: string
+          schedule_slot_minutes?: number
+          schedule_start_time?: string
           slug?: string
           subscription_end_date?: string | null
           subscription_price?: number | null
