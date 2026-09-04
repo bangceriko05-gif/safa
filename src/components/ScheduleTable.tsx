@@ -1230,15 +1230,17 @@ export default function ScheduleTable({
                         const bgColor = isBatal ? `${statusColor}20` : `${statusColor}40`; // Add transparency
                         const borderColor = statusColor;
                           
-                        // Calculate the actual rowSpan based on visible time slots
-                        const bookingStartHour = parseInt(booking.start_time.split(":")[0]);
-                        const firstVisibleHour = 9;
-                        const bookingEndHour = parseInt(booking.end_time.split(":")[0]);
-                        
-                        // If booking started before visible hours, calculate rowSpan from first visible hour
-                        const effectiveRowSpan = bookingStartHour < firstVisibleHour 
-                          ? bookingEndHour - firstVisibleHour 
-                          : booking.duration;
+                        // Calculate the actual rowSpan based on visible time slots (minute-based)
+                        const bStartMin = normMin(booking.start_time.slice(0, 5));
+                        let bEndMin = normMin(booking.end_time.slice(0, 5));
+                        if (bEndMin <= bStartMin) bEndMin += 1440;
+                        const effStartMin = bStartMin < startMin ? startMin : bStartMin;
+                        const effEndMin = Math.min(bEndMin, endMinAbs);
+                        const effectiveRowSpan = Math.max(
+                          1,
+                          Math.ceil((effEndMin - effStartMin) / step)
+                        );
+
                           
                         return (
                           <td 
