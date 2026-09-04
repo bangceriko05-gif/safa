@@ -157,7 +157,7 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
         const [{ data: bookings }, { data: orders }] = await Promise.all([
           supabase
             .from("bookings")
-            .select("total_amount, price, check_in, date, status, phone")
+            .select("price, date, status, phone")
             .eq("store_id", storeId)
             .in("phone", phoneVariants),
           supabase
@@ -171,13 +171,14 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
           ...(bookings || [])
             .filter((b: any) => String(b.status || "").toLowerCase() !== "batal")
             .map((b: any) => ({
-              amount: Number(b.total_amount ?? b.price ?? 0),
-              date: b.check_in || b.date,
+              amount: Number(b.price ?? 0),
+              date: b.date,
             })),
           ...(orders || [])
             .filter((o: any) => String(o.process_status || "").toLowerCase() !== "batal")
             .map((o: any) => ({ amount: Number(o.total_amount || 0), date: o.date })),
         ];
+
 
         const totalSpend = rows.reduce((s, r) => s + r.amount, 0);
         const lastVisit = rows
