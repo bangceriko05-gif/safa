@@ -145,25 +145,40 @@ export default function BookingCustomerCRMCard({ storeId, name, phone }: Props) 
           setLoading(false);
         }
 
+        // Phone numbers can be stored in several formats (0812…, 62812…, +62 812-…).
+        // Match on every common variant so history is not missed.
+        const digits = (cust.phone || "").replace(/\D/g, "");
+        const local = digits.replace(/^62/, "0");
+        const intl = digits.replace(/^0/, "62");
+        const phoneVariants = Array.from(
+          new Set([cust.phone, digits, local, intl, `+${intl}`].filter(Boolean) as string[])
+        );
+
         const [{ data: bookings }, { data: orders }] = await Promise.all([
           supabase
             .from("bookings")
-            .select("total_amount, check_in, status")
+            .select("total_amount, price, check_in, date, status, phone")
             .eq("store_id", storeId)
-            .eq("phone", cust.phone),
+            .in("phone", phoneVariants),
           supabase
             .from("booking_orders")
-            .select("total_amount, date, customer_phone")
+            .select("total_amount, date, customer_phone, process_status")
             .eq("store_id", storeId)
-            .eq("customer_phone", cust.phone),
+            .in("customer_phone", phoneVariants),
         ]);
 
         const rows = [
           ...(bookings || [])
-            .filter((b: any) => b.status !== "batal")
-            .map((b: any) => ({ amount: Number(b.total_amount || 0), date: b.check_in })),
-          ...(orders || []).map((o: any) => ({ amount: Number(o.total_amount || 0), date: o.date })),
+            .filter((b: any) => String(b.status || "").toLowerCase() !== "batal")
+            .map((b: any) => ({
+              amount: Number(b.total_amount ?? b.price ?? 0),
+              date: b.check_in || b.date,
+            })),
+          ...(orders || [])
+            .filter((o: any) => String(o.process_status || "").toLowerCase() !== "batal")
+            .map((o: any) => ({ amount: Number(o.total_amount || 0), date: o.date })),
         ];
+
         const totalSpend = rows.reduce((s, r) => s + r.amount, 0);
         const lastVisit = rows
           .map((r) => r.date)
