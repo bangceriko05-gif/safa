@@ -939,73 +939,45 @@ export default function ScheduleTable({
     setConfirmReadyRoom(null);
   };
 
-  // Check if a slot is the start of a booking
-  // Also handles bookings that started before the first visible time slot
+  // Check if a slot is the start of a booking (minute-based, supports 30-min slots)
   const isBookingStart = (roomId: string, time: string) => {
-    const slotHour = parseInt(time.split(":")[0]);
-    const firstVisibleHour = 9; // First hour in timeSlots
-    
+    const slot = normMin(time);
+
     return bookings.find((b) => {
       if (b.room_id !== roomId) return false;
-      
-      const bookingStartHour = parseInt(b.start_time.split(":")[0]);
-      let bookingEndHour = parseInt(b.end_time.split(":")[0]);
-      
-      // Handle overnight bookings
-      if (bookingEndHour < bookingStartHour) {
-        bookingEndHour += 24;
-      }
-      
-      // Exact match: booking starts at this slot
-      if (bookingStartHour === slotHour) {
-        return true;
-      }
-      
-      // Booking started before visible hours (e.g., 08:00) but is still active
-      // Show it at the first visible slot
-      if (bookingStartHour < firstVisibleHour && slotHour === firstVisibleHour) {
-        // Check if booking is still active at first visible hour
-        return bookingEndHour > firstVisibleHour;
-      }
-      
+
+      const bStart = normMin(b.start_time.slice(0, 5));
+      let bEnd = normMin(b.end_time.slice(0, 5));
+      if (bEnd <= bStart) bEnd += 1440;
+
+      // Booking dimulai tepat di slot ini (atau di dalam slot ini)
+      if (bStart >= slot && bStart < slot + step) return true;
+
+      // Booking dimulai sebelum jam tampil pertama tapi masih berjalan
+      if (bStart < startMin && slot === startMin) return bEnd > startMin;
+
       return false;
     });
   };
 
   // Check if a slot is occupied by a booking (but not the start)
   const isSlotOccupied = (roomId: string, time: string) => {
-    const firstVisibleHour = 9; // First hour in timeSlots
-    let slotHour = parseInt(time.split(":")[0]);
-    
-    // Convert slot hour to 24+ format if it's in the early morning
-    if (slotHour >= 0 && slotHour <= 5) {
-      slotHour += 24;
-    }
-    
+    const slot = normMin(time);
+
     return bookings.some((b) => {
       if (b.room_id !== roomId) return false;
-      
-      const bookingStartHour = parseInt(b.start_time.split(":")[0]);
-      let startHour = bookingStartHour;
-      let endHour = parseInt(b.end_time.split(":")[0]);
-      
-      if (endHour < startHour) {
-        endHour += 24;
-      }
-      
-      // If booking started before visible hours and we're at the first visible hour,
-      // it's shown as a booking start, not occupied
-      if (startHour < firstVisibleHour && slotHour === firstVisibleHour) {
-        return false;
-      }
-      
-      // For bookings that started before visible hours, treat firstVisibleHour as the effective start
-      const effectiveStart = startHour < firstVisibleHour ? firstVisibleHour : startHour;
-      
-      // Check if this slot is occupied but not the start
-      return slotHour > effectiveStart && slotHour < endHour;
+
+      const bStart = normMin(b.start_time.slice(0, 5));
+      let bEnd = normMin(b.end_time.slice(0, 5));
+      if (bEnd <= bStart) bEnd += 1440;
+
+      if (bStart < startMin && slot === startMin) return false;
+
+      const effectiveStart = bStart < startMin ? startMin : bStart;
+      return slot >= effectiveStart + step && slot < bEnd;
     });
   };
+
 
   // Filter & deduplicate rooms: show only active rooms for regular users
   const roomsByStatus = rooms;
