@@ -487,6 +487,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const finalNote = [discountNote, svcNote, customerNote, note].filter(Boolean).join(" ").trim();
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : null,
+        room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? null,
         store_id: currentStore.id,
         date,
         payment_method: paymentMethod,
