@@ -61,6 +61,7 @@ const App = () => (
               <Route path="/receipt/deposit" element={<DepositReceiptPage />} />
               <Route path="/super-admin" element={<SuperAdmin />} />
               <Route path="/pos-order/:id" element={<PosOrderDetail />} />
+              <Route path="/room-scan" element={<RoomScan />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
