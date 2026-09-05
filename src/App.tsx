@@ -19,6 +19,7 @@ const TransactionReceiptPage = lazy(() => import("./pages/TransactionReceipt"));
 const DepositReceiptPage = lazy(() => import("./pages/DepositReceipt"));
 const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
 const PosOrderDetail = lazy(() => import("./pages/PosOrderDetail"));
+const RoomScan = lazy(() => import("./pages/RoomScan"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
