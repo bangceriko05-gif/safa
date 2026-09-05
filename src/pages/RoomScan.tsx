@@ -43,10 +43,10 @@ export default function RoomScan() {
     if (!code) return;
     setLoading(true);
     setNotFound(false);
-    const { data: roomData } = await supabase
+    const { data: roomData } = await (supabase as any)
       .from("rooms")
       .select("id, name")
-      .eq("barcode_code" as any, code.trim().toUpperCase())
+      .eq("barcode_code", code.trim().toUpperCase())
       .maybeSingle();
 
     if (!roomData) {
@@ -58,10 +58,10 @@ export default function RoomScan() {
     }
     setRoom(roomData as any);
 
-    const { data: orderData } = await supabase
+    const { data: orderData } = await (supabase as any)
       .from("booking_orders")
       .select("id, bid, date, total_amount, payment_status, process_status, customer_name, booking_order_items(product_name, quantity, subtotal)")
-      .eq("room_id" as any, (roomData as any).id)
+      .eq("room_id", (roomData as any).id)
       .order("created_at", { ascending: false })
       .limit(50);
 
