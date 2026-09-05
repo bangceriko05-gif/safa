@@ -54,9 +54,10 @@ interface AddOrderModalProps {
   order?: any | null;
   onSaved: () => void;
   posMode?: boolean;
+  presetRoomId?: string | null;
 }
 
-export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false }: AddOrderModalProps) {
+export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false, presetRoomId = null }: AddOrderModalProps) {
   const { currentStore } = useStore();
   const { methods } = usePaymentMethods();
   const [products, setProducts] = useState<Product[]>([]);
@@ -486,6 +487,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const finalNote = [discountNote, svcNote, customerNote, note].filter(Boolean).join(" ").trim();
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : null,
+        room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? null,
         store_id: currentStore.id,
         date,
         payment_method: paymentMethod,

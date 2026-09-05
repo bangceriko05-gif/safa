@@ -30,11 +30,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
+import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search, QrCode } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 const ProductManagement = lazy(() => import("./ProductManagement"));
 const CategoryManagement = lazy(() => import("./CategoryManagement"));
 const InventoryManagement = lazy(() => import("./inventory/InventoryManagement"));
+const RoomBarcodeSettings = lazy(() => import("./rooms/RoomBarcodeSettings"));
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
@@ -75,6 +76,7 @@ interface RoomManagementProps {
 }
 
 export default function RoomManagement({ section }: RoomManagementProps = {}) {
+  const [roomTab, setRoomTab] = useState<"kelola" | "settingan">("kelola");
   // Scroll to selected sub-section when changed via sidebar
   useEffect(() => {
     if (!section) return;
@@ -627,6 +629,30 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       {showRooms && (
       <div id="pi-section-rooms" className="scroll-mt-4">
       {isFeatureEnabled("products_inventory.rooms") ? (
+      <>
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={roomTab === "kelola" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setRoomTab("kelola")}
+        >
+          <Bed className="mr-2 h-4 w-4" />
+          Kelola Kamar
+        </Button>
+        <Button
+          variant={roomTab === "settingan" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setRoomTab("settingan")}
+        >
+          <QrCode className="mr-2 h-4 w-4" />
+          Settingan Kamar
+        </Button>
+      </div>
+      {roomTab === "settingan" ? (
+        <Suspense fallback={<AnkaLoader />}>
+          <RoomBarcodeSettings />
+        </Suspense>
+      ) : (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -795,6 +821,8 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         </CardContent>
         )}
       </Card>
+      )}
+      </>
       ) : (
         <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("products_inventory.rooms").price} description={getFeatureInfo("products_inventory.rooms").description} />
       )}

@@ -19,6 +19,7 @@ const TransactionReceiptPage = lazy(() => import("./pages/TransactionReceipt"));
 const DepositReceiptPage = lazy(() => import("./pages/DepositReceipt"));
 const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
 const PosOrderDetail = lazy(() => import("./pages/PosOrderDetail"));
+const RoomScan = lazy(() => import("./pages/RoomScan"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/receipt/deposit" element={<DepositReceiptPage />} />
               <Route path="/super-admin" element={<SuperAdmin />} />
               <Route path="/pos-order/:id" element={<PosOrderDetail />} />
+              <Route path="/room-scan" element={<RoomScan />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
