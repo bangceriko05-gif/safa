@@ -461,6 +461,7 @@ export type Database = {
           process_status: string
           reference_no: string | null
           reference_no_2: string | null
+          room_id: string | null
           rounding: number
           service_charge: number
           service_charge_type: string | null
@@ -500,6 +501,7 @@ export type Database = {
           process_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
+          room_id?: string | null
           rounding?: number
           service_charge?: number
           service_charge_type?: string | null
@@ -539,6 +541,7 @@ export type Database = {
           process_status?: string
           reference_no?: string | null
           reference_no_2?: string | null
+          room_id?: string | null
           rounding?: number
           service_charge?: number
           service_charge_type?: string | null
@@ -559,6 +562,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_orders_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {
@@ -2957,6 +2967,7 @@ export type Database = {
       }
       rooms: {
         Row: {
+          barcode_code: string | null
           category: string | null
           category_id: string | null
           created_at: string
@@ -2967,6 +2978,7 @@ export type Database = {
           store_id: string | null
         }
         Insert: {
+          barcode_code?: string | null
           category?: string | null
           category_id?: string | null
           created_at?: string
@@ -2977,6 +2989,7 @@ export type Database = {
           store_id?: string | null
         }
         Update: {
+          barcode_code?: string | null
           category?: string | null
           category_id?: string | null
           created_at?: string
