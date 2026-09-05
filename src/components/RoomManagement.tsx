@@ -819,6 +819,8 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         </CardContent>
         )}
       </Card>
+      )}
+      </>
       ) : (
         <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("products_inventory.rooms").price} description={getFeatureInfo("products_inventory.rooms").description} />
       )}
