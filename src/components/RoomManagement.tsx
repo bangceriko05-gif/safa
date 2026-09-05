@@ -30,11 +30,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search } from "lucide-react";
+import { Plus, Pencil, AlertTriangle, ChevronDown, ChevronUp, Trash2, Tags, Search, QrCode } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 const ProductManagement = lazy(() => import("./ProductManagement"));
 const CategoryManagement = lazy(() => import("./CategoryManagement"));
 const InventoryManagement = lazy(() => import("./inventory/InventoryManagement"));
+const RoomBarcodeSettings = lazy(() => import("./rooms/RoomBarcodeSettings"));
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
@@ -75,6 +76,7 @@ interface RoomManagementProps {
 }
 
 export default function RoomManagement({ section }: RoomManagementProps = {}) {
+  const [roomTab, setRoomTab] = useState<"kelola" | "settingan">("kelola");
   // Scroll to selected sub-section when changed via sidebar
   useEffect(() => {
     if (!section) return;
