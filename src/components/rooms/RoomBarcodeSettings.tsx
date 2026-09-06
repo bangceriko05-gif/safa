@@ -5,7 +5,6 @@ import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -17,16 +16,9 @@ interface RoomRow {
   barcode_code: string | null;
 }
 
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 24);
-}
-
-function randomSuffix() {
-  return Math.random().toString(36).slice(2, 7).toUpperCase();
+// Kode barcode = nama kamar (uppercase, spasi jadi strip)
+function codeFromName(name: string) {
+  return name.trim().toUpperCase().replace(/\s+/g, "-");
 }
 
 export default function RoomBarcodeSettings() {
@@ -35,8 +27,6 @@ export default function RoomBarcodeSettings() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<{ room: RoomRow; dataUrl: string } | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const scanBaseUrl = useMemo(() => `${window.location.origin}/room-scan`, []);
 
@@ -48,52 +38,42 @@ export default function RoomBarcodeSettings() {
       .select("id, name, barcode_code")
       .eq("store_id", currentStore.id)
       .order("name");
-    if (error) toast.error("Gagal memuat kamar");
-    setRooms((data as RoomRow[]) || []);
+    if (error) {
+      toast.error("Gagal memuat kamar");
+      setLoading(false);
+      return;
+    }
+    const list = (data as RoomRow[]) || [];
+    setRooms(list);
     setLoading(false);
+
+    // Otomatis isi barcode dari nama kamar untuk yang belum punya / kodenya berbeda dari nama
+    const toFix = list.filter((r) => r.barcode_code !== codeFromName(r.name));
+    if (toFix.length) {
+      for (const room of toFix) {
+        const clean = codeFromName(room.name);
+        // eslint-disable-next-line no-await-in-loop
+        const { error: upErr } = await supabase
+          .from("rooms")
+          .update({ barcode_code: clean } as any)
+          .eq("id", room.id);
+        if (upErr) {
+          // Kode bentrok dengan kamar lain — tambahkan suffix unik
+          const alt = `${clean}-${room.id.slice(0, 4).toUpperCase()}`;
+          // eslint-disable-next-line no-await-in-loop
+          await supabase.from("rooms").update({ barcode_code: alt } as any).eq("id", room.id);
+          setRooms((rs) => rs.map((r) => (r.id === room.id ? { ...r, barcode_code: alt } : r)));
+        } else {
+          setRooms((rs) => rs.map((r) => (r.id === room.id ? { ...r, barcode_code: clean } : r)));
+        }
+      }
+    }
   };
 
   useEffect(() => {
     void loadRooms();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStore?.id]);
-
-  const saveCode = async (room: RoomRow, code: string) => {
-    const clean = code.trim().toUpperCase().replace(/\s+/g, "-");
-    if (!clean) {
-      toast.error("Kode barcode tidak boleh kosong");
-      return;
-    }
-    setSavingId(room.id);
-    const { error } = await supabase.from("rooms").update({ barcode_code: clean } as any).eq("id", room.id);
-    setSavingId(null);
-    if (error) {
-      toast.error(error.message.includes("duplicate") ? "Kode sudah dipakai kamar lain" : "Gagal menyimpan kode");
-      return;
-    }
-    toast.success(`Barcode ${room.name} disimpan`);
-    setDrafts((d) => {
-      const next = { ...d };
-      delete next[room.id];
-      return next;
-    });
-    setRooms((rs) => rs.map((r) => (r.id === room.id ? { ...r, barcode_code: clean } : r)));
-  };
-
-  const generateCode = (room: RoomRow) =>
-    saveCode(room, `${slugify(room.name).toUpperCase()}-${randomSuffix()}`);
-
-  const generateAll = async () => {
-    const targets = rooms.filter((r) => !r.barcode_code);
-    if (!targets.length) {
-      toast.info("Semua kamar sudah punya barcode");
-      return;
-    }
-    for (const room of targets) {
-      // eslint-disable-next-line no-await-in-loop
-      await saveCode(room, `${slugify(room.name).toUpperCase()}-${randomSuffix()}`);
-    }
-  };
 
   const roomUrl = (room: RoomRow) => `${scanBaseUrl}?code=${encodeURIComponent(room.barcode_code || "")}`;
 
@@ -135,13 +115,13 @@ export default function RoomBarcodeSettings() {
             <QrCode className="h-5 w-5" />
             Settingan Kamar — Barcode
           </CardTitle>
-          <Button variant="outline" onClick={generateAll}>
+          <Button variant="outline" onClick={loadRooms}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Buat Barcode Otomatis
+            Muat Ulang
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Setiap kamar bisa punya barcode/QR sendiri. Saat dipindai, sistem menampilkan pesanan produk POS dari kamar tersebut.
+          Kode barcode otomatis sama dengan nama kamar. Saat dipindai, sistem menampilkan pesanan produk POS dari kamar tersebut.
         </p>
         <div className="relative mt-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -160,68 +140,51 @@ export default function RoomBarcodeSettings() {
           <p className="text-sm text-muted-foreground py-6 text-center">Tidak ada kamar.</p>
         ) : (
           <div className="space-y-3">
-            {filtered.map((room) => {
-              const value = drafts[room.id] ?? room.barcode_code ?? "";
-              return (
-                <div
-                  key={room.id}
-                  className="flex flex-col md:flex-row md:items-center gap-3 rounded-lg border p-3"
-                >
-                  <div className="md:w-56">
-                    <p className="font-medium">{room.name}</p>
-                    {room.barcode_code ? (
-                      <Badge variant="secondary" className="mt-1">Barcode aktif</Badge>
-                    ) : (
-                      <Badge variant="outline" className="mt-1">Belum ada barcode</Badge>
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs text-muted-foreground">Kode barcode</Label>
-                    <Input
-                      value={value}
-                      onChange={(e) => setDrafts((d) => ({ ...d, [room.id]: e.target.value }))}
-                      placeholder="Contoh: 101-KING-A1B2"
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      disabled={savingId === room.id}
-                      onClick={() => saveCode(room, value)}
-                    >
-                      Simpan
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => generateCode(room)}>
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!room.barcode_code}
-                      onClick={() => showQr(room)}
-                    >
-                      <QrCode className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!room.barcode_code}
-                      onClick={() => copyLink(room)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!room.barcode_code}
-                      onClick={() => window.open(roomUrl(room), "_blank")}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {filtered.map((room) => (
+              <div
+                key={room.id}
+                className="flex flex-col md:flex-row md:items-center gap-3 rounded-lg border p-3"
+              >
+                <div className="md:w-56">
+                  <p className="font-medium">{room.name}</p>
+                  {room.barcode_code ? (
+                    <Badge variant="secondary" className="mt-1">Barcode aktif</Badge>
+                  ) : (
+                    <Badge variant="outline" className="mt-1">Membuat barcode...</Badge>
+                  )}
                 </div>
-              );
-            })}
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Kode barcode</p>
+                  <p className="font-mono text-sm">{room.barcode_code || "—"}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!room.barcode_code}
+                    onClick={() => showQr(room)}
+                  >
+                    <QrCode className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!room.barcode_code}
+                    onClick={() => copyLink(room)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!room.barcode_code}
+                    onClick={() => window.open(roomUrl(room), "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
