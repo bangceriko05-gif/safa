@@ -21,14 +21,95 @@ function codeFromName(name: string) {
   return name.trim().toUpperCase().replace(/\s+/g, "-");
 }
 
+// Gambar QR + logo di tengah sesuai pengaturan Super Admin
+async function buildQrWithLogo(
+  text: string,
+  logoMode: string,
+  storeImage: string | null
+): Promise<string> {
+  const size = 640;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return QRCode.toDataURL(text, { width: size, margin: 1 });
+
+  await QRCode.toCanvas(canvas, text, {
+    width: size,
+    margin: 1,
+    errorCorrectionLevel: "H",
+    color: { dark: "#000000", light: "#ffffff" },
+  });
+
+  if (logoMode === "none") return canvas.toDataURL("image/png");
+
+  const box = Math.round(size * 0.24);
+  const x = (size - box) / 2;
+  const radius = 16;
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(x + radius, x);
+  ctx.arcTo(x + box, x, x + box, x + box, radius);
+  ctx.arcTo(x + box, x + box, x, x + box, radius);
+  ctx.arcTo(x, x + box, x, x, radius);
+  ctx.arcTo(x, x, x + box, x, radius);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  if (logoMode === "outlet" && storeImage) {
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.crossOrigin = "anonymous";
+        el.onload = () => resolve(el);
+        el.onerror = reject;
+        el.src = storeImage;
+      });
+      const pad = box * 0.1;
+      const inner = box - pad * 2;
+      const scale = Math.min(inner / img.width, inner / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, x + (box - w) / 2, x + (box - h) / 2, w, h);
+      return canvas.toDataURL("image/png");
+    } catch {
+      /* fallback ke teks di bawah */
+    }
+  }
+
+  ctx.fillStyle = "#1d4ed8";
+  ctx.font = `bold ${Math.round(box * 0.32)}px system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("ANKA", size / 2, size / 2);
+  return canvas.toDataURL("image/png");
+}
+
 export default function RoomBarcodeSettings() {
   const { currentStore } = useStore();
+  const [logoMode, setLogoMode] = useState<string>("anka");
+  const [storeImage, setStoreImage] = useState<string | null>(null);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<{ room: RoomRow; dataUrl: string } | null>(null);
 
   const scanBaseUrl = useMemo(() => `${window.location.origin}/room-scan`, []);
+
+  useEffect(() => {
+    if (!currentStore?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("qr_logo_mode, image_url")
+        .eq("id", currentStore.id)
+        .maybeSingle();
+      setLogoMode(((data as any)?.qr_logo_mode as string) || "anka");
+      setStoreImage(((data as any)?.image_url as string) || null);
+    })();
+  }, [currentStore?.id]);
 
   const loadRooms = async () => {
     if (!currentStore) return;
@@ -79,7 +160,7 @@ export default function RoomBarcodeSettings() {
 
   const showQr = async (room: RoomRow) => {
     if (!room.barcode_code) return;
-    const dataUrl = await QRCode.toDataURL(roomUrl(room), { width: 640, margin: 1 });
+    const dataUrl = await buildQrWithLogo(roomUrl(room), logoMode, storeImage);
     setPreview({ room, dataUrl });
   };
 
