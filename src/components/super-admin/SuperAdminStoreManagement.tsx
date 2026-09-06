@@ -48,6 +48,7 @@ interface Store {
   subscription_end_date: string | null;
   subscription_price: number | null;
   room_limit: number;
+  qr_logo_mode?: string | null;
 }
 
 interface StoreStats {
@@ -91,7 +92,8 @@ export default function SuperAdminStoreManagement() {
     subscription_start_date: "",
     subscription_end_date: "",
     room_limit: "25",
-  });
+    qr_logo_mode: "anka",
+  }); 
 
   useEffect(() => {
     fetchStores();
@@ -207,6 +209,7 @@ export default function SuperAdminStoreManagement() {
         subscription_start_date: formData.subscription_start_date || null,
         subscription_end_date: formData.subscription_end_date || null,
         room_limit: parseInt(formData.room_limit) || 25,
+        qr_logo_mode: formData.qr_logo_mode || "anka",
         slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
@@ -264,6 +267,7 @@ export default function SuperAdminStoreManagement() {
       subscription_start_date: store.subscription_start_date || "",
       subscription_end_date: store.subscription_end_date || "",
       room_limit: String(store.room_limit || 25),
+      qr_logo_mode: (store as any).qr_logo_mode || "anka",
     });
     setPreviewUrl(store.image_url || null);
     setIsDialogOpen(true);
@@ -352,6 +356,7 @@ export default function SuperAdminStoreManagement() {
       location: "",
       image_url: "",
       is_active: true,
+      qr_logo_mode: "anka",
       subscription_start_date: "",
       subscription_end_date: "",
       room_limit: "25",
@@ -714,6 +719,28 @@ export default function SuperAdminStoreManagement() {
                 placeholder="25"
               />
               <p className="text-xs text-muted-foreground">Jumlah maksimal kamar yang dapat dibuat di outlet ini</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Logo di Tengah QR Kamar</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { v: "anka", l: "Logo ANKA" },
+                  { v: "outlet", l: "Logo Outlet" },
+                  { v: "none", l: "Tanpa Logo" },
+                ].map((opt) => (
+                  <Button
+                    key={opt.v}
+                    type="button"
+                    size="sm"
+                    variant={formData.qr_logo_mode === opt.v ? "default" : "outline"}
+                    onClick={() => setFormData({ ...formData, qr_logo_mode: opt.v })}
+                  >
+                    {opt.l}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Logo ini tampil di tengah QR barcode kamar outlet ini.</p>
             </div>
 
             <div className="flex items-center justify-between">
