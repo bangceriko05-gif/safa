@@ -38,6 +38,7 @@ export default function RoomScan() {
   const [loading, setLoading] = useState(!!code);
   const [notFound, setNotFound] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [autoOpened, setAutoOpened] = useState(false);
 
   const load = async () => {
     if (!code) return;
@@ -73,6 +74,14 @@ export default function RoomScan() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
+
+  // Saat QR kamar dipindai, langsung buka tampilan POS untuk kamar tersebut
+  useEffect(() => {
+    if (room && !loading && !autoOpened) {
+      setAutoOpened(true);
+      setAddOpen(true);
+    }
+  }, [room, loading, autoOpened]);
 
   const openOrders = orders.filter((o) => (o.process_status || "").toLowerCase() !== "selesai");
 
