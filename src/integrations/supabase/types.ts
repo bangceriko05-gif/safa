@@ -3449,6 +3449,7 @@ export type Database = {
           is_active: boolean
           location: string | null
           name: string
+          qr_logo_mode: string
           room_limit: number
           schedule_end_time: string
           schedule_slot_minutes: number
@@ -3471,6 +3472,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name: string
+          qr_logo_mode?: string
           room_limit?: number
           schedule_end_time?: string
           schedule_slot_minutes?: number
@@ -3493,6 +3495,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name?: string
+          qr_logo_mode?: string
           room_limit?: number
           schedule_end_time?: string
           schedule_slot_minutes?: number
