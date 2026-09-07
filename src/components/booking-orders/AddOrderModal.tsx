@@ -751,7 +751,21 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                         className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                          <span className="flex items-center gap-1">
+                            <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => copyBid(e, o.id, o.bid)}
+                              className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+                              title="Salin BID"
+                            >
+                              {copiedBidId === o.id ? (
+                                <Check className="h-3 w-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </button>
+                          </span>
                           <span className="flex items-center gap-1.5">
                             {(!!o.room_id || !!o.booking_id) && (
                               <Globe className="h-3 w-3 text-muted-foreground" />
