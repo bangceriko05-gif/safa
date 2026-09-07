@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2 } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -93,6 +93,47 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Finish action popup (Print / WhatsApp)
   const [finishOpen, setFinishOpen] = useState(false);
   const [waPhone, setWaPhone] = useState("");
+
+  // Daftar transaksi POS (draft / selesai / online)
+  const [txListOpen, setTxListOpen] = useState(false);
+  const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
+  const [txOrders, setTxOrders] = useState<any[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
+
+  const fetchTxOrders = async () => {
+    if (!currentStore) return;
+    setTxLoading(true);
+    const { data } = await supabase
+      .from("booking_orders")
+      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, created_at, booking_order_items(product_name, quantity)")
+      .eq("store_id", currentStore.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setTxOrders((data as any) || []);
+    setTxLoading(false);
+  };
+
+  useEffect(() => {
+    if (open && posMode) void fetchTxOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, posMode, currentStore?.id]);
+
+  const isDraftTx = (o: any) => {
+    const ps = (o.process_status || "proses").toLowerCase();
+    return ps !== "selesai" && ps !== "batal";
+  };
+  const draftCount = txOrders.filter(isDraftTx).length;
+  const filteredTx = txOrders.filter((o) => {
+    if (txTab === "draft") return isDraftTx(o);
+    if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
+    return !!o.room_id || !!o.booking_id; // online: pesanan via scan QR kamar / booking
+  });
+
+  const openTxList = (tab: "draft" | "selesai" | "online") => {
+    setTxTab(tab);
+    setTxListOpen(true);
+    void fetchTxOrders();
+  };
 
   useEffect(() => {
     if (!resizing) return;
@@ -652,6 +693,82 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           </DialogContent>
         </Dialog>
 
+        {/* Dialog daftar transaksi POS: draft / selesai / online */}
+        <Dialog open={txListOpen} onOpenChange={setTxListOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Daftar Transaksi</DialogTitle>
+            </DialogHeader>
+            <div className="flex gap-1">
+              {([
+                { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
+                { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
+                { key: "online", label: `Online (${txOrders.filter((o) => !!o.room_id || !!o.booking_id).length})` },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTxTab(t.key)}
+                  className={`px-3 h-8 rounded text-xs font-semibold ${txTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent"}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto -mx-2 px-2">
+              {txLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredTx.length === 0 ? (
+                <div className="text-center text-xs text-muted-foreground py-8">
+                  {txTab === "draft" ? "Tidak ada transaksi draft" : txTab === "selesai" ? "Belum ada transaksi selesai" : "Belum ada transaksi online"}
+                </div>
+              ) : (
+                <div className="space-y-2 py-1">
+                  {filteredTx.map((o) => {
+                    const ps = (o.process_status || "proses").toLowerCase();
+                    const its = o.booking_order_items || [];
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => window.open(`/pos-order/${o.id}`, "_blank")}
+                        className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                          <span className="flex items-center gap-1.5">
+                            {(!!o.room_id || !!o.booking_id) && (
+                              <Globe className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
+                              {ps === "selesai" ? "SELESAI" : ps === "batal" ? "BATAL" : "DRAFT"}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {o.date} · {o.customer_name || "Tanpa nama"} · {o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"}
+                        </div>
+                        {its.length > 0 && (
+                          <div className="text-[11px] truncate">
+                            {its.map((it: any) => `${it.product_name} x${it.quantity}`).join(", ")}
+                          </div>
+                        )}
+                        <div className="flex justify-between font-semibold pt-1 border-t">
+                          <span>Total</span>
+                          <span>{fmt(Number(o.total_amount) || 0)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
   <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r">
@@ -674,13 +791,39 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 <User className="h-4 w-4 text-muted-foreground" />
               )}
               <div className="font-semibold text-sm">Pesanan Baru</div>
-              <button
-                type="button"
-                className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
-                title="Tambah catatan"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              {posMode ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => openTxList("draft")}
+                    className="relative h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                    title="Daftar transaksi (draft & selesai)"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    {draftCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                        {draftCount > 99 ? "99+" : draftCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openTxList("online")}
+                    className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                    title="Daftar transaksi online (pesanan via scan QR kamar)"
+                  >
+                    <Globe className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                  title="Tambah catatan"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-[1fr_50px_90px] gap-2 px-3 py-1.5 text-xs font-semibold bg-muted/60 border-b">
