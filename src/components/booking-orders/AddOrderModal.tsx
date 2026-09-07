@@ -715,13 +715,39 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 <User className="h-4 w-4 text-muted-foreground" />
               )}
               <div className="font-semibold text-sm">Pesanan Baru</div>
-              <button
-                type="button"
-                className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
-                title="Tambah catatan"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              {posMode ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => openTxList("draft")}
+                    className="relative h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                    title="Daftar transaksi (draft & selesai)"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    {draftCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                        {draftCount > 99 ? "99+" : draftCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openTxList("online")}
+                    className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                    title="Daftar transaksi online (pesanan via scan QR kamar)"
+                  >
+                    <Globe className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
+                  title="Tambah catatan"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-[1fr_50px_90px] gap-2 px-3 py-1.5 text-xs font-semibold bg-muted/60 border-b">
