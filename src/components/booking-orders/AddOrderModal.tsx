@@ -136,6 +136,19 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     void fetchTxOrders();
   };
 
+  const copyBid = async (e: React.MouseEvent, id: string, bid?: string | null) => {
+    e.stopPropagation();
+    if (!bid) return;
+    try {
+      await navigator.clipboard.writeText(bid);
+      setCopiedBidId(id);
+      toast.success("BID disalin");
+      setTimeout(() => setCopiedBidId((prev) => (prev === id ? null : prev)), 1500);
+    } catch {
+      toast.error("Gagal menyalin BID");
+    }
+  };
+
   useEffect(() => {
     if (!resizing) return;
     const onMove = (e: MouseEvent) => {
