@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2 } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -93,6 +93,47 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Finish action popup (Print / WhatsApp)
   const [finishOpen, setFinishOpen] = useState(false);
   const [waPhone, setWaPhone] = useState("");
+
+  // Daftar transaksi POS (draft / selesai / online)
+  const [txListOpen, setTxListOpen] = useState(false);
+  const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
+  const [txOrders, setTxOrders] = useState<any[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
+
+  const fetchTxOrders = async () => {
+    if (!currentStore) return;
+    setTxLoading(true);
+    const { data } = await supabase
+      .from("booking_orders")
+      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, created_at, booking_order_items(product_name, quantity)")
+      .eq("store_id", currentStore.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setTxOrders((data as any) || []);
+    setTxLoading(false);
+  };
+
+  useEffect(() => {
+    if (open && posMode) void fetchTxOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, posMode, currentStore?.id]);
+
+  const isDraftTx = (o: any) => {
+    const ps = (o.process_status || "proses").toLowerCase();
+    return ps !== "selesai" && ps !== "batal";
+  };
+  const draftCount = txOrders.filter(isDraftTx).length;
+  const filteredTx = txOrders.filter((o) => {
+    if (txTab === "draft") return isDraftTx(o);
+    if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
+    return !!o.room_id || !!o.booking_id; // online: pesanan via scan QR kamar / booking
+  });
+
+  const openTxList = (tab: "draft" | "selesai" | "online") => {
+    setTxTab(tab);
+    setTxListOpen(true);
+    void fetchTxOrders();
+  };
 
   useEffect(() => {
     if (!resizing) return;
