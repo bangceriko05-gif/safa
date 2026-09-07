@@ -693,6 +693,82 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           </DialogContent>
         </Dialog>
 
+        {/* Dialog daftar transaksi POS: draft / selesai / online */}
+        <Dialog open={txListOpen} onOpenChange={setTxListOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Daftar Transaksi</DialogTitle>
+            </DialogHeader>
+            <div className="flex gap-1">
+              {([
+                { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
+                { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
+                { key: "online", label: `Online (${txOrders.filter((o) => !!o.room_id || !!o.booking_id).length})` },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTxTab(t.key)}
+                  className={`px-3 h-8 rounded text-xs font-semibold ${txTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent"}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto -mx-2 px-2">
+              {txLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredTx.length === 0 ? (
+                <div className="text-center text-xs text-muted-foreground py-8">
+                  {txTab === "draft" ? "Tidak ada transaksi draft" : txTab === "selesai" ? "Belum ada transaksi selesai" : "Belum ada transaksi online"}
+                </div>
+              ) : (
+                <div className="space-y-2 py-1">
+                  {filteredTx.map((o) => {
+                    const ps = (o.process_status || "proses").toLowerCase();
+                    const its = o.booking_order_items || [];
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => window.open(`/pos-order/${o.id}`, "_blank")}
+                        className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                          <span className="flex items-center gap-1.5">
+                            {(!!o.room_id || !!o.booking_id) && (
+                              <Globe className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
+                              {ps === "selesai" ? "SELESAI" : ps === "batal" ? "BATAL" : "DRAFT"}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {o.date} · {o.customer_name || "Tanpa nama"} · {o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"}
+                        </div>
+                        {its.length > 0 && (
+                          <div className="text-[11px] truncate">
+                            {its.map((it: any) => `${it.product_name} x${it.quantity}`).join(", ")}
+                          </div>
+                        )}
+                        <div className="flex justify-between font-semibold pt-1 border-t">
+                          <span>Total</span>
+                          <span>{fmt(Number(o.total_amount) || 0)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
   <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r">
