@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -99,6 +99,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
+  const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
 
   const fetchTxOrders = async () => {
     if (!currentStore) return;
@@ -133,6 +134,19 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     setTxTab(tab);
     setTxListOpen(true);
     void fetchTxOrders();
+  };
+
+  const copyBid = async (e: React.MouseEvent, id: string, bid?: string | null) => {
+    e.stopPropagation();
+    if (!bid) return;
+    try {
+      await navigator.clipboard.writeText(bid);
+      setCopiedBidId(id);
+      toast.success("BID disalin");
+      setTimeout(() => setCopiedBidId((prev) => (prev === id ? null : prev)), 1500);
+    } catch {
+      toast.error("Gagal menyalin BID");
+    }
   };
 
   useEffect(() => {
@@ -737,7 +751,21 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                         className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                          <span className="flex items-center gap-1">
+                            <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => copyBid(e, o.id, o.bid)}
+                              className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+                              title="Salin BID"
+                            >
+                              {copiedBidId === o.id ? (
+                                <Check className="h-3 w-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </button>
+                          </span>
                           <span className="flex items-center gap-1.5">
                             {(!!o.room_id || !!o.booking_id) && (
                               <Globe className="h-3 w-3 text-muted-foreground" />
