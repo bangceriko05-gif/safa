@@ -599,7 +599,7 @@ export default function SuperAdminStoreManagement() {
 
       {/* Add/Edit Store Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingStore ? "Edit Outlet" : "Tambah Outlet Baru"}
