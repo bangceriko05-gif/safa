@@ -99,6 +99,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
+  const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
 
   const fetchTxOrders = async () => {
     if (!currentStore) return;
