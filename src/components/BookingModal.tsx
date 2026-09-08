@@ -184,6 +184,49 @@ export default function BookingModal({
   // Check if PMS mode based on store calendar_type
   const isPMSMode = (currentStore as any)?.calendar_type === "pms";
 
+  // Schedule slot settings (FunFury only) — jam mulai/selesai mengikuti tabel jadwal
+  const isFunFury = /funfury/i.test(currentStore?.name || "");
+  const [scheduleCfg, setScheduleCfg] = useState<{ start: string; end: string; slot: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !currentStore?.id || !isFunFury) {
+      setScheduleCfg(null);
+      return;
+    }
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("stores")
+        .select("schedule_start_time, schedule_end_time, schedule_slot_minutes")
+        .eq("id", currentStore.id)
+        .maybeSingle();
+      setScheduleCfg({
+        start: (data?.schedule_start_time || "09:00").slice(0, 5),
+        end: (data?.schedule_end_time || "05:00").slice(0, 5),
+        slot: Number(data?.schedule_slot_minutes) || 60,
+      });
+    })();
+  }, [isOpen, currentStore?.id, isFunFury]);
+
+  const scheduleTimes = (() => {
+    if (!scheduleCfg) return null;
+    const toMin = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + (m || 0);
+    };
+    const fromMin = (m: number) => {
+      const v = ((m % 1440) + 1440) % 1440;
+      return `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
+    };
+    const startMin = toMin(scheduleCfg.start);
+    let endMin = toMin(scheduleCfg.end);
+    if (endMin <= startMin) endMin += 1440;
+    const step = scheduleCfg.slot > 0 ? scheduleCfg.slot : 60;
+    const list: string[] = [];
+    for (let m = startMin; m <= endMin; m += step) list.push(fromMin(m));
+    return list;
+  })();
+
+
   // Fetch data when modal opens or store changes - always refetch rooms to ensure latest data
   useEffect(() => {
     if (!currentStore || !isOpen) return;
