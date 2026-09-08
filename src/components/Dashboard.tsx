@@ -1,3 +1,4 @@
+import { lazyWithRetry } from "@/utils/lazyWithRetry";
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { readCachedUser } from "@/utils/fastSession";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,23 +45,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import StoreSelector from "./StoreSelector";
-const DateNavigation = lazy(() => import("./DateNavigation"));
-const RoomSummary = lazy(() => import("./RoomSummary"));
-const ScheduleTable = lazy(() => import("./ScheduleTable"));
-const PMSCalendar = lazy(() => import("./PMSCalendar"));
-const BookingModal = lazy(() => import("./BookingModal"));
-const AddOrderModal = lazy(() => import("./booking-orders/AddOrderModal"));
-const UserManagement = lazy(() => import("./UserManagement"));
-const RoomManagement = lazy(() => import("./RoomManagement"));
-const CustomerManagement = lazy(() => import("./CustomerManagement"));
-const SupplierManagement = lazy(() => import("./suppliers/SupplierManagement"));
-const CRMDashboard = lazy(() => import("./crm/CRMDashboard"));
-const ActivityLog = lazy(() => import("./ActivityLog").then(m => ({ default: m.ActivityLog })));
-const Reports = lazy(() => import("./Reports"));
-const PermissionManagement = lazy(() => import("./PermissionManagement"));
-const SettingsPage = lazy(() => import("./SettingsPage"));
-const TransactionManagement = lazy(() => import("./TransactionManagement"));
-const DepositFormModal = lazy(() => import("./deposit/DepositFormModal"));
+const DateNavigation = lazyWithRetry(() => import("./DateNavigation"));
+const RoomSummary = lazyWithRetry(() => import("./RoomSummary"));
+const ScheduleTable = lazyWithRetry(() => import("./ScheduleTable"));
+const PMSCalendar = lazyWithRetry(() => import("./PMSCalendar"));
+const BookingModal = lazyWithRetry(() => import("./BookingModal"));
+const AddOrderModal = lazyWithRetry(() => import("./booking-orders/AddOrderModal"));
+const UserManagement = lazyWithRetry(() => import("./UserManagement"));
+const RoomManagement = lazyWithRetry(() => import("./RoomManagement"));
+const CustomerManagement = lazyWithRetry(() => import("./CustomerManagement"));
+const SupplierManagement = lazyWithRetry(() => import("./suppliers/SupplierManagement"));
+const CRMDashboard = lazyWithRetry(() => import("./crm/CRMDashboard"));
+const ActivityLog = lazyWithRetry(() => import("./ActivityLog").then(m => ({ default: m.ActivityLog })));
+const Reports = lazyWithRetry(() => import("./Reports"));
+const PermissionManagement = lazyWithRetry(() => import("./PermissionManagement"));
+const SettingsPage = lazyWithRetry(() => import("./SettingsPage"));
+const TransactionManagement = lazyWithRetry(() => import("./TransactionManagement"));
+const DepositFormModal = lazyWithRetry(() => import("./deposit/DepositFormModal"));
 
 // Prefetch is tiered so the boot path stays light:
 // tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
