@@ -106,7 +106,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     setTxLoading(true);
     const { data } = await supabase
       .from("booking_orders")
-      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, created_at, booking_order_items(product_name, quantity)")
+      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, order_source, created_at, booking_order_items(product_name, quantity)")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false })
       .limit(200);
