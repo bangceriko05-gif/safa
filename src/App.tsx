@@ -1,3 +1,4 @@
+import { lazyWithRetry } from "@/utils/lazyWithRetry";
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,19 +9,19 @@ import { StoreProvider } from "@/contexts/StoreContext";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all route pages for code splitting
-const Landing = lazy(() => import("./pages/Landing"));
-const Index = lazy(() => import("./pages/Index"));
-const Auth = lazy(() => import("./pages/Auth"));
-const SelectStore = lazy(() => import("./pages/SelectStore"));
-const Booking = lazy(() => import("./pages/Booking"));
-const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
-const Receipt = lazy(() => import("./pages/Receipt"));
-const TransactionReceiptPage = lazy(() => import("./pages/TransactionReceipt"));
-const DepositReceiptPage = lazy(() => import("./pages/DepositReceipt"));
-const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
-const PosOrderDetail = lazy(() => import("./pages/PosOrderDetail"));
-const RoomScan = lazy(() => import("./pages/RoomScan"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const Landing = lazyWithRetry(() => import("./pages/Landing"));
+const Index = lazyWithRetry(() => import("./pages/Index"));
+const Auth = lazyWithRetry(() => import("./pages/Auth"));
+const SelectStore = lazyWithRetry(() => import("./pages/SelectStore"));
+const Booking = lazyWithRetry(() => import("./pages/Booking"));
+const BookingConfirmation = lazyWithRetry(() => import("./pages/BookingConfirmation"));
+const Receipt = lazyWithRetry(() => import("./pages/Receipt"));
+const TransactionReceiptPage = lazyWithRetry(() => import("./pages/TransactionReceipt"));
+const DepositReceiptPage = lazyWithRetry(() => import("./pages/DepositReceipt"));
+const SuperAdmin = lazyWithRetry(() => import("./pages/SuperAdmin"));
+const PosOrderDetail = lazyWithRetry(() => import("./pages/PosOrderDetail"));
+const RoomScan = lazyWithRetry(() => import("./pages/RoomScan"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {

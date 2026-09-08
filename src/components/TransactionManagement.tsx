@@ -1,3 +1,4 @@
+import { lazyWithRetry } from "@/utils/lazyWithRetry";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Search, CalendarIcon, Infinity } from "lucide-react";
@@ -7,9 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { lazy, Suspense } from "react";
 import ListBooking from "./ListBooking";
-const ExpenseTransactionView = lazy(() => import("./expense/ExpenseTransactionView"));
-const IncomeTransactionView = lazy(() => import("./income/IncomeTransactionView"));
-const PurchaseManagement = lazy(() => import("./purchase/PurchaseManagement"));
+const ExpenseTransactionView = lazyWithRetry(() => import("./expense/ExpenseTransactionView"));
+const IncomeTransactionView = lazyWithRetry(() => import("./income/IncomeTransactionView"));
+const PurchaseManagement = lazyWithRetry(() => import("./purchase/PurchaseManagement"));
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
