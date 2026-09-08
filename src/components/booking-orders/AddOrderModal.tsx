@@ -110,9 +110,43 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false })
       .limit(200);
-    setTxOrders((data as any) || []);
+
+    let rows: any[] = (data as any) || [];
+
+    // Ikuti status booking induk: kalau booking sudah check out (selesai),
+    // order POS terkait tidak boleh tetap berstatus draft/proses.
+    const bookingIds = Array.from(
+      new Set(rows.filter((o) => o.booking_id).map((o) => o.booking_id))
+    );
+    if (bookingIds.length > 0) {
+      const { data: bks } = await supabase
+        .from("bookings")
+        .select("id, status")
+        .in("id", bookingIds);
+      const doneBookings = new Set(
+        (bks || []).filter((b: any) => (b.status || "").toUpperCase() === "CO").map((b: any) => b.id)
+      );
+      const toSync = rows.filter(
+        (o) =>
+          o.booking_id &&
+          doneBookings.has(o.booking_id) &&
+          (o.process_status || "").toLowerCase() !== "selesai" &&
+          (o.process_status || "").toLowerCase() !== "batal"
+      );
+      if (toSync.length > 0) {
+        await supabase
+          .from("booking_orders")
+          .update({ process_status: "selesai" })
+          .in("id", toSync.map((o) => o.id));
+        const synced = new Set(toSync.map((o) => o.id));
+        rows = rows.map((o) => (synced.has(o.id) ? { ...o, process_status: "selesai" } : o));
+      }
+    }
+
+    setTxOrders(rows);
     setTxLoading(false);
   };
+
 
   useEffect(() => {
     if (open && posMode) void fetchTxOrders();
