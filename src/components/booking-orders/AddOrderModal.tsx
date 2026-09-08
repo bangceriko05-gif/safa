@@ -158,10 +158,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return ps !== "selesai" && ps !== "batal";
   };
   const draftCount = txOrders.filter(isDraftTx).length;
+  const isOnlineTx = (o: any) => (o.order_source || "pos").toLowerCase() === "barcode";
   const filteredTx = txOrders.filter((o) => {
     if (txTab === "draft") return isDraftTx(o);
     if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
-    return (o.order_source || "pos").toLowerCase() === "barcode"; // online: hanya pesanan via scan barcode kamar
+    return isOnlineTx(o); // online: hanya pesanan via scan barcode kamar
   });
 
   const openTxList = (tab: "draft" | "selesai" | "online") => {
@@ -753,7 +754,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               {([
                 { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
                 { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
-                { key: "online", label: `Online (${txOrders.filter((o) => !!o.room_id || !!o.booking_id).length})` },
+                { key: "online", label: `Online (${txOrders.filter(isOnlineTx).length})` },
               ] as const).map((t) => (
                 <button
                   key={t.key}
