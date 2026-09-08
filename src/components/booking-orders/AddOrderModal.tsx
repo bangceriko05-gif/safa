@@ -577,6 +577,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : null,
         room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? null,
+        order_source: presetRoomId ? "barcode" : "pos",
+
         store_id: currentStore.id,
         date,
         payment_method: paymentMethod,
