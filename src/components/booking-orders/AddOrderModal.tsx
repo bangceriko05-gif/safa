@@ -106,7 +106,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     setTxLoading(true);
     const { data } = await supabase
       .from("booking_orders")
-      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, created_at, booking_order_items(product_name, quantity)")
+      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, order_source, created_at, booking_order_items(product_name, quantity)")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -161,7 +161,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const filteredTx = txOrders.filter((o) => {
     if (txTab === "draft") return isDraftTx(o);
     if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
-    return !!o.room_id || !!o.booking_id; // online: pesanan via scan QR kamar / booking
+    return (o.order_source || "pos").toLowerCase() === "barcode"; // online: hanya pesanan via scan barcode kamar
   });
 
   const openTxList = (tab: "draft" | "selesai" | "online") => {
@@ -577,6 +577,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : null,
         room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? null,
+        order_source: presetRoomId ? "barcode" : "pos",
+
         store_id: currentStore.id,
         date,
         payment_method: paymentMethod,
@@ -801,7 +803,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             </button>
                           </span>
                           <span className="flex items-center gap-1.5">
-                            {(!!o.room_id || !!o.booking_id) && (
+                            {(o.order_source || "pos").toLowerCase() === "barcode" && (
                               <Globe className="h-3 w-3 text-muted-foreground" />
                             )}
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>

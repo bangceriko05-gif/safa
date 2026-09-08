@@ -454,6 +454,7 @@ export type Database = {
           id: string
           invoice_footer: string | null
           note: string | null
+          order_source: string
           payment_method: string | null
           payment_method_2: string | null
           payment_proof_urls: string[]
@@ -494,6 +495,7 @@ export type Database = {
           id?: string
           invoice_footer?: string | null
           note?: string | null
+          order_source?: string
           payment_method?: string | null
           payment_method_2?: string | null
           payment_proof_urls?: string[]
@@ -534,6 +536,7 @@ export type Database = {
           id?: string
           invoice_footer?: string | null
           note?: string | null
+          order_source?: string
           payment_method?: string | null
           payment_method_2?: string | null
           payment_proof_urls?: string[]
