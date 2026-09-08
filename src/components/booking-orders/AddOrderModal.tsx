@@ -803,7 +803,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             </button>
                           </span>
                           <span className="flex items-center gap-1.5">
-                            {(!!o.room_id || !!o.booking_id) && (
+                            {(o.order_source || "pos").toLowerCase() === "barcode" && (
                               <Globe className="h-3 w-3 text-muted-foreground" />
                             )}
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
