@@ -2104,17 +2104,15 @@ export default function BookingModal({
                     <SelectValue placeholder="Pilih jam mulai" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50 max-h-[200px]">
-                    {/* Generate time slots from 09:00 to 05:00 (next day) */}
-                    {Array.from({ length: 20 }, (_, i) => {
+                    {(scheduleTimes ?? Array.from({ length: 20 }, (_, i) => {
                       const hour = i + 9;
                       const displayHour = hour >= 24 ? hour - 24 : hour;
-                      const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
-                      return (
-                        <SelectItem key={`start-${i}`} value={timeValue}>
-                          {timeValue}
-                        </SelectItem>
-                      );
-                    })}
+                      return `${displayHour.toString().padStart(2, "0")}:00`;
+                    })).slice(0, -1).map((timeValue, i) => (
+                      <SelectItem key={`start-${i}-${timeValue}`} value={timeValue}>
+                        {timeValue}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -2132,20 +2130,19 @@ export default function BookingModal({
                     <SelectValue placeholder="Pilih jam selesai" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50 max-h-[200px]">
-                    {/* Generate all time slots from 10:00 to 06:00 (next day) */}
-                    {Array.from({ length: 21 }, (_, i) => {
+                    {(scheduleTimes ?? Array.from({ length: 21 }, (_, i) => {
                       const hour = i + 10;
                       const displayHour = hour >= 24 ? hour - 24 : hour;
-                      const timeValue = `${displayHour.toString().padStart(2, "0")}:00`;
-                      return (
-                        <SelectItem key={`end-${i}`} value={timeValue}>
-                          {timeValue}
-                        </SelectItem>
-                      );
-                    })}
+                      return `${displayHour.toString().padStart(2, "0")}:00`;
+                    })).slice(1).map((timeValue, i) => (
+                      <SelectItem key={`end-${i}-${timeValue}`} value={timeValue}>
+                        {timeValue}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
             </div>
           )}
 
