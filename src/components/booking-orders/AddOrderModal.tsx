@@ -753,7 +753,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               {([
                 { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
                 { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
-                { key: "online", label: `Online (${txOrders.filter((o) => !!o.room_id || !!o.booking_id).length})` },
+                { key: "online", label: `Online (${txOrders.filter(isOnlineTx).length})` },
               ] as const).map((t) => (
                 <button
                   key={t.key}
