@@ -161,7 +161,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const filteredTx = txOrders.filter((o) => {
     if (txTab === "draft") return isDraftTx(o);
     if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
-    return !!o.room_id || !!o.booking_id; // online: pesanan via scan QR kamar / booking
+    return (o.order_source || "pos").toLowerCase() === "barcode"; // online: hanya pesanan via scan barcode kamar
   });
 
   const openTxList = (tab: "draft" | "selesai" | "online") => {
