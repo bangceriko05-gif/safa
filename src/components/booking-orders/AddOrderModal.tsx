@@ -582,9 +582,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         customerDisplayName && !effectiveBooking ? `(Pelanggan: ${customerDisplayName})` : "";
       const finalNote = [discountNote, svcNote, customerNote, note].filter(Boolean).join(" ").trim();
       const payload: any = {
-        booking_id: effectiveBooking ? effectiveBooking.id : null,
-        room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? null,
-        order_source: presetRoomId ? "barcode" : "pos",
+        booking_id: effectiveBooking ? effectiveBooking.id : activeOrder?.booking_id ?? null,
+        room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? activeOrder?.room_id ?? null,
+        order_source: presetRoomId ? "barcode" : activeOrder?.order_source ?? "pos",
 
         store_id: currentStore.id,
         date,
@@ -616,11 +616,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         tax_included_amount: taxSummary.includeTax,
       };
 
-      let orderId = order?.id;
-      if (order) {
-        const { error } = await supabase.from("booking_orders").update(payload).eq("id", order.id);
+      let orderId = activeOrder?.id;
+      if (activeOrder) {
+        const { error } = await supabase.from("booking_orders").update(payload).eq("id", activeOrder.id);
         if (error) throw error;
-        await supabase.from("booking_order_items").delete().eq("booking_order_id", order.id);
+        await supabase.from("booking_order_items").delete().eq("booking_order_id", activeOrder.id);
       } else {
         payload.created_by = user?.id;
         const { data, error } = await supabase
