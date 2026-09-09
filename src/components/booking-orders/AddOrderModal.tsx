@@ -224,6 +224,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Per-transaction toggle: cashier can opt out of the configured service charge
   const [applyServiceCharge, setApplyServiceCharge] = useState<boolean>(true);
   const effectiveBooking = booking || matchedBooking;
+  // Order yang sedang diedit: dari prop (mode booking) atau draft yang dibuka dari daftar transaksi POS
+  const activeOrder = draftOrder || order;
 
   // POS settings (per store)
   const [posSettings, setPosSettings] = useState<{
