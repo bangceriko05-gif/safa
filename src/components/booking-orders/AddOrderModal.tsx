@@ -740,6 +740,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 Print
               </button>
             )}
+            {draftOrder && (
+              <button
+                type="button"
+                onClick={() => { setDraftOrder(null); setMatchedBooking(null); }}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
+                title="Keluar dari mode ubah draft dan buat order baru"
+              >
+                <Plus className="h-4 w-4" />
+                Order Baru
+              </button>
+            )}
             {posMode && (
               <button
                 type="button"
