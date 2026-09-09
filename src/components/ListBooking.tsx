@@ -915,7 +915,18 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                     <tbody>
                                       {bookingChildOrders.map((o) => (
                                         <tr key={o.id} className="border-t">
-                                          <td className="px-2 py-1 font-mono text-xs">{o.bid || "-"}</td>
+                                          <td className="px-2 py-1 font-mono text-xs">
+                                            {o.bid ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => openPosOrder(o.id)}
+                                                className="text-primary hover:underline font-medium"
+                                                title="Buka detail transaksi POS"
+                                              >
+                                                {o.bid}
+                                              </button>
+                                            ) : "-"}
+                                          </td>
                                           <td className="px-2 py-1">{format(new Date(o.date), "d MMM yyyy", { locale: idLocale })}</td>
                                           <td className="px-2 py-1">{o.payment_method || "-"}</td>
                                           <td className="px-2 py-1 text-right tabular-nums">Rp {o.total_amount.toLocaleString("id-ID")}</td>
