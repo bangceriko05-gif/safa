@@ -100,6 +100,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
+  // Filter tanggal daftar transaksi
+  const [txDateFilter, setTxDateFilter] = useState<"semua" | "hari_ini" | "kemarin" | "7_hari" | "bulan_ini" | "bulan_lalu" | "custom">("semua");
+  const [txCustomFrom, setTxCustomFrom] = useState("");
+  const [txCustomTo, setTxCustomTo] = useState("");
   // Draft yang dibuka langsung di POS untuk dilanjutkan/diedit
   const [draftOrder, setDraftOrder] = useState<any | null>(null);
 
