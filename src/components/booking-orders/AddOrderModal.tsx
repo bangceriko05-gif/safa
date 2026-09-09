@@ -100,6 +100,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
+  // Draft yang dibuka langsung di POS untuk dilanjutkan/diedit
+  const [draftOrder, setDraftOrder] = useState<any | null>(null);
 
   const fetchTxOrders = async () => {
     if (!currentStore) return;
@@ -171,6 +173,30 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     void fetchTxOrders();
   };
 
+  // Buka transaksi draft langsung di POS (tanpa tab baru) untuk dilanjutkan/diedit
+  const openDraftInPos = async (o: any) => {
+    const { data: full } = await supabase
+      .from("booking_orders")
+      .select("*")
+      .eq("id", o.id)
+      .single();
+    if (!full) {
+      toast.error("Gagal memuat transaksi draft");
+      return;
+    }
+    setTxListOpen(false);
+    setDraftOrder(full);
+    if ((full as any).booking_id) {
+      const { data: bk } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", (full as any).booking_id)
+        .maybeSingle();
+      if (bk) setMatchedBooking(bk);
+    }
+    toast.success(`Draft ${(full as any).bid || ""} dibuka di POS`);
+  };
+
   const copyBid = async (e: React.MouseEvent, id: string, bid?: string | null) => {
     e.stopPropagation();
     if (!bid) return;
@@ -222,6 +248,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Per-transaction toggle: cashier can opt out of the configured service charge
   const [applyServiceCharge, setApplyServiceCharge] = useState<boolean>(true);
   const effectiveBooking = booking || matchedBooking;
+  // Order yang sedang diedit: dari prop (mode booking) atau draft yang dibuka dari daftar transaksi POS
+  const activeOrder = draftOrder || order;
 
   // POS settings (per store)
   const [posSettings, setPosSettings] = useState<{
@@ -356,21 +384,22 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   useEffect(() => {
     if (!open) return;
-    if (order) {
-      setDate(order.date);
-      setPaymentMethod(order.payment_method || "Cash");
-      setReferenceNo(order.reference_no || "");
-      setDualPayment(!!order.dual_payment);
-      setPaymentMethod2(order.payment_method_2 || "");
-      setReferenceNo2(order.reference_no_2 || "");
-      setAmount(Number(order.amount) || 0);
-      setAmount2(Number(order.amount_2) || 0);
-      setProofUrl(order.payment_proof_urls?.[0] || null);
-      setNote(order.note || "");
+    if (activeOrder) {
+      setDate(activeOrder.date);
+      setPaymentMethod(activeOrder.payment_method || "Cash");
+      setReferenceNo(activeOrder.reference_no || "");
+      setDualPayment(!!activeOrder.dual_payment);
+      setPaymentMethod2(activeOrder.payment_method_2 || "");
+      setReferenceNo2(activeOrder.reference_no_2 || "");
+      setAmount(Number(activeOrder.amount) || 0);
+      setAmount2(Number(activeOrder.amount_2) || 0);
+      setProofUrl(activeOrder.payment_proof_urls?.[0] || null);
+      setNote(activeOrder.note || "");
+      if (activeOrder.customer_name) setManualCustomerName(activeOrder.customer_name);
       supabase
         .from("booking_order_items")
         .select("*")
-        .eq("booking_order_id", order.id)
+        .eq("booking_order_id", activeOrder.id)
         .then(({ data }) => {
           setItems(
             (data || []).map((d: any) => ({
@@ -396,8 +425,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setProofUrl(null);
       setNote("");
       setItems([]);
+      setManualCustomerName("");
     }
-  }, [open, order]);
+  }, [open, activeOrder]);
 
   const itemsSubtotal = useMemo(
     () => items.reduce((s, it) => s + Math.max(0, it.quantity * it.unit_price - (it.discount || 0)), 0),
@@ -467,9 +497,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Auto-fill Nominal Bayar with total when not dual payment (and not editing an existing order)
   useEffect(() => {
     if (dualPayment) return;
-    if (order) return;
+    if (activeOrder) return;
     setAmount(total);
-  }, [total, dualPayment, order]);
+  }, [total, dualPayment, activeOrder]);
 
   const filtered = products.filter((p) => {
     if (activeCategory !== "all" && (p.category_id || "") !== activeCategory) return false;
@@ -576,9 +606,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         customerDisplayName && !effectiveBooking ? `(Pelanggan: ${customerDisplayName})` : "";
       const finalNote = [discountNote, svcNote, customerNote, note].filter(Boolean).join(" ").trim();
       const payload: any = {
-        booking_id: effectiveBooking ? effectiveBooking.id : null,
-        room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? null,
-        order_source: presetRoomId ? "barcode" : "pos",
+        booking_id: effectiveBooking ? effectiveBooking.id : activeOrder?.booking_id ?? null,
+        room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? activeOrder?.room_id ?? null,
+        order_source: presetRoomId ? "barcode" : activeOrder?.order_source ?? "pos",
 
         store_id: currentStore.id,
         date,
@@ -610,11 +640,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         tax_included_amount: taxSummary.includeTax,
       };
 
-      let orderId = order?.id;
-      if (order) {
-        const { error } = await supabase.from("booking_orders").update(payload).eq("id", order.id);
+      let orderId = activeOrder?.id;
+      if (activeOrder) {
+        const { error } = await supabase.from("booking_orders").update(payload).eq("id", activeOrder.id);
         if (error) throw error;
-        await supabase.from("booking_order_items").delete().eq("booking_order_id", order.id);
+        await supabase.from("booking_order_items").delete().eq("booking_order_id", activeOrder.id);
       } else {
         payload.created_by = user?.id;
         const { data, error } = await supabase
@@ -640,7 +670,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
       if (itemErr) throw itemErr;
 
-      toast.success(order ? "Order diperbarui" : "Order ditambahkan");
+      toast.success(activeOrder ? "Order diperbarui" : "Order ditambahkan");
+      setDraftOrder(null);
 
       // Post-save action
       if (afterAction === "print") {
@@ -685,28 +716,39 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) setDraftOrder(null); onOpenChange(o); }}>
       <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 [&>button.absolute]:hidden">
         {/* Top blue header bar */}
         <div className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           <div className="font-semibold text-lg truncate">
-            {order
-              ? `Ubah Order ${order.bid || ""}`
+            {activeOrder
+              ? `Ubah Order ${activeOrder.bid || ""}`
               : posMode
               ? "POS Kasir"
               : "Tambah Order"}
             {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {order?.id && (!posMode || posSettings.enable_print) && (
+            {activeOrder?.id && (!posMode || posSettings.enable_print) && (
               <button
                 type="button"
-                onClick={() => window.open(`/receipt?id=${booking.id}&order=${order.id}`, "_blank")}
+                onClick={() => window.open(`/receipt?${booking?.id ? `id=${booking.id}&` : ""}order=${activeOrder.id}`, "_blank")}
                 className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
                 title="Cetak nota order"
               >
                 <Printer className="h-4 w-4" />
                 Print
+              </button>
+            )}
+            {draftOrder && (
+              <button
+                type="button"
+                onClick={() => { setDraftOrder(null); setMatchedBooking(null); }}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
+                title="Keluar dari mode ubah draft dan buat order baru"
+              >
+                <Plus className="h-4 w-4" />
+                Order Baru
               </button>
             )}
             {posMode && (
@@ -784,7 +826,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       <button
                         key={o.id}
                         type="button"
-                        onClick={() => window.open(`/pos-order/${o.id}`, "_blank")}
+                        onClick={() => {
+                          if (ps !== "selesai" && ps !== "batal") {
+                            void openDraftInPos(o);
+                          } else {
+                            window.open(`/pos-order/${o.id}`, "_blank");
+                          }
+                        }}
                         className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -810,7 +858,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
                               {ps === "selesai" ? "SELESAI" : ps === "batal" ? "BATAL" : "DRAFT"}
                             </span>
-                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                            {ps !== "selesai" && ps !== "batal" ? (
+                              <ClipboardList className="h-3 w-3 text-primary" />
+                            ) : (
+                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                            )}
                           </span>
                         </div>
                         <div className="text-[11px] text-muted-foreground">
