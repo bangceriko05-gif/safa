@@ -716,23 +716,23 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) setDraftOrder(null); onOpenChange(o); }}>
       <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 [&>button.absolute]:hidden">
         {/* Top blue header bar */}
         <div className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           <div className="font-semibold text-lg truncate">
-            {order
-              ? `Ubah Order ${order.bid || ""}`
+            {activeOrder
+              ? `Ubah Order ${activeOrder.bid || ""}`
               : posMode
               ? "POS Kasir"
               : "Tambah Order"}
             {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {order?.id && (!posMode || posSettings.enable_print) && (
+            {activeOrder?.id && (!posMode || posSettings.enable_print) && (
               <button
                 type="button"
-                onClick={() => window.open(`/receipt?id=${booking.id}&order=${order.id}`, "_blank")}
+                onClick={() => window.open(`/receipt?${booking?.id ? `id=${booking.id}&` : ""}order=${activeOrder.id}`, "_blank")}
                 className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
                 title="Cetak nota order"
               >
