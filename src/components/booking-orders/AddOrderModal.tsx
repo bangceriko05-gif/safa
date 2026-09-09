@@ -360,21 +360,22 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   useEffect(() => {
     if (!open) return;
-    if (order) {
-      setDate(order.date);
-      setPaymentMethod(order.payment_method || "Cash");
-      setReferenceNo(order.reference_no || "");
-      setDualPayment(!!order.dual_payment);
-      setPaymentMethod2(order.payment_method_2 || "");
-      setReferenceNo2(order.reference_no_2 || "");
-      setAmount(Number(order.amount) || 0);
-      setAmount2(Number(order.amount_2) || 0);
-      setProofUrl(order.payment_proof_urls?.[0] || null);
-      setNote(order.note || "");
+    if (activeOrder) {
+      setDate(activeOrder.date);
+      setPaymentMethod(activeOrder.payment_method || "Cash");
+      setReferenceNo(activeOrder.reference_no || "");
+      setDualPayment(!!activeOrder.dual_payment);
+      setPaymentMethod2(activeOrder.payment_method_2 || "");
+      setReferenceNo2(activeOrder.reference_no_2 || "");
+      setAmount(Number(activeOrder.amount) || 0);
+      setAmount2(Number(activeOrder.amount_2) || 0);
+      setProofUrl(activeOrder.payment_proof_urls?.[0] || null);
+      setNote(activeOrder.note || "");
+      if (activeOrder.customer_name) setManualCustomerName(activeOrder.customer_name);
       supabase
         .from("booking_order_items")
         .select("*")
-        .eq("booking_order_id", order.id)
+        .eq("booking_order_id", activeOrder.id)
         .then(({ data }) => {
           setItems(
             (data || []).map((d: any) => ({
