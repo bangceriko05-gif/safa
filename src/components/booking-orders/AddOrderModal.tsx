@@ -473,9 +473,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   // Auto-fill Nominal Bayar with total when not dual payment (and not editing an existing order)
   useEffect(() => {
     if (dualPayment) return;
-    if (order) return;
+    if (activeOrder) return;
     setAmount(total);
-  }, [total, dualPayment, order]);
+  }, [total, dualPayment, activeOrder]);
 
   const filtered = products.filter((p) => {
     if (activeCategory !== "all" && (p.category_id || "") !== activeCategory) return false;
