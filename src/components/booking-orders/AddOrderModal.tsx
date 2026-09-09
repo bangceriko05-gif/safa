@@ -858,7 +858,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
                               {ps === "selesai" ? "SELESAI" : ps === "batal" ? "BATAL" : "DRAFT"}
                             </span>
-                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                            {ps !== "selesai" && ps !== "batal" ? (
+                              <ClipboardList className="h-3 w-3 text-primary" />
+                            ) : (
+                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                            )}
                           </span>
                         </div>
                         <div className="text-[11px] text-muted-foreground">
