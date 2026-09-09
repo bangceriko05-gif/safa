@@ -182,7 +182,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   };
   const draftCount = txOrders.filter(isDraftTx).length;
   const isOnlineTx = (o: any) => (o.order_source || "pos").toLowerCase() === "barcode";
+
+  const txDateRange = (): { from: string; to: string } | null => {
+    const today = new Date();
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (txDateFilter === "hari_ini") return { from: iso(today), to: iso(today) };
+    if (txDateFilter === "kemarin") { const d = new Date(today); d.setDate(d.getDate() - 1); return { from: iso(d), to: iso(d) }; }
+    if (txDateFilter === "7_hari") { const d = new Date(today); d.setDate(d.getDate() - 6); return { from: iso(d), to: iso(today) }; }
+    if (txDateFilter === "bulan_ini") return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
+    if (txDateFilter === "bulan_lalu") return { from: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)), to: iso(new Date(today.getFullYear(), today.getMonth(), 0)) };
+    if (txDateFilter === "custom" && txCustomFrom) return { from: txCustomFrom, to: txCustomTo || txCustomFrom };
+    return null;
+  };
+  const inTxDateRange = (o: any) => {
+    const r = txDateRange();
+    if (!r) return true;
+    const d = (o.date || "").slice(0, 10);
+    return d >= r.from && d <= r.to;
+  };
+
   const filteredTx = txOrders.filter((o) => {
+    if (!inTxDateRange(o)) return false;
     if (txTab === "draft") return isDraftTx(o);
     if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
     return isOnlineTx(o); // online: hanya pesanan via scan barcode kamar
