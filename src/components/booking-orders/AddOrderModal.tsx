@@ -646,7 +646,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
       if (itemErr) throw itemErr;
 
-      toast.success(order ? "Order diperbarui" : "Order ditambahkan");
+      toast.success(activeOrder ? "Order diperbarui" : "Order ditambahkan");
+      setDraftOrder(null);
 
       // Post-save action
       if (afterAction === "print") {
