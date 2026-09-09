@@ -173,6 +173,30 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     void fetchTxOrders();
   };
 
+  // Buka transaksi draft langsung di POS (tanpa tab baru) untuk dilanjutkan/diedit
+  const openDraftInPos = async (o: any) => {
+    const { data: full } = await supabase
+      .from("booking_orders")
+      .select("*")
+      .eq("id", o.id)
+      .single();
+    if (!full) {
+      toast.error("Gagal memuat transaksi draft");
+      return;
+    }
+    setTxListOpen(false);
+    setDraftOrder(full);
+    if ((full as any).booking_id) {
+      const { data: bk } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", (full as any).booking_id)
+        .maybeSingle();
+      if (bk) setMatchedBooking(bk);
+    }
+    toast.success(`Draft ${(full as any).bid || ""} dibuka di POS`);
+  };
+
   const copyBid = async (e: React.MouseEvent, id: string, bid?: string | null) => {
     e.stopPropagation();
     if (!bid) return;
@@ -791,7 +815,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       <button
                         key={o.id}
                         type="button"
-                        onClick={() => window.open(`/pos-order/${o.id}`, "_blank")}
+                        onClick={() => {
+                          if (ps !== "selesai" && ps !== "batal") {
+                            void openDraftInPos(o);
+                          } else {
+                            window.open(`/pos-order/${o.id}`, "_blank");
+                          }
+                        }}
                         className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
                       >
                         <div className="flex items-center justify-between gap-2">
