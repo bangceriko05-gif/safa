@@ -401,8 +401,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setProofUrl(null);
       setNote("");
       setItems([]);
+      setManualCustomerName("");
     }
-  }, [open, order]);
+  }, [open, activeOrder]);
 
   const itemsSubtotal = useMemo(
     () => items.reduce((s, it) => s + Math.max(0, it.quantity * it.unit_price - (it.discount || 0)), 0),
