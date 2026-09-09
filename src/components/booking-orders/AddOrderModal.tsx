@@ -100,6 +100,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
+  // Filter tanggal daftar transaksi
+  const [txDateFilter, setTxDateFilter] = useState<"semua" | "hari_ini" | "kemarin" | "7_hari" | "bulan_ini" | "bulan_lalu" | "custom">("semua");
+  const [txCustomFrom, setTxCustomFrom] = useState("");
+  const [txCustomTo, setTxCustomTo] = useState("");
   // Draft yang dibuka langsung di POS untuk dilanjutkan/diedit
   const [draftOrder, setDraftOrder] = useState<any | null>(null);
 
@@ -178,7 +182,27 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   };
   const draftCount = txOrders.filter(isDraftTx).length;
   const isOnlineTx = (o: any) => (o.order_source || "pos").toLowerCase() === "barcode";
+
+  const txDateRange = (): { from: string; to: string } | null => {
+    const today = new Date();
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (txDateFilter === "hari_ini") return { from: iso(today), to: iso(today) };
+    if (txDateFilter === "kemarin") { const d = new Date(today); d.setDate(d.getDate() - 1); return { from: iso(d), to: iso(d) }; }
+    if (txDateFilter === "7_hari") { const d = new Date(today); d.setDate(d.getDate() - 6); return { from: iso(d), to: iso(today) }; }
+    if (txDateFilter === "bulan_ini") return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
+    if (txDateFilter === "bulan_lalu") return { from: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)), to: iso(new Date(today.getFullYear(), today.getMonth(), 0)) };
+    if (txDateFilter === "custom" && txCustomFrom) return { from: txCustomFrom, to: txCustomTo || txCustomFrom };
+    return null;
+  };
+  const inTxDateRange = (o: any) => {
+    const r = txDateRange();
+    if (!r) return true;
+    const d = (o.date || "").slice(0, 10);
+    return d >= r.from && d <= r.to;
+  };
+
   const filteredTx = txOrders.filter((o) => {
+    if (!inTxDateRange(o)) return false;
     if (txTab === "draft") return isDraftTx(o);
     if (txTab === "selesai") return (o.process_status || "").toLowerCase() === "selesai";
     return isOnlineTx(o); // online: hanya pesanan via scan barcode kamar
@@ -807,8 +831,31 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         <Dialog open={txListOpen} onOpenChange={setTxListOpen}>
           <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Daftar Transaksi</DialogTitle>
+              <div className="flex items-center justify-between gap-2 pr-6">
+                <DialogTitle>Daftar Transaksi</DialogTitle>
+                <Select value={txDateFilter} onValueChange={(v) => setTxDateFilter(v as any)}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue placeholder="Semua Tanggal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="semua">Semua Tanggal</SelectItem>
+                    <SelectItem value="hari_ini">Hari Ini</SelectItem>
+                    <SelectItem value="kemarin">Kemarin</SelectItem>
+                    <SelectItem value="7_hari">7 Hari Terakhir</SelectItem>
+                    <SelectItem value="bulan_ini">Bulan Ini</SelectItem>
+                    <SelectItem value="bulan_lalu">Bulan Lalu</SelectItem>
+                    <SelectItem value="custom">Sesuaikan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </DialogHeader>
+            {txDateFilter === "custom" && (
+              <div className="flex items-center gap-2">
+                <Input type="date" value={txCustomFrom} onChange={(e) => setTxCustomFrom(e.target.value)} className="h-8 text-xs" />
+                <span className="text-xs text-muted-foreground">s/d</span>
+                <Input type="date" value={txCustomTo} onChange={(e) => setTxCustomTo(e.target.value)} className="h-8 text-xs" />
+              </div>
+            )}
             <div className="flex gap-1">
               {([
                 { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
