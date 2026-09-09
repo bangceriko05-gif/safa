@@ -145,6 +145,23 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }
     }
 
+    // Transaksi LUNAS dianggap selesai: order yang sudah lunas tidak boleh
+    // tetap berstatus draft/proses.
+    const lunasSync = rows.filter(
+      (o) =>
+        (o.payment_status || "").toLowerCase() === "lunas" &&
+        (o.process_status || "").toLowerCase() !== "selesai" &&
+        (o.process_status || "").toLowerCase() !== "batal"
+    );
+    if (lunasSync.length > 0) {
+      await supabase
+        .from("booking_orders")
+        .update({ process_status: "selesai" })
+        .in("id", lunasSync.map((o) => o.id));
+      const synced = new Set(lunasSync.map((o) => o.id));
+      rows = rows.map((o) => (synced.has(o.id) ? { ...o, process_status: "selesai" } : o));
+    }
+
     setTxOrders(rows);
     setTxLoading(false);
   };
