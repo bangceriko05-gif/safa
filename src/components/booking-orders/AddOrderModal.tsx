@@ -831,8 +831,31 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         <Dialog open={txListOpen} onOpenChange={setTxListOpen}>
           <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Daftar Transaksi</DialogTitle>
+              <div className="flex items-center justify-between gap-2 pr-6">
+                <DialogTitle>Daftar Transaksi</DialogTitle>
+                <Select value={txDateFilter} onValueChange={(v) => setTxDateFilter(v as any)}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue placeholder="Semua Tanggal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="semua">Semua Tanggal</SelectItem>
+                    <SelectItem value="hari_ini">Hari Ini</SelectItem>
+                    <SelectItem value="kemarin">Kemarin</SelectItem>
+                    <SelectItem value="7_hari">7 Hari Terakhir</SelectItem>
+                    <SelectItem value="bulan_ini">Bulan Ini</SelectItem>
+                    <SelectItem value="bulan_lalu">Bulan Lalu</SelectItem>
+                    <SelectItem value="custom">Sesuaikan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </DialogHeader>
+            {txDateFilter === "custom" && (
+              <div className="flex items-center gap-2">
+                <Input type="date" value={txCustomFrom} onChange={(e) => setTxCustomFrom(e.target.value)} className="h-8 text-xs" />
+                <span className="text-xs text-muted-foreground">s/d</span>
+                <Input type="date" value={txCustomTo} onChange={(e) => setTxCustomTo(e.target.value)} className="h-8 text-xs" />
+              </div>
+            )}
             <div className="flex gap-1">
               {([
                 { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
