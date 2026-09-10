@@ -200,6 +200,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return d >= r.from && d <= r.to;
   };
 
+  // Badge jumlah transaksi mengikuti filter tanggal (kalender) yang dipilih
+  const dateFilteredTx = txOrders.filter(inTxDateRange);
+  const draftCount = dateFilteredTx.filter(isDraftTx).length;
+  const selesaiCount = dateFilteredTx.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length;
+  const onlineCount = dateFilteredTx.filter(isOnlineTx).length;
+
   const filteredTx = txOrders.filter((o) => {
     if (!inTxDateRange(o)) return false;
     if (txTab === "draft") return isDraftTx(o);
