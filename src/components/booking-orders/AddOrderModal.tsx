@@ -842,7 +842,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               <div className="flex items-center justify-between gap-2 pr-6">
                 <DialogTitle>Daftar Transaksi</DialogTitle>
                 <Select value={txDateFilter} onValueChange={(v) => setTxDateFilter(v as any)}>
-                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                  <SelectTrigger className="h-9 w-[160px] text-sm font-medium">
                     <SelectValue placeholder="Semua Tanggal" />
                   </SelectTrigger>
                   <SelectContent>
@@ -859,12 +859,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </DialogHeader>
             {txDateFilter === "custom" && (
               <div className="flex items-center gap-2">
-                <Input type="date" value={txCustomFrom} onChange={(e) => setTxCustomFrom(e.target.value)} className="h-8 text-xs" />
-                <span className="text-xs text-muted-foreground">s/d</span>
-                <Input type="date" value={txCustomTo} onChange={(e) => setTxCustomTo(e.target.value)} className="h-8 text-xs" />
+                <Input type="date" value={txCustomFrom} onChange={(e) => setTxCustomFrom(e.target.value)} className="h-9 text-sm" />
+                <span className="text-sm text-muted-foreground">s/d</span>
+                <Input type="date" value={txCustomTo} onChange={(e) => setTxCustomTo(e.target.value)} className="h-9 text-sm" />
               </div>
             )}
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               {([
                 { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
                 { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
@@ -874,7 +874,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   key={t.key}
                   type="button"
                   onClick={() => setTxTab(t.key)}
-                  className={`px-3 h-8 rounded text-xs font-semibold ${txTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent"}`}
+                  className={`flex-1 h-10 rounded-md text-sm font-bold transition ${txTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent text-foreground"}`}
                 >
                   {t.label}
                 </button>
@@ -886,11 +886,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredTx.length === 0 ? (
-                <div className="text-center text-xs text-muted-foreground py-8">
+                <div className="text-center text-base text-black/70 py-8">
                   {txTab === "draft" ? "Tidak ada transaksi draft" : txTab === "selesai" ? "Belum ada transaksi selesai" : "Belum ada transaksi online"}
                 </div>
               ) : (
-                <div className="space-y-2 py-1">
+                <div className="space-y-3 py-1">
                   {filteredTx.map((o) => {
                     const ps = (o.process_status || "proses").toLowerCase();
                     const its = o.booking_order_items || [];
@@ -905,47 +905,47 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             window.open(`/pos-order/${o.id}`, "_blank");
                           }
                         }}
-                        className="w-full text-left border rounded-lg p-2.5 text-xs hover:border-primary/60 hover:bg-accent/40 transition space-y-1"
+                        className="w-full text-left border rounded-xl p-3.5 text-sm hover:border-primary/60 hover:bg-accent/40 transition space-y-1.5 bg-card"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="flex items-center gap-1">
-                            <span className="font-mono font-bold text-primary">{o.bid || "-"}</span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-black text-sm">{o.bid || "-"}</span>
                             <button
                               type="button"
                               onClick={(e) => copyBid(e, o.id, o.bid)}
-                              className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+                              className="p-1 rounded-md hover:bg-accent text-black/60 hover:text-primary"
                               title="Salin BID"
                             >
                               {copiedBidId === o.id ? (
-                                <Check className="h-3 w-3 text-emerald-600" />
+                                <Check className="h-4 w-4 text-emerald-600" />
                               ) : (
-                                <Copy className="h-3 w-3" />
+                                <Copy className="h-4 w-4" />
                               )}
                             </button>
                           </span>
                           <span className="flex items-center gap-1.5">
                             {(o.order_source || "pos").toLowerCase() === "barcode" && (
-                              <Globe className="h-3 w-3 text-muted-foreground" />
+                              <Globe className="h-4 w-4 text-black/50" />
                             )}
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
                               {ps === "selesai" ? "SELESAI" : ps === "batal" ? "BATAL" : "DRAFT"}
                             </span>
                             {ps !== "selesai" && ps !== "batal" ? (
-                              <ClipboardList className="h-3 w-3 text-primary" />
+                              <ClipboardList className="h-4 w-4 text-primary" />
                             ) : (
-                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                              <ExternalLink className="h-4 w-4 text-black/50" />
                             )}
                           </span>
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-sm text-black/80">
                           {o.date} · {o.customer_name || "Tanpa nama"} · {o.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"}
                         </div>
                         {its.length > 0 && (
-                          <div className="text-[11px] truncate">
+                          <div className="text-sm text-black/70 truncate">
                             {its.map((it: any) => `${it.product_name} x${it.quantity}`).join(", ")}
                           </div>
                         )}
-                        <div className="flex justify-between font-semibold pt-1 border-t">
+                        <div className="flex justify-between items-center font-bold pt-2 border-t text-base text-black">
                           <span>Total</span>
                           <span>{fmt(Number(o.total_amount) || 0)}</span>
                         </div>
