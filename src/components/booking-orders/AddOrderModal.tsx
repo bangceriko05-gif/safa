@@ -180,7 +180,6 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     const ps = (o.process_status || "proses").toLowerCase();
     return ps !== "selesai" && ps !== "batal";
   };
-  const draftCount = txOrders.filter(isDraftTx).length;
   const isOnlineTx = (o: any) => (o.order_source || "pos").toLowerCase() === "barcode";
 
   const txDateRange = (): { from: string; to: string } | null => {
@@ -200,6 +199,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     const d = (o.date || "").slice(0, 10);
     return d >= r.from && d <= r.to;
   };
+
+  // Badge jumlah transaksi mengikuti filter tanggal (kalender) yang dipilih
+  const dateFilteredTx = txOrders.filter(inTxDateRange);
+  const draftCount = dateFilteredTx.filter(isDraftTx).length;
+  const selesaiCount = dateFilteredTx.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length;
+  const onlineCount = dateFilteredTx.filter(isOnlineTx).length;
 
   const filteredTx = txOrders.filter((o) => {
     if (!inTxDateRange(o)) return false;
@@ -866,9 +871,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             )}
             <div className="flex gap-2">
               {([
-                { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
-                { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
-                { key: "online", label: `Online (${txOrders.filter(isOnlineTx).length})` },
+                { key: "draft", label: `Draft (${draftCount})` },
+                { key: "selesai", label: `Selesai (${selesaiCount})` },
+                { key: "online", label: `Online (${onlineCount})` },
               ] as const).map((t) => (
                 <button
                   key={t.key}
