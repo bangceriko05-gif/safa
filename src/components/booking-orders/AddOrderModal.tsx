@@ -871,9 +871,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             )}
             <div className="flex gap-2">
               {([
-                { key: "draft", label: `Draft (${txOrders.filter(isDraftTx).length})` },
-                { key: "selesai", label: `Selesai (${txOrders.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length})` },
-                { key: "online", label: `Online (${txOrders.filter(isOnlineTx).length})` },
+                { key: "draft", label: `Draft (${draftCount})` },
+                { key: "selesai", label: `Selesai (${selesaiCount})` },
+                { key: "online", label: `Online (${onlineCount})` },
               ] as const).map((t) => (
                 <button
                   key={t.key}
