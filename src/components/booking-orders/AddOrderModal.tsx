@@ -269,6 +269,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     };
   }, [resizing, leftWidth]);
 
+  // Default date filter for completed transactions: today
+  useEffect(() => {
+    if (txTab === "selesai" && txDateFilter === "semua") {
+      setTxDateFilter("hari_ini");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txTab]);
+
   // POS-mode customer matching
   const [posCustomerName, setPosCustomerName] = useState("");
   const [activeBookings, setActiveBookings] = useState<any[]>([]);
