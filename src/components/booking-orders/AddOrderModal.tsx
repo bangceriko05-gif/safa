@@ -180,8 +180,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     const ps = (o.process_status || "proses").toLowerCase();
     return ps !== "selesai" && ps !== "batal";
   };
-  const draftCount = txOrders.filter(isDraftTx).length;
   const isOnlineTx = (o: any) => (o.order_source || "pos").toLowerCase() === "barcode";
+  // Badge jumlah transaksi mengikuti filter tanggal (kalender) yang dipilih
+  const dateFilteredTx = txOrders.filter(inTxDateRange);
+  const draftCount = dateFilteredTx.filter(isDraftTx).length;
+  const selesaiCount = dateFilteredTx.filter((o) => (o.process_status || "").toLowerCase() === "selesai").length;
+  const onlineCount = dateFilteredTx.filter(isOnlineTx).length;
 
   const txDateRange = (): { from: string; to: string } | null => {
     const today = new Date();
