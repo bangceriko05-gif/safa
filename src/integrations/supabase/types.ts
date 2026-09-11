@@ -3779,6 +3779,30 @@ export type Database = {
           email_payment_received: boolean
         }[]
       }
+      get_public_shop_catalog: {
+        Args: never
+        Returns: {
+          category_id: string
+          category_name: string
+          product_description: string
+          product_id: string
+          product_images: Json
+          product_name: string
+          product_price: number
+          product_stock: number
+          store_description: string
+          store_id: string
+          store_image_url: string
+          store_location: string
+          store_name: string
+          store_slug: string
+          track_inventory: boolean
+          variant_id: string
+          variant_name: string
+          variant_price: number
+          variant_stock: number
+        }[]
+      }
       get_store_code: { Args: { store_id: string }; Returns: string }
       get_user_ids_with_any_store_access: {
         Args: never
