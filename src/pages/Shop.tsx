@@ -96,8 +96,34 @@ export default function Shop() {
   const stores = useMemo(() => {
     const map = new Map<string, CatalogRow>();
     rows.forEach((row) => map.set(row.store_id, row));
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) => a.store_name.localeCompare(b.store_name));
   }, [rows]);
+
+  const slugStore = useMemo(
+    () => (storeSlug ? stores.find((store) => store.store_slug === storeSlug) : undefined),
+    [stores, storeSlug],
+  );
+
+  useEffect(() => {
+    setStoreId(slugStore ? slugStore.store_id : ALL);
+    setCategoryId(ALL);
+  }, [slugStore]);
+
+  useEffect(() => {
+    const name = slugStore?.store_name;
+    document.title = name ? `Belanja Online ${name} | ANKA Shop` : "ANKA Shop - Katalog Online Setiap Outlet";
+    const description = name
+      ? `Lihat dan belanja produk terbaru dari ${name} lengkap dengan harga dan ketersediaan stok.`
+      : "Pilih outlet ANKA dan belanja produk terbarunya lengkap dengan harga serta ketersediaan stok.";
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", description);
+  }, [slugStore]);
+
 
   const categories = useMemo(() => {
     const map = new Map<string, string>();
