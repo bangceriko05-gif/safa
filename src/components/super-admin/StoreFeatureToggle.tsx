@@ -70,6 +70,13 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
       "pos.inventory": { label: "Inventori (Stok Masuk/Keluar/Opname)", icon: Boxes },
     },
   },
+  website: {
+    label: "Website", description: "Halaman toko online & transaksi website", icon: Globe,
+    children: {
+      "website.storefront": { label: "Tampilan Website Toko", icon: Monitor },
+      "website.orders": { label: "Transaksi dari Website", icon: ShoppingCart },
+    },
+  },
   activity_log: { label: "Log Aktivitas", description: "Riwayat aktivitas pengguna", icon: History },
   user_management: { label: "Manajemen Pengguna", description: "Kelola user dan permission", icon: UserCog },
   booking_requests: { label: "Booking Request", description: "Permintaan booking online", icon: Inbox },
@@ -78,7 +85,7 @@ const FEATURE_TREE: Record<string, FeatureConfig> = {
 
 const FEATURE_ORDER = [
   "calendar", "transactions", "customers", "reports",
-  "settings", "products_inventory", "pos", "activity_log",
+  "settings", "products_inventory", "pos", "website", "activity_log",
   "user_management", "booking_requests", "deposit",
 ];
 
