@@ -25,7 +25,7 @@ type WebsiteOrder = {
   date: string | null;
   customer_name: string | null;
   customer_phone: string | null;
-  grand_total: number | null;
+  total_amount: number | null;
   payment_status: string | null;
   process_status: string | null;
   order_source: string | null;
@@ -80,7 +80,7 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
       } else {
         const { data, error } = await supabase
           .from("booking_orders")
-          .select("id, bid, date, customer_name, customer_phone, grand_total, payment_status, process_status, order_source")
+          .select("id, bid, date, customer_name, customer_phone, total_amount, payment_status, process_status, order_source")
           .eq("store_id", storeId)
           .in("order_source", ["website", "barcode"])
           .order("date", { ascending: false })
@@ -263,7 +263,7 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
                 <Badge variant={order.payment_status === "LUNAS" ? "default" : "secondary"}>
                   {order.payment_status || "-"}
                 </Badge>
-                <span className="font-bold">{formatPrice(order.grand_total)}</span>
+                <span className="font-bold">{formatPrice(order.total_amount)}</span>
               </button>
             ))}
           </div>
