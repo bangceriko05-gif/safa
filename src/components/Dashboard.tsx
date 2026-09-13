@@ -657,6 +657,11 @@ export default function Dashboard() {
     { key: "rooms", label: "Kamar", icon: Bed },
   ];
 
+  const websiteSubItems: { key: "storefront" | "orders"; label: string; icon: typeof Package }[] = [
+    { key: "storefront", label: "Tampilan Website Toko", icon: StoreIcon },
+    { key: "orders", label: "Transaksi dari Website", icon: Receipt },
+  ];
+
   const customersSubItems: { key: "customers" | "suppliers" | "crm"; label: string; icon: typeof Users }[] = [
     { key: "customers", label: "Pelanggan", icon: Users },
     { key: "suppliers", label: "Supplier", icon: Package },
@@ -708,6 +713,16 @@ export default function Dashboard() {
                     subItems={roomsSubItems}
                     activeSubKey={roomsSection}
                     onSelect={goToRoomsSection}
+                  />
+
+                  {/* Website with collapsible sub-menu */}
+                  <CollapsibleSidebarMenu
+                    isActive={activeTab === "website"}
+                    label="Website"
+                    icon={Globe}
+                    subItems={websiteSubItems}
+                    activeSubKey={websiteSection}
+                    onSelect={goToWebsiteSection}
                   />
 
                   {/* Pelanggan with collapsible sub-menu */}
