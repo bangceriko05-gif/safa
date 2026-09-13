@@ -62,6 +62,7 @@ const PermissionManagement = lazyWithRetry(() => import("./PermissionManagement"
 const SettingsPage = lazyWithRetry(() => import("./SettingsPage"));
 const TransactionManagement = lazyWithRetry(() => import("./TransactionManagement"));
 const DepositFormModal = lazyWithRetry(() => import("./deposit/DepositFormModal"));
+const WebsiteManagement = lazyWithRetry(() => import("./website/WebsiteManagement"));
 
 // Prefetch is tiered so the boot path stays light:
 // tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
@@ -123,6 +124,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
   const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
+  const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders">("storefront");
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
@@ -171,6 +173,10 @@ export default function Dashboard() {
     };
   }, []);
 
+  const goToWebsiteSection = (section: "storefront" | "orders") => {
+    setActiveTab("website");
+    setWebsiteSection(section);
+  };
   const goToCustomersSection = (section: "customers" | "suppliers" | "crm") => {
     setActiveTab("customers");
     setCustomersSection(null);
