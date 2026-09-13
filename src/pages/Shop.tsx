@@ -65,6 +65,8 @@ function formatPrice(value: number) {
 }
 
 export default function Shop() {
+  const { storeSlug } = useParams<{ storeSlug?: string }>();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<CatalogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
