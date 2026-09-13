@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Store as StoreIcon } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -1000,6 +1000,26 @@ export default function Dashboard() {
               )
             ) : (
               <FeatureInactiveNotice featureName="Pelanggan" icon={Users} price={getFeatureInfo("customers").price} description={getFeatureInfo("customers").description} />
+            ))}
+          </TabsContent>
+
+          <TabsContent value="website" className="mt-6">
+            {activeTab === "website" && (isFeatureEnabled("website") ? (
+              websiteSection === "orders" ? (
+                isFeatureEnabled("website.orders") ? (
+                  <WebsiteManagement section="orders" />
+                ) : (
+                  <FeatureInactiveNotice featureName="Transaksi dari Website" icon={Receipt} price={getFeatureInfo("website.orders").price} description={getFeatureInfo("website.orders").description} />
+                )
+              ) : (
+                isFeatureEnabled("website.storefront") ? (
+                  <WebsiteManagement section="storefront" />
+                ) : (
+                  <FeatureInactiveNotice featureName="Tampilan Website Toko" icon={StoreIcon} price={getFeatureInfo("website.storefront").price} description={getFeatureInfo("website.storefront").description} />
+                )
+              )
+            ) : (
+              <FeatureInactiveNotice featureName="Website" icon={Globe} price={getFeatureInfo("website").price} description={getFeatureInfo("website").description} />
             ))}
           </TabsContent>
 
