@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,8 @@ function formatPrice(value: number) {
 }
 
 export default function Shop() {
+  const { storeSlug } = useParams<{ storeSlug?: string }>();
+  
   const [rows, setRows] = useState<CatalogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,8 +96,34 @@ export default function Shop() {
   const stores = useMemo(() => {
     const map = new Map<string, CatalogRow>();
     rows.forEach((row) => map.set(row.store_id, row));
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) => a.store_name.localeCompare(b.store_name));
   }, [rows]);
+
+  const slugStore = useMemo(
+    () => (storeSlug ? stores.find((store) => store.store_slug === storeSlug) : undefined),
+    [stores, storeSlug],
+  );
+
+  useEffect(() => {
+    setStoreId(slugStore ? slugStore.store_id : ALL);
+    setCategoryId(ALL);
+  }, [slugStore]);
+
+  useEffect(() => {
+    const name = slugStore?.store_name;
+    document.title = name ? `Belanja Online ${name} | ANKA Shop` : "ANKA Shop - Katalog Online Setiap Outlet";
+    const description = name
+      ? `Lihat dan belanja produk terbaru dari ${name} lengkap dengan harga dan ketersediaan stok.`
+      : "Pilih outlet ANKA dan belanja produk terbarunya lengkap dengan harga serta ketersediaan stok.";
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", description);
+  }, [slugStore]);
+
 
   const categories = useMemo(() => {
     const map = new Map<string, string>();
@@ -130,38 +158,123 @@ export default function Shop() {
       });
   }, [rows, storeId, categoryId, query]);
 
-  const currentStore = stores.find((store) => store.store_id === storeId);
+  const currentStore = slugStore || stores.find((store) => store.store_id === storeId);
+
+  const pageHeader = (
+    <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur">
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <Link to="/shop" className="flex min-w-0 items-center gap-3" aria-label="Semua outlet ANKA Shop">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <ShoppingBag className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-lg font-extrabold text-foreground">ANKA Shop</span>
+            <span className="block truncate text-xs font-medium text-muted-foreground">
+              {slugStore ? slugStore.store_name : "Belanja dari outlet pilihan Anda"}
+            </span>
+          </span>
+        </Link>
+        <Button asChild variant="ghost" className="shrink-0">
+          <Link to={storeSlug ? "/shop" : "/"}>
+            <ArrowLeft className="h-4 w-4" />
+            {storeSlug ? "Semua Outlet" : "Beranda"}
+          </Link>
+        </Button>
+      </div>
+    </header>
+  );
+
+  if (!storeSlug) {
+    return (
+      <main className="min-h-screen bg-background">
+        {pageHeader}
+        <section className="border-b bg-secondary/50">
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+            <p className="mb-2 text-sm font-bold uppercase text-primary">Katalog Online</p>
+            <h1 className="text-3xl font-black text-foreground sm:text-4xl">Pilih outlet untuk mulai belanja</h1>
+            <p className="mt-3 max-w-3xl text-base font-medium text-muted-foreground sm:text-lg">
+              Setiap outlet punya halaman katalognya sendiri lengkap dengan produk, harga, dan ketersediaan stok.
+            </p>
+          </div>
+        </section>
+        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          {loading ? (
+            <div className="flex min-h-72 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : error ? (
+            <div className="flex min-h-72 flex-col items-center justify-center text-center">
+              <ShoppingBag className="mb-4 h-10 w-10 text-muted-foreground" />
+              <p className="text-lg font-bold text-foreground">{error}</p>
+            </div>
+          ) : stores.length === 0 ? (
+            <div className="flex min-h-72 flex-col items-center justify-center text-center">
+              <Building2 className="mb-4 h-10 w-10 text-muted-foreground" />
+              <p className="text-lg font-bold text-foreground">Belum ada outlet dengan produk online</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {stores.map((store) => {
+                const total = new Set(
+                  rows.filter((row) => row.store_id === store.store_id).map((row) => row.product_id),
+                ).size;
+                return (
+                  <Link
+                    key={store.store_id}
+                    to={`/shop/${store.store_slug}`}
+                    className="group flex items-center gap-4 rounded-md border bg-card p-5 shadow-[var(--shadow-card)] transition-transform duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-hover)]"
+                  >
+                    {store.store_image_url ? (
+                      <img src={store.store_image_url} alt={`Logo ${store.store_name}`} loading="lazy" className="h-16 w-16 shrink-0 rounded-md border object-cover" />
+                    ) : (
+                      <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-muted"><Store className="h-7 w-7 text-muted-foreground" /></span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate text-lg font-extrabold text-foreground">{store.store_name}</span>
+                      {store.store_location && (
+                        <span className="mt-1 flex items-center gap-1 truncate text-sm font-medium text-muted-foreground">
+                          <MapPin className="h-4 w-4 shrink-0" />{store.store_location}
+                        </span>
+                      )}
+                      <span className="mt-2 block text-sm font-bold text-primary">{total} produk online</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </main>
+    );
+  }
+
+  if (!loading && !error && !slugStore) {
+    return (
+      <main className="min-h-screen bg-background">
+        {pageHeader}
+        <section className="mx-auto flex min-h-[60vh] max-w-3xl flex-col items-center justify-center px-4 text-center">
+          <Building2 className="mb-4 h-10 w-10 text-muted-foreground" />
+          <h1 className="text-2xl font-black text-foreground">Outlet tidak ditemukan</h1>
+          <p className="mt-2 font-medium text-muted-foreground">Halaman outlet ini belum tersedia atau belum memiliki produk online.</p>
+          <Button asChild className="mt-6"><Link to="/shop">Lihat semua outlet</Link></Button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-          <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="Kembali ke ANKA">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <ShoppingBag className="h-5 w-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-lg font-extrabold text-foreground">ANKA Shop</span>
-              <span className="block text-xs font-medium text-muted-foreground">Belanja dari outlet pilihan Anda</span>
-            </span>
-          </Link>
-          <Button asChild variant="ghost" className="shrink-0">
-            <Link to="/"><ArrowLeft className="h-4 w-4" />Beranda</Link>
-          </Button>
-        </div>
-      </header>
+      {pageHeader}
 
       <section className="border-b bg-secondary/50">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
           <div className="max-w-3xl">
             <p className="mb-2 text-sm font-bold uppercase text-primary">Katalog Online</p>
-            <h1 className="text-3xl font-black text-foreground sm:text-4xl">Produk terbaik dari setiap outlet</h1>
+            <h1 className="text-3xl font-black text-foreground sm:text-4xl">{slugStore?.store_name || "Katalog Outlet"}</h1>
             <p className="mt-3 text-base font-medium text-muted-foreground sm:text-lg">
-              Pilih outlet, temukan produk, dan lihat harga serta ketersediaannya secara langsung.
+              {slugStore?.store_description || "Temukan produk outlet ini beserta harga dan ketersediaannya secara langsung."}
             </p>
           </div>
 
-          <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_220px]">
+          <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
             <label className="relative block">
               <span className="sr-only">Cari produk</span>
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -172,18 +285,6 @@ export default function Shop() {
                 className="h-12 bg-card pl-12 text-base"
               />
             </label>
-            <select
-              aria-label="Pilih outlet"
-              value={storeId}
-              onChange={(event) => {
-                setStoreId(event.target.value);
-                setCategoryId(ALL);
-              }}
-              className="h-12 rounded-md border border-input bg-card px-4 text-base font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value={ALL}>Semua outlet</option>
-              {stores.map((store) => <option key={store.store_id} value={store.store_id}>{store.store_name}</option>)}
-            </select>
             <select
               aria-label="Pilih kategori"
               value={categoryId}
