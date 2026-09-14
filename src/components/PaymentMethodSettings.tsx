@@ -175,10 +175,17 @@ export default function PaymentMethodSettings() {
           Metode Pembayaran
         </CardTitle>
         <CardDescription>
-          Kelola daftar metode pembayaran yang tersedia. Hanya metode yang aktif yang akan muncul di form booking dan pemasukan.
+          Kelola daftar metode pembayaran yang tersedia. Hanya metode yang aktif yang akan muncul di form booking dan pemasukan. Aktifkan "Website" agar metode dipakai di toko online.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!websiteEnabled && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <p className="text-sm text-destructive font-medium">{WEBSITE_INACTIVE_MESSAGE}</p>
+          </div>
+        )}
+
         {/* Add new method */}
         <div className="flex gap-2">
           <Input
