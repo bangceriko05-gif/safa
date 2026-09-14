@@ -145,6 +145,44 @@ export default function PaymentMethodSettings() {
     }
   };
 
+  const handleBulkDashboard = async (active: boolean) => {
+    if (!currentStore || methods.length === 0) return;
+    try {
+      const ids = methods.map(m => m.id);
+      const { error } = await supabase
+        .from("payment_methods")
+        .update({ is_active: active })
+        .in("id", ids);
+      if (error) throw error;
+      setMethods(prev => prev.map(m => ({ ...m, is_active: active })));
+      toast.success(active ? "Semua metode diaktifkan di dashboard" : "Semua metode dinonaktifkan di dashboard");
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal mengubah status metode pembayaran");
+    }
+  };
+
+  const handleBulkWebsite = async (active: boolean) => {
+    if (!currentStore || methods.length === 0) return;
+    if (active && !websiteEnabled) {
+      toast.error(WEBSITE_INACTIVE_MESSAGE);
+      return;
+    }
+    try {
+      const ids = methods.map(m => m.id);
+      const { error } = await supabase
+        .from("payment_methods")
+        .update({ show_on_website: active })
+        .in("id", ids);
+      if (error) throw error;
+      setMethods(prev => prev.map(m => ({ ...m, show_on_website: active })));
+      toast.success(active ? "Semua metode aktif di website" : "Semua metode dinonaktifkan di website");
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal mengubah metode pembayaran website");
+    }
+  };
+
   const handleDelete = async (id: string, name: string, isDefault: boolean) => {
     if (isDefault) {
       toast.error("Metode pembayaran bawaan tidak bisa dihapus");
