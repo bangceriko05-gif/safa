@@ -96,7 +96,12 @@ export default function RoomBarcodeSettings() {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<{ room: RoomRow; dataUrl: string } | null>(null);
 
-  const scanBaseUrl = useMemo(() => `${window.location.origin}/room-scan`, []);
+  const scanBaseUrl = useMemo(() => {
+    const origin = window.location.origin.includes("lovable")
+      ? "https://www.anka.management"
+      : window.location.origin;
+    return `${origin}/room-scan`;
+  }, []);
 
   useEffect(() => {
     if (!currentStore?.id) return;
