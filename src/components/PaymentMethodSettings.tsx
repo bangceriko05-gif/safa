@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CreditCard, Plus, Trash2, GripVertical, Globe, AlertTriangle } from "lucide-react";
+import { CreditCard, Plus, Trash2, GripVertical, Globe, AlertTriangle, LayoutDashboard } from "lucide-react";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface PaymentMethod {
