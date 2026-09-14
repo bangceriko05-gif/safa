@@ -60,7 +60,11 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
   const shopUrl = useMemo(() => {
     const slug = (currentStore as any)?.slug;
     if (!slug) return null;
-    return `${window.location.origin}/shop/${slug}`;
+    // Pakai domain resmi bila sedang di host preview lovable
+    const origin = window.location.origin.includes("lovable")
+      ? "https://www.anka.management"
+      : window.location.origin;
+    return `${origin}/shop/${slug}`;
   }, [currentStore]);
 
   useEffect(() => {
