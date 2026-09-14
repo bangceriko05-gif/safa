@@ -136,23 +136,23 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
 
       if (error) throw error;
 
-      // If toggling a parent OFF, also disable all children
+      // Toggling a parent cascades to all its children (both ON and OFF)
       const config = FEATURE_TREE[feature.feature_key];
-      if (config?.children && !newValue) {
+      if (config?.children) {
         const childKeys = Object.keys(config.children);
         const childFeatures = features.filter(f => childKeys.includes(f.feature_key));
         for (const child of childFeatures) {
-          if (child.is_enabled) {
+          if (child.is_enabled !== newValue) {
             await supabase
               .from("store_features")
-              .update({ is_enabled: false, updated_at: new Date().toISOString() })
+              .update({ is_enabled: newValue, updated_at: new Date().toISOString() })
               .eq("id", child.id);
           }
         }
         setFeatures(prev =>
           prev.map(f => {
             if (f.id === feature.id) return { ...f, is_enabled: newValue };
-            if (childKeys.includes(f.feature_key)) return { ...f, is_enabled: false };
+            if (childKeys.includes(f.feature_key)) return { ...f, is_enabled: newValue };
             return f;
           })
         );
