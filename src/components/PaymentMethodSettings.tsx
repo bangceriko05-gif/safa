@@ -124,6 +124,27 @@ export default function PaymentMethodSettings() {
     }
   };
 
+  const handleToggleWebsite = async (id: string, show: boolean) => {
+    if (show && !websiteEnabled) {
+      toast.error(WEBSITE_INACTIVE_MESSAGE);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("payment_methods")
+        .update({ show_on_website: show })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setMethods(prev => prev.map(m => m.id === id ? { ...m, show_on_website: show } : m));
+      toast.success(show ? "Metode pembayaran aktif di website" : "Metode pembayaran dinonaktifkan di website");
+    } catch (error) {
+      console.error("Error toggling website payment method:", error);
+      toast.error("Gagal mengubah metode pembayaran website");
+    }
+  };
+
   const handleDelete = async (id: string, name: string, isDefault: boolean) => {
     if (isDefault) {
       toast.error("Metode pembayaran bawaan tidak bisa dihapus");
