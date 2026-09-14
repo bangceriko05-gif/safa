@@ -222,7 +222,15 @@ export default function PaymentMethodSettings() {
                     <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <Globe className={`h-4 w-4 ${method.show_on_website && websiteEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="text-xs text-muted-foreground hidden sm:inline">Website</span>
+                    <Switch
+                      checked={!!method.show_on_website && websiteEnabled}
+                      onCheckedChange={(checked) => handleToggleWebsite(method.id, checked)}
+                    />
+                  </div>
                   <Switch
                     checked={method.is_active}
                     onCheckedChange={(checked) => handleToggle(method.id, checked)}
