@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CreditCard, Plus, Trash2, GripVertical, Globe, AlertTriangle } from "lucide-react";
+import { CreditCard, Plus, Trash2, GripVertical, Globe, AlertTriangle, LayoutDashboard } from "lucide-react";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface PaymentMethod {
@@ -145,6 +145,44 @@ export default function PaymentMethodSettings() {
     }
   };
 
+  const handleBulkDashboard = async (active: boolean) => {
+    if (!currentStore || methods.length === 0) return;
+    try {
+      const ids = methods.map(m => m.id);
+      const { error } = await supabase
+        .from("payment_methods")
+        .update({ is_active: active })
+        .in("id", ids);
+      if (error) throw error;
+      setMethods(prev => prev.map(m => ({ ...m, is_active: active })));
+      toast.success(active ? "Semua metode diaktifkan di dashboard" : "Semua metode dinonaktifkan di dashboard");
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal mengubah status metode pembayaran");
+    }
+  };
+
+  const handleBulkWebsite = async (active: boolean) => {
+    if (!currentStore || methods.length === 0) return;
+    if (active && !websiteEnabled) {
+      toast.error(WEBSITE_INACTIVE_MESSAGE);
+      return;
+    }
+    try {
+      const ids = methods.map(m => m.id);
+      const { error } = await supabase
+        .from("payment_methods")
+        .update({ show_on_website: active })
+        .in("id", ids);
+      if (error) throw error;
+      setMethods(prev => prev.map(m => ({ ...m, show_on_website: active })));
+      toast.success(active ? "Semua metode aktif di website" : "Semua metode dinonaktifkan di website");
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal mengubah metode pembayaran website");
+    }
+  };
+
   const handleDelete = async (id: string, name: string, isDefault: boolean) => {
     if (isDefault) {
       toast.error("Metode pembayaran bawaan tidak bisa dihapus");
@@ -206,48 +244,82 @@ export default function PaymentMethodSettings() {
         ) : methods.length === 0 ? (
           <p className="text-sm text-muted-foreground">Belum ada metode pembayaran</p>
         ) : (
-          <div className="space-y-2">
-            {methods.map((method) => (
-              <div
-                key={method.id}
-                className="flex items-center justify-between p-3 rounded-lg border bg-card"
-              >
-                <div className="flex items-center gap-3">
-                  <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium text-sm">{method.name}</span>
-                  {method.is_default && (
-                    <Badge variant="outline" className="text-xs">Bawaan</Badge>
-                  )}
-                  {!method.is_active && (
-                    <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
-                  )}
+          <div className="rounded-xl border overflow-hidden">
+            {/* Header kolom */}
+            <div className="grid grid-cols-[1fr_140px_140px_44px] items-start gap-2 bg-muted/50 px-3 py-2.5 border-b">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground self-center">
+                Metode
+              </span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Globe className="h-3.5 w-3.5" /> Website
+                </span>
+                <div className="flex gap-1">
+                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkWebsite(true)}>
+                    Aktifkan semua
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkWebsite(false)}>
+                    Matikan
+                  </Button>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <Globe className={`h-4 w-4 ${method.show_on_website && websiteEnabled ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className="text-xs text-muted-foreground hidden sm:inline">Website</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+                </span>
+                <div className="flex gap-1">
+                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkDashboard(true)}>
+                    Aktifkan semua
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkDashboard(false)}>
+                    Matikan
+                  </Button>
+                </div>
+              </div>
+              <span className="sr-only">Aksi</span>
+            </div>
+
+            {/* Baris metode */}
+            <div className="divide-y">
+              {methods.map((method) => (
+                <div
+                  key={method.id}
+                  className="grid grid-cols-[1fr_140px_140px_44px] items-center gap-2 px-3 py-3 bg-card"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-sm truncate">{method.name}</span>
+                    {method.is_default && (
+                      <Badge variant="outline" className="text-xs shrink-0">Bawaan</Badge>
+                    )}
+                  </div>
+                  <div className="flex justify-center">
                     <Switch
                       checked={!!method.show_on_website && websiteEnabled}
                       onCheckedChange={(checked) => handleToggleWebsite(method.id, checked)}
                     />
                   </div>
-                  <Switch
-                    checked={method.is_active}
-                    onCheckedChange={(checked) => handleToggle(method.id, checked)}
-                  />
-                  {!method.is_default && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(method.id, method.name, method.is_default)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={method.is_active}
+                      onCheckedChange={(checked) => handleToggle(method.id, checked)}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    {!method.is_default && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(method.id, method.name, method.is_default)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
