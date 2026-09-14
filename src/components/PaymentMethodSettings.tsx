@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CreditCard, Plus, Trash2, GripVertical } from "lucide-react";
+import { CreditCard, Plus, Trash2, GripVertical, Globe, AlertTriangle } from "lucide-react";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface PaymentMethod {
   id: string;
@@ -16,10 +17,16 @@ interface PaymentMethod {
   is_active: boolean;
   sort_order: number;
   is_default: boolean;
+  show_on_website?: boolean;
 }
+
+const WEBSITE_INACTIVE_MESSAGE =
+  "Mohon maaf, fitur website di outlet anda tidak aktif. Lakukan pembayaran tambahan untuk mengaktifkan fitur ini. Terima kasih";
 
 export default function PaymentMethodSettings() {
   const { currentStore } = useStore();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const websiteEnabled = isFeatureEnabled("website") && isFeatureEnabled("website.storefront");
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [newMethodName, setNewMethodName] = useState("");
