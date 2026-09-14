@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CreditCard, Plus, Trash2, GripVertical } from "lucide-react";
+import { CreditCard, Plus, Trash2, GripVertical, Globe, AlertTriangle } from "lucide-react";
+import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 interface PaymentMethod {
   id: string;
@@ -16,10 +17,16 @@ interface PaymentMethod {
   is_active: boolean;
   sort_order: number;
   is_default: boolean;
+  show_on_website?: boolean;
 }
+
+const WEBSITE_INACTIVE_MESSAGE =
+  "Mohon maaf, fitur website di outlet anda tidak aktif. Lakukan pembayaran tambahan untuk mengaktifkan fitur ini. Terima kasih";
 
 export default function PaymentMethodSettings() {
   const { currentStore } = useStore();
+  const { isFeatureEnabled } = useStoreFeatures(currentStore?.id);
+  const websiteEnabled = isFeatureEnabled("website") && isFeatureEnabled("website.storefront");
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [newMethodName, setNewMethodName] = useState("");
@@ -117,6 +124,27 @@ export default function PaymentMethodSettings() {
     }
   };
 
+  const handleToggleWebsite = async (id: string, show: boolean) => {
+    if (show && !websiteEnabled) {
+      toast.error(WEBSITE_INACTIVE_MESSAGE);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("payment_methods")
+        .update({ show_on_website: show })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setMethods(prev => prev.map(m => m.id === id ? { ...m, show_on_website: show } : m));
+      toast.success(show ? "Metode pembayaran aktif di website" : "Metode pembayaran dinonaktifkan di website");
+    } catch (error) {
+      console.error("Error toggling website payment method:", error);
+      toast.error("Gagal mengubah metode pembayaran website");
+    }
+  };
+
   const handleDelete = async (id: string, name: string, isDefault: boolean) => {
     if (isDefault) {
       toast.error("Metode pembayaran bawaan tidak bisa dihapus");
@@ -147,10 +175,17 @@ export default function PaymentMethodSettings() {
           Metode Pembayaran
         </CardTitle>
         <CardDescription>
-          Kelola daftar metode pembayaran yang tersedia. Hanya metode yang aktif yang akan muncul di form booking dan pemasukan.
+          Kelola daftar metode pembayaran yang tersedia. Hanya metode yang aktif yang akan muncul di form booking dan pemasukan. Aktifkan "Website" agar metode dipakai di toko online.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!websiteEnabled && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <p className="text-sm text-destructive font-medium">{WEBSITE_INACTIVE_MESSAGE}</p>
+          </div>
+        )}
+
         {/* Add new method */}
         <div className="flex gap-2">
           <Input
@@ -187,7 +222,15 @@ export default function PaymentMethodSettings() {
                     <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <Globe className={`h-4 w-4 ${method.show_on_website && websiteEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="text-xs text-muted-foreground hidden sm:inline">Website</span>
+                    <Switch
+                      checked={!!method.show_on_website && websiteEnabled}
+                      onCheckedChange={(checked) => handleToggleWebsite(method.id, checked)}
+                    />
+                  </div>
                   <Switch
                     checked={method.is_active}
                     onCheckedChange={(checked) => handleToggle(method.id, checked)}
