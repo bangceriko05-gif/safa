@@ -1,0 +1,1 @@
+ALTER TABLE public.payment_methods ADD COLUMN IF NOT EXISTS show_on_website boolean NOT NULL DEFAULT false;

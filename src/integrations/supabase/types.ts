@@ -1880,6 +1880,7 @@ export type Database = {
           is_active: boolean
           is_default: boolean
           name: string
+          show_on_website: boolean
           sort_order: number
           store_id: string
           updated_at: string
@@ -1890,6 +1891,7 @@ export type Database = {
           is_active?: boolean
           is_default?: boolean
           name: string
+          show_on_website?: boolean
           sort_order?: number
           store_id: string
           updated_at?: string
@@ -1900,6 +1902,7 @@ export type Database = {
           is_active?: boolean
           is_default?: boolean
           name?: string
+          show_on_website?: boolean
           sort_order?: number
           store_id?: string
           updated_at?: string
