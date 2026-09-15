@@ -220,7 +220,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
         </p>
       )}
 
-      <div className="border rounded-md divide-y">
+      <div className="border rounded-md divide-y max-h-[55vh] overflow-y-auto">
         {adding && (
           <div className="flex items-center gap-2 p-3">
             <Input
