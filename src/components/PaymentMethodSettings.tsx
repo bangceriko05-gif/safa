@@ -258,27 +258,27 @@ export default function PaymentMethodSettings() {
                 <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <Globe className="h-3.5 w-3.5" /> Website
                 </span>
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkWebsite(true)}>
-                    Aktifkan semua
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkWebsite(false)}>
-                    Matikan
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={handleBulkWebsite}
+                >
+                  {methods.every(m => m.show_on_website) ? "Non-aktifkan semua" : "Aktifkan semua"}
+                </Button>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
                 </span>
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkDashboard(true)}>
-                    Aktifkan semua
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkDashboard(false)}>
-                    Matikan
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={handleBulkDashboard}
+                >
+                  {methods.every(m => m.is_active) ? "Non-aktifkan semua" : "Aktifkan semua"}
+                </Button>
               </div>
               <span className="sr-only">Aksi</span>
             </div>
