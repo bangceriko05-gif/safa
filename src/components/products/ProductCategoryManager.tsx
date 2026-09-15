@@ -14,6 +14,7 @@ interface Item {
   qty?: number;
   sort_order?: number;
   pos_visible?: boolean;
+  show_on_website?: boolean;
 }
 
 interface Props {
@@ -37,6 +38,8 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   const [editingName, setEditingName] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const isCategory = table === "product_categories";
+  const isCollection = table === "product_collections";
+  const hasVisibilityToggles = isCategory || isCollection;
 
   const fetchItems = async () => {
     if (!currentStore) return;
@@ -44,7 +47,9 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       table === "product_materials"
         ? "id, name, is_default"
         : isCategory
-        ? "id, name, sort_order, pos_visible"
+        ? "id, name, sort_order, pos_visible, show_on_website"
+        : isCollection
+        ? "id, name, pos_visible, show_on_website"
         : "id, name";
     let query = supabase
       .from(table as any)
@@ -190,11 +195,27 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       .update({ pos_visible: next })
       .eq("id", item.id);
     if (error) {
-      toast.error("Gagal mengubah tampilan kategori");
+      toast.error("Gagal mengubah tampilan");
       fetchItems();
       return;
     }
-    toast.success(next ? "Kategori tampil di POS" : "Kategori disembunyikan dari POS");
+    toast.success(next ? "Tampil di POS" : "Disembunyikan dari POS");
+    onChanged?.();
+  };
+
+  const toggleWebsite = async (item: Item) => {
+    const next = !(item.show_on_website ?? true);
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, show_on_website: next } : i)));
+    const { error } = await supabase
+      .from(table as any)
+      .update({ show_on_website: next })
+      .eq("id", item.id);
+    if (error) {
+      toast.error("Gagal mengubah tampilan website");
+      fetchItems();
+      return;
+    }
+    toast.success(next ? "Tampil di website" : "Disembunyikan dari website");
     onChanged?.();
   };
 
@@ -215,9 +236,22 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
 
       {isCategory && (
         <p className="text-xs text-muted-foreground">
-          Geser kategori untuk mengatur urutan tampil di POS, dan gunakan tombol mata untuk
-          menampilkan / menyembunyikan kategori.
+          Geser kategori untuk mengatur urutan tampil di POS, dan gunakan tombol aktif/nonaktif
+          untuk menampilkan / menyembunyikan kategori.
         </p>
+      )}
+
+      {hasVisibilityToggles && items.length > 0 && (
+        <div className="flex items-center gap-2 px-3">
+          <span className="flex-1" />
+          <span className="w-[76px] text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground leading-tight">
+            Tampil di Website
+          </span>
+          <span className="w-[76px] text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground leading-tight">
+            Tampil di POS
+          </span>
+          <span className="w-[76px]" />
+        </div>
       )}
 
       <div className="border rounded-md divide-y max-h-[55vh] overflow-y-auto">
@@ -276,9 +310,9 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 e.preventDefault();
                 handleDrop();
               }}
-              className={`flex items-center gap-2 p-3 ${
-                isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""
-              } ${isCategory && item.pos_visible === false ? "bg-muted/40" : ""}`}
+               className={`flex items-center gap-2 p-3 ${
+                 isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""
+               } ${hasVisibilityToggles && item.pos_visible === false ? "bg-muted/40" : ""}`}
             >
               {isCategory && editingId !== item.id && (
                 <div className="flex items-center gap-1">
@@ -334,7 +368,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 <>
                   <span className="flex-1 text-sm">
                     {item.name}
-                    {isCategory && item.pos_visible === false && (
+                    {hasVisibilityToggles && item.pos_visible === false && (
                       <span className="ml-2 text-[10px] uppercase text-muted-foreground">
                         (disembunyikan)
                       </span>
@@ -348,19 +382,33 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                       <span className="ml-2 text-[10px] uppercase text-muted-foreground">(default)</span>
                     )}
                   </span>
-                  {isCategory && (
-                    <div className="flex items-center gap-2 mr-1">
-                      <Switch
-                        checked={item.pos_visible ?? true}
-                        onCheckedChange={() => toggleVisible(item)}
-                        aria-label="Tampilkan di POS"
-                      />
-                      {item.pos_visible === false ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
+                  {hasVisibilityToggles && (
+                    <>
+                      <div className="flex w-[76px] items-center justify-center gap-1">
+                        <Switch
+                          checked={item.show_on_website ?? true}
+                          onCheckedChange={() => toggleWebsite(item)}
+                          aria-label="Tampilkan di Website"
+                        />
+                        {item.show_on_website === false ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex w-[76px] items-center justify-center gap-1">
+                        <Switch
+                          checked={item.pos_visible ?? true}
+                          onCheckedChange={() => toggleVisible(item)}
+                          aria-label="Tampilkan di POS"
+                        />
+                        {item.pos_visible === false ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </>
                   )}
                   {!item.is_default && (
                     <>
