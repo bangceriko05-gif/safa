@@ -145,26 +145,30 @@ export default function PaymentMethodSettings() {
     }
   };
 
-  const handleBulkDashboard = async (active: boolean) => {
+  const handleBulkDashboard = async () => {
     if (!currentStore || methods.length === 0) return;
+    const allActive = methods.every(m => m.is_active);
+    const target = !allActive;
     try {
       const ids = methods.map(m => m.id);
       const { error } = await supabase
         .from("payment_methods")
-        .update({ is_active: active })
+        .update({ is_active: target })
         .in("id", ids);
       if (error) throw error;
-      setMethods(prev => prev.map(m => ({ ...m, is_active: active })));
-      toast.success(active ? "Semua metode diaktifkan di dashboard" : "Semua metode dinonaktifkan di dashboard");
+      setMethods(prev => prev.map(m => ({ ...m, is_active: target })));
+      toast.success(target ? "Semua metode diaktifkan di dashboard" : "Semua metode dinonaktifkan di dashboard");
     } catch (error) {
       console.error(error);
       toast.error("Gagal mengubah status metode pembayaran");
     }
   };
 
-  const handleBulkWebsite = async (active: boolean) => {
+  const handleBulkWebsite = async () => {
     if (!currentStore || methods.length === 0) return;
-    if (active && !websiteEnabled) {
+    const allActive = methods.every(m => m.show_on_website);
+    const target = !allActive;
+    if (target && !websiteEnabled) {
       toast.error(WEBSITE_INACTIVE_MESSAGE);
       return;
     }
@@ -172,11 +176,11 @@ export default function PaymentMethodSettings() {
       const ids = methods.map(m => m.id);
       const { error } = await supabase
         .from("payment_methods")
-        .update({ show_on_website: active })
+        .update({ show_on_website: target })
         .in("id", ids);
       if (error) throw error;
-      setMethods(prev => prev.map(m => ({ ...m, show_on_website: active })));
-      toast.success(active ? "Semua metode aktif di website" : "Semua metode dinonaktifkan di website");
+      setMethods(prev => prev.map(m => ({ ...m, show_on_website: target })));
+      toast.success(target ? "Semua metode aktif di website" : "Semua metode dinonaktifkan di website");
     } catch (error) {
       console.error(error);
       toast.error("Gagal mengubah metode pembayaran website");
@@ -254,27 +258,27 @@ export default function PaymentMethodSettings() {
                 <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <Globe className="h-3.5 w-3.5" /> Website
                 </span>
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkWebsite(true)}>
-                    Aktifkan semua
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkWebsite(false)}>
-                    Matikan
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={handleBulkWebsite}
+                >
+                  {methods.every(m => m.show_on_website) ? "Non-aktifkan semua" : "Aktifkan semua"}
+                </Button>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
                 </span>
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkDashboard(true)}>
-                    Aktifkan semua
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleBulkDashboard(false)}>
-                    Matikan
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={handleBulkDashboard}
+                >
+                  {methods.every(m => m.is_active) ? "Non-aktifkan semua" : "Aktifkan semua"}
+                </Button>
               </div>
               <span className="sr-only">Aksi</span>
             </div>
