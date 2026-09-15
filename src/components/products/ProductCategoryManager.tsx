@@ -14,6 +14,7 @@ interface Item {
   qty?: number;
   sort_order?: number;
   pos_visible?: boolean;
+  show_on_website?: boolean;
 }
 
 interface Props {
@@ -37,6 +38,8 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
   const [editingName, setEditingName] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const isCategory = table === "product_categories";
+  const isCollection = table === "product_collections";
+  const hasVisibilityToggles = isCategory || isCollection;
 
   const fetchItems = async () => {
     if (!currentStore) return;
@@ -44,7 +47,9 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       table === "product_materials"
         ? "id, name, is_default"
         : isCategory
-        ? "id, name, sort_order, pos_visible"
+        ? "id, name, sort_order, pos_visible, show_on_website"
+        : isCollection
+        ? "id, name, pos_visible, show_on_website"
         : "id, name";
     let query = supabase
       .from(table as any)
@@ -190,11 +195,27 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       .update({ pos_visible: next })
       .eq("id", item.id);
     if (error) {
-      toast.error("Gagal mengubah tampilan kategori");
+      toast.error("Gagal mengubah tampilan");
       fetchItems();
       return;
     }
-    toast.success(next ? "Kategori tampil di POS" : "Kategori disembunyikan dari POS");
+    toast.success(next ? "Tampil di POS" : "Disembunyikan dari POS");
+    onChanged?.();
+  };
+
+  const toggleWebsite = async (item: Item) => {
+    const next = !(item.show_on_website ?? true);
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, show_on_website: next } : i)));
+    const { error } = await supabase
+      .from(table as any)
+      .update({ show_on_website: next })
+      .eq("id", item.id);
+    if (error) {
+      toast.error("Gagal mengubah tampilan website");
+      fetchItems();
+      return;
+    }
+    toast.success(next ? "Tampil di website" : "Disembunyikan dari website");
     onChanged?.();
   };
 
