@@ -313,9 +313,19 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 e.preventDefault();
                 handleDrop();
               }}
-               className={`flex items-center gap-2 p-3 ${
-                 isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""
-               } ${hasVisibilityToggles && item.pos_visible === false ? "bg-muted/40" : ""}`}
+               className={`${
+                 hasVisibilityToggles
+                   ? "grid items-center gap-2 p-3"
+                   : "flex items-center gap-2 p-3"
+               } ${
+                 isCategory
+                   ? "grid-cols-[40px_1fr_92px_92px_80px]"
+                   : hasVisibilityToggles
+                   ? "grid-cols-[1fr_92px_92px_80px]"
+                   : ""
+               } ${isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""} ${
+                 hasVisibilityToggles && item.pos_visible === false ? "bg-muted/40" : ""
+               }`}
             >
               {isCategory && editingId !== item.id && (
                 <div className="flex items-center gap-1">
@@ -342,6 +352,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
               )}
               {editingId === item.id ? (
                 <>
+                  {isCategory && <span />}
                   <Input
                     autoFocus
                     value={editingName}
@@ -350,7 +361,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                       if (e.key === "Enter") handleUpdate(item.id);
                       if (e.key === "Escape") setEditingId(null);
                     }}
-                    className="flex-1"
+                    className={`${hasVisibilityToggles ? "col-span-3" : "flex-1"}`}
                   />
                   <Button
                     size="icon"
@@ -369,7 +380,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm">
+                  <span className={`text-sm ${hasVisibilityToggles ? "truncate" : "flex-1"}`}>
                     {item.name}
                     {hasVisibilityToggles && item.pos_visible === false && (
                       <span className="ml-2 text-[10px] uppercase text-muted-foreground">
@@ -387,7 +398,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                   </span>
                   {hasVisibilityToggles && (
                     <>
-                      <div className="flex w-[76px] items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         <Switch
                           checked={item.show_on_website ?? true}
                           onCheckedChange={() => toggleWebsite(item)}
@@ -399,7 +410,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                           <Eye className="h-4 w-4 text-muted-foreground" />
                         )}
                       </div>
-                      <div className="flex w-[76px] items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         <Switch
                           checked={item.pos_visible ?? true}
                           onCheckedChange={() => toggleVisible(item)}
@@ -414,7 +425,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                     </>
                   )}
                   {!item.is_default && (
-                    <>
+                    <div className="flex items-center justify-end gap-1">
                       <Button
                         size="icon"
                         variant="ghost"
@@ -433,7 +444,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </>
+                    </div>
                   )}
                 </>
               )}
