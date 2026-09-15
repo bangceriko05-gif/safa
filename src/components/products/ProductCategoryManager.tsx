@@ -243,7 +243,7 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
 
       {hasVisibilityToggles && items.length > 0 && (
         <div
-          className={`hidden sm:grid gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground ${
+          className={`grid gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground ${
             isCategory
               ? "grid-cols-[40px_1fr_92px_92px_80px]"
               : "grid-cols-[1fr_92px_92px_80px]"
