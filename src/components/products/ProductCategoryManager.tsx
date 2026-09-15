@@ -242,15 +242,18 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
       )}
 
       {hasVisibilityToggles && items.length > 0 && (
-        <div className="flex items-center gap-2 px-3">
-          <span className="flex-1" />
-          <span className="w-[76px] text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground leading-tight">
-            Tampil di Website
-          </span>
-          <span className="w-[76px] text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground leading-tight">
-            Tampil di POS
-          </span>
-          <span className="w-[76px]" />
+        <div
+          className={`hidden sm:grid gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground ${
+            isCategory
+              ? "grid-cols-[40px_1fr_92px_92px_80px]"
+              : "grid-cols-[1fr_92px_92px_80px]"
+          }`}
+        >
+          {isCategory && <span />}
+          <span />
+          <span className="text-center leading-tight">Tampil di Website</span>
+          <span className="text-center leading-tight">Tampil di POS</span>
+          <span />
         </div>
       )}
 
