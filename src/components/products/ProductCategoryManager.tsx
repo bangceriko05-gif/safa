@@ -363,20 +363,22 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                     }}
                     className={`${hasVisibilityToggles ? "col-span-3" : "flex-1"}`}
                   />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => handleUpdate(item.id)}
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => setEditingId(null)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => handleUpdate(item.id)}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setEditingId(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <>
