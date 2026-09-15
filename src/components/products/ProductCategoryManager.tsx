@@ -310,9 +310,9 @@ export default function ProductCategoryManager({ table, searchPlaceholder, onCha
                 e.preventDefault();
                 handleDrop();
               }}
-              className={`flex items-center gap-2 p-3 ${
-                isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""
-              } ${isCategory && item.pos_visible === false ? "bg-muted/40" : ""}`}
+               className={`flex items-center gap-2 p-3 ${
+                 isCategory && dragId === item.id ? "opacity-50 ring-1 ring-primary/40" : ""
+               } ${hasVisibilityToggles && item.pos_visible === false ? "bg-muted/40" : ""}`}
             >
               {isCategory && editingId !== item.id && (
                 <div className="flex items-center gap-1">
