@@ -381,11 +381,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     (async () => {
       const { data: prods } = await supabase
         .from("products")
-        .select("id, name, price, images, category_id, dynamic_price, tax_enabled, tax_mode")
+        .select("id, name, price, images, category_id, collection_id, dynamic_price, tax_enabled, tax_mode")
         .eq("store_id", currentStore.id)
         .eq("is_active", true)
         .order("name");
-      setProducts(prods || []);
+      const { data: hiddenCols } = await supabase
+        .from("product_collections")
+        .select("id")
+        .eq("store_id", currentStore.id)
+        .eq("pos_visible", false);
+      const hiddenColIds = new Set((hiddenCols || []).map((c: any) => c.id));
+      setProducts((prods || []).filter((p: any) => !p.collection_id || !hiddenColIds.has(p.collection_id)));
       const { data: cats } = await supabase
         .from("product_categories")
         .select("id, name, sort_order, pos_visible")
