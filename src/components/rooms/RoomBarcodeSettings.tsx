@@ -96,12 +96,12 @@ export default function RoomBarcodeSettings() {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<{ room: RoomRow; dataUrl: string } | null>(null);
 
-  const scanBaseUrl = useMemo(() => {
+  const shopBaseUrl = useMemo(() => {
     const origin = window.location.origin.includes("lovable")
       ? "https://www.anka.management"
       : window.location.origin;
-    return `${origin}/room-scan`;
-  }, []);
+    return currentStore?.slug ? `${origin}/shop/${currentStore.slug}` : null;
+  }, [currentStore?.slug]);
 
   useEffect(() => {
     if (!currentStore?.id) return;
@@ -161,15 +161,19 @@ export default function RoomBarcodeSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStore?.id]);
 
-  const roomUrl = (room: RoomRow) => `${scanBaseUrl}?code=${encodeURIComponent(room.barcode_code || "")}`;
+  const roomUrl = (room: RoomRow) => {
+    if (!shopBaseUrl) return "";
+    return `${shopBaseUrl}?room=${encodeURIComponent(room.name)}&room_code=${encodeURIComponent(room.barcode_code || "")}`;
+  };
 
   const showQr = async (room: RoomRow) => {
-    if (!room.barcode_code) return;
+    if (!room.barcode_code || !shopBaseUrl) return;
     const dataUrl = await buildQrWithLogo(roomUrl(room), logoMode, storeImage);
     setPreview({ room, dataUrl });
   };
 
   const copyLink = async (room: RoomRow) => {
+    if (!shopBaseUrl) return;
     await navigator.clipboard.writeText(roomUrl(room));
     toast.success("Link scan disalin");
   };

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
+  Bed,
   Building2,
   ImageIcon,
   Loader2,
@@ -66,6 +67,8 @@ function formatPrice(value: number) {
 
 export default function Shop() {
   const { storeSlug } = useParams<{ storeSlug?: string }>();
+  const [searchParams] = useSearchParams();
+  const roomName = searchParams.get("room")?.trim() || null;
   
   const [rows, setRows] = useState<CatalogRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -262,16 +265,27 @@ export default function Shop() {
 
   return (
     <main className="min-h-screen bg-background">
-      {pageHeader}
-
       <section className="border-b bg-secondary/50">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-          <div className="max-w-3xl">
+          <div className="flex max-w-3xl items-start gap-4">
+            {slugStore?.store_image_url ? (
+              <img
+                src={slugStore.store_image_url}
+                alt={`Logo ${slugStore.store_name}`}
+                className="h-16 w-16 shrink-0 rounded-md border bg-card object-cover sm:h-20 sm:w-20"
+              />
+            ) : (
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-card sm:h-20 sm:w-20">
+                <Store className="h-7 w-7 text-muted-foreground" />
+              </span>
+            )}
+            <div className="min-w-0">
             <p className="mb-2 text-sm font-bold uppercase text-primary">Katalog Online</p>
             <h1 className="text-3xl font-black text-foreground sm:text-4xl">{slugStore?.store_name || "Katalog Outlet"}</h1>
             <p className="mt-3 text-base font-medium text-muted-foreground sm:text-lg">
               {slugStore?.store_description || "Temukan produk outlet ini beserta harga dan ketersediaannya secara langsung."}
             </p>
+            </div>
           </div>
 
           <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
@@ -300,16 +314,24 @@ export default function Shop() {
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {currentStore && (
-          <div className="mb-8 flex items-center gap-4 border-b pb-6">
-            {currentStore.store_image_url ? (
-              <img src={currentStore.store_image_url} alt={`Logo ${currentStore.store_name}`} className="h-16 w-16 rounded-md border object-cover" />
-            ) : (
-              <span className="flex h-16 w-16 items-center justify-center rounded-md bg-muted"><Store className="h-7 w-7 text-muted-foreground" /></span>
-            )}
-            <div className="min-w-0">
-              <h2 className="truncate text-xl font-extrabold text-foreground">{currentStore.store_name}</h2>
-              {currentStore.store_location && <p className="mt-1 flex items-center gap-1 text-sm font-medium text-muted-foreground"><MapPin className="h-4 w-4" />{currentStore.store_location}</p>}
+          <div className="mb-8 flex flex-wrap items-center gap-4 border-b pb-6">
+            <div className="flex min-w-0 items-center gap-4">
+              {currentStore.store_image_url ? (
+                <img src={currentStore.store_image_url} alt={`Logo ${currentStore.store_name}`} className="h-16 w-16 shrink-0 rounded-md border object-cover" />
+              ) : (
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-muted"><Store className="h-7 w-7 text-muted-foreground" /></span>
+              )}
+              <div className="min-w-0">
+                <h2 className="truncate text-xl font-extrabold text-foreground">{currentStore.store_name}</h2>
+                {currentStore.store_location && <p className="mt-1 flex items-center gap-1 text-sm font-medium text-muted-foreground"><MapPin className="h-4 w-4" />{currentStore.store_location}</p>}
+              </div>
             </div>
+            {roomName && (
+              <Badge variant="secondary" className="h-10 gap-2 px-4 text-sm font-extrabold">
+                <Bed className="h-4 w-4" />
+                Kamar {roomName}
+              </Badge>
+            )}
           </div>
         )}
 
