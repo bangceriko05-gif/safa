@@ -4,19 +4,14 @@ import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Copy, ExternalLink, Globe, ImageIcon, Loader2, Search, ShoppingBag } from "lucide-react";
+import { Check, Copy, ExternalLink, Globe, Loader2, Search, ShoppingBag } from "lucide-react";
 
 type WebsiteProduct = {
   id: string;
-  name: string;
-  price: number | null;
-  images: unknown;
   is_active: boolean;
   show_on_website: boolean;
-  category_id: string | null;
 };
 
 type WebsiteOrder = {
@@ -39,14 +34,6 @@ function formatPrice(value: number | null) {
   }).format(value || 0);
 }
 
-function firstImage(images: unknown): string | null {
-  if (Array.isArray(images)) {
-    const found = images.find((i) => typeof i === "string" && i.length > 0);
-    return typeof found === "string" ? found : null;
-  }
-  return typeof images === "string" && images ? images : null;
-}
-
 export default function WebsiteManagement({ section }: { section: "storefront" | "orders" }) {
   const { currentStore } = useStore();
   const storeId = currentStore?.id;
@@ -54,18 +41,15 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
   const [orders, setOrders] = useState<WebsiteOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const storeSlug = (currentStore as { slug?: string } | null)?.slug;
   const shopUrl = useMemo(() => {
-    const slug = (currentStore as any)?.slug;
-    if (!slug) return null;
-    // Pakai domain resmi bila sedang di host preview lovable
-    const origin = window.location.origin.includes("lovable")
-      ? "https://www.anka.management"
-      : window.location.origin;
-    return `${origin}/shop/${slug}`;
-  }, [currentStore]);
+    if (!storeSlug) return null;
+    return `https://www.anka.management/shop/${storeSlug}`;
+  }, [storeSlug]);
+
+  const previewUrl = storeSlug ? `/shop/${storeSlug}` : null;
 
   useEffect(() => {
     if (!storeId) return;
@@ -75,9 +59,9 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
       if (section === "storefront") {
         const { data, error } = await supabase
           .from("products")
-          .select("id, name, price, images, is_active, show_on_website, category_id")
+          .select("id, is_active, show_on_website")
           .eq("store_id", storeId)
-          .order("name");
+          .order("id");
         if (!active) return;
         if (error) toast.error("Gagal memuat produk");
         else setProducts((data || []) as WebsiteProduct[]);
@@ -101,22 +85,6 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
     };
   }, [storeId, section]);
 
-  const toggleShow = async (product: WebsiteProduct) => {
-    setSavingId(product.id);
-    const next = !product.show_on_website;
-    const { error } = await supabase
-      .from("products")
-      .update({ show_on_website: next })
-      .eq("id", product.id);
-    setSavingId(null);
-    if (error) {
-      toast.error("Gagal menyimpan perubahan");
-      return;
-    }
-    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, show_on_website: next } : p)));
-    toast.success(next ? `${product.name} tampil di website` : `${product.name} disembunyikan dari website`);
-  };
-
   const copyLink = async () => {
     if (!shopUrl) return;
     await navigator.clipboard.writeText(shopUrl);
@@ -124,10 +92,6 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
     toast.success("Link halaman toko disalin");
     setTimeout(() => setCopied(false), 1500);
   };
-
-  const filteredProducts = products.filter((p) =>
-    p.name.toLocaleLowerCase("id-ID").includes(query.trim().toLocaleLowerCase("id-ID")),
-  );
 
   const filteredOrders = orders.filter((o) => {
     const q = query.trim().toLocaleLowerCase("id-ID");
@@ -178,49 +142,22 @@ export default function WebsiteManagement({ section }: { section: "storefront" |
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Produk yang Tampil di Website</CardTitle>
+            <CardTitle className="text-lg">Preview Tampilan Website</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cari produk..."
-                className="pl-9"
+          <CardContent className="p-0">
+            {previewUrl ? (
+              <iframe
+                key={previewUrl}
+                src={previewUrl}
+                title={`Preview website ${currentStore?.name || "outlet"}`}
+                className="h-[72vh] min-h-[640px] w-full border-0 bg-background"
               />
-            </div>
-            {filteredProducts.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Tidak ada produk yang cocok.</p>
             ) : (
-              <div className="divide-y rounded-md border">
-                {filteredProducts.map((product) => {
-                  const image = firstImage(product.images);
-                  return (
-                    <div key={product.id} className="flex items-center gap-3 p-3">
-                      {image ? (
-                        <img src={image} alt={product.name} loading="lazy" className="h-12 w-12 rounded-md border object-cover" />
-                      ) : (
-                        <span className="flex h-12 w-12 items-center justify-center rounded-md bg-muted">
-                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatPrice(product.price)}</p>
-                      </div>
-                      {!product.is_active && <Badge variant="secondary">Nonaktif</Badge>}
-                      <Switch
-                        checked={product.show_on_website}
-                        onCheckedChange={() => toggleShow(product)}
-                        disabled={savingId === product.id}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="py-16 text-center text-sm text-muted-foreground">
+                Preview belum tersedia karena outlet ini belum memiliki alamat website.
+              </p>
             )}
           </CardContent>
         </Card>
