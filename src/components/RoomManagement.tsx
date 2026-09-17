@@ -77,7 +77,6 @@ interface RoomManagementProps {
 }
 
 export default function RoomManagement({ section }: RoomManagementProps = {}) {
-  const [roomTab, setRoomTab] = useState<"kelola" | "settingan">("kelola");
   // Scroll to selected sub-section when changed via sidebar
   useEffect(() => {
     if (!section) return;
