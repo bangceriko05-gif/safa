@@ -351,39 +351,31 @@ export default function Shop() {
           </div>
         ) : (
           <>
+            {showFeaturedSection && (
+              <div className="mb-10">
+                <div className="mb-5 flex items-end justify-between gap-4">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-2xl font-black text-foreground">
+                      <Star className="h-6 w-6 text-primary" />
+                      Produk Terbaik
+                    </h2>
+                    <p className="mt-1 font-medium text-muted-foreground">Pilihan utama dari outlet ini</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                  {featuredItems.map(renderCard)}
+                </div>
+              </div>
+            )}
+
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black text-foreground">Katalog Produk</h2>
-                <p className="mt-1 font-medium text-muted-foreground">{items.length} produk tersedia</p>
+                <p className="mt-1 font-medium text-muted-foreground">{restItems.length} produk tersedia</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-              {items.map((item) => {
-                const soldOut = item.track_inventory && item.displayStock <= 0;
-                return (
-                  <article key={item.key} className="group overflow-hidden rounded-md border bg-card shadow-[var(--shadow-card)] transition-transform duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-hover)]">
-                    <div className="relative aspect-square overflow-hidden bg-muted">
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.displayName} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/60" /></div>
-                      )}
-                      <Badge className="absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate bg-card text-card-foreground hover:bg-card">{item.store_name}</Badge>
-                    </div>
-                    <div className="p-3 sm:p-4">
-                      <p className="min-h-5 truncate text-xs font-bold uppercase text-primary">{item.category_name || "Produk"}</p>
-                      <h3 className="mt-1 line-clamp-2 min-h-12 text-base font-extrabold text-foreground sm:text-lg">{item.displayName}</h3>
-                      {item.product_description && <p className="mt-2 line-clamp-2 text-sm font-medium text-muted-foreground">{item.product_description}</p>}
-                      <div className="mt-4 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-end sm:justify-between">
-                        <p className="text-base font-black text-foreground sm:text-lg">{formatPrice(item.displayPrice)}</p>
-                        <span className={soldOut ? "text-xs font-bold text-destructive" : "text-xs font-bold text-muted-foreground"}>
-                          {soldOut ? "Stok habis" : item.track_inventory ? `Stok ${item.displayStock}` : "Tersedia"}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+              {restItems.map(renderCard)}
             </div>
           </>
         )}
