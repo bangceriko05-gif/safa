@@ -2437,6 +2437,7 @@ export type Database = {
           images: Json
           is_active: boolean
           is_available_offline: boolean
+          is_featured: boolean
           material_id: string | null
           min_stock: number
           name: string
@@ -2466,6 +2467,7 @@ export type Database = {
           images?: Json
           is_active?: boolean
           is_available_offline?: boolean
+          is_featured?: boolean
           material_id?: string | null
           min_stock?: number
           name: string
@@ -2495,6 +2497,7 @@ export type Database = {
           images?: Json
           is_active?: boolean
           is_available_offline?: boolean
+          is_featured?: boolean
           material_id?: string | null
           min_stock?: number
           name?: string
@@ -3796,6 +3799,7 @@ export type Database = {
         Returns: {
           category_id: string
           category_name: string
+          is_featured: boolean
           product_description: string
           product_id: string
           product_images: Json

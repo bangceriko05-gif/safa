@@ -57,6 +57,7 @@ export interface EditorProduct {
   tax_enabled: boolean;
   tax_mode: "include" | "exclude";
   show_on_website: boolean;
+  is_featured: boolean;
   images: string[];
   description?: string;
   dynamic_price?: boolean;
@@ -88,6 +89,7 @@ const empty: EditorProduct = {
   tax_enabled: false,
   tax_mode: "exclude",
   show_on_website: false,
+  is_featured: false,
   images: [],
   description: "",
   dynamic_price: false,
@@ -160,6 +162,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         tax_enabled: (p as any).tax_enabled ?? false,
         tax_mode: ((p as any).tax_mode ?? "exclude") as "include" | "exclude",
         show_on_website: (p as any).show_on_website ?? false,
+        is_featured: (p as any).is_featured ?? false,
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
         dynamic_price: (p as any).dynamic_price ?? false,
@@ -335,6 +338,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         tax_enabled: data.tax_enabled,
         tax_mode: data.tax_mode,
         show_on_website: data.show_on_website,
+        is_featured: data.is_featured,
         images: copyMode && !copySyncImages ? [] : data.images,
         description: data.description?.trim() || null,
         dynamic_price: !!data.dynamic_price,
@@ -734,18 +738,32 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                 </div>
               </div>
 
-              {/* Inventory toggle */}
-              <div className="flex items-center justify-between rounded-md border p-3">
-                <div>
-                  <p className="font-medium text-sm">Aktifkan Inventori Stok</p>
-                  <p className="text-xs text-muted-foreground">
-                    Lacak stok produk ini secara otomatis.
-                  </p>
+              {/* Inventory & featured toggles */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="font-medium text-sm">Aktifkan Inventori Stok</p>
+                    <p className="text-xs text-muted-foreground">
+                      Lacak stok produk ini secara otomatis.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={data.track_inventory}
+                    onCheckedChange={(v) => setData({ ...data, track_inventory: v })}
+                  />
                 </div>
-                <Switch
-                  checked={data.track_inventory}
-                  onCheckedChange={(v) => setData({ ...data, track_inventory: v })}
-                />
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="font-medium text-sm">Produk Terbaik</p>
+                    <p className="text-xs text-muted-foreground">
+                      Akan tampil di halaman depan website.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={data.is_featured}
+                    onCheckedChange={(v) => setData({ ...data, is_featured: v })}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
