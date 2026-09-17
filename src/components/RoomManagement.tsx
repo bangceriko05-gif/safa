@@ -36,7 +36,7 @@ import { logActivity } from "@/utils/activityLogger";
 const ProductManagement = lazyWithRetry(() => import("./ProductManagement"));
 const CategoryManagement = lazyWithRetry(() => import("./CategoryManagement"));
 const InventoryManagement = lazyWithRetry(() => import("./inventory/InventoryManagement"));
-const RoomBarcodeSettings = lazyWithRetry(() => import("./rooms/RoomBarcodeSettings"));
+
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
@@ -77,7 +77,6 @@ interface RoomManagementProps {
 }
 
 export default function RoomManagement({ section }: RoomManagementProps = {}) {
-  const [roomTab, setRoomTab] = useState<"kelola" | "settingan">("kelola");
   // Scroll to selected sub-section when changed via sidebar
   useEffect(() => {
     if (!section) return;
@@ -631,29 +630,6 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
       <div id="pi-section-rooms" className="scroll-mt-4">
       {isFeatureEnabled("products_inventory.rooms") ? (
       <>
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant={roomTab === "kelola" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRoomTab("kelola")}
-        >
-          <Bed className="mr-2 h-4 w-4" />
-          Kelola Kamar
-        </Button>
-        <Button
-          variant={roomTab === "settingan" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRoomTab("settingan")}
-        >
-          <QrCode className="mr-2 h-4 w-4" />
-          Settingan Kamar
-        </Button>
-      </div>
-      {roomTab === "settingan" ? (
-        <Suspense fallback={<AnkaLoader />}>
-          <RoomBarcodeSettings />
-        </Suspense>
-      ) : (
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -822,7 +798,6 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
         </CardContent>
         )}
       </Card>
-      )}
       </>
       ) : (
         <FeatureInactiveNotice featureName="Kamar" icon={Bed} price={getFeatureInfo("products_inventory.rooms").price} description={getFeatureInfo("products_inventory.rooms").description} />
