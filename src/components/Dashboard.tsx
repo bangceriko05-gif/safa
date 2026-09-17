@@ -657,9 +657,10 @@ export default function Dashboard() {
     { key: "rooms", label: "Kamar", icon: Bed },
   ];
 
-  const websiteSubItems: { key: "storefront" | "orders"; label: string; icon: typeof Package }[] = [
+  const websiteSubItems: { key: "storefront" | "orders" | "barcode"; label: string; icon: typeof Package }[] = [
     { key: "storefront", label: "Tampilan Website Toko", icon: StoreIcon },
     { key: "orders", label: "Transaksi dari Website", icon: Receipt },
+    { key: "barcode", label: "Settingan Kamar (Barcode)", icon: QrCode },
   ];
 
   const customersSubItems: { key: "customers" | "suppliers" | "crm"; label: string; icon: typeof Users }[] = [
