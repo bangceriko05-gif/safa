@@ -1006,7 +1006,11 @@ export default function Dashboard() {
 
           <TabsContent value="website" className="mt-6">
             {activeTab === "website" && (isFeatureEnabled("website") ? (
-              websiteSection === "orders" ? (
+              websiteSection === "barcode" ? (
+                <Suspense fallback={<PageLoader />}>
+                  <RoomBarcodeSettings />
+                </Suspense>
+              ) : websiteSection === "orders" ? (
                 isFeatureEnabled("website.orders") ? (
                   <WebsiteManagement section="orders" />
                 ) : (
