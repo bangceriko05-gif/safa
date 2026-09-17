@@ -36,7 +36,7 @@ import { logActivity } from "@/utils/activityLogger";
 const ProductManagement = lazyWithRetry(() => import("./ProductManagement"));
 const CategoryManagement = lazyWithRetry(() => import("./CategoryManagement"));
 const InventoryManagement = lazyWithRetry(() => import("./inventory/InventoryManagement"));
-const RoomBarcodeSettings = lazyWithRetry(() => import("./rooms/RoomBarcodeSettings"));
+
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
