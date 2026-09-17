@@ -63,6 +63,7 @@ const SettingsPage = lazyWithRetry(() => import("./SettingsPage"));
 const TransactionManagement = lazyWithRetry(() => import("./TransactionManagement"));
 const DepositFormModal = lazyWithRetry(() => import("./deposit/DepositFormModal"));
 const WebsiteManagement = lazyWithRetry(() => import("./website/WebsiteManagement"));
+const RoomBarcodeSettings = lazyWithRetry(() => import("./rooms/RoomBarcodeSettings"));
 
 // Prefetch is tiered so the boot path stays light:
 // tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
@@ -1007,7 +1008,7 @@ export default function Dashboard() {
           <TabsContent value="website" className="mt-6">
             {activeTab === "website" && (isFeatureEnabled("website") ? (
               websiteSection === "barcode" ? (
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<AnkaLoader />}>
                   <RoomBarcodeSettings />
                 </Suspense>
               ) : websiteSection === "orders" ? (
