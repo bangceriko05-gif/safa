@@ -13,6 +13,7 @@ import {
   MapPin,
   Search,
   ShoppingBag,
+  Star,
   Store,
 } from "lucide-react";
 
@@ -163,6 +164,46 @@ export default function Shop() {
   }, [rows, storeId, categoryId, query]);
 
   const currentStore = slugStore || stores.find((store) => store.store_id === storeId);
+
+  const featuredItems = useMemo(() => items.filter((item) => item.is_featured), [items]);
+  const showFeaturedSection = featuredItems.length > 0;
+  const restItems = useMemo(
+    () => (showFeaturedSection ? items.filter((item) => !item.is_featured) : items),
+    [items, showFeaturedSection],
+  );
+
+  const renderCard = (item: CatalogItem) => {
+    const soldOut = item.track_inventory && item.displayStock <= 0;
+    return (
+      <article key={item.key} className="group overflow-hidden rounded-md border bg-card shadow-[var(--shadow-card)] transition-transform duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-hover)]">
+        <div className="relative aspect-square overflow-hidden bg-muted">
+          {item.imageUrl ? (
+            <img src={item.imageUrl} alt={item.displayName} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/60" /></div>
+          )}
+          <Badge className="absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate bg-card text-card-foreground hover:bg-card">{item.store_name}</Badge>
+          {item.is_featured && (
+            <Badge className="absolute right-3 top-3 gap-1 font-extrabold">
+              <Star className="h-3.5 w-3.5" />
+              Terbaik
+            </Badge>
+          )}
+        </div>
+        <div className="p-3 sm:p-4">
+          <p className="min-h-5 truncate text-xs font-bold uppercase text-primary">{item.category_name || "Produk"}</p>
+          <h3 className="mt-1 line-clamp-2 min-h-12 text-base font-extrabold text-foreground sm:text-lg">{item.displayName}</h3>
+          {item.product_description && <p className="mt-2 line-clamp-2 text-sm font-medium text-muted-foreground">{item.product_description}</p>}
+          <div className="mt-4 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-end sm:justify-between">
+            <p className="text-base font-black text-foreground sm:text-lg">{formatPrice(item.displayPrice)}</p>
+            <span className={soldOut ? "text-xs font-bold text-destructive" : "text-xs font-bold text-muted-foreground"}>
+              {soldOut ? "Stok habis" : item.track_inventory ? `Stok ${item.displayStock}` : "Tersedia"}
+            </span>
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   const pageHeader = (
     <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur">
