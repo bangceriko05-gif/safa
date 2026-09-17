@@ -30,6 +30,7 @@ type CatalogRow = {
   product_images: unknown;
   product_stock: number;
   track_inventory: boolean;
+  is_featured: boolean | null;
   category_id: string | null;
   category_name: string | null;
   variant_id: string | null;
