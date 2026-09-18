@@ -153,6 +153,20 @@ export default function Shop() {
     return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [rows, storeId]);
 
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => checkScroll();
+    el.addEventListener("scroll", handleScroll);
+    const ro = new ResizeObserver(() => checkScroll());
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      ro.disconnect();
+    };
+  }, [categories]);
+
   const items = useMemo<CatalogItem[]>(() => {
     const productsWithVariants = new Set(rows.filter((row) => row.variant_id).map((row) => row.product_id));
     const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
