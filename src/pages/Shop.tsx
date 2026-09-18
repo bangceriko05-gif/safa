@@ -81,6 +81,17 @@ export default function Shop() {
   const [categoryId, setCategoryId] = useState(ALL);
   const [query, setQuery] = useState("");
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  };
+
   useEffect(() => {
     let active = true;
     const loadCatalog = async () => {
