@@ -395,6 +395,61 @@ export default function Shop() {
           </div>
         )}
 
+        {!loading && !error && categories.length > 0 && (
+          <div className="mb-8 flex items-center gap-2">
+            {canScrollLeft && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 rounded-full"
+                onClick={() => scrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div
+              ref={scrollRef}
+              onScroll={checkScroll}
+              className="flex flex-1 gap-2 overflow-x-auto py-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              <Button
+                type="button"
+                variant={categoryId === ALL ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryId(ALL)}
+                className="shrink-0 rounded-full"
+              >
+                Semua
+              </Button>
+              {categories.map((category) => (
+                <Button
+                  key={category.id}
+                  type="button"
+                  variant={categoryId === category.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryId(category.id)}
+                  className="shrink-0 rounded-full"
+                >
+                  {category.name}
+                </Button>
+              ))}
+            </div>
+            {canScrollRight && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 rounded-full"
+                onClick={() => scrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex min-h-72 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
         ) : error ? (
