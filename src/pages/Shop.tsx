@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   Bed,
   Building2,
+  ChevronLeft,
+  ChevronRight,
   ImageIcon,
   Loader2,
   MapPin,
@@ -79,6 +81,17 @@ export default function Shop() {
   const [categoryId, setCategoryId] = useState(ALL);
   const [query, setQuery] = useState("");
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  };
+
   useEffect(() => {
     let active = true;
     const loadCatalog = async () => {
@@ -139,6 +152,20 @@ export default function Shop() {
     });
     return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [rows, storeId]);
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => checkScroll();
+    el.addEventListener("scroll", handleScroll);
+    const ro = new ResizeObserver(() => checkScroll());
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      ro.disconnect();
+    };
+  }, [categories]);
 
   const items = useMemo<CatalogItem[]>(() => {
     const productsWithVariants = new Set(rows.filter((row) => row.variant_id).map((row) => row.product_id));
@@ -330,7 +357,7 @@ export default function Shop() {
             </div>
           </div>
 
-          <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="mt-7">
             <label className="relative block">
               <span className="sr-only">Cari produk</span>
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -341,20 +368,66 @@ export default function Shop() {
                 className="h-12 bg-card pl-12 text-base"
               />
             </label>
-            <select
-              aria-label="Pilih kategori"
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              className="h-12 rounded-md border border-input bg-card px-4 text-base font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value={ALL}>Semua kategori</option>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-            </select>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {!loading && !error && categories.length > 0 && (
+          <div className="mb-8 flex items-center gap-2">
+            {canScrollLeft && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 rounded-full"
+                onClick={() => scrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div
+              ref={scrollRef}
+              onScroll={checkScroll}
+              className="flex flex-1 gap-2 overflow-x-auto py-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              <Button
+                type="button"
+                variant={categoryId === ALL ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryId(ALL)}
+                className="shrink-0 rounded-full"
+              >
+                Semua
+              </Button>
+              {categories.map((category) => (
+                <Button
+                  key={category.id}
+                  type="button"
+                  variant={categoryId === category.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryId(category.id)}
+                  className="shrink-0 rounded-full"
+                >
+                  {category.name}
+                </Button>
+              ))}
+            </div>
+            {canScrollRight && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 rounded-full"
+                onClick={() => scrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+
         {currentStore && (
           <div className="mb-8 flex flex-wrap items-center gap-4 border-b pb-6">
             <div className="flex min-w-0 items-center gap-4">
