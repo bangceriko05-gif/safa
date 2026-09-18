@@ -357,7 +357,7 @@ export default function Shop() {
             </div>
           </div>
 
-          <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="mt-7">
             <label className="relative block">
               <span className="sr-only">Cari produk</span>
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -368,15 +368,6 @@ export default function Shop() {
                 className="h-12 bg-card pl-12 text-base"
               />
             </label>
-            <select
-              aria-label="Pilih kategori"
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              className="h-12 rounded-md border border-input bg-card px-4 text-base font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value={ALL}>Semua kategori</option>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-            </select>
           </div>
         </div>
       </section>
