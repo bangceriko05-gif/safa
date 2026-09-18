@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useStore } from "@/contexts/StoreContext";
-import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Download, Search, Copy as CopyIcon, Filter } from "lucide-react";
+import { Clock, Users, TrendingUp, XCircle, Package, MapPin, TrendingDown, FileText, ShoppingBag, Globe, Download, Search, Copy as CopyIcon, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast as toastSonner } from "sonner";
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./ReportDateFilter";
@@ -25,6 +25,7 @@ import BookingModal from "@/components/BookingModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import TaxReport from "./TaxReport";
 import CustomerTypeReport from "./CustomerTypeReport";
+import SalesChannelReport from "./SalesChannelReport";
 import { Receipt } from "lucide-react";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
 
@@ -94,7 +95,7 @@ interface ExpenseData {
   date: string;
 }
 
-type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type";
+type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type" | "channel";
 
 export default function SalesReport() {
   const { currentStore } = useStore();
@@ -834,6 +835,9 @@ export default function SalesReport() {
                   <SelectItem value="source">
                     <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />Laporan Sumber Penjualan</div>
                   </SelectItem>
+                  <SelectItem value="channel">
+                    <div className="flex items-center gap-2"><Globe className="h-4 w-4" />Laporan Sumber Transaksi (POS/Website/Dashboard)</div>
+                  </SelectItem>
                   <SelectItem value="profit-loss">
                     <div className="flex items-center gap-2"><TrendingDown className="h-4 w-4" />Laporan Laba/Rugi</div>
                   </SelectItem>
@@ -852,7 +856,7 @@ export default function SalesReport() {
                 </SelectContent>
               </Select>
 
-              {activeTab !== "tax" && activeTab !== "customer-type" && (
+              {activeTab !== "tax" && activeTab !== "customer-type" && activeTab !== "channel" && (
               <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 lg:justify-end">
                 <div className="relative w-full sm:w-[280px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -885,6 +889,8 @@ export default function SalesReport() {
               <TaxReport />
             ) : activeTab === "customer-type" ? (
               <CustomerTypeReport />
+            ) : activeTab === "channel" ? (
+              <SalesChannelReport />
             ) : (
               <>
 
