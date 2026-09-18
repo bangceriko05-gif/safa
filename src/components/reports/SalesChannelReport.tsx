@@ -268,14 +268,14 @@ export default function SalesChannelReport() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pg.pageItems.length === 0 ? (
+                    {pg.paginated.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           Tidak ada transaksi pada periode ini
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pg.pageItems.map((r) => (
+                      pg.paginated.map((r) => (
                         <TableRow key={`${r.channel}-${r.id}`}>
                           <TableCell className="font-medium">{r.bid}</TableCell>
                           <TableCell>{format(new Date(r.date), "dd MMM yyyy", { locale: localeId })}</TableCell>
@@ -293,7 +293,14 @@ export default function SalesChannelReport() {
               <div className="flex justify-end pt-3 text-sm font-bold">
                 Total: {formatIDR(grandTotal)}
               </div>
-              <ReportPagination {...pg} />
+              <ReportPagination
+                page={pg.page}
+                totalPages={pg.totalPages}
+                total={pg.total}
+                pageSize={pg.pageSize}
+                onPageChange={pg.setPage}
+                onPageSizeChange={pg.setPageSize}
+              />
             </CardContent>
           </Card>
         </>
