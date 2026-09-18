@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   Bed,
   Building2,
+  ChevronLeft,
+  ChevronRight,
   ImageIcon,
   Loader2,
   MapPin,
