@@ -79,7 +79,7 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [storeId, setStoreId] = useState(ALL);
-  const [categoryId, setCategoryId] = useState(ALL);
+  const [categoryId, setCategoryId] = useState(FEATURED);
   const [query, setQuery] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
