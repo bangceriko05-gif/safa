@@ -51,6 +51,7 @@ type CatalogItem = CatalogRow & {
 };
 
 const ALL = "all";
+const FEATURED = "featured";
 
 function getFirstImage(images: unknown): string | null {
   if (Array.isArray(images)) {
