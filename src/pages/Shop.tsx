@@ -168,7 +168,7 @@ export default function Shop() {
     };
   }, [categories]);
 
-  const items = useMemo<CatalogItem[]>(() => {
+  const baseItems = useMemo<CatalogItem[]>(() => {
     const productsWithVariants = new Set(rows.filter((row) => row.variant_id).map((row) => row.product_id));
     const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
 
@@ -183,13 +183,18 @@ export default function Shop() {
         imageUrl: getFirstImage(row.product_images),
       }))
       .filter((item) => storeId === ALL || item.store_id === storeId)
-      .filter((item) => categoryId === ALL || item.category_id === categoryId)
       .filter((item) => {
         if (!normalizedQuery) return true;
         return [item.displayName, item.category_name, item.store_name, item.product_description]
           .some((value) => value?.toLocaleLowerCase("id-ID").includes(normalizedQuery));
       });
-  }, [rows, storeId, categoryId, query]);
+  }, [rows, storeId, query]);
+
+  const items = useMemo<CatalogItem[]>(() => {
+    if (categoryId === FEATURED) return baseItems.filter((item) => item.is_featured);
+    if (categoryId === ALL) return baseItems;
+    return baseItems.filter((item) => item.category_id === categoryId);
+  }, [baseItems, categoryId]);
 
   const currentStore = slugStore || stores.find((store) => store.store_id === storeId);
 
