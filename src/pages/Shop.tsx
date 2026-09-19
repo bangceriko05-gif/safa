@@ -400,6 +400,16 @@ export default function Shop() {
             >
               <Button
                 type="button"
+                variant={categoryId === FEATURED ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryId(FEATURED)}
+                className="shrink-0 gap-1 rounded-full"
+              >
+                <Star className="h-3.5 w-3.5" />
+                Produk Terbaik
+              </Button>
+              <Button
+                type="button"
                 variant={categoryId === ALL ? "default" : "outline"}
                 size="sm"
                 onClick={() => setCategoryId(ALL)}
