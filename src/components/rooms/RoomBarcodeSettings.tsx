@@ -193,6 +193,17 @@ export default function RoomBarcodeSettings() {
     w.document.close();
   };
 
+  const downloadQr = () => {
+    if (!preview) return;
+    const a = document.createElement("a");
+    a.href = preview.dataUrl;
+    a.download = `QR-${preview.room.barcode_code || preview.room.name}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast.success("QR berhasil diunduh");
+  };
+
   const filtered = rooms.filter((r) =>
     `${r.name} ${r.barcode_code || ""}`.toLowerCase().includes(query.toLowerCase())
   );
