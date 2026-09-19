@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon, QrCode } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon, QrCode, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
