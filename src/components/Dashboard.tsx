@@ -125,7 +125,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
   const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
-  const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders" | "barcode">("storefront");
+  const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders" | "payments" | "barcode">("storefront");
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
