@@ -1008,7 +1008,11 @@ export default function Dashboard() {
 
           <TabsContent value="website" className="mt-6">
             {activeTab === "website" && (isFeatureEnabled("website") ? (
-              websiteSection === "barcode" ? (
+              websiteSection === "payments" ? (
+                <Suspense fallback={<AnkaLoader />}>
+                  <WebsitePaymentSettings />
+                </Suspense>
+              ) : websiteSection === "barcode" ? (
                 <Suspense fallback={<AnkaLoader />}>
                   <RoomBarcodeSettings />
                 </Suspense>
