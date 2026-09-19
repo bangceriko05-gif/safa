@@ -125,7 +125,7 @@ export default function Shop() {
 
   useEffect(() => {
     setStoreId(slugStore ? slugStore.store_id : ALL);
-    setCategoryId(ALL);
+    setCategoryId(FEATURED);
   }, [slugStore]);
 
   useEffect(() => {
