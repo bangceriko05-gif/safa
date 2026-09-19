@@ -59,7 +59,7 @@ const DOKU_CHANNEL_GROUPS: ChannelGroup[] = [
       { code: "EMONEY_DANA", label: "DANA" },
       { code: "EMONEY_SHOPEE_PAY", label: "ShopeePay" },
       { code: "EMONEY_LINKAJA", label: "LinkAja" },
-digit      { code: "EMONEY_DOKU", label: "DOKU e-Wallet" },
+{ code: "EMONEY_DOKU", label: "DOKU e-Wallet" },
     ],
   },
   {
