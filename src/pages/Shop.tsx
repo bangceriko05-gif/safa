@@ -51,6 +51,7 @@ type CatalogItem = CatalogRow & {
 };
 
 const ALL = "all";
+const FEATURED = "featured";
 
 function getFirstImage(images: unknown): string | null {
   if (Array.isArray(images)) {
@@ -78,7 +79,7 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [storeId, setStoreId] = useState(ALL);
-  const [categoryId, setCategoryId] = useState(ALL);
+  const [categoryId, setCategoryId] = useState(FEATURED);
   const [query, setQuery] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -124,7 +125,7 @@ export default function Shop() {
 
   useEffect(() => {
     setStoreId(slugStore ? slugStore.store_id : ALL);
-    setCategoryId(ALL);
+    setCategoryId(FEATURED);
   }, [slugStore]);
 
   useEffect(() => {
@@ -167,7 +168,7 @@ export default function Shop() {
     };
   }, [categories]);
 
-  const items = useMemo<CatalogItem[]>(() => {
+  const baseItems = useMemo<CatalogItem[]>(() => {
     const productsWithVariants = new Set(rows.filter((row) => row.variant_id).map((row) => row.product_id));
     const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
 
@@ -182,13 +183,18 @@ export default function Shop() {
         imageUrl: getFirstImage(row.product_images),
       }))
       .filter((item) => storeId === ALL || item.store_id === storeId)
-      .filter((item) => categoryId === ALL || item.category_id === categoryId)
       .filter((item) => {
         if (!normalizedQuery) return true;
         return [item.displayName, item.category_name, item.store_name, item.product_description]
           .some((value) => value?.toLocaleLowerCase("id-ID").includes(normalizedQuery));
       });
-  }, [rows, storeId, categoryId, query]);
+  }, [rows, storeId, query]);
+
+  const items = useMemo<CatalogItem[]>(() => {
+    if (categoryId === FEATURED) return baseItems.filter((item) => item.is_featured);
+    if (categoryId === ALL) return baseItems;
+    return baseItems.filter((item) => item.category_id === categoryId);
+  }, [baseItems, categoryId]);
 
   const currentStore = slugStore || stores.find((store) => store.store_id === storeId);
 
@@ -394,6 +400,16 @@ export default function Shop() {
             >
               <Button
                 type="button"
+                variant={categoryId === FEATURED ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryId(FEATURED)}
+                className="shrink-0 gap-1 rounded-full"
+              >
+                <Star className="h-3.5 w-3.5" />
+                Produk Terbaik
+              </Button>
+              <Button
+                type="button"
                 variant={categoryId === ALL ? "default" : "outline"}
                 size="sm"
                 onClick={() => setCategoryId(ALL)}
@@ -482,15 +498,19 @@ export default function Shop() {
               </div>
             )}
 
-            <div className="mb-5 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-foreground">Katalog Produk</h2>
-                <p className="mt-1 font-medium text-muted-foreground">{restItems.length} produk tersedia</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-              {restItems.map(renderCard)}
-            </div>
+            {restItems.length > 0 && (
+              <>
+                <div className="mb-5 flex items-end justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-foreground">Katalog Produk</h2>
+                    <p className="mt-1 font-medium text-muted-foreground">{restItems.length} produk tersedia</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                  {restItems.map(renderCard)}
+                </div>
+              </>
+            )}
           </>
         )}
       </section>
