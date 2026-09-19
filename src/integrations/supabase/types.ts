@@ -3704,6 +3704,45 @@ export type Database = {
         }
         Relationships: []
       }
+      website_payment_settings: {
+        Row: {
+          created_at: string
+          doku_channels: Json
+          doku_client_id: string | null
+          doku_enabled: boolean
+          doku_environment: string
+          doku_secret_key: string | null
+          id: string
+          manual_transfer_note: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doku_channels?: Json
+          doku_client_id?: string | null
+          doku_enabled?: boolean
+          doku_environment?: string
+          doku_secret_key?: string | null
+          id?: string
+          manual_transfer_note?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doku_channels?: Json
+          doku_client_id?: string | null
+          doku_enabled?: boolean
+          doku_environment?: string
+          doku_secret_key?: string | null
+          id?: string
+          manual_transfer_note?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
