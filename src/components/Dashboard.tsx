@@ -64,6 +64,7 @@ const TransactionManagement = lazyWithRetry(() => import("./TransactionManagemen
 const DepositFormModal = lazyWithRetry(() => import("./deposit/DepositFormModal"));
 const WebsiteManagement = lazyWithRetry(() => import("./website/WebsiteManagement"));
 const RoomBarcodeSettings = lazyWithRetry(() => import("./rooms/RoomBarcodeSettings"));
+const WebsitePaymentSettings = lazyWithRetry(() => import("./website/WebsitePaymentSettings"));
 
 // Prefetch is tiered so the boot path stays light:
 // tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
