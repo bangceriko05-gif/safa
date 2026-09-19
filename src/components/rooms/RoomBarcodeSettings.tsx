@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { QrCode, RefreshCw, Copy, Printer, Search, ExternalLink } from "lucide-react";
+import { QrCode, RefreshCw, Copy, Printer, Search, ExternalLink, Download } from "lucide-react";
 
 interface RoomRow {
   id: string;
@@ -288,10 +288,16 @@ export default function RoomBarcodeSettings() {
             <div className="text-center space-y-3">
               <img src={preview.dataUrl} alt={`QR ${preview.room.name}`} className="mx-auto w-56 h-56" />
               <p className="text-sm text-muted-foreground break-all">{preview.room.barcode_code}</p>
-              <Button className="w-full" onClick={printQr}>
-                <Printer className="mr-2 h-4 w-4" />
-                Cetak QR
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button className="w-full" onClick={printQr}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Cetak QR
+                </Button>
+                <Button className="w-full" variant="outline" onClick={downloadQr}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download QR
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
