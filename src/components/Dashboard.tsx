@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon, QrCode } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon, QrCode, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -64,6 +64,7 @@ const TransactionManagement = lazyWithRetry(() => import("./TransactionManagemen
 const DepositFormModal = lazyWithRetry(() => import("./deposit/DepositFormModal"));
 const WebsiteManagement = lazyWithRetry(() => import("./website/WebsiteManagement"));
 const RoomBarcodeSettings = lazyWithRetry(() => import("./rooms/RoomBarcodeSettings"));
+const WebsitePaymentSettings = lazyWithRetry(() => import("./website/WebsitePaymentSettings"));
 
 // Prefetch is tiered so the boot path stays light:
 // tier 1 = views the user almost always opens, tier 2 = heavy/rare modules
@@ -125,7 +126,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
   const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
-  const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders" | "barcode">("storefront");
+  const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders" | "payments" | "barcode">("storefront");
   const setActiveTab = (tab: string) => {
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
@@ -658,9 +659,10 @@ export default function Dashboard() {
     { key: "rooms", label: "Kamar", icon: Bed },
   ];
 
-  const websiteSubItems: { key: "storefront" | "orders" | "barcode"; label: string; icon: typeof Package }[] = [
+  const websiteSubItems: { key: "storefront" | "orders" | "payments" | "barcode"; label: string; icon: typeof Package }[] = [
     { key: "storefront", label: "Tampilan Website Toko", icon: StoreIcon },
     { key: "orders", label: "Transaksi dari Website", icon: Receipt },
+    { key: "payments", label: "Metode Pembayaran", icon: CreditCard },
     { key: "barcode", label: "Settingan Kamar (Barcode)", icon: QrCode },
   ];
 
@@ -1007,7 +1009,11 @@ export default function Dashboard() {
 
           <TabsContent value="website" className="mt-6">
             {activeTab === "website" && (isFeatureEnabled("website") ? (
-              websiteSection === "barcode" ? (
+              websiteSection === "payments" ? (
+                <Suspense fallback={<AnkaLoader />}>
+                  <WebsitePaymentSettings />
+                </Suspense>
+              ) : websiteSection === "barcode" ? (
                 <Suspense fallback={<AnkaLoader />}>
                   <RoomBarcodeSettings />
                 </Suspense>

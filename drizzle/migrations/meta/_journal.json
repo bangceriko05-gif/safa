@@ -8,6 +8,13 @@
       "when": 1789658411255,
       "tag": "0000_add_product_is_featured",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789809843235,
+      "tag": "0001_create_website_payment_settings",
+      "breakpoints": true
     }
   ]
 }
