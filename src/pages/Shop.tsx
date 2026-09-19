@@ -498,15 +498,19 @@ export default function Shop() {
               </div>
             )}
 
-            <div className="mb-5 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-foreground">Katalog Produk</h2>
-                <p className="mt-1 font-medium text-muted-foreground">{restItems.length} produk tersedia</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-              {restItems.map(renderCard)}
-            </div>
+            {restItems.length > 0 && (
+              <>
+                <div className="mb-5 flex items-end justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-foreground">Katalog Produk</h2>
+                    <p className="mt-1 font-medium text-muted-foreground">{restItems.length} produk tersedia</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                  {restItems.map(renderCard)}
+                </div>
+              </>
+            )}
           </>
         )}
       </section>
