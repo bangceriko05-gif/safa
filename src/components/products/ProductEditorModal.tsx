@@ -900,7 +900,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                   <Button variant="outline" onClick={onClose}>
                     Batal
                   </Button>
-                  <Button onClick={handleSave} disabled={saving || loading || permissionLoading || !canSaveCurrent}>
+                  <Button onClick={handleSave} disabled={saving || loading || permissionLoading || !canSaveCurrent || !isDirty}>
                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Simpan
                   </Button>
