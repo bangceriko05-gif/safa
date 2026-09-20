@@ -130,6 +130,13 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const canDelete = hasPermission("delete_products");
   const canSaveCurrent = savedId ? canUpdate : canCreate;
 
+  const deepEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+  const isDirty = useMemo(() => {
+    const baseChanged = !deepEqual(data, initialData);
+    const copySyncChanged = copyMode ? copySyncImages !== true : false;
+    return baseChanged || copySyncChanged;
+  }, [data, initialData, copyMode, copySyncImages]);
+
   const loadProduct = async () => {
     if (!productId) {
       setData(empty);
