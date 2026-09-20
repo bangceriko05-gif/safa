@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const { hasPermission, loading: permissionLoading } = usePermissions();
   const [tab, setTab] = useState("edit");
   const [data, setData] = useState<EditorProduct>(empty);
+  const [initialData, setInitialData] = useState<EditorProduct>(empty);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -129,9 +130,17 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const canDelete = hasPermission("delete_products");
   const canSaveCurrent = savedId ? canUpdate : canCreate;
 
+  const deepEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+  const isDirty = useMemo(() => {
+    const baseChanged = !deepEqual(data, initialData);
+    const copySyncChanged = copyMode ? copySyncImages !== true : false;
+    return baseChanged || copySyncChanged;
+  }, [data, initialData, copyMode, copySyncImages]);
+
   const loadProduct = async () => {
     if (!productId) {
       setData(empty);
+      setInitialData(empty);
       setSavedId(null);
       return;
     }
@@ -142,7 +151,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
       .eq("id", productId)
       .maybeSingle();
     if (p) {
-      setData({
+      const loaded: EditorProduct = {
         id: copyMode ? undefined : p.id,
         name: p.name ?? "",
         sku: (p as any).sku ?? "",
@@ -166,7 +175,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
         dynamic_price: (p as any).dynamic_price ?? false,
-      });
+      };
+      setData(loaded);
+      setInitialData(loaded);
       setSavedId(copyMode ? null : p.id);
       originalNameRef.current = copyMode ? "" : (p.name ?? "").trim().toLowerCase();
       originalSkuRef.current = copyMode ? "" : ((p as any).sku ?? "").trim().toLowerCase();
@@ -362,6 +373,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
           storeId: currentStore.id,
         });
         toast.success("Produk berhasil diperbarui");
+        setInitialData({ ...data });
       } else {
         const { data: created, error } = await supabase
           .from("products")
@@ -371,7 +383,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         if (error) throw error;
         id = created.id;
         setSavedId(id);
-        setData((prev) => ({ ...prev, id }));
+        const createdData = { ...data, id };
+        setData(createdData);
+        setInitialData(createdData);
         await logActivity({
           actionType: "created",
           entityType: "Produk",
@@ -889,7 +903,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                   <Button variant="outline" onClick={onClose}>
                     Batal
                   </Button>
-                  <Button onClick={handleSave} disabled={saving || loading || permissionLoading || !canSaveCurrent}>
+                  <Button onClick={handleSave} disabled={saving || loading || permissionLoading || !canSaveCurrent || !isDirty}>
                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Simpan
                   </Button>
