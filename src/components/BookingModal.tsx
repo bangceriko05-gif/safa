@@ -228,6 +228,20 @@ export default function BookingModal({
     return list;
   })();
 
+  const isDirty = useMemo(() => {
+    if (!editingBooking) return true;
+    if (!editDataLoaded || !initialSnapshot) return false;
+    const current = {
+      formData,
+      selectedProducts,
+      paymentProofUrl,
+      paymentProofUrl2,
+      checkInDate: checkInDate ? checkInDate.toISOString() : null,
+      checkOutDate: checkOutDate ? checkOutDate.toISOString() : null,
+    };
+    return JSON.stringify(initialSnapshot) !== JSON.stringify(current);
+  }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate]);
+
 
   // Fetch data when modal opens or store changes - always refetch rooms to ensure latest data
   useEffect(() => {
