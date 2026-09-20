@@ -125,6 +125,8 @@ export default function BookingModal({
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [originalProducts, setOriginalProducts] = useState<SelectedProduct[]>([]);
+  const [initialSnapshot, setInitialSnapshot] = useState<any>(null);
+  const [editDataLoaded, setEditDataLoaded] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
