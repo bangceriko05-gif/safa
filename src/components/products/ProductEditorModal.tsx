@@ -382,7 +382,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         if (error) throw error;
         id = created.id;
         setSavedId(id);
-        setData((prev) => ({ ...prev, id }));
+        const createdData = { ...data, id };
+        setData(createdData);
+        setInitialData(createdData);
         await logActivity({
           actionType: "created",
           entityType: "Produk",
