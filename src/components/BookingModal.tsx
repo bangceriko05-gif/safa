@@ -2905,7 +2905,7 @@ export default function BookingModal({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={deleting}>
               Batal
             </Button>
-            <Button type="submit" disabled={loading || deleting} className="flex-1">
+            <Button type="submit" disabled={loading || deleting || (editingBooking && (!editDataLoaded || !isDirty))} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingBooking ? "Simpan" : "Tambah"}
             </Button>
