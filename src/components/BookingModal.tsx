@@ -633,7 +633,7 @@ export default function BookingModal({
     }
   };
 
-  const fetchBookingProducts = async (bookingId: string) => {
+  const fetchBookingProducts = async (bookingId: string): Promise<SelectedProduct[]> => {
     try {
       const { data, error } = await supabase
         .from("booking_products")
@@ -652,8 +652,10 @@ export default function BookingModal({
 
       setSelectedProducts(bookingProducts);
       setOriginalProducts(bookingProducts);
+      return bookingProducts;
     } catch (error) {
       console.error("Error fetching booking products:", error);
+      return [];
     }
   };
 
