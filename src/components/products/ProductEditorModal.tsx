@@ -100,6 +100,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const { hasPermission, loading: permissionLoading } = usePermissions();
   const [tab, setTab] = useState("edit");
   const [data, setData] = useState<EditorProduct>(empty);
+  const [initialData, setInitialData] = useState<EditorProduct>(empty);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
