@@ -373,6 +373,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
           storeId: currentStore.id,
         });
         toast.success("Produk berhasil diperbarui");
+        setInitialData({ ...data });
       } else {
         const { data: created, error } = await supabase
           .from("products")
