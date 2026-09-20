@@ -456,7 +456,7 @@ export default function BookingModal({
           ? formatPrice(String(editingBooking.variant_price_override))
           : "",
       };
-      setFormData(loadedFormData);
+      setFormData(loadedFormData as typeof formData);
       // Set payment proof URL from existing booking
       const loadedProof1 = editingBooking.payment_proof_url || null;
       const loadedProof2 = (editingBooking as any).payment_proof_url_2 || null;
