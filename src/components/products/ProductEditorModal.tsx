@@ -133,6 +133,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
   const loadProduct = async () => {
     if (!productId) {
       setData(empty);
+      setInitialData(empty);
       setSavedId(null);
       return;
     }
@@ -143,7 +144,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
       .eq("id", productId)
       .maybeSingle();
     if (p) {
-      setData({
+      const loaded: EditorProduct = {
         id: copyMode ? undefined : p.id,
         name: p.name ?? "",
         sku: (p as any).sku ?? "",
@@ -167,7 +168,9 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         images: Array.isArray((p as any).images) ? (p as any).images : [],
         description: (p as any).description ?? "",
         dynamic_price: (p as any).dynamic_price ?? false,
-      });
+      };
+      setData(loaded);
+      setInitialData(loaded);
       setSavedId(copyMode ? null : p.id);
       originalNameRef.current = copyMode ? "" : (p.name ?? "").trim().toLowerCase();
       originalSkuRef.current = copyMode ? "" : ((p as any).sku ?? "").trim().toLowerCase();
