@@ -414,20 +414,21 @@ export default function BookingModal({
     if (!isOpen) return; // Only run when modal is open
     
     if (editingBooking) {
+      setEditDataLoaded(false);
       // Format time from "HH:MM:SS" or "HH:MM" to "HH:MM"
       const formatTime = (time: string) => {
         if (!time) return "";
         const parts = time.split(":");
         return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
       };
-      
+
       // Determine booking type: if no variant, it's OTA
       const isOTA = !editingBooking.variant_id;
-      
+
       isLoadingEditDataRef.current = true;
       isPriceProtectedRef.current = true;
       const matchedCust = customers.find((c) => c.phone === editingBooking.phone);
-      setFormData({
+      const loadedFormData = {
         customer_name: editingBooking.customer_name,
         phone: editingBooking.phone,
         customer_type: matchedCust?.customer_type || "Reguler",
@@ -454,27 +455,46 @@ export default function BookingModal({
         variant_price_override: editingBooking.variant_price_override != null
           ? formatPrice(String(editingBooking.variant_price_override))
           : "",
-      });
+      };
+      setFormData(loadedFormData);
       // Set payment proof URL from existing booking
-      setPaymentProofUrl(editingBooking.payment_proof_url || null);
-      setPaymentProofUrl2((editingBooking as any).payment_proof_url_2 || null);
+      const loadedProof1 = editingBooking.payment_proof_url || null;
+      const loadedProof2 = (editingBooking as any).payment_proof_url_2 || null;
+      setPaymentProofUrl(loadedProof1);
+      setPaymentProofUrl2(loadedProof2);
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
       // For PMS mode, set check-in/out dates from booking date and duration
+      let loadedCheckInDate: Date | null = null;
+      let loadedCheckOutDate: Date | null = null;
       if (isPMSMode && editingBooking.date) {
         const bookingDate = new Date(editingBooking.date);
+        loadedCheckInDate = bookingDate;
         setCheckInDate(bookingDate);
         if (editingBooking.duration) {
-          setCheckOutDate(addDays(bookingDate, Math.ceil(editingBooking.duration)));
+          loadedCheckOutDate = addDays(bookingDate, Math.ceil(editingBooking.duration));
+          setCheckOutDate(loadedCheckOutDate);
         } else {
-          setCheckOutDate(addDays(bookingDate, 1));
+          loadedCheckOutDate = addDays(bookingDate, 1);
+          setCheckOutDate(loadedCheckOutDate);
         }
       }
 
-      // Fetch booking products
-      fetchBookingProducts(editingBooking.id);
-      
+      // Fetch booking products then lock the initial snapshot
+      (async () => {
+        const products = await fetchBookingProducts(editingBooking.id);
+        setInitialSnapshot({
+          formData: loadedFormData,
+          selectedProducts: products,
+          paymentProofUrl: loadedProof1,
+          paymentProofUrl2: loadedProof2,
+          checkInDate: loadedCheckInDate ? loadedCheckInDate.toISOString() : null,
+          checkOutDate: loadedCheckOutDate ? loadedCheckOutDate.toISOString() : null,
+        });
+        setEditDataLoaded(true);
+      })();
+
       // Clear the initial loading flag after a delay
       // but keep price protected until user explicitly changes variant/duration
       setTimeout(() => {
