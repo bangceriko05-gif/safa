@@ -114,6 +114,7 @@ interface ReportStats {
   totalBookingRevenue: number;
   totalRoomSales: number;
   totalProductSales: number;
+  totalSalesDiscount: number;
   productSalesCount: number;
   totalPurchase: number;
   purchaseTransactionCount: number;
@@ -209,6 +210,7 @@ export default function Reports() {
     totalBookingRevenue: 0,
     totalRoomSales: 0,
     totalProductSales: 0,
+    totalSalesDiscount: 0,
     productSalesCount: 0,
     totalPurchase: 0,
     purchaseTransactionCount: 0,
@@ -402,7 +404,7 @@ export default function Reports() {
       const [bookingsResult, customersResult, expensesResult, incomesResult, incomeProductsResult, purchasesResult] = await Promise.all([
         supabase
           .from("bookings")
-          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status")
+          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status, discount_type, discount_value")
           .eq("store_id", currentStore.id)
           .gte("date", startDateStr)
           .lte("date", endDateStr),
@@ -553,6 +555,17 @@ export default function Reports() {
 
       const totalBookingRevenue = activeBookings.reduce((sum, b) => sum + (Number(b.price) || 0) + (Number(b.price_2) || 0), 0);
 
+      // Diskon level booking (sama dengan rumus di Laporan Penjualan)
+      const totalSalesDiscount = activeBookings.reduce((sum, b: any) => {
+        const base = (Number(b.price) || 0) + (Number(b.price_2) || 0);
+        const dv = Number(b.discount_value) || 0;
+        if (dv <= 0 || base <= 0) return sum;
+        if (b.discount_type === "percent" || b.discount_type === "percentage") {
+          return sum + Math.round((base * dv) / 100);
+        }
+        return sum + Math.min(dv, base);
+      }, 0);
+
       // Fetch booking_products for active bookings in range → split room vs product sales
       const activeBookingIds = activeBookings.map((b: any) => b.id);
       let totalProductSales = 0;
@@ -608,6 +621,7 @@ export default function Reports() {
         totalBookingRevenue,
         totalRoomSales,
         totalProductSales,
+        totalSalesDiscount,
         productSalesCount,
         totalPurchase,
         purchaseTransactionCount,
@@ -1160,7 +1174,8 @@ export default function Reports() {
 
           {/* Total Pendapatan */}
           {(() => {
-            const totalPenjualan = stats.totalRoomSales + stats.totalProductSales;
+            // Penjualan diambil dari jumlah bayar (harga asli dikurangi diskon)
+            const totalPenjualan = stats.totalBookingRevenue - stats.totalSalesDiscount;
             const total = totalPenjualan + stats.totalAdditionalIncome - stats.totalExpenses - stats.totalPurchase;
             const totalColor = total >= 0 ? "text-foreground" : "text-red-600";
             return (
@@ -1172,7 +1187,7 @@ export default function Reports() {
                   </div>
                   <div className="space-y-0.5">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Total Penjualan:</span>
+                      <span className="text-xs text-muted-foreground">Penjualan:</span>
                       <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(totalPenjualan)}</span>
                     </div>
                     <div className="flex items-baseline justify-between gap-2">
