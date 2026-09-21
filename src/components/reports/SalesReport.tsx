@@ -417,15 +417,13 @@ export default function SalesReport() {
       const productSalesRevenue = mappedProducts.reduce((sum, p) => sum + p.subtotal, 0);
       const productSalesCount = mappedProducts.reduce((sum, p) => sum + p.quantity, 0);
 
-      // Hitung Total Biaya, Jumlah Bayar, HPP, Laba per booking
+      // Hitung Total Biaya (harga asli sebelum diskon), Total Diskon,
+      // Jumlah Bayar (setelah diskon), HPP, dan Laba per booking
       const totalBiaya = activeBookings.reduce((sum, b) => sum + b.price + b.price_2, 0);
-      const jumlahBayar = activeBookings.reduce((sum, b) => {
-        const paid1 = b.payment_method ? b.price : 0;
-        const paid2 = b.payment_method_2 ? b.price_2 : 0;
-        return sum + paid1 + paid2;
-      }, 0);
+      const totalDiskon = activeBookings.reduce((sum, b) => sum + getDiscountAmount(b), 0);
+      const jumlahBayar = totalBiaya - totalDiskon;
       const totalHPP = mappedProducts.reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
-      const totalLaba = totalBiaya - totalHPP;
+      const totalLaba = jumlahBayar - totalHPP;
 
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
@@ -446,6 +444,7 @@ export default function SalesReport() {
         productSalesRevenue,
         paymentMethodTotals: Object.entries(paymentTotals).map(([method, total]) => ({ method, total })),
         totalBiaya,
+        totalDiskon,
         jumlahBayar,
         totalHPP,
         totalLaba,
