@@ -909,7 +909,7 @@ export default function SalesReport() {
             {/* Rincian Penjualan */}
             <TabsContent value="details" className="space-y-4">
               {/* 5 stat cards */}
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Transaksi</CardTitle></CardHeader>
                   <CardContent><div className="text-2xl font-bold">{stats.totalBookings}</div></CardContent>
@@ -917,6 +917,10 @@ export default function SalesReport() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Biaya</CardTitle></CardHeader>
                   <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(stats.totalBiaya)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Diskon</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-red-600">{formatCurrency(stats.totalDiskon)}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Jumlah Bayar</CardTitle></CardHeader>
