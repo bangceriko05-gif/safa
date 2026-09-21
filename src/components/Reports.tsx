@@ -1174,7 +1174,8 @@ export default function Reports() {
 
           {/* Total Pendapatan */}
           {(() => {
-            const totalPenjualan = stats.totalRoomSales + stats.totalProductSales;
+            // Penjualan diambil dari jumlah bayar (harga asli dikurangi diskon)
+            const totalPenjualan = stats.totalBookingRevenue - stats.totalSalesDiscount;
             const total = totalPenjualan + stats.totalAdditionalIncome - stats.totalExpenses - stats.totalPurchase;
             const totalColor = total >= 0 ? "text-foreground" : "text-red-600";
             return (
@@ -1186,7 +1187,7 @@ export default function Reports() {
                   </div>
                   <div className="space-y-0.5">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Total Penjualan:</span>
+                      <span className="text-xs text-muted-foreground">Penjualan:</span>
                       <span className="text-xs font-semibold tabular-nums whitespace-nowrap">{formatCurrency(totalPenjualan)}</span>
                     </div>
                     <div className="flex items-baseline justify-between gap-2">
