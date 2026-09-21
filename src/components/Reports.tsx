@@ -566,6 +566,9 @@ export default function Reports() {
         totalProductSales = bps.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
         productSalesCount = new Set(bps.map((r) => r.booking_id)).size;
       }
+      // Diskon dicatat di level booking, sehingga subtotal produk bisa melebihi nilai
+      // tagihan. Batasi penjualan produk agar total selalu sama dengan nilai tagihan.
+      totalProductSales = Math.min(totalProductSales, totalBookingRevenue);
       const totalRoomSales = Math.max(0, totalBookingRevenue - totalProductSales);
 
       const paymentMethodTotals = Object.entries(paymentTotals).map(([method, total]) => ({
