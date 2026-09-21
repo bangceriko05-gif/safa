@@ -97,6 +97,18 @@ interface ExpenseData {
 
 type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type" | "channel";
 
+// Harga yang tersimpan (price + price_2) adalah harga asli SEBELUM diskon.
+// Diskon dihitung dari nilai tersebut sesuai tipe diskonnya.
+const getDiscountAmount = (b: { price: number; price_2: number; discount_type: string | null; discount_value: number | null }) => {
+  const base = (Number(b.price) || 0) + (Number(b.price_2) || 0);
+  const dv = Number(b.discount_value) || 0;
+  if (dv <= 0 || base <= 0) return 0;
+  if (b.discount_type === "percent" || b.discount_type === "percentage") {
+    return Math.round((base * dv) / 100);
+  }
+  return Math.min(dv, base);
+};
+
 export default function SalesReport() {
   const { currentStore } = useStore();
   const navigate = useNavigate();
@@ -147,6 +159,7 @@ export default function SalesReport() {
     productSalesRevenue: 0,
     paymentMethodTotals: [] as { method: string; total: number }[],
     totalBiaya: 0,
+    totalDiskon: 0,
     jumlahBayar: 0,
     totalHPP: 0,
     totalLaba: 0,
@@ -404,15 +417,13 @@ export default function SalesReport() {
       const productSalesRevenue = mappedProducts.reduce((sum, p) => sum + p.subtotal, 0);
       const productSalesCount = mappedProducts.reduce((sum, p) => sum + p.quantity, 0);
 
-      // Hitung Total Biaya, Jumlah Bayar, HPP, Laba per booking
+      // Hitung Total Biaya (harga asli sebelum diskon), Total Diskon,
+      // Jumlah Bayar (setelah diskon), HPP, dan Laba per booking
       const totalBiaya = activeBookings.reduce((sum, b) => sum + b.price + b.price_2, 0);
-      const jumlahBayar = activeBookings.reduce((sum, b) => {
-        const paid1 = b.payment_method ? b.price : 0;
-        const paid2 = b.payment_method_2 ? b.price_2 : 0;
-        return sum + paid1 + paid2;
-      }, 0);
+      const totalDiskon = activeBookings.reduce((sum, b) => sum + getDiscountAmount(b), 0);
+      const jumlahBayar = totalBiaya - totalDiskon;
       const totalHPP = mappedProducts.reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
-      const totalLaba = totalBiaya - totalHPP;
+      const totalLaba = jumlahBayar - totalHPP;
 
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
@@ -433,6 +444,7 @@ export default function SalesReport() {
         productSalesRevenue,
         paymentMethodTotals: Object.entries(paymentTotals).map(([method, total]) => ({ method, total })),
         totalBiaya,
+        totalDiskon,
         jumlahBayar,
         totalHPP,
         totalLaba,
@@ -897,7 +909,7 @@ export default function SalesReport() {
             {/* Rincian Penjualan */}
             <TabsContent value="details" className="space-y-4">
               {/* 5 stat cards */}
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Transaksi</CardTitle></CardHeader>
                   <CardContent><div className="text-2xl font-bold">{stats.totalBookings}</div></CardContent>
@@ -905,6 +917,10 @@ export default function SalesReport() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Biaya</CardTitle></CardHeader>
                   <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(stats.totalBiaya)}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Diskon</CardTitle></CardHeader>
+                  <CardContent><div className="text-xl font-bold text-red-600">{formatCurrency(stats.totalDiskon)}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Jumlah Bayar</CardTitle></CardHeader>
@@ -933,6 +949,7 @@ export default function SalesReport() {
                           <TableHead>Room</TableHead>
                           <TableHead>Durasi/Qty</TableHead>
                           <TableHead className="text-right">Total Biaya</TableHead>
+                          <TableHead className="text-right">Diskon</TableHead>
                           <TableHead className="text-right">Jumlah Bayar</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Metode Bayar</TableHead>
@@ -944,16 +961,17 @@ export default function SalesReport() {
                       <TableBody>
                         {detailsPg.paginated.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={13} className="text-center text-sm text-muted-foreground py-8">
+                            <TableCell colSpan={14} className="text-center text-sm text-muted-foreground py-8">
                               Tidak ada data
                             </TableCell>
                           </TableRow>
                         ) : (
                           detailsPg.paginated.map((booking) => {
                             const totalBiaya = booking.price + booking.price_2;
-                            const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
+                            const diskon = getDiscountAmount(booking);
+                            const jumlahBayar = totalBiaya - diskon;
                             const hpp = getBookingHPP(booking.id);
-                            const laba = totalBiaya - hpp;
+                            const laba = jumlahBayar - hpp;
                             const items = productsByBookingId[booking.id] || [];
                             const itemsLabel = items.length === 0
                               ? "-"
@@ -994,6 +1012,7 @@ export default function SalesReport() {
                                 <TableCell className="text-xs">{booking.room_name}</TableCell>
                                 <TableCell className="text-xs">{formatDuration(booking)}</TableCell>
                                 <TableCell className="text-right text-xs">{formatCurrency(totalBiaya)}</TableCell>
+                                <TableCell className="text-right text-xs text-red-600">{diskon > 0 ? `- ${formatCurrency(diskon)}` : "-"}</TableCell>
                                 <TableCell className="text-right text-xs">{formatCurrency(jumlahBayar)}</TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
