@@ -97,6 +97,18 @@ interface ExpenseData {
 
 type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type" | "channel";
 
+// Harga yang tersimpan (price + price_2) adalah harga asli SEBELUM diskon.
+// Diskon dihitung dari nilai tersebut sesuai tipe diskonnya.
+const getDiscountAmount = (b: { price: number; price_2: number; discount_type: string | null; discount_value: number | null }) => {
+  const base = (Number(b.price) || 0) + (Number(b.price_2) || 0);
+  const dv = Number(b.discount_value) || 0;
+  if (dv <= 0 || base <= 0) return 0;
+  if (b.discount_type === "percent" || b.discount_type === "percentage") {
+    return Math.round((base * dv) / 100);
+  }
+  return Math.min(dv, base);
+};
+
 export default function SalesReport() {
   const { currentStore } = useStore();
   const navigate = useNavigate();
@@ -147,6 +159,7 @@ export default function SalesReport() {
     productSalesRevenue: 0,
     paymentMethodTotals: [] as { method: string; total: number }[],
     totalBiaya: 0,
+    totalDiskon: 0,
     jumlahBayar: 0,
     totalHPP: 0,
     totalLaba: 0,
