@@ -1108,7 +1108,7 @@ export default function Reports() {
                 </div>
                 <div className="flex items-baseline justify-between gap-2 pt-1 border-t mt-1">
                   <span className="text-xs font-semibold">Total:</span>
-                  <span className="text-sm font-bold">{formatCurrency(stats.totalRoomSales + stats.totalProductSales)}</span>
+                  <span className="text-sm font-bold">{formatCurrency(stats.totalBookingRevenue)}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{stats.totalTransactions} transaksi</p>
