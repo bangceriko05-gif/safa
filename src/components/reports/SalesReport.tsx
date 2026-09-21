@@ -949,6 +949,7 @@ export default function SalesReport() {
                           <TableHead>Room</TableHead>
                           <TableHead>Durasi/Qty</TableHead>
                           <TableHead className="text-right">Total Biaya</TableHead>
+                          <TableHead className="text-right">Diskon</TableHead>
                           <TableHead className="text-right">Jumlah Bayar</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Metode Bayar</TableHead>
@@ -960,16 +961,17 @@ export default function SalesReport() {
                       <TableBody>
                         {detailsPg.paginated.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={13} className="text-center text-sm text-muted-foreground py-8">
+                            <TableCell colSpan={14} className="text-center text-sm text-muted-foreground py-8">
                               Tidak ada data
                             </TableCell>
                           </TableRow>
                         ) : (
                           detailsPg.paginated.map((booking) => {
                             const totalBiaya = booking.price + booking.price_2;
-                            const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
+                            const diskon = getDiscountAmount(booking);
+                            const jumlahBayar = totalBiaya - diskon;
                             const hpp = getBookingHPP(booking.id);
-                            const laba = totalBiaya - hpp;
+                            const laba = jumlahBayar - hpp;
                             const items = productsByBookingId[booking.id] || [];
                             const itemsLabel = items.length === 0
                               ? "-"
@@ -1010,6 +1012,7 @@ export default function SalesReport() {
                                 <TableCell className="text-xs">{booking.room_name}</TableCell>
                                 <TableCell className="text-xs">{formatDuration(booking)}</TableCell>
                                 <TableCell className="text-right text-xs">{formatCurrency(totalBiaya)}</TableCell>
+                                <TableCell className="text-right text-xs text-red-600">{diskon > 0 ? `- ${formatCurrency(diskon)}` : "-"}</TableCell>
                                 <TableCell className="text-right text-xs">{formatCurrency(jumlahBayar)}</TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
