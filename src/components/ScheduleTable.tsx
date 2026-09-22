@@ -1559,9 +1559,9 @@ export default function ScheduleTable({
                                   )}
                                 </div>
                                 
-                                {/* Edit and Delete buttons */}
+                                {/* Edit, delete, and FunFury status controls */}
                                 {(hasPermission("edit_bookings") || hasPermission("delete_bookings")) && (booking.status !== 'BATAL' || userRole === 'admin') && (
-                                  <div className={`flex ${size.gapSize} pt-1.5`}>
+                                  <div className={`flex flex-wrap items-center ${size.gapSize} pt-1.5`}>
                                     {hasPermission("edit_bookings") && (
                                       <Button
                                         size="sm"
@@ -1583,6 +1583,29 @@ export default function ScheduleTable({
                                         <Trash2 className={`${size.buttonIconSize} mr-0.5`} />
                                         Hapus
                                       </Button>
+                                    )}
+                                    {isFunfury && hasPermission("edit_bookings") && (
+                                      <div className="flex items-center gap-1 ml-1" aria-label="Ubah status booking">
+                                        {[
+                                          { value: "BO", label: "Booking" },
+                                          { value: "CI", label: "Check In" },
+                                          { value: "CO", label: "Check Out" },
+                                        ].map((option) => (
+                                          <Button
+                                            key={option.value}
+                                            type="button"
+                                            size="sm"
+                                            variant={booking.status === option.value ? "secondary" : "outline"}
+                                            className={`${size.buttonHeight2} ${size.buttonTextSize} ${size.buttonPadding}`}
+                                            disabled={booking.status === option.value || updatingPopupStatus === booking.id}
+                                            onClick={() => handlePopupStatusChange(booking.id, option.value, booking)}
+                                          >
+                                            {updatingPopupStatus === booking.id && booking.status !== option.value ? (
+                                              <Loader2 className={`${size.buttonIconSize} animate-spin`} />
+                                            ) : option.label}
+                                          </Button>
+                                        ))}
+                                      </div>
                                     )}
                                   </div>
                                 )}
