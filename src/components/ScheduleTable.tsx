@@ -508,13 +508,18 @@ export default function ScheduleTable({
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-      // Fetch all bookings for the date (exclude CO and BATAL status - they should not appear on calendar)
-      const { data: bookingsData, error } = await supabase
+      // FunFury keeps checked-out bookings visible; other outlets keep the existing behavior.
+      let bookingsQuery = supabase
         .from("bookings")
         .select("*, bid")
         .eq("date", dateStr)
-        .eq("store_id", currentStore.id)
-        .not("status", "in", "(CO,BATAL)");
+        .eq("store_id", currentStore.id);
+
+      bookingsQuery = isFunfury
+        ? bookingsQuery.neq("status", "BATAL")
+        : bookingsQuery.not("status", "in", "(CO,BATAL)");
+
+      const { data: bookingsData, error } = await bookingsQuery;
 
       if (error) throw error;
       
@@ -1225,7 +1230,9 @@ export default function ScheduleTable({
                         
                         // Determine background color based on status using configured colors
                         const status = booking.status || 'BO';
-                        const statusColor = statusColors[status] || '#3B82F6';
+                        const statusColor = isFunfury && status === "CO"
+                          ? "#6B7280"
+                          : statusColors[status] || '#3B82F6';
                         const isBatal = status === 'BATAL';
                         const bgColor = isBatal ? `${statusColor}20` : `${statusColor}40`; // Add transparency
                         const borderColor = statusColor;
