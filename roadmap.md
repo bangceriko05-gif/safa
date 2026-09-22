@@ -6,4 +6,4 @@
 - [x] Samakan preview Tampilan Website di dashboard dengan halaman toko publik outlet.
 - [x] Rapikan halaman toko: hapus bar atas, tampilkan logo outlet, dan bawa nama kamar dari QR.
 - [x] Tampilkan booking Checked Out khusus FunFury di kalender dengan kartu abu-abu.
-- [x] Tambahkan pilihan status Booking, Check In, dan Check Out pada kartu kalender FunFury.
+- [x] Tambahkan dropdown status Booking, Check In, dan Check Out pada kartu kalender FunFury.
