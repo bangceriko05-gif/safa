@@ -1585,27 +1585,43 @@ export default function ScheduleTable({
                                       </Button>
                                     )}
                                     {isFunfury && hasPermission("edit_bookings") && (
-                                      <div className="flex items-center gap-1 ml-1" aria-label="Ubah status booking">
-                                        {[
-                                          { value: "BO", label: "Booking" },
-                                          { value: "CI", label: "Check In" },
-                                          { value: "CO", label: "Check Out" },
-                                        ].map((option) => (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
                                           <Button
-                                            key={option.value}
                                             type="button"
                                             size="sm"
-                                            variant={booking.status === option.value ? "secondary" : "outline"}
-                                            className={`${size.buttonHeight2} ${size.buttonTextSize} ${size.buttonPadding}`}
-                                            disabled={booking.status === option.value || updatingPopupStatus === booking.id}
-                                            onClick={() => handlePopupStatusChange(booking.id, option.value, booking)}
+                                            variant="outline"
+                                            className={`${size.buttonHeight2} ${size.buttonTextSize} ${size.buttonPadding} ml-1`}
+                                            disabled={updatingPopupStatus === booking.id}
                                           >
-                                            {updatingPopupStatus === booking.id && booking.status !== option.value ? (
-                                              <Loader2 className={`${size.buttonIconSize} animate-spin`} />
-                                            ) : option.label}
+                                            {updatingPopupStatus === booking.id ? (
+                                              <Loader2 className={`${size.buttonIconSize} mr-1 animate-spin`} />
+                                            ) : (
+                                              <ChevronDown className={`${size.buttonIconSize} mr-1`} />
+                                            )}
+                                            Ubah Status
                                           </Button>
-                                        ))}
-                                      </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="bg-popover z-[100]">
+                                          {[
+                                            { value: "BO", label: "Booking" },
+                                            { value: "CI", label: "Check In" },
+                                            { value: "CO", label: "Check Out" },
+                                          ].map((option) => (
+                                            <DropdownMenuItem
+                                              key={option.value}
+                                              disabled={booking.status === option.value}
+                                              onClick={() => handlePopupStatusChange(booking.id, option.value, booking)}
+                                            >
+                                              <div
+                                                className="w-3 h-3 rounded-full mr-2"
+                                                style={{ backgroundColor: option.value === "CO" ? "#6B7280" : statusColors[option.value] || "#ccc" }}
+                                              />
+                                              {option.label}
+                                            </DropdownMenuItem>
+                                          ))}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
                                     )}
                                   </div>
                                 )}
