@@ -7,3 +7,4 @@
 - [x] Rapikan halaman toko: hapus bar atas, tampilkan logo outlet, dan bawa nama kamar dari QR.
 - [x] Tampilkan booking Checked Out khusus FunFury di kalender dengan kartu abu-abu.
 - [x] Tambahkan dropdown status Booking, Check In, dan Check Out pada kartu kalender FunFury.
+- [x] Tampilkan status booking saat ini sebagai teks tombol dropdown FunFury.

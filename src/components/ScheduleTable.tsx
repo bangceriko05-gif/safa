@@ -1599,7 +1599,7 @@ export default function ScheduleTable({
                                             ) : (
                                               <ChevronDown className={`${size.buttonIconSize} mr-1`} />
                                             )}
-                                            Ubah Status
+                                            {getPopupStatusLabel(booking.status || "BO")}
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start" className="bg-popover z-[100]">
