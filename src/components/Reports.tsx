@@ -404,7 +404,7 @@ export default function Reports() {
       const [bookingsResult, customersResult, expensesResult, incomesResult, incomeProductsResult, purchasesResult] = await Promise.all([
         supabase
           .from("bookings")
-          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status, discount_type, discount_value")
+          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status, discount_type, discount_value, discount_applies_to")
           .eq("store_id", currentStore.id)
           .gte("date", startDateStr)
           .lte("date", endDateStr),
@@ -555,20 +555,9 @@ export default function Reports() {
 
       const totalBookingRevenue = activeBookings.reduce((sum, b) => sum + (Number(b.price) || 0) + (Number(b.price_2) || 0), 0);
 
-      // Diskon level booking (sama dengan rumus di Laporan Penjualan)
-      const totalSalesDiscount = activeBookings.reduce((sum, b: any) => {
-        const base = (Number(b.price) || 0) + (Number(b.price_2) || 0);
-        const dv = Number(b.discount_value) || 0;
-        if (dv <= 0 || base <= 0) return sum;
-        if (b.discount_type === "percent" || b.discount_type === "percentage") {
-          return sum + Math.round((base * dv) / 100);
-        }
-        return sum + Math.min(dv, base);
-      }, 0);
-
       // Fetch booking_products for active bookings in range → split room vs product sales
       const activeBookingIds = activeBookings.map((b: any) => b.id);
-      let totalProductSales = 0;
+      const productTotalsByBooking = new Map<string, number>();
       let productSalesCount = 0;
       if (activeBookingIds.length > 0) {
         const { data: bpData } = await supabase
@@ -576,13 +565,40 @@ export default function Reports() {
           .select("subtotal, booking_id")
           .in("booking_id", activeBookingIds);
         const bps = (bpData || []) as any[];
-        totalProductSales = bps.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
+        bps.forEach((row) => {
+          productTotalsByBooking.set(
+            row.booking_id,
+            (productTotalsByBooking.get(row.booking_id) || 0) + (Number(row.subtotal) || 0),
+          );
+        });
         productSalesCount = new Set(bps.map((r) => r.booking_id)).size;
       }
-      // Diskon dicatat di level booking, sehingga subtotal produk bisa melebihi nilai
-      // tagihan. Batasi penjualan produk agar total selalu sama dengan nilai tagihan.
-      totalProductSales = Math.min(totalProductSales, totalBookingRevenue);
-      const totalRoomSales = Math.max(0, totalBookingRevenue - totalProductSales);
+
+      // Kamar, produk, dan total pada kartu Penjualan menampilkan nilai yang benar-benar
+      // dibayar. Diskon dikurangkan dari targetnya (kamar/variant atau produk).
+      let totalRoomSales = 0;
+      let totalProductSales = 0;
+      let totalSalesDiscount = 0;
+      activeBookings.forEach((booking: any) => {
+        const transactionTotal = (Number(booking.price) || 0) + (Number(booking.price_2) || 0);
+        const productTotal = Math.min(productTotalsByBooking.get(booking.id) || 0, transactionTotal);
+        const roomTotal = Math.max(0, transactionTotal - productTotal);
+        const discountTarget = booking.discount_applies_to === "product" ? productTotal : roomTotal;
+        const discountValue = Number(booking.discount_value) || 0;
+        const discountAmount = discountValue <= 0 || discountTarget <= 0
+          ? 0
+          : booking.discount_type === "percent" || booking.discount_type === "percentage"
+            ? Math.round((discountTarget * discountValue) / 100)
+            : Math.min(discountValue, discountTarget);
+
+        totalSalesDiscount += discountAmount;
+        totalProductSales += booking.discount_applies_to === "product"
+          ? Math.max(0, productTotal - discountAmount)
+          : productTotal;
+        totalRoomSales += booking.discount_applies_to === "product"
+          ? roomTotal
+          : Math.max(0, roomTotal - discountAmount);
+      });
 
       const paymentMethodTotals = Object.entries(paymentTotals).map(([method, total]) => ({
         method,
@@ -1122,7 +1138,7 @@ export default function Reports() {
                 </div>
                 <div className="flex items-baseline justify-between gap-2 pt-1 border-t mt-1">
                   <span className="text-xs font-semibold">Total:</span>
-                  <span className="text-sm font-bold">{formatCurrency(stats.totalBookingRevenue)}</span>
+                  <span className="text-sm font-bold">{formatCurrency(stats.totalRoomSales + stats.totalProductSales)}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{stats.totalTransactions} transaksi</p>
