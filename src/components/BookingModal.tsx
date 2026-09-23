@@ -1153,6 +1153,26 @@ export default function BookingModal({
         return;
       }
 
+      const roomSelections = isMultiRoom
+        ? [
+            { key: "primary", room_id: formData.room_id, variant_id: formData.variant_id, price: primaryRoomPrice },
+            ...additionalRooms,
+          ]
+        : [];
+
+      if (isMultiRoom) {
+        if (roomSelections.some((room) => !room.room_id || numericPrice(room.price) <= 0 || (formData.booking_type === "walk_in" && !room.variant_id))) {
+          toast.error("Lengkapi kamar, varian, dan harga pada setiap kamar");
+          setLoading(false);
+          return;
+        }
+        if (new Set(roomSelections.map((room) => room.room_id)).size !== roomSelections.length) {
+          toast.error("Kamar yang sama tidak dapat dipilih lebih dari sekali");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validate OTA fields
       if (formData.booking_type === "ota") {
         if (!formData.ota_booking_id.trim()) {
@@ -1229,16 +1249,16 @@ export default function BookingModal({
       }
 
       // Check if room is active
+      const selectedRoomIds = isMultiRoom ? roomSelections.map((room) => room.room_id) : [formData.room_id];
       const { data: roomData, error: roomError } = await supabase
         .from("rooms")
-        .select("status")
-        .eq("id", formData.room_id)
-        .single();
+        .select("id, status")
+        .in("id", selectedRoomIds);
 
       if (roomError) throw roomError;
 
-      if (roomData.status !== "Aktif") {
-        toast.error("Ruangan ini sedang tidak tersedia. Silakan pilih ruangan lain.");
+      if (!roomData || roomData.length !== selectedRoomIds.length || roomData.some((room) => room.status !== "Aktif")) {
+        toast.error("Salah satu kamar sedang tidak tersedia. Silakan pilih kamar lain.");
         return;
       }
 
@@ -1259,7 +1279,7 @@ export default function BookingModal({
           let query = supabase
             .from("bookings")
             .select("*")
-            .eq("room_id", formData.room_id)
+            .in("room_id", selectedRoomIds)
             .eq("date", dateStr);
           
           // Only exclude current booking if editing
@@ -1303,7 +1323,18 @@ export default function BookingModal({
           });
 
           if (hasOverlap) {
-            toast.error("Ruangan sudah dibooking pada waktu tersebut");
+            const conflictRoom = rooms.find((room) => room.id === existingBookings?.find((booking) => {
+              let existingStart = parseInt(booking.start_time.split(":")[0]);
+              let existingEnd = parseInt(booking.end_time.split(":")[0]);
+              let newStart = parseInt(formData.start_time.split(":")[0]);
+              let newEnd = parseInt(formData.end_time.split(":")[0]);
+              if (existingEnd < 9 && existingStart >= 9) existingEnd += 24;
+              if (newEnd < 9 && newStart >= 9) newEnd += 24;
+              if (newStart < 9) newStart += 24;
+              if (newEnd < 9) newEnd += 24;
+              return newStart < existingEnd && newEnd > existingStart;
+            })?.room_id)?.name;
+            toast.error(`${conflictRoom || "Ruangan"} sudah dibooking pada waktu tersebut`);
             return;
           }
         }
@@ -1332,7 +1363,9 @@ export default function BookingModal({
         status: formData.status,
         date: dateStr,
         duration: finalDuration,
-        price: parseFloat(parsePrice(formData.price)),
+        price: isMultiRoom
+          ? Math.max(0, numericPrice(primaryRoomPrice) + calculateProductsTotal() - calculateDiscount())
+          : parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
         variant_price_override: (() => {
           const selectedRoom = rooms.find(r => r.id === formData.room_id);
