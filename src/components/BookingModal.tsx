@@ -28,7 +28,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +102,13 @@ interface SelectedProduct {
   subtotal: number;
 }
 
+interface AdditionalRoomBooking {
+  key: string;
+  room_id: string;
+  variant_id: string;
+  price: string;
+}
+
 export default function BookingModal({
   isOpen,
   onClose,
@@ -146,6 +153,8 @@ export default function BookingModal({
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
   const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
+  const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
+  const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
   
   // Deposit state
   const [enableDeposit, setEnableDeposit] = useState(false);
@@ -188,6 +197,7 @@ export default function BookingModal({
 
   // Schedule slot settings (FunFury only) — jam mulai/selesai mengikuti tabel jadwal
   const isFunFury = /funfury/i.test(currentStore?.name || "");
+  const isMultiRoom = !editingBooking && !isFunFury && additionalRooms.length > 0;
   const [scheduleCfg, setScheduleCfg] = useState<{ start: string; end: string; slot: number } | null>(null);
 
   useEffect(() => {
