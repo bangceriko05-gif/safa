@@ -2015,10 +2015,20 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="room_id">Ruangan *</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
+              {!editingBooking && !isFunFury && (
+                <Button type="button" variant="outline" size="sm" onClick={addAnotherRoom} className="h-8 gap-1">
+                  <Plus className="h-4 w-4" /> Tambah Kamar
+                </Button>
+              )}
+            </div>
             <Select
               value={formData.room_id}
-              onValueChange={(value) => setFormData({ ...formData, room_id: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, room_id: value, variant_id: "" });
+                setPrimaryRoomPrice("");
+              }}
               required
             >
               <SelectTrigger>
@@ -2122,6 +2132,80 @@ export default function BookingModal({
             </div>
           )}
 
+          {isMultiRoom && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="space-y-1">
+                <Label htmlFor="primary_room_price">Harga Kamar 1 *</Label>
+                <Input
+                  id="primary_room_price"
+                  inputMode="numeric"
+                  value={primaryRoomPrice}
+                  onChange={(event) => setPrimaryRoomPrice(formatPrice(event.target.value))}
+                  placeholder="Masukkan harga kamar pertama"
+                  required
+                />
+              </div>
+              {additionalRooms.map((room, index) => {
+                const variants = filterVariantsForDate(additionalRoomVariants[room.key] || []);
+                return (
+                  <div key={room.key} className="space-y-3 border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Kamar {index + 2}</Label>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAdditionalRoom(room.key)} aria-label={`Hapus kamar ${index + 2}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Select
+                        value={room.room_id}
+                        onValueChange={(roomId) => {
+                          updateAdditionalRoom(room.key, { room_id: roomId, variant_id: "", price: "" });
+                          void fetchAdditionalRoomVariants(room.key, roomId);
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Pilih kamar" /></SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          {rooms.filter((candidate) => candidate.id === room.room_id || (candidate.id !== formData.room_id && !additionalRooms.some((selected) => selected.key !== room.key && selected.room_id === candidate.id))).map((candidate) => (
+                            <SelectItem key={candidate.id} value={candidate.id}>{candidate.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formData.booking_type === "walk_in" ? (
+                        <Select
+                          value={room.variant_id}
+                          onValueChange={(variantId) => {
+                            const variant = variants.find((item) => item.id === variantId);
+                            updateAdditionalRoom(room.key, {
+                              variant_id: variantId,
+                              price: variant ? formatPrice(String(calculateVariantTotal(variant))) : "",
+                            });
+                          }}
+                          disabled={!room.room_id}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            {variants.map((variant) => (
+                              <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : <div />}
+                      <Input
+                        inputMode="numeric"
+                        value={room.price}
+                        onChange={(event) => updateAdditionalRoom(room.key, { price: formatPrice(event.target.value) })}
+                        placeholder="Harga kamar"
+                        disabled={!room.room_id}
+                        required
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">Tanggal, pelanggan, metode pembayaran, dan bukti bayar berlaku untuk semua kamar.</p>
+            </div>
+          )}
+
           {/* OTA Booking ID and Source */}
           {formData.booking_type === "ota" && (
             <>
@@ -2186,7 +2270,7 @@ export default function BookingModal({
               ) : null}
             </div>
           </div>
-          {formData.room_id && formData.booking_type === "ota" && (
+          {formData.room_id && formData.booking_type === "ota" && !isMultiRoom && (
             <div className="space-y-2">
               <Label htmlFor="ota_price">Harga (Input Manual) *</Label>
               <Input
@@ -2623,7 +2707,7 @@ export default function BookingModal({
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">{formData.booking_type === "ota" ? "Harga OTA:" : "Subtotal Kamar:"}</span>
                     <span className="font-bold text-primary">
-                      Rp {calculateRoomSubtotal().toLocaleString('id-ID')}
+                      Rp {(isMultiRoom ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0) : calculateRoomSubtotal()).toLocaleString('id-ID')}
                     </span>
                   </div>
                   {selectedProducts.length > 0 && (
@@ -2773,7 +2857,7 @@ export default function BookingModal({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          {!isMultiRoom && <div className="flex items-center space-x-2">
             <Checkbox
               id="dual_payment"
               checked={formData.dual_payment}
@@ -2809,9 +2893,9 @@ export default function BookingModal({
             >
               Dual Payment
             </Label>
-          </div>
+          </div>}
 
-          {formData.dual_payment && (
+          {formData.dual_payment && !isMultiRoom && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="payment_method_2">Metode Pembayaran Kedua *</Label>
