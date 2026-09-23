@@ -153,6 +153,7 @@ export default function BookingModal({
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
   const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
+  const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
   const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
   const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
   
@@ -365,7 +366,7 @@ export default function BookingModal({
         price: formatPrice(grandTotal.toString()),
       }));
     }
-  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type, formData.variant_price_override, rooms, formData.room_id]);
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type, formData.variant_price_override, rooms, formData.room_id, primaryRoomPrice, additionalRooms, isMultiRoom]);
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
@@ -472,6 +473,9 @@ export default function BookingModal({
       const loadedProof2 = (editingBooking as any).payment_proof_url_2 || null;
       setPaymentProofUrl(loadedProof1);
       setPaymentProofUrl2(loadedProof2);
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
@@ -543,6 +547,9 @@ export default function BookingModal({
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
       setPaymentProofUrl2(null);
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
 
       // For PMS mode, initialize check-in date from selected date
       if (isPMSMode) {
@@ -589,6 +596,9 @@ export default function BookingModal({
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
       setPaymentProofUrl2(null);
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
       isPriceProtectedRef.current = false;
       
       // Reset check-in/out dates for PMS mode
@@ -697,6 +707,17 @@ export default function BookingModal({
       setRoomVariants(data || []);
     } catch (error) {
       console.error("Error fetching room variants:", error);
+    }
+  };
+
+  const fetchAdditionalRoomVariants = async (key: string, roomId: string) => {
+    if (!currentStore || !roomId) return;
+    try {
+      const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
+      const data = await fetchRoomVariantsByRoom(currentStore.id, roomId, true);
+      setAdditionalRoomVariants((previous) => ({ ...previous, [key]: data || [] }));
+    } catch (error) {
+      console.error("Error fetching additional room variants:", error);
     }
   };
 
@@ -885,6 +906,59 @@ export default function BookingModal({
     return value.replace(/\./g, '');
   };
 
+  const numericPrice = (value: string) => parseFloat(parsePrice(value)) || 0;
+
+  const filterVariantsForDate = (variants: RoomVariant[]) => {
+    const bookingDate = isPMSMode ? checkInDate : selectedDate;
+    if (!bookingDate) return variants;
+    const dayOfWeek = bookingDate.getDay();
+    return variants.filter((variant) => {
+      const visibilityType = variant.visibility_type || "all";
+      const visibleDays = variant.visible_days;
+      if (visibilityType === "all" || !visibilityType) return true;
+      if (visibilityType === "weekdays") return dayOfWeek >= 1 && dayOfWeek <= 5;
+      if (visibilityType === "weekends") return dayOfWeek === 0 || dayOfWeek === 6;
+      if (visibilityType === "specific_days" && visibleDays) return visibleDays.includes(dayOfWeek);
+      return true;
+    });
+  };
+
+  const calculateVariantTotal = (variant: RoomVariant) => {
+    if (isPMSMode) {
+      if (!checkInDate || !checkOutDate) return variant.price;
+      if (variant.booking_duration_type === "months") return variant.price;
+      return variant.price * Math.max(1, differenceInCalendarDays(checkOutDate, checkInDate));
+    }
+    return variant.price * Math.max(1, calculateDuration(formData.start_time, formData.end_time));
+  };
+
+  const addAnotherRoom = () => {
+    if (!formData.room_id) {
+      toast.error("Pilih kamar pertama terlebih dahulu");
+      return;
+    }
+    if (!primaryRoomPrice) setPrimaryRoomPrice(formatPrice(String(calculateRoomSubtotal())));
+    setFormData((previous) => ({ ...previous, dual_payment: false, price_2: "", payment_method_2: "", reference_no_2: "" }));
+    setPaymentProofUrl2(null);
+    setAdditionalRooms((previous) => [
+      ...previous,
+      { key: crypto.randomUUID(), room_id: "", variant_id: "", price: "" },
+    ]);
+  };
+
+  const updateAdditionalRoom = (key: string, patch: Partial<AdditionalRoomBooking>) => {
+    setAdditionalRooms((previous) => previous.map((room) => room.key === key ? { ...room, ...patch } : room));
+  };
+
+  const removeAdditionalRoom = (key: string) => {
+    setAdditionalRooms((previous) => previous.filter((room) => room.key !== key));
+    setAdditionalRoomVariants((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+  };
+
   const handlePriceChange = (value: string) => {
     const formatted = formatPrice(value);
     setFormData({ ...formData, price: formatted });
@@ -971,7 +1045,9 @@ export default function BookingModal({
   const calculateDiscount = () => {
     if (!formData.has_discount || !formData.discount_value) return 0;
 
-    const roomPrice = calculateRoomSubtotal();
+    const roomPrice = isMultiRoom
+      ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0)
+      : calculateRoomSubtotal();
     const productsTotal = calculateProductsTotal();
     
     // Determine which amount to apply discount to
@@ -986,7 +1062,9 @@ export default function BookingModal({
   };
 
   const calculateGrandTotal = () => {
-    const roomPrice = calculateRoomSubtotal();
+    const roomPrice = isMultiRoom
+      ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0)
+      : calculateRoomSubtotal();
     const productsTotal = calculateProductsTotal();
     const discount = calculateDiscount();
     return Math.max(0, roomPrice + productsTotal - discount);
