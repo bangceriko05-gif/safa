@@ -1688,13 +1688,34 @@ export default function BookingModal({
 
         toast.success("Booking berhasil diupdate");
       } else {
-        const { data: newBooking, error } = await supabase
+        const rowsToInsert = isMultiRoom
+          ? roomSelections.map((room, index) => ({
+              ...bookingData,
+              room_id: room.room_id,
+              variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
+              price: index === 0
+                ? Math.max(0, numericPrice(room.price) + calculateProductsTotal() - calculateDiscount())
+                : numericPrice(room.price),
+              price_2: null,
+              dual_payment: false,
+              payment_method_2: null,
+              reference_no_2: null,
+              payment_proof_url_2: null,
+              discount_type: index === 0 && formData.has_discount ? formData.discount_type : null,
+              discount_value: index === 0 && formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
+              discount_applies_to: index === 0 && formData.has_discount ? formData.discount_applies_to : null,
+              variant_price_override: null,
+              payment_status: "lunas",
+            }))
+          : [bookingData];
+        const { data: createdBookings, error } = await supabase
           .from("bookings")
-          .insert([bookingData])
-          .select()
-          .single();
+          .insert(rowsToInsert)
+          .select();
 
         if (error) throw error;
+        const newBooking = createdBookings?.[0];
+        if (!newBooking) throw new Error("Booking gagal dibuat");
 
         // Insert products
         if (selectedProducts.length > 0) {
@@ -1748,24 +1769,30 @@ export default function BookingModal({
         }
         
         // Log activity
-        await logActivity({
-          actionType: 'created',
-          entityType: 'Booking',
-          entityId: newBooking.id,
-          description: `Membuat booking ${formData.customer_name} di kamar ${roomName} pada ${dateStr}`,
-          storeId: currentStore?.id,
-        });
+        await Promise.all((createdBookings || []).map((booking) => {
+          const createdRoomName = rooms.find((room) => room.id === booking.room_id)?.name || "Unknown";
+          return logActivity({
+            actionType: 'created',
+            entityType: 'Booking',
+            entityId: booking.id,
+            description: `Membuat booking ${formData.customer_name} di kamar ${createdRoomName} pada ${dateStr}`,
+            storeId: currentStore?.id,
+          });
+        }));
         
         // Auto-create hutang if payment method is Hutang
-        await createAutoHutang({
-          paymentMethod: formData.payment_method,
-          amount: parseFloat(parsePrice(formData.price)),
-          supplierName: formData.customer_name,
-          description: `Penjualan - ${formData.customer_name} di kamar ${roomName}`,
-          storeId: currentStore.id,
-          userId,
-          bid: newBooking.bid,
-        });
+        await Promise.all((createdBookings || []).map((booking) => {
+          const createdRoomName = rooms.find((room) => room.id === booking.room_id)?.name || "Unknown";
+          return createAutoHutang({
+            paymentMethod: formData.payment_method,
+            amount: Number(booking.price || 0),
+            supplierName: formData.customer_name,
+            description: `Penjualan - ${formData.customer_name} di kamar ${createdRoomName}`,
+            storeId: currentStore.id,
+            userId,
+            bid: booking.bid,
+          });
+        }));
 
         // Also check dual payment
         if (formData.dual_payment && formData.payment_method_2) {
@@ -1780,7 +1807,7 @@ export default function BookingModal({
           });
         }
 
-        toast.success("Booking berhasil ditambahkan");
+        toast.success(isMultiRoom ? `${createdBookings?.length || 0} kamar berhasil dibooking` : "Booking berhasil ditambahkan");
       }
 
       onClose();
@@ -1790,6 +1817,9 @@ export default function BookingModal({
       setProductName("");
       setProductPrice("");
       setProductQuantity("1");
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
       setFormData({
         customer_name: "",
         phone: "",
