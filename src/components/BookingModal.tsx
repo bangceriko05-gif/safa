@@ -1266,6 +1266,28 @@ export default function BookingModal({
       const dateStr = isPMSMode && checkInDate 
         ? format(checkInDate, "yyyy-MM-dd") 
         : format(selectedDate, "yyyy-MM-dd");
+
+      if (isPMSMode && isMultiRoom && checkInDate && checkOutDate) {
+        const { data: existingBookings, error: checkError } = await supabase
+          .from("bookings")
+          .select("room_id, date, duration, status")
+          .in("room_id", selectedRoomIds)
+          .neq("status", "BATAL")
+          .lt("date", format(checkOutDate, "yyyy-MM-dd"));
+        if (checkError) throw checkError;
+        const requestedStart = checkInDate.getTime();
+        const requestedEnd = checkOutDate.getTime();
+        const conflict = existingBookings?.find((booking) => {
+          const existingStartDate = new Date(`${booking.date}T00:00:00`);
+          const existingEndDate = addDays(existingStartDate, Math.ceil(Number(booking.duration) || 1));
+          return requestedStart < existingEndDate.getTime() && requestedEnd > existingStartDate.getTime();
+        });
+        if (conflict) {
+          const conflictRoom = rooms.find((room) => room.id === conflict.room_id)?.name || "Kamar";
+          toast.error(`${conflictRoom} sudah dibooking pada tanggal tersebut`);
+          return;
+        }
+      }
       
       // Skip overlap check for PMS mode - will implement date range overlap check later
       if (!isPMSMode) {
