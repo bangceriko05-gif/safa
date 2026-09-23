@@ -28,7 +28,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +102,13 @@ interface SelectedProduct {
   subtotal: number;
 }
 
+interface AdditionalRoomBooking {
+  key: string;
+  room_id: string;
+  variant_id: string;
+  price: string;
+}
+
 export default function BookingModal({
   isOpen,
   onClose,
@@ -146,6 +153,9 @@ export default function BookingModal({
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
   const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
+  const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
+  const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
+  const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
   
   // Deposit state
   const [enableDeposit, setEnableDeposit] = useState(false);
@@ -188,6 +198,7 @@ export default function BookingModal({
 
   // Schedule slot settings (FunFury only) — jam mulai/selesai mengikuti tabel jadwal
   const isFunFury = /funfury/i.test(currentStore?.name || "");
+  const isMultiRoom = !editingBooking && !isFunFury && additionalRooms.length > 0;
   const [scheduleCfg, setScheduleCfg] = useState<{ start: string; end: string; slot: number } | null>(null);
 
   useEffect(() => {
@@ -355,7 +366,7 @@ export default function BookingModal({
         price: formatPrice(grandTotal.toString()),
       }));
     }
-  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type, formData.variant_price_override, rooms, formData.room_id]);
+  }, [formData.variant_id, formData.start_time, formData.end_time, selectedProducts, formData.has_discount, formData.discount_value, formData.discount_type, formData.discount_applies_to, roomVariants, formData.dual_payment, checkInDate, checkOutDate, isPMSMode, formData.booking_type, formData.variant_price_override, rooms, formData.room_id, primaryRoomPrice, additionalRooms, isMultiRoom]);
 
   // Auto-fill Total Bayar Kedua when dual_payment is enabled
   useEffect(() => {
@@ -462,6 +473,9 @@ export default function BookingModal({
       const loadedProof2 = (editingBooking as any).payment_proof_url_2 || null;
       setPaymentProofUrl(loadedProof1);
       setPaymentProofUrl2(loadedProof2);
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
       // If booking has price_2, treat it as manually edited
       setIsPrice2ManuallyEdited(!!editingBooking.price_2);
 
@@ -533,6 +547,9 @@ export default function BookingModal({
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
       setPaymentProofUrl2(null);
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
 
       // For PMS mode, initialize check-in date from selected date
       if (isPMSMode) {
@@ -579,6 +596,9 @@ export default function BookingModal({
       setIsPrice2ManuallyEdited(false);
       setPaymentProofUrl(null);
       setPaymentProofUrl2(null);
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
       isPriceProtectedRef.current = false;
       
       // Reset check-in/out dates for PMS mode
@@ -687,6 +707,17 @@ export default function BookingModal({
       setRoomVariants(data || []);
     } catch (error) {
       console.error("Error fetching room variants:", error);
+    }
+  };
+
+  const fetchAdditionalRoomVariants = async (key: string, roomId: string) => {
+    if (!currentStore || !roomId) return;
+    try {
+      const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
+      const data = await fetchRoomVariantsByRoom(currentStore.id, roomId, true);
+      setAdditionalRoomVariants((previous) => ({ ...previous, [key]: data || [] }));
+    } catch (error) {
+      console.error("Error fetching additional room variants:", error);
     }
   };
 
@@ -875,6 +906,59 @@ export default function BookingModal({
     return value.replace(/\./g, '');
   };
 
+  const numericPrice = (value: string) => parseFloat(parsePrice(value)) || 0;
+
+  const filterVariantsForDate = (variants: RoomVariant[]) => {
+    const bookingDate = isPMSMode ? checkInDate : selectedDate;
+    if (!bookingDate) return variants;
+    const dayOfWeek = bookingDate.getDay();
+    return variants.filter((variant) => {
+      const visibilityType = variant.visibility_type || "all";
+      const visibleDays = variant.visible_days;
+      if (visibilityType === "all" || !visibilityType) return true;
+      if (visibilityType === "weekdays") return dayOfWeek >= 1 && dayOfWeek <= 5;
+      if (visibilityType === "weekends") return dayOfWeek === 0 || dayOfWeek === 6;
+      if (visibilityType === "specific_days" && visibleDays) return visibleDays.includes(dayOfWeek);
+      return true;
+    });
+  };
+
+  const calculateVariantTotal = (variant: RoomVariant) => {
+    if (isPMSMode) {
+      if (!checkInDate || !checkOutDate) return variant.price;
+      if (variant.booking_duration_type === "months") return variant.price;
+      return variant.price * Math.max(1, differenceInCalendarDays(checkOutDate, checkInDate));
+    }
+    return variant.price * Math.max(1, calculateDuration(formData.start_time, formData.end_time));
+  };
+
+  const addAnotherRoom = () => {
+    if (!formData.room_id) {
+      toast.error("Pilih kamar pertama terlebih dahulu");
+      return;
+    }
+    if (!primaryRoomPrice) setPrimaryRoomPrice(formatPrice(String(calculateRoomSubtotal())));
+    setFormData((previous) => ({ ...previous, dual_payment: false, price_2: "", payment_method_2: "", reference_no_2: "" }));
+    setPaymentProofUrl2(null);
+    setAdditionalRooms((previous) => [
+      ...previous,
+      { key: crypto.randomUUID(), room_id: "", variant_id: "", price: "" },
+    ]);
+  };
+
+  const updateAdditionalRoom = (key: string, patch: Partial<AdditionalRoomBooking>) => {
+    setAdditionalRooms((previous) => previous.map((room) => room.key === key ? { ...room, ...patch } : room));
+  };
+
+  const removeAdditionalRoom = (key: string) => {
+    setAdditionalRooms((previous) => previous.filter((room) => room.key !== key));
+    setAdditionalRoomVariants((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+  };
+
   const handlePriceChange = (value: string) => {
     const formatted = formatPrice(value);
     setFormData({ ...formData, price: formatted });
@@ -961,7 +1045,9 @@ export default function BookingModal({
   const calculateDiscount = () => {
     if (!formData.has_discount || !formData.discount_value) return 0;
 
-    const roomPrice = calculateRoomSubtotal();
+    const roomPrice = isMultiRoom
+      ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0)
+      : calculateRoomSubtotal();
     const productsTotal = calculateProductsTotal();
     
     // Determine which amount to apply discount to
@@ -976,7 +1062,9 @@ export default function BookingModal({
   };
 
   const calculateGrandTotal = () => {
-    const roomPrice = calculateRoomSubtotal();
+    const roomPrice = isMultiRoom
+      ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0)
+      : calculateRoomSubtotal();
     const productsTotal = calculateProductsTotal();
     const discount = calculateDiscount();
     return Math.max(0, roomPrice + productsTotal - discount);
@@ -1065,6 +1153,26 @@ export default function BookingModal({
         return;
       }
 
+      const roomSelections = isMultiRoom
+        ? [
+            { key: "primary", room_id: formData.room_id, variant_id: formData.variant_id, price: primaryRoomPrice },
+            ...additionalRooms,
+          ]
+        : [];
+
+      if (isMultiRoom) {
+        if (roomSelections.some((room) => !room.room_id || numericPrice(room.price) <= 0 || (formData.booking_type === "walk_in" && !room.variant_id))) {
+          toast.error("Lengkapi kamar, varian, dan harga pada setiap kamar");
+          setLoading(false);
+          return;
+        }
+        if (new Set(roomSelections.map((room) => room.room_id)).size !== roomSelections.length) {
+          toast.error("Kamar yang sama tidak dapat dipilih lebih dari sekali");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validate OTA fields
       if (formData.booking_type === "ota") {
         if (!formData.ota_booking_id.trim()) {
@@ -1141,16 +1249,16 @@ export default function BookingModal({
       }
 
       // Check if room is active
+      const selectedRoomIds = isMultiRoom ? roomSelections.map((room) => room.room_id) : [formData.room_id];
       const { data: roomData, error: roomError } = await supabase
         .from("rooms")
-        .select("status")
-        .eq("id", formData.room_id)
-        .single();
+        .select("id, status")
+        .in("id", selectedRoomIds);
 
       if (roomError) throw roomError;
 
-      if (roomData.status !== "Aktif") {
-        toast.error("Ruangan ini sedang tidak tersedia. Silakan pilih ruangan lain.");
+      if (!roomData || roomData.length !== selectedRoomIds.length || roomData.some((room) => room.status !== "Aktif")) {
+        toast.error("Salah satu kamar sedang tidak tersedia. Silakan pilih kamar lain.");
         return;
       }
 
@@ -1158,6 +1266,28 @@ export default function BookingModal({
       const dateStr = isPMSMode && checkInDate 
         ? format(checkInDate, "yyyy-MM-dd") 
         : format(selectedDate, "yyyy-MM-dd");
+
+      if (isPMSMode && isMultiRoom && checkInDate && checkOutDate) {
+        const { data: existingBookings, error: checkError } = await supabase
+          .from("bookings")
+          .select("room_id, date, duration, status")
+          .in("room_id", selectedRoomIds)
+          .neq("status", "BATAL")
+          .lt("date", format(checkOutDate, "yyyy-MM-dd"));
+        if (checkError) throw checkError;
+        const requestedStart = checkInDate.getTime();
+        const requestedEnd = checkOutDate.getTime();
+        const conflict = existingBookings?.find((booking) => {
+          const existingStartDate = new Date(`${booking.date}T00:00:00`);
+          const existingEndDate = addDays(existingStartDate, Math.ceil(Number(booking.duration) || 1));
+          return requestedStart < existingEndDate.getTime() && requestedEnd > existingStartDate.getTime();
+        });
+        if (conflict) {
+          const conflictRoom = rooms.find((room) => room.id === conflict.room_id)?.name || "Kamar";
+          toast.error(`${conflictRoom} sudah dibooking pada tanggal tersebut`);
+          return;
+        }
+      }
       
       // Skip overlap check for PMS mode - will implement date range overlap check later
       if (!isPMSMode) {
@@ -1171,7 +1301,7 @@ export default function BookingModal({
           let query = supabase
             .from("bookings")
             .select("*")
-            .eq("room_id", formData.room_id)
+            .in("room_id", selectedRoomIds)
             .eq("date", dateStr);
           
           // Only exclude current booking if editing
@@ -1215,7 +1345,18 @@ export default function BookingModal({
           });
 
           if (hasOverlap) {
-            toast.error("Ruangan sudah dibooking pada waktu tersebut");
+            const conflictRoom = rooms.find((room) => room.id === existingBookings?.find((booking) => {
+              let existingStart = parseInt(booking.start_time.split(":")[0]);
+              let existingEnd = parseInt(booking.end_time.split(":")[0]);
+              let newStart = parseInt(formData.start_time.split(":")[0]);
+              let newEnd = parseInt(formData.end_time.split(":")[0]);
+              if (existingEnd < 9 && existingStart >= 9) existingEnd += 24;
+              if (newEnd < 9 && newStart >= 9) newEnd += 24;
+              if (newStart < 9) newStart += 24;
+              if (newEnd < 9) newEnd += 24;
+              return newStart < existingEnd && newEnd > existingStart;
+            })?.room_id)?.name;
+            toast.error(`${conflictRoom || "Ruangan"} sudah dibooking pada waktu tersebut`);
             return;
           }
         }
@@ -1244,7 +1385,9 @@ export default function BookingModal({
         status: formData.status,
         date: dateStr,
         duration: finalDuration,
-        price: parseFloat(parsePrice(formData.price)),
+        price: isMultiRoom
+          ? Math.max(0, numericPrice(primaryRoomPrice) + calculateProductsTotal() - calculateDiscount())
+          : parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
         variant_price_override: (() => {
           const selectedRoom = rooms.find(r => r.id === formData.room_id);
@@ -1567,13 +1710,34 @@ export default function BookingModal({
 
         toast.success("Booking berhasil diupdate");
       } else {
-        const { data: newBooking, error } = await supabase
+        const rowsToInsert = isMultiRoom
+          ? roomSelections.map((room, index) => ({
+              ...bookingData,
+              room_id: room.room_id,
+              variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
+              price: index === 0
+                ? Math.max(0, numericPrice(room.price) + calculateProductsTotal() - calculateDiscount())
+                : numericPrice(room.price),
+              price_2: null,
+              dual_payment: false,
+              payment_method_2: null,
+              reference_no_2: null,
+              payment_proof_url_2: null,
+              discount_type: index === 0 && formData.has_discount ? formData.discount_type : null,
+              discount_value: index === 0 && formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
+              discount_applies_to: index === 0 && formData.has_discount ? formData.discount_applies_to : null,
+              variant_price_override: null,
+              payment_status: "lunas",
+            }))
+          : [bookingData];
+        const { data: createdBookings, error } = await supabase
           .from("bookings")
-          .insert([bookingData])
-          .select()
-          .single();
+          .insert(rowsToInsert)
+          .select();
 
         if (error) throw error;
+        const newBooking = createdBookings?.[0];
+        if (!newBooking) throw new Error("Booking gagal dibuat");
 
         // Insert products
         if (selectedProducts.length > 0) {
@@ -1627,24 +1791,30 @@ export default function BookingModal({
         }
         
         // Log activity
-        await logActivity({
-          actionType: 'created',
-          entityType: 'Booking',
-          entityId: newBooking.id,
-          description: `Membuat booking ${formData.customer_name} di kamar ${roomName} pada ${dateStr}`,
-          storeId: currentStore?.id,
-        });
+        await Promise.all((createdBookings || []).map((booking) => {
+          const createdRoomName = rooms.find((room) => room.id === booking.room_id)?.name || "Unknown";
+          return logActivity({
+            actionType: 'created',
+            entityType: 'Booking',
+            entityId: booking.id,
+            description: `Membuat booking ${formData.customer_name} di kamar ${createdRoomName} pada ${dateStr}`,
+            storeId: currentStore?.id,
+          });
+        }));
         
         // Auto-create hutang if payment method is Hutang
-        await createAutoHutang({
-          paymentMethod: formData.payment_method,
-          amount: parseFloat(parsePrice(formData.price)),
-          supplierName: formData.customer_name,
-          description: `Penjualan - ${formData.customer_name} di kamar ${roomName}`,
-          storeId: currentStore.id,
-          userId,
-          bid: newBooking.bid,
-        });
+        await Promise.all((createdBookings || []).map((booking) => {
+          const createdRoomName = rooms.find((room) => room.id === booking.room_id)?.name || "Unknown";
+          return createAutoHutang({
+            paymentMethod: formData.payment_method,
+            amount: Number(booking.price || 0),
+            supplierName: formData.customer_name,
+            description: `Penjualan - ${formData.customer_name} di kamar ${createdRoomName}`,
+            storeId: currentStore.id,
+            userId,
+            bid: booking.bid,
+          });
+        }));
 
         // Also check dual payment
         if (formData.dual_payment && formData.payment_method_2) {
@@ -1659,7 +1829,7 @@ export default function BookingModal({
           });
         }
 
-        toast.success("Booking berhasil ditambahkan");
+        toast.success(isMultiRoom ? `${createdBookings?.length || 0} kamar berhasil dibooking` : "Booking berhasil ditambahkan");
       }
 
       onClose();
@@ -1669,6 +1839,9 @@ export default function BookingModal({
       setProductName("");
       setProductPrice("");
       setProductQuantity("1");
+      setPrimaryRoomPrice("");
+      setAdditionalRooms([]);
+      setAdditionalRoomVariants({});
       setFormData({
         customer_name: "",
         phone: "",
@@ -1864,10 +2037,20 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="room_id">Ruangan *</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
+              {!editingBooking && !isFunFury && (
+                <Button type="button" variant="outline" size="sm" onClick={addAnotherRoom} className="h-8 gap-1">
+                  <Plus className="h-4 w-4" /> Tambah Kamar
+                </Button>
+              )}
+            </div>
             <Select
               value={formData.room_id}
-              onValueChange={(value) => setFormData({ ...formData, room_id: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, room_id: value, variant_id: "" });
+                setPrimaryRoomPrice("");
+              }}
               required
             >
               <SelectTrigger>
@@ -1971,6 +2154,80 @@ export default function BookingModal({
             </div>
           )}
 
+          {isMultiRoom && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="space-y-1">
+                <Label htmlFor="primary_room_price">Harga Kamar 1 *</Label>
+                <Input
+                  id="primary_room_price"
+                  inputMode="numeric"
+                  value={primaryRoomPrice}
+                  onChange={(event) => setPrimaryRoomPrice(formatPrice(event.target.value))}
+                  placeholder="Masukkan harga kamar pertama"
+                  required
+                />
+              </div>
+              {additionalRooms.map((room, index) => {
+                const variants = filterVariantsForDate(additionalRoomVariants[room.key] || []);
+                return (
+                  <div key={room.key} className="space-y-3 border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Kamar {index + 2}</Label>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAdditionalRoom(room.key)} aria-label={`Hapus kamar ${index + 2}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Select
+                        value={room.room_id}
+                        onValueChange={(roomId) => {
+                          updateAdditionalRoom(room.key, { room_id: roomId, variant_id: "", price: "" });
+                          void fetchAdditionalRoomVariants(room.key, roomId);
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Pilih kamar" /></SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          {rooms.filter((candidate) => candidate.id === room.room_id || (candidate.id !== formData.room_id && !additionalRooms.some((selected) => selected.key !== room.key && selected.room_id === candidate.id))).map((candidate) => (
+                            <SelectItem key={candidate.id} value={candidate.id}>{candidate.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formData.booking_type === "walk_in" ? (
+                        <Select
+                          value={room.variant_id}
+                          onValueChange={(variantId) => {
+                            const variant = variants.find((item) => item.id === variantId);
+                            updateAdditionalRoom(room.key, {
+                              variant_id: variantId,
+                              price: variant ? formatPrice(String(calculateVariantTotal(variant))) : "",
+                            });
+                          }}
+                          disabled={!room.room_id}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            {variants.map((variant) => (
+                              <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : <div />}
+                      <Input
+                        inputMode="numeric"
+                        value={room.price}
+                        onChange={(event) => updateAdditionalRoom(room.key, { price: formatPrice(event.target.value) })}
+                        placeholder="Harga kamar"
+                        disabled={!room.room_id}
+                        required
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">Tanggal, pelanggan, metode pembayaran, dan bukti bayar berlaku untuk semua kamar.</p>
+            </div>
+          )}
+
           {/* OTA Booking ID and Source */}
           {formData.booking_type === "ota" && (
             <>
@@ -2035,7 +2292,7 @@ export default function BookingModal({
               ) : null}
             </div>
           </div>
-          {formData.room_id && formData.booking_type === "ota" && (
+          {formData.room_id && formData.booking_type === "ota" && !isMultiRoom && (
             <div className="space-y-2">
               <Label htmlFor="ota_price">Harga (Input Manual) *</Label>
               <Input
@@ -2472,7 +2729,7 @@ export default function BookingModal({
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">{formData.booking_type === "ota" ? "Harga OTA:" : "Subtotal Kamar:"}</span>
                     <span className="font-bold text-primary">
-                      Rp {calculateRoomSubtotal().toLocaleString('id-ID')}
+                      Rp {(isMultiRoom ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0) : calculateRoomSubtotal()).toLocaleString('id-ID')}
                     </span>
                   </div>
                   {selectedProducts.length > 0 && (
@@ -2622,7 +2879,7 @@ export default function BookingModal({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          {!isMultiRoom && <div className="flex items-center space-x-2">
             <Checkbox
               id="dual_payment"
               checked={formData.dual_payment}
@@ -2658,9 +2915,9 @@ export default function BookingModal({
             >
               Dual Payment
             </Label>
-          </div>
+          </div>}
 
-          {formData.dual_payment && (
+          {formData.dual_payment && !isMultiRoom && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="payment_method_2">Metode Pembayaran Kedua *</Label>
