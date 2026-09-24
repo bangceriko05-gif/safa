@@ -1941,7 +1941,7 @@ export default function BookingModal({
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
            <div className="space-y-4">
-          {!isMultiRoom && <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="customer_name">Nama Pelanggan</Label>
             <div className="relative">
               <Input
@@ -1973,7 +1973,7 @@ export default function BookingModal({
                 </div>
               )}
             </div>
-          </div>}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">
@@ -2039,7 +2039,7 @@ export default function BookingModal({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          {!isMultiRoom && <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
               {!editingBooking && !isFunFury && (
@@ -2073,7 +2073,7 @@ export default function BookingModal({
                 )}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
 
           {/* Varian Kamar - Only show for Walk-in */}
           {!isMultiRoom && formData.room_id && formData.booking_type === "walk_in" && (
