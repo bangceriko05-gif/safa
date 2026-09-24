@@ -110,7 +110,8 @@ export default function IdentityUploadCard({ storeId, customerId, name, phone, o
       const { error: updErr } = await supabase
         .from("customers")
         .update({ identity_document_url: filePath })
-        .eq("id", targetId);
+        .eq("id", targetId)
+        .eq("store_id", storeId);
       if (updErr) throw updErr;
 
       toast.success("Identitas pelanggan berhasil diupload");

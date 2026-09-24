@@ -12,6 +12,7 @@ const cache = new Map<string, { at: number; data: CachedCustomer[] }>();
 const inflight = new Map<string, Promise<CachedCustomer[]>>();
 
 export async function fetchCustomersCached(storeId: string): Promise<CachedCustomer[]> {
+  if (!storeId) return [];
   const now = Date.now();
   const hit = cache.get(storeId);
   if (hit && now - hit.at < TTL_MS) return hit.data;

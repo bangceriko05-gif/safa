@@ -10,3 +10,4 @@
 - [x] Tampilkan status booking saat ini sebagai teks tombol dropdown FunFury.
 - [x] Tambahkan booking beberapa kamar sekaligus untuk outlet selain FunFury, dengan pelanggan dan tanggal sama serta harga per kamar.
 - [x] Samakan tampilan Kamar 1 dengan kamar tambahan dan pisahkan rincian harga setiap kamar pada Billing.
+- [x] Pisahkan seluruh database, pencarian, CRM, dan nomor telepon pelanggan berdasarkan outlet.

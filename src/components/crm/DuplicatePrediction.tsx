@@ -195,12 +195,12 @@ export default function DuplicatePrediction({ open, onOpenChange, customers, sto
       if (!to.phone && from.phone) patch.phone = from.phone;
       if (from.notes) patch.notes = [to.notes, from.notes].filter(Boolean).join(" | ");
       if (Object.keys(patch).length) {
-        const { error } = await supabase.from("customers").update(patch).eq("id", to.id);
+        const { error } = await supabase.from("customers").update(patch).eq("id", to.id).eq("store_id", storeId || "");
         if (error) throw error;
       }
 
       if (deleteSource) {
-        const { error } = await supabase.from("customers").delete().eq("id", from.id);
+        const { error } = await supabase.from("customers").delete().eq("id", from.id).eq("store_id", storeId || "");
         if (error) throw error;
       }
 

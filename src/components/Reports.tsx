@@ -377,13 +377,16 @@ export default function Reports() {
   const fetchCustomers = async () => {
     if (!currentStore) return;
     try {
+      const requestedStoreId = currentStore.id;
+      setCustomers([]);
       const { data, error } = await supabase
         .from("customers")
         .select("id, name, phone")
-        .eq("store_id", currentStore.id)
+        .eq("store_id", requestedStoreId)
         .order("name");
       
       if (error) throw error;
+      if (currentStore.id !== requestedStoreId) return;
       setCustomers(data || []);
     } catch (error) {
       console.error("Error fetching customers:", error);

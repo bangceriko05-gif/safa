@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
@@ -117,6 +117,14 @@ export default function CRMDashboard({
   });
   const [editingTpl, setEditingTpl] = useState<TemplateKey | null>(null);
   const [draftTpl, setDraftTpl] = useState("");
+
+  useLayoutEffect(() => {
+    setCustomers([]);
+    setTxns([]);
+    setSelected(null);
+    setLoading(true);
+    autoOpenedRef.current = null;
+  }, [currentStore?.id]);
 
   const openTplEditor = (key: TemplateKey) => {
     setDraftTpl(templates[key] ?? DEFAULT_TEMPLATES[key]);

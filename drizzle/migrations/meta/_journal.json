@@ -15,6 +15,13 @@
       "when": 1789809843235,
       "tag": "0001_create_website_payment_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790253357760,
+      "tag": "0002_scope_customer_phone_uniqueness_by_outlet",
+      "breakpoints": true
     }
   ]
 }
