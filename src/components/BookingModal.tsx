@@ -147,6 +147,8 @@ export default function BookingModal({
   const nameLookupSeq = useRef(0);
   const nameLookupTimer = useRef<number | undefined>(undefined);
   const [lastFetchedStoreId, setLastFetchedStoreId] = useState<string | null>(null);
+  const activeStoreIdRef = useRef(currentStore?.id);
+  activeStoreIdRef.current = currentStore?.id;
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
   const [checkInOpen, setCheckInOpen] = useState(false);
@@ -630,8 +632,11 @@ export default function BookingModal({
   const fetchCustomers = async () => {
     try {
       if (!currentStore) return;
+      const requestedStoreId = currentStore.id;
+      setCustomers([]);
       const { fetchCustomersCached } = await import("@/utils/customerCache");
-      const data = await fetchCustomersCached(currentStore.id);
+      const data = await fetchCustomersCached(requestedStoreId);
+      if (activeStoreIdRef.current !== requestedStoreId) return;
       setCustomers(data as any);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -1476,7 +1481,8 @@ export default function BookingModal({
         try {
           await supabase.from("customers")
             .update({ customer_type: formData.customer_type || "Reguler" })
-            .eq("id", existingCustomer.id);
+            .eq("id", existingCustomer.id)
+            .eq("store_id", currentStore.id);
           const { invalidateCustomerCache } = await import("@/utils/customerCache");
           invalidateCustomerCache(currentStore.id);
           fetchCustomers();

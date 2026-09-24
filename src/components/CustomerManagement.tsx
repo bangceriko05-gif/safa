@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -118,6 +118,16 @@ export default function CustomerManagement() {
   const [crmCustomer, setCrmCustomer] = useState<DetailCustomer | null>(null);
   const [crmTxns, setCrmTxns] = useState<DetailTxn[]>([]);
   const [dupOpen, setDupOpen] = useState(false);
+  const activeStoreIdRef = useRef(currentStore?.id);
+
+  activeStoreIdRef.current = currentStore?.id;
+
+  useLayoutEffect(() => {
+    setCustomers([]);
+    setSelectedIds(new Set());
+    setCrmCustomer(null);
+    setCrmTxns([]);
+  }, [currentStore?.id]);
 
   const normPhone = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
 
@@ -196,14 +206,16 @@ export default function CustomerManagement() {
   const fetchCustomers = async () => {
     try {
       if (!currentStore) return;
+      const requestedStoreId = currentStore.id;
 
       const { data, error } = await supabase
         .from("customers")
         .select("*")
-        .eq("store_id", currentStore.id)
+        .eq("store_id", requestedStoreId)
         .order("name");
 
       if (error) throw error;
+      if (activeStoreIdRef.current !== requestedStoreId) return;
       setCustomers(data || []);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -328,7 +340,8 @@ export default function CustomerManagement() {
             identity_number: formData.identity_number || null,
             identity_document_url: identityDocUrl,
           })
-          .eq("id", editingCustomer.id);
+          .eq("id", editingCustomer.id)
+          .eq("store_id", currentStore?.id || "");
 
         if (error) throw error;
 
@@ -375,7 +388,8 @@ export default function CustomerManagement() {
             await supabase
               .from("customers")
               .update({ identity_document_url: uploadedPath })
-              .eq("id", newCustomer.id);
+              .eq("id", newCustomer.id)
+              .eq("store_id", currentStore.id);
           }
         }
 
@@ -434,7 +448,8 @@ export default function CustomerManagement() {
       const { error } = await supabase
         .from("customers")
         .delete()
-        .eq("id", deleteCustomerId);
+        .eq("id", deleteCustomerId)
+        .eq("store_id", currentStore?.id || "");
 
       if (error) throw error;
 
@@ -469,7 +484,8 @@ export default function CustomerManagement() {
       const { error } = await supabase
         .from("customers")
         .delete()
-        .in("id", idsArray);
+        .in("id", idsArray)
+        .eq("store_id", currentStore?.id || "");
 
       if (error) throw error;
 

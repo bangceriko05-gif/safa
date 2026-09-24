@@ -105,7 +105,7 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
       const [sRes, lRes, cRes] = await Promise.all([
         supabase.from("loyalty_settings").select("*").eq("store_id", storeId).maybeSingle(),
         supabase.from("loyalty_transactions").select("*").eq("store_id", storeId).eq("customer_id", customer.id).order("created_at", { ascending: false }),
-        supabase.from("customers").select("identity_type,identity_number,notes").eq("id", customer.id).maybeSingle(),
+        supabase.from("customers").select("identity_type,identity_number,notes").eq("id", customer.id).eq("store_id", storeId).maybeSingle(),
       ]);
       if (!active) return;
       setSettings(sRes.data);
@@ -176,7 +176,8 @@ export default function CustomerDetailDialog({ customer, txns, storeId, storeNam
         identity_number: form.identity_number?.trim() || null,
         notes: form.notes?.trim() || null,
       };
-      const { error } = await supabase.from("customers").update(payload).eq("id", customer.id);
+      if (!storeId) throw new Error("Outlet pelanggan tidak ditemukan");
+      const { error } = await supabase.from("customers").update(payload).eq("id", customer.id).eq("store_id", storeId);
       if (error) throw error;
       setLocal({
         name: payload.name,
