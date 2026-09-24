@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
@@ -289,6 +289,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [showSuggest, setShowSuggest] = useState(false);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [dbCustomers, setDbCustomers] = useState<any[]>([]);
+
+  useLayoutEffect(() => {
+    setDbCustomers([]);
+    setPickedCustomerPhone("");
+  }, [currentStore?.id]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [manualCustomerName, setManualCustomerName] = useState("");
   const [pickedCustomerPhone, setPickedCustomerPhone] = useState("");

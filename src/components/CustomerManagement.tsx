@@ -132,11 +132,14 @@ export default function CustomerManagement() {
   const normPhone = (p?: string | null) => (p || "").replace(/\D/g, "").replace(/^0/, "62");
 
   const openCrmDetail = async (customer: Customer) => {
+    const storeId = currentStore?.id;
+    if (!storeId) return;
     const phone = normPhone(customer.phone);
     const [bRes, oRes] = await Promise.all([
-      supabase.from("bookings").select("id,customer_name,phone,date,price,status,bid").eq("store_id", currentStore?.id || ""),
-      supabase.from("booking_orders").select("id,customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", currentStore?.id || ""),
+      supabase.from("bookings").select("id,customer_name,phone,date,price,status,bid").eq("store_id", storeId),
+      supabase.from("booking_orders").select("id,customer_name,customer_phone,date,total_amount,process_status,bid").eq("store_id", storeId),
     ]);
+    if (activeStoreIdRef.current !== storeId) return;
     const all: DetailTxn[] = [];
     (bRes.data || []).forEach((b: any) => {
       if ((b.status || "").toUpperCase() === "BATAL") return;

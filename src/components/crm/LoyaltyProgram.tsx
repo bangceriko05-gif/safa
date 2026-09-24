@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { useToast } from "@/hooks/use-toast";
@@ -111,6 +111,14 @@ export default function LoyaltyProgram() {
   const [points, setPoints] = useState(0);
   const [note, setNote] = useState("");
   const [adjustSign, setAdjustSign] = useState<"plus" | "minus">("plus");
+
+  useLayoutEffect(() => {
+    setCustomers([]);
+    setTxns([]);
+    setLedger([]);
+    setDialog(null);
+    setLoading(true);
+  }, [currentStore?.id]);
 
   const load = async (silent = false) => {
     if (!currentStore?.id) return;
