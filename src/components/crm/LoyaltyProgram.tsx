@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { useToast } from "@/hooks/use-toast";
@@ -111,6 +111,8 @@ export default function LoyaltyProgram() {
   const [points, setPoints] = useState(0);
   const [note, setNote] = useState("");
   const [adjustSign, setAdjustSign] = useState<"plus" | "minus">("plus");
+  const activeStoreIdRef = useRef(currentStore?.id);
+  activeStoreIdRef.current = currentStore?.id;
 
   useLayoutEffect(() => {
     setCustomers([]);
@@ -122,14 +124,16 @@ export default function LoyaltyProgram() {
 
   const load = async (silent = false) => {
     if (!currentStore?.id) return;
+    const requestedStoreId = currentStore.id;
     if (!silent) setLoading(true);
     const [sRes, cRes, bRes, oRes, lRes] = await Promise.all([
-      supabase.from("loyalty_settings").select("*").eq("store_id", currentStore.id).maybeSingle(),
-      supabase.from("customers").select("id,name,phone").eq("store_id", currentStore.id),
-      supabase.from("bookings").select("phone,date,price,status").eq("store_id", currentStore.id),
-      supabase.from("booking_orders").select("customer_phone,date,total_amount,process_status").eq("store_id", currentStore.id),
-      supabase.from("loyalty_transactions").select("*").eq("store_id", currentStore.id).order("created_at", { ascending: false }).limit(500),
+      supabase.from("loyalty_settings").select("*").eq("store_id", requestedStoreId).maybeSingle(),
+      supabase.from("customers").select("id,name,phone").eq("store_id", requestedStoreId),
+      supabase.from("bookings").select("phone,date,price,status").eq("store_id", requestedStoreId),
+      supabase.from("booking_orders").select("customer_phone,date,total_amount,process_status").eq("store_id", requestedStoreId),
+      supabase.from("loyalty_transactions").select("*").eq("store_id", requestedStoreId).order("created_at", { ascending: false }).limit(500),
     ]);
+    if (activeStoreIdRef.current !== requestedStoreId) return;
 
     if (sRes.data) setSettings({ ...DEFAULTS, ...(sRes.data as any) });
 

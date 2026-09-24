@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
@@ -289,6 +289,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [showSuggest, setShowSuggest] = useState(false);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [dbCustomers, setDbCustomers] = useState<any[]>([]);
+  const activeStoreIdRef = useRef(currentStore?.id);
+  activeStoreIdRef.current = currentStore?.id;
 
   useLayoutEffect(() => {
     setDbCustomers([]);
@@ -431,6 +433,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setActiveBookings(data || []);
       const { fetchCustomersCached } = await import("@/utils/customerCache");
       const cust = await fetchCustomersCached(currentStore.id);
+      if (activeStoreIdRef.current !== currentStore.id) return;
       setDbCustomers(cust as any);
     })();
   }, [open, posMode, currentStore]);
