@@ -793,6 +793,9 @@ export default function BookingModal({
       ? formatPrice(String(selectedVariant.price))
       : "";
     if (selectedVariant) {
+      if (isMultiRoom) {
+        setPrimaryRoomPrice(formatPrice(String(calculateVariantTotal(selectedVariant))));
+      }
       // For PMS mode with duration types (months, weeks, days), auto-set checkout date
       if (isPMSMode && checkInDate) {
         const durationType = selectedVariant.booking_duration_type || "hours";
@@ -1914,7 +1917,7 @@ export default function BookingModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Booking Type Selection */}
-          <div className="space-y-2">
+          {!isMultiRoom && <div className="space-y-2">
             <Label>Tipe Booking *</Label>
             <div className="flex gap-2">
               <Button
@@ -1934,7 +1937,7 @@ export default function BookingModal({
                 OTA
               </Button>
             </div>
-          </div>
+          </div>}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
            <div className="space-y-4">
@@ -2073,7 +2076,7 @@ export default function BookingModal({
           </div>
 
           {/* Varian Kamar - Only show for Walk-in */}
-          {formData.room_id && formData.booking_type === "walk_in" && (
+          {!isMultiRoom && formData.room_id && formData.booking_type === "walk_in" && (
             <div className="space-y-2">
               <Label htmlFor="variant_id">Varian Kamar *</Label>
               {getFilteredVariants.length > 0 ? (
@@ -2156,14 +2159,43 @@ export default function BookingModal({
 
           {isMultiRoom && (
             <div className="space-y-3 rounded-md border p-3">
-              <div className="space-y-1">
-                <Label htmlFor="primary_room_price">Harga Kamar 1 *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Kamar 1</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addAnotherRoom} className="h-8 gap-1">
+                  <Plus className="h-4 w-4" /> Tambah Kamar
+                </Button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <Select
+                  value={formData.room_id}
+                  onValueChange={(roomId) => {
+                    setFormData({ ...formData, room_id: roomId, variant_id: "" });
+                    setPrimaryRoomPrice("");
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Pilih kamar" /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {rooms.filter((candidate) => candidate.id === formData.room_id || !additionalRooms.some((selected) => selected.room_id === candidate.id)).map((candidate) => (
+                      <SelectItem key={candidate.id} value={candidate.id}>{candidate.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.booking_type === "walk_in" ? (
+                  <Select value={formData.variant_id} onValueChange={handleVariantChange}>
+                    <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {getFilteredVariants.map((variant) => (
+                        <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : <div />}
                 <Input
                   id="primary_room_price"
                   inputMode="numeric"
                   value={primaryRoomPrice}
                   onChange={(event) => setPrimaryRoomPrice(formatPrice(event.target.value))}
-                  placeholder="Masukkan harga kamar pertama"
+                  placeholder="Harga kamar"
                   required
                 />
               </div>
