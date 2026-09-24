@@ -1917,7 +1917,7 @@ export default function BookingModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Booking Type Selection */}
-          {!isMultiRoom && <div className="space-y-2">
+          <div className="space-y-2">
             <Label>Tipe Booking *</Label>
             <div className="flex gap-2">
               <Button
@@ -1937,11 +1937,11 @@ export default function BookingModal({
                 OTA
               </Button>
             </div>
-          </div>}
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
            <div className="space-y-4">
-          <div className="space-y-2">
+          {!isMultiRoom && <div className="space-y-2">
             <Label htmlFor="customer_name">Nama Pelanggan</Label>
             <div className="relative">
               <Input
@@ -1973,7 +1973,7 @@ export default function BookingModal({
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           <div className="space-y-2">
             <Label htmlFor="phone">
