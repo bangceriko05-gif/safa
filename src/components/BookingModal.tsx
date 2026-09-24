@@ -793,6 +793,9 @@ export default function BookingModal({
       ? formatPrice(String(selectedVariant.price))
       : "";
     if (selectedVariant) {
+      if (isMultiRoom) {
+        setPrimaryRoomPrice(formatPrice(String(calculateVariantTotal(selectedVariant))));
+      }
       // For PMS mode with duration types (months, weeks, days), auto-set checkout date
       if (isPMSMode && checkInDate) {
         const durationType = selectedVariant.booking_duration_type || "hours";
@@ -2036,7 +2039,7 @@ export default function BookingModal({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          {!isMultiRoom && <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
               {!editingBooking && !isFunFury && (
@@ -2070,10 +2073,10 @@ export default function BookingModal({
                 )}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
 
           {/* Varian Kamar - Only show for Walk-in */}
-          {formData.room_id && formData.booking_type === "walk_in" && (
+          {!isMultiRoom && formData.room_id && formData.booking_type === "walk_in" && (
             <div className="space-y-2">
               <Label htmlFor="variant_id">Varian Kamar *</Label>
               {getFilteredVariants.length > 0 ? (
@@ -2156,14 +2159,43 @@ export default function BookingModal({
 
           {isMultiRoom && (
             <div className="space-y-3 rounded-md border p-3">
-              <div className="space-y-1">
-                <Label htmlFor="primary_room_price">Harga Kamar 1 *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Kamar 1</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addAnotherRoom} className="h-8 gap-1">
+                  <Plus className="h-4 w-4" /> Tambah Kamar
+                </Button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <Select
+                  value={formData.room_id}
+                  onValueChange={(roomId) => {
+                    setFormData({ ...formData, room_id: roomId, variant_id: "" });
+                    setPrimaryRoomPrice("");
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Pilih kamar" /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {rooms.filter((candidate) => candidate.id === formData.room_id || !additionalRooms.some((selected) => selected.room_id === candidate.id)).map((candidate) => (
+                      <SelectItem key={candidate.id} value={candidate.id}>{candidate.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.booking_type === "walk_in" ? (
+                  <Select value={formData.variant_id} onValueChange={handleVariantChange}>
+                    <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {getFilteredVariants.map((variant) => (
+                        <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : <div />}
                 <Input
                   id="primary_room_price"
                   inputMode="numeric"
                   value={primaryRoomPrice}
                   onChange={(event) => setPrimaryRoomPrice(formatPrice(event.target.value))}
-                  placeholder="Masukkan harga kamar pertama"
+                  placeholder="Harga kamar"
                   required
                 />
               </div>
@@ -2656,7 +2688,7 @@ export default function BookingModal({
                 )}
 
                 {/* Walk-in Variant Info */}
-                {formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
+                {!isMultiRoom && formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
                   const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
                   const isMonthlyVariant = selectedVariant?.booking_duration_type === "months";
                   const selectedRoom = rooms.find(r => r.id === formData.room_id);
@@ -2706,6 +2738,24 @@ export default function BookingModal({
                     </>
                   );
                 })()}
+
+                {isMultiRoom && (
+                  <div className="space-y-2">
+                    {[
+                      { key: "primary", room_id: formData.room_id, price: primaryRoomPrice },
+                      ...additionalRooms,
+                    ].map((room, index) => (
+                      <div key={room.key} className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Kamar {index + 1} · {rooms.find((item) => item.id === room.room_id)?.name || "Belum dipilih"}
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          Rp {numericPrice(room.price).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {selectedProducts.length > 0 && (
                   <>
