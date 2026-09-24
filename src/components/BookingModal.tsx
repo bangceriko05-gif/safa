@@ -2688,7 +2688,7 @@ export default function BookingModal({
                 )}
 
                 {/* Walk-in Variant Info */}
-                {formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
+                {!isMultiRoom && formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
                   const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
                   const isMonthlyVariant = selectedVariant?.booking_duration_type === "months";
                   const selectedRoom = rooms.find(r => r.id === formData.room_id);
@@ -2738,6 +2738,24 @@ export default function BookingModal({
                     </>
                   );
                 })()}
+
+                {isMultiRoom && (
+                  <div className="space-y-2">
+                    {[
+                      { key: "primary", room_id: formData.room_id, price: primaryRoomPrice },
+                      ...additionalRooms,
+                    ].map((room, index) => (
+                      <div key={room.key} className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Kamar {index + 1} · {rooms.find((item) => item.id === room.room_id)?.name || "Belum dipilih"}
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          Rp {numericPrice(room.price).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {selectedProducts.length > 0 && (
                   <>
