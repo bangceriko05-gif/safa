@@ -22,6 +22,13 @@
       "when": 1790253357760,
       "tag": "0002_scope_customer_phone_uniqueness_by_outlet",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790399872770,
+      "tag": "0003_group_multi_room_bookings_under_one_bid",
+      "breakpoints": true
     }
   ]
 }
