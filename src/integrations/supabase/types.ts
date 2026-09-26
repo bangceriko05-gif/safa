@@ -385,6 +385,44 @@ export type Database = {
           },
         ]
       }
+      booking_groups: {
+        Row: {
+          bid: string | null
+          booking_date: string
+          created_at: string
+          created_by: string
+          id: string
+          is_ota: boolean
+          store_id: string
+        }
+        Insert: {
+          bid?: string | null
+          booking_date: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_ota?: boolean
+          store_id: string
+        }
+        Update: {
+          bid?: string | null
+          booking_date?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_ota?: boolean
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_groups_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_order_items: {
         Row: {
           booking_order_id: string
@@ -768,6 +806,7 @@ export type Database = {
       bookings: {
         Row: {
           bid: string | null
+          booking_group_id: string | null
           checked_in_at: string | null
           checked_in_by: string | null
           checked_out_at: string | null
@@ -813,6 +852,7 @@ export type Database = {
         }
         Insert: {
           bid?: string | null
+          booking_group_id?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
           checked_out_at?: string | null
@@ -858,6 +898,7 @@ export type Database = {
         }
         Update: {
           bid?: string | null
+          booking_group_id?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
           checked_out_at?: string | null
@@ -902,6 +943,13 @@ export type Database = {
           variant_price_override?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_booking_group_id_fkey"
+            columns: ["booking_group_id"]
+            isOneToOne: false
+            referencedRelation: "booking_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_room_id_fkey"
             columns: ["room_id"]

@@ -28,7 +28,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings, Plus } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, CalendarIcon, Shield, Banknote, CreditCard, Trash2, History, X, Settings, Plus, Copy } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,6 +158,10 @@ export default function BookingModal({
   const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
   const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
   const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
+  const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
+  const [bookingBid, setBookingBid] = useState("");
+  const [bookingBidLoading, setBookingBidLoading] = useState(false);
+  const savedBookingGroupRef = useRef<string | null>(null);
   
   // Deposit state
   const [enableDeposit, setEnableDeposit] = useState(false);
@@ -202,6 +206,59 @@ export default function BookingModal({
   const isFunFury = /funfury/i.test(currentStore?.name || "");
   const isMultiRoom = !editingBooking && !isFunFury && additionalRooms.length > 0;
   const [scheduleCfg, setScheduleCfg] = useState<{ start: string; end: string; slot: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || editingBooking || !currentStore?.id || !userId) {
+      setBookingGroupId(null);
+      setBookingBid("");
+      setBookingBidLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let preparedGroupId: string | null = null;
+    savedBookingGroupRef.current = null;
+    setBookingBidLoading(true);
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("booking_groups")
+        .insert({
+          store_id: currentStore.id,
+          booking_date: format(selectedDate, "yyyy-MM-dd"),
+          is_ota: formData.booking_type === "ota",
+          created_by: userId,
+        })
+        .select("id, bid")
+        .single();
+
+      if (error) {
+        if (!cancelled) {
+          console.error("Error preparing booking BID:", error);
+          toast.error("Gagal menyiapkan BID booking");
+          setBookingBidLoading(false);
+        }
+        return;
+      }
+
+      preparedGroupId = data.id;
+      if (cancelled) {
+        await supabase.from("booking_groups").delete().eq("id", data.id);
+        return;
+      }
+
+      setBookingGroupId(data.id);
+      setBookingBid(data.bid || "");
+      setBookingBidLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (preparedGroupId && savedBookingGroupRef.current !== preparedGroupId) {
+        void supabase.from("booking_groups").delete().eq("id", preparedGroupId);
+      }
+    };
+  }, [isOpen, editingBooking, currentStore?.id, selectedDate, formData.booking_type, userId]);
 
   useEffect(() => {
     if (!isOpen || !currentStore?.id || !isFunFury) {
@@ -1719,9 +1776,15 @@ export default function BookingModal({
 
         toast.success("Booking berhasil diupdate");
       } else {
+        if (!bookingGroupId || !bookingBid) {
+          toast.error("BID belum siap. Tunggu sebentar lalu simpan kembali.");
+          return;
+        }
+
         const rowsToInsert = isMultiRoom
           ? roomSelections.map((room, index) => ({
               ...bookingData,
+              booking_group_id: bookingGroupId,
               room_id: room.room_id,
               variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
               price: index === 0
@@ -1738,7 +1801,7 @@ export default function BookingModal({
               variant_price_override: null,
               payment_status: "lunas",
             }))
-          : [bookingData];
+          : [{ ...bookingData, booking_group_id: bookingGroupId }];
         const { data: createdBookings, error } = await supabase
           .from("bookings")
           .insert(rowsToInsert)
@@ -1838,7 +1901,12 @@ export default function BookingModal({
           });
         }
 
-        toast.success(isMultiRoom ? `${createdBookings?.length || 0} kamar berhasil dibooking` : "Booking berhasil ditambahkan");
+        savedBookingGroupRef.current = bookingGroupId;
+        toast.success(
+          isMultiRoom
+            ? `${createdBookings?.length || 0} kamar berhasil dibooking dalam BID ${bookingBid}`
+            : `Booking ${bookingBid} berhasil ditambahkan`
+        );
       }
 
       onClose();
@@ -1907,6 +1975,37 @@ export default function BookingModal({
             <DialogTitle>
               {editingBooking ? "Ubah Booking" : "Tambah Booking"}
             </DialogTitle>
+            {!editingBooking && (
+              <div className="flex min-w-0 flex-1 items-center justify-center px-3">
+                <div className="flex min-h-9 min-w-[240px] items-center justify-center gap-2 rounded-md border bg-muted/40 px-3">
+                  <span className="text-xs text-muted-foreground">BID</span>
+                  {bookingBidLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <span className="truncate font-mono text-sm font-bold text-primary">
+                        {bookingBid || "Belum tersedia"}
+                      </span>
+                      {bookingBid && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          title="Salin BID"
+                          onClick={() => {
+                            navigator.clipboard.writeText(bookingBid);
+                            toast.success("BID berhasil disalin");
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <Button
               type="button"
               variant="outline"
