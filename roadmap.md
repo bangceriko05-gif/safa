@@ -11,3 +11,4 @@
 - [x] Tambahkan booking beberapa kamar sekaligus untuk outlet selain FunFury, dengan pelanggan dan tanggal sama serta harga per kamar.
 - [x] Samakan tampilan Kamar 1 dengan kamar tambahan dan pisahkan rincian harga setiap kamar pada Billing.
 - [x] Pisahkan seluruh database, pencarian, CRM, dan nomor telepon pelanggan berdasarkan outlet.
+- [x] Tampilkan BID saat tambah booking dan satukan booking beberapa kamar dalam satu BID.
