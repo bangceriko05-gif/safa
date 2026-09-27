@@ -856,7 +856,7 @@ export default function BookingModal({
       : "";
     if (selectedVariant) {
       if (isMultiRoom) {
-        setPrimaryRoomPrice(formatPrice(String(calculateVariantTotal(selectedVariant))));
+        setPrimaryRoomPrice(formatPrice(String(selectedVariant.price)));
       }
       // For PMS mode with duration types (months, weeks, days), auto-set checkout date
       if (isPMSMode && checkInDate) {
@@ -988,13 +988,21 @@ export default function BookingModal({
     });
   };
 
-  const calculateVariantTotal = (variant: RoomVariant) => {
+  const calculateEnteredRoomTotal = (price: string, variantId: string) => {
+    const unitPrice = numericPrice(price);
+    const variant = variantId
+      ? [...roomVariants, ...Object.values(additionalRoomVariants).flat()].find((item) => item.id === variantId)
+      : undefined;
+
     if (isPMSMode) {
-      if (!checkInDate || !checkOutDate) return variant.price;
-      if (variant.booking_duration_type === "months") return variant.price;
-      return variant.price * Math.max(1, differenceInCalendarDays(checkOutDate, checkInDate));
+      if (variant?.booking_duration_type === "months") return unitPrice;
+      const nights = checkInDate && checkOutDate
+        ? Math.max(1, differenceInCalendarDays(checkOutDate, checkInDate))
+        : 1;
+      return unitPrice * nights;
     }
-    return variant.price * Math.max(1, calculateDuration(formData.start_time, formData.end_time));
+
+    return unitPrice * Math.max(1, calculateDuration(formData.start_time, formData.end_time));
   };
 
   const addAnotherRoom = () => {
@@ -1002,7 +1010,10 @@ export default function BookingModal({
       toast.error("Pilih kamar pertama terlebih dahulu");
       return;
     }
-    if (!primaryRoomPrice) setPrimaryRoomPrice(formatPrice(String(calculateRoomSubtotal())));
+    if (!primaryRoomPrice) {
+      const selectedVariant = roomVariants.find((variant) => variant.id === formData.variant_id);
+      setPrimaryRoomPrice(formatPrice(String(selectedVariant?.price || calculateRoomSubtotal())));
+    }
     setFormData((previous) => ({ ...previous, dual_payment: false, price_2: "", payment_method_2: "", reference_no_2: "" }));
     setPaymentProofUrl2(null);
     setAdditionalRooms((previous) => [
@@ -1111,7 +1122,8 @@ export default function BookingModal({
     if (!formData.has_discount || !formData.discount_value) return 0;
 
     const roomPrice = isMultiRoom
-      ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0)
+      ? calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id)
+        + additionalRooms.reduce((sum, room) => sum + calculateEnteredRoomTotal(room.price, room.variant_id), 0)
       : calculateRoomSubtotal();
     const productsTotal = calculateProductsTotal();
     
@@ -1128,7 +1140,8 @@ export default function BookingModal({
 
   const calculateGrandTotal = () => {
     const roomPrice = isMultiRoom
-      ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0)
+      ? calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id)
+        + additionalRooms.reduce((sum, room) => sum + calculateEnteredRoomTotal(room.price, room.variant_id), 0)
       : calculateRoomSubtotal();
     const productsTotal = calculateProductsTotal();
     const discount = calculateDiscount();
@@ -1451,7 +1464,7 @@ export default function BookingModal({
         date: dateStr,
         duration: finalDuration,
         price: isMultiRoom
-          ? Math.max(0, numericPrice(primaryRoomPrice) + calculateProductsTotal() - calculateDiscount())
+          ? Math.max(0, calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id) + calculateProductsTotal() - calculateDiscount())
           : parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
         variant_price_override: (() => {
@@ -1788,8 +1801,8 @@ export default function BookingModal({
               room_id: room.room_id,
               variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
               price: index === 0
-                ? Math.max(0, numericPrice(room.price) + calculateProductsTotal() - calculateDiscount())
-                : numericPrice(room.price),
+                ? Math.max(0, calculateEnteredRoomTotal(room.price, room.variant_id) + calculateProductsTotal() - calculateDiscount())
+                : calculateEnteredRoomTotal(room.price, room.variant_id),
               price_2: null,
               dual_payment: false,
               payment_method_2: null,
@@ -2336,7 +2349,7 @@ export default function BookingModal({
                             const variant = variants.find((item) => item.id === variantId);
                             updateAdditionalRoom(room.key, {
                               variant_id: variantId,
-                              price: variant ? formatPrice(String(calculateVariantTotal(variant))) : "",
+                              price: variant ? formatPrice(String(variant.price)) : "",
                             });
                           }}
                           disabled={!room.room_id}
@@ -2849,16 +2862,23 @@ export default function BookingModal({
                     {[
                       { key: "primary", room_id: formData.room_id, price: primaryRoomPrice },
                       ...additionalRooms,
-                    ].map((room, index) => (
+                    ].map((room, index) => {
+                      const variantId = "variant_id" in room ? room.variant_id : formData.variant_id;
+                      const roomTotal = calculateEnteredRoomTotal(room.price, variantId);
+                      const selectedVariant = [...roomVariants, ...Object.values(additionalRoomVariants).flat()].find((variant) => variant.id === variantId);
+                      const isMonthly = selectedVariant?.booking_duration_type === "months";
+                      const multiplier = isPMSMode ? finalDuration : Math.max(1, duration);
+                      return (
                       <div key={room.key} className="flex justify-between gap-4">
                         <span className="text-muted-foreground">
                           Kamar {index + 1} · {rooms.find((item) => item.id === room.room_id)?.name || "Belum dipilih"}
+                          {!isMonthly && ` · Rp ${numericPrice(room.price).toLocaleString("id-ID")} × ${multiplier} ${isPMSMode ? "malam" : "jam"}`}
                         </span>
                         <span className="font-medium tabular-nums">
-                          Rp {numericPrice(room.price).toLocaleString("id-ID")}
+                          Rp {roomTotal.toLocaleString("id-ID")}
                         </span>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
 
@@ -2884,7 +2904,10 @@ export default function BookingModal({
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">{formData.booking_type === "ota" ? "Harga OTA:" : "Subtotal Kamar:"}</span>
                     <span className="font-bold text-primary">
-                      Rp {(isMultiRoom ? numericPrice(primaryRoomPrice) + additionalRooms.reduce((sum, room) => sum + numericPrice(room.price), 0) : calculateRoomSubtotal()).toLocaleString('id-ID')}
+                      Rp {(isMultiRoom
+                        ? calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id)
+                          + additionalRooms.reduce((sum, room) => sum + calculateEnteredRoomTotal(room.price, room.variant_id), 0)
+                        : calculateRoomSubtotal()).toLocaleString('id-ID')}
                     </span>
                   </div>
                   {selectedProducts.length > 0 && (
