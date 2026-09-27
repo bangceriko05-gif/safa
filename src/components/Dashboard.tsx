@@ -479,8 +479,25 @@ export default function Dashboard() {
     setPendingBookingSlot(null);
   };
 
-  const handleEditBooking = (booking: any) => {
-    setEditingBooking(booking);
+  const handleEditBooking = async (booking: any) => {
+    if (!booking?.id) {
+      toast.error("Data booking tidak ditemukan");
+      return;
+    }
+
+    const { data: completeBooking, error } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("id", booking.id)
+      .maybeSingle();
+
+    if (error || !completeBooking) {
+      console.error("Gagal memuat data lengkap booking:", error);
+      toast.error("Gagal memuat data lengkap booking");
+      return;
+    }
+
+    setEditingBooking(completeBooking);
     setSelectedSlot(null);
     setIsModalOpen(true);
   };

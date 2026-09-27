@@ -492,8 +492,14 @@ export default function BookingModal({
         return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
       };
 
-      // Determine booking type: if no variant, it's OTA
-      const isOTA = !editingBooking.variant_id;
+      // The transaction list used to send a partial row without variant/payment
+      // fields, which made Walk-in bookings look like OTA bookings. Editing now
+      // receives the complete row; explicit OTA data remains the primary marker.
+      const isOTA = Boolean(
+        editingBooking.booking_type === "ota" ||
+        editingBooking.ota_booking_id ||
+        editingBooking.ota_source
+      );
 
       isLoadingEditDataRef.current = true;
       isPriceProtectedRef.current = true;
@@ -2042,6 +2048,7 @@ export default function BookingModal({
                 type="button"
                 variant={formData.booking_type === "walk_in" ? "default" : "outline"}
                 className="flex-1"
+                disabled={Boolean(editingBooking)}
                 onClick={() => setFormData({ ...formData, booking_type: "walk_in", variant_id: "" })}
               >
                 Walk-in
@@ -2050,6 +2057,7 @@ export default function BookingModal({
                 type="button"
                 variant={formData.booking_type === "ota" ? "default" : "outline"}
                 className="flex-1"
+                disabled={Boolean(editingBooking)}
                 onClick={() => setFormData({ ...formData, booking_type: "ota", variant_id: "" })}
               >
                 OTA
