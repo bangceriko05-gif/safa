@@ -12,3 +12,4 @@
 - [x] Samakan tampilan Kamar 1 dengan kamar tambahan dan pisahkan rincian harga setiap kamar pada Billing.
 - [x] Pisahkan seluruh database, pencarian, CRM, dan nomor telepon pelanggan berdasarkan outlet.
 - [x] Tampilkan BID saat tambah booking dan satukan booking beberapa kamar dalam satu BID.
+- [x] Hitung harga setiap kamar berdasarkan jumlah malam pada booking beberapa kamar.
