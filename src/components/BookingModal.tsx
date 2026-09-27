@@ -498,8 +498,7 @@ export default function BookingModal({
       const isOTA = Boolean(
         editingBooking.booking_type === "ota" ||
         editingBooking.ota_booking_id ||
-        editingBooking.ota_source ||
-        !editingBooking.variant_id
+        editingBooking.ota_source
       );
 
       isLoadingEditDataRef.current = true;
