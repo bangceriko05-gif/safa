@@ -153,6 +153,8 @@ export default function BookingModal({
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
+  const [checkInMonth, setCheckInMonth] = useState<Date>(selectedDate);
+  const [checkOutMonth, setCheckOutMonth] = useState<Date>(selectedDate);
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
   const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
   const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
@@ -551,12 +553,15 @@ export default function BookingModal({
         const bookingDate = new Date(editingBooking.date);
         loadedCheckInDate = bookingDate;
         setCheckInDate(bookingDate);
+        setCheckInMonth(bookingDate);
         if (editingBooking.duration) {
           loadedCheckOutDate = addDays(bookingDate, Math.ceil(editingBooking.duration));
           setCheckOutDate(loadedCheckOutDate);
+          setCheckOutMonth(loadedCheckOutDate);
         } else {
           loadedCheckOutDate = addDays(bookingDate, 1);
           setCheckOutDate(loadedCheckOutDate);
+          setCheckOutMonth(loadedCheckOutDate);
         }
       }
 
@@ -623,9 +628,13 @@ export default function BookingModal({
         if (!isNaN(slotDate.getTime())) {
           setCheckInDate(slotDate);
           setCheckOutDate(addDays(slotDate, 1));
+          setCheckInMonth(slotDate);
+          setCheckOutMonth(addDays(slotDate, 1));
         } else {
           setCheckInDate(selectedDate);
           setCheckOutDate(addDays(selectedDate, 1));
+          setCheckInMonth(selectedDate);
+          setCheckOutMonth(addDays(selectedDate, 1));
         }
       }
     } else {
@@ -2486,17 +2495,26 @@ export default function BookingModal({
                     <Calendar
                       mode="single"
                       selected={checkInDate}
+                      month={checkInMonth}
+                      onMonthChange={setCheckInMonth}
                       onSelect={(date) => {
                         // User explicitly changed check-in date - allow price auto-fill
                         if (!isLoadingEditDataRef.current) {
                           isPriceProtectedRef.current = false;
                         }
                         setCheckInDate(date);
+                        const selectedAnotherMonth = Boolean(date && (
+                          date.getMonth() !== checkInMonth.getMonth() ||
+                          date.getFullYear() !== checkInMonth.getFullYear()
+                        ));
+                        if (date) setCheckInMonth(date);
                         // Auto-set checkout to next day if not set or if before check-in
                         if (date && (!checkOutDate || checkOutDate <= date)) {
-                          setCheckOutDate(addDays(date, 1));
+                          const nextDay = addDays(date, 1);
+                          setCheckOutDate(nextDay);
+                          setCheckOutMonth(nextDay);
                         }
-                        setCheckInOpen(false);
+                        if (!selectedAnotherMonth) setCheckInOpen(false);
                       }}
                       initialFocus
                       className="p-3 pointer-events-auto"
@@ -2524,13 +2542,20 @@ export default function BookingModal({
                     <Calendar
                       mode="single"
                       selected={checkOutDate}
+                      month={checkOutMonth}
+                      onMonthChange={setCheckOutMonth}
                       onSelect={(date) => {
                         // User explicitly changed check-out date - allow price auto-fill
                         if (!isLoadingEditDataRef.current) {
                           isPriceProtectedRef.current = false;
                         }
                         setCheckOutDate(date);
-                        setCheckOutOpen(false);
+                        const selectedAnotherMonth = Boolean(date && (
+                          date.getMonth() !== checkOutMonth.getMonth() ||
+                          date.getFullYear() !== checkOutMonth.getFullYear()
+                        ));
+                        if (date) setCheckOutMonth(date);
+                        if (!selectedAnotherMonth) setCheckOutOpen(false);
                       }}
                       disabled={(date) => checkInDate ? date <= checkInDate : false}
                       initialFocus

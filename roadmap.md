@@ -14,3 +14,4 @@
 - [x] Tampilkan BID saat tambah booking dan satukan booking beberapa kamar dalam satu BID.
 - [x] Hitung harga setiap kamar berdasarkan jumlah malam pada booking beberapa kamar.
 - [x] Pertahankan data lengkap dan sumber Walk-in/OTA saat booking diedit dari menu Transaksi, sambil tetap mengizinkan perubahan sumber secara manual.
+- [x] Izinkan tanggal bulan sebelah dipilih dari kalender booking dan pindahkan kalender otomatis ke bulan tersebut.
