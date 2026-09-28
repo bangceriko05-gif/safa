@@ -1536,8 +1536,13 @@ export default function ScheduleTable({
                               </Popover>
                               
                               <div className={size.spacing}>
-                                <div className={`font-medium ${size.fontSize}`} style={{ color: bookingTextColor }}>
-                                  {booking.customer_name}
+                                <div className={`flex flex-wrap items-baseline gap-x-1 pr-10 font-medium ${size.fontSize}`} style={{ color: bookingTextColor }}>
+                                  <span>{booking.customer_name}</span>
+                                  {booking.bid && (
+                                    <span className="font-mono text-[10px] font-semibold opacity-80 break-all" title={booking.bid}>
+                                      {booking.bid}
+                                    </span>
+                                  )}
                                   {isBlocked && (
                                     <span className={`${size.fontSize} text-muted-foreground ml-1`}>
                                       (Ruangan nonaktif)
