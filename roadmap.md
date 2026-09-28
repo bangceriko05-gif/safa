@@ -13,4 +13,4 @@
 - [x] Pisahkan seluruh database, pencarian, CRM, dan nomor telepon pelanggan berdasarkan outlet.
 - [x] Tampilkan BID saat tambah booking dan satukan booking beberapa kamar dalam satu BID.
 - [x] Hitung harga setiap kamar berdasarkan jumlah malam pada booking beberapa kamar.
-- [x] Pertahankan data lengkap dan sumber Walk-in/OTA saat booking diedit dari menu Transaksi.
+- [x] Pertahankan data lengkap dan sumber Walk-in/OTA saat booking diedit dari menu Transaksi, sambil tetap mengizinkan perubahan sumber secara manual.

@@ -2048,7 +2048,6 @@ export default function BookingModal({
                 type="button"
                 variant={formData.booking_type === "walk_in" ? "default" : "outline"}
                 className="flex-1"
-                disabled={Boolean(editingBooking)}
                 onClick={() => setFormData({ ...formData, booking_type: "walk_in", variant_id: "" })}
               >
                 Walk-in
@@ -2057,7 +2056,6 @@ export default function BookingModal({
                 type="button"
                 variant={formData.booking_type === "ota" ? "default" : "outline"}
                 className="flex-1"
-                disabled={Boolean(editingBooking)}
                 onClick={() => setFormData({ ...formData, booking_type: "ota", variant_id: "" })}
               >
                 OTA
