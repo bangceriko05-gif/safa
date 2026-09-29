@@ -206,6 +206,7 @@ export default function BookingModal({
 
   // Schedule slot settings (FunFury only) — jam mulai/selesai mengikuti tabel jadwal
   const isFunFury = /funfury/i.test(currentStore?.name || "");
+  const displayedBid = editingBooking?.bid || bookingBid;
   const isMultiRoom = !editingBooking && !isFunFury && additionalRooms.length > 0;
   const [scheduleCfg, setScheduleCfg] = useState<{ start: string; end: string; slot: number } | null>(null);
 
@@ -2003,18 +2004,17 @@ export default function BookingModal({
             <DialogTitle>
               {editingBooking ? "Ubah Booking" : "Tambah Booking"}
             </DialogTitle>
-            {!editingBooking && (
-              <div className="flex min-w-0 flex-1 items-center justify-center px-3">
-                <div className="flex min-h-9 min-w-[240px] items-center justify-center gap-2 rounded-md border bg-muted/40 px-3">
-                  <span className="text-xs text-muted-foreground">BID</span>
-                  {bookingBidLoading ? (
+            <div className="flex min-w-0 flex-1 items-center justify-center px-3">
+              <div className="flex min-h-9 min-w-[240px] items-center justify-center gap-2 rounded-md border bg-muted/40 px-3">
+                <span className="text-xs text-muted-foreground">BID</span>
+                {!editingBooking && bookingBidLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   ) : (
                     <>
                       <span className="truncate font-mono text-sm font-bold text-primary">
-                        {bookingBid || "Belum tersedia"}
+                        {displayedBid || "Belum tersedia"}
                       </span>
-                      {bookingBid && (
+                      {displayedBid && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -2022,7 +2022,7 @@ export default function BookingModal({
                           className="h-7 w-7 shrink-0"
                           title="Salin BID"
                           onClick={() => {
-                            navigator.clipboard.writeText(bookingBid);
+                            navigator.clipboard.writeText(displayedBid);
                             toast.success("BID berhasil disalin");
                           }}
                         >
@@ -2031,9 +2031,8 @@ export default function BookingModal({
                       )}
                     </>
                   )}
-                </div>
               </div>
-            )}
+            </div>
             <Button
               type="button"
               variant="outline"
