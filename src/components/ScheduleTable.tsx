@@ -1536,11 +1536,29 @@ export default function ScheduleTable({
                               </Popover>
                               
                               <div className={size.spacing}>
-                                <div className={`flex flex-wrap items-baseline gap-x-1 pr-10 font-medium ${size.fontSize}`} style={{ color: bookingTextColor }}>
+                                <div className={`flex flex-wrap items-center gap-x-1 pr-10 font-medium ${size.fontSize}`} style={{ color: bookingTextColor }}>
                                   <span>{booking.customer_name}</span>
                                   {booking.bid && (
-                                    <span className="font-mono text-[10px] font-semibold opacity-80 break-all" title={booking.bid}>
-                                      {booking.bid}
+                                    <span className="inline-flex min-w-0 items-center gap-1">
+                                      <span className="font-mono text-[10px] font-semibold opacity-80 break-all" title={booking.bid}>
+                                        {booking.bid}
+                                      </span>
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-5 w-5 shrink-0"
+                                        aria-label={`Salin BID ${booking.bid}`}
+                                        title="Salin BID"
+                                        onClick={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          navigator.clipboard.writeText(booking.bid || "");
+                                          toast.success("BID berhasil disalin");
+                                        }}
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </Button>
                                     </span>
                                   )}
                                   {isBlocked && (

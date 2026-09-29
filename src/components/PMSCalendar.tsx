@@ -1312,6 +1312,29 @@ export default function PMSCalendar({
                                         </>
                                       )}
                                       <div className={cn("text-xs font-semibold truncate pr-8", hasActiveDeposit && "pl-6")}>{booking.customer_name}</div>
+                                      {booking.bid && (
+                                        <div className="flex min-w-0 items-center gap-1 pr-8">
+                                          <span className="truncate font-mono text-[10px] font-semibold text-primary" title={booking.bid}>
+                                            {booking.bid}
+                                          </span>
+                                          <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-5 w-5 shrink-0"
+                                            aria-label={`Salin BID ${booking.bid}`}
+                                            title="Salin BID"
+                                            onClick={(event) => {
+                                              event.preventDefault();
+                                              event.stopPropagation();
+                                              navigator.clipboard.writeText(booking.bid || "");
+                                              toast.success("BID berhasil disalin");
+                                            }}
+                                          >
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      )}
                                       <div className="text-[11px] font-medium truncate">
                                         {nights} malam {' '}
                                         <span className={cn(
