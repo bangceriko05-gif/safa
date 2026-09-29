@@ -16,3 +16,4 @@
 - [x] Pertahankan data lengkap dan sumber Walk-in/OTA saat booking diedit dari menu Transaksi, sambil tetap mengizinkan perubahan sumber secara manual.
 - [x] Izinkan tanggal bulan sebelah dipilih dari kalender booking dan pindahkan kalender otomatis ke bulan tersebut.
 - [x] Tampilkan BID di samping nama pelanggan pada setiap kartu kalender booking.
+- [x] Tampilkan BID beserta tombol salin pada judul formulir tambah dan ubah booking di semua outlet.
