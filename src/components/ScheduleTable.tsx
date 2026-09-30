@@ -729,7 +729,7 @@ export default function ScheduleTable({
 
   const handlePopupStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
     if (newStatus === "BATAL") {
-      window.setTimeout(() => setCancelBooking({ bookingId, bookingData }), 0);
+      window.setTimeout(() => setCancelBooking({ bookingId, bookingData }), 150);
       return;
     }
     // If changing to Check In, show deposit popup only if no active deposit exists

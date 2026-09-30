@@ -351,7 +351,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
       const selectedBooking = bookings.find((booking) => booking.id === bookingId);
       window.setTimeout(
         () => setCancelBooking({ bookingId, currentStatus, customerName: selectedBooking?.customer_name }),
-        0,
+        150,
       );
       return;
     }
