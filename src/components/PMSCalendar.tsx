@@ -586,7 +586,7 @@ export default function PMSCalendar({
 
   const handleBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
     if (newStatus === "BATAL") {
-      setCancelBooking({ bookingId, bookingData });
+      window.setTimeout(() => setCancelBooking({ bookingId, bookingData }), 0);
       return;
     }
     // If changing to Check In, show deposit popup only if no active deposit exists

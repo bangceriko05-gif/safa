@@ -238,7 +238,7 @@ export default function BookingDetailPopup({
   const handleStatusChange = async (newStatus: string) => {
     if (!booking || !bookingId) return;
     if (newStatus === "BATAL") {
-      setCancelDialogOpen(true);
+      window.setTimeout(() => setCancelDialogOpen(true), 0);
       return;
     }
     

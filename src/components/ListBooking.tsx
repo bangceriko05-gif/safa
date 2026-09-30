@@ -349,7 +349,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null, cancelReason?: string) => {
     if (newStatus === "BATAL" && !cancelReason) {
       const selectedBooking = bookings.find((booking) => booking.id === bookingId);
-      setCancelBooking({ bookingId, currentStatus, customerName: selectedBooking?.customer_name });
+      window.setTimeout(
+        () => setCancelBooking({ bookingId, currentStatus, customerName: selectedBooking?.customer_name }),
+        0,
+      );
       return;
     }
 
