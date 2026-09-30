@@ -23,6 +23,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
+import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
 
 interface BookingDetailPopupProps {
   isOpen: boolean;
@@ -105,6 +106,7 @@ export default function BookingDetailPopup({
   const [products, setProducts] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   
   // Check-in deposit popup state
   const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
@@ -235,6 +237,10 @@ export default function BookingDetailPopup({
 
   const handleStatusChange = async (newStatus: string) => {
     if (!booking || !bookingId) return;
+    if (newStatus === "BATAL") {
+      setCancelDialogOpen(true);
+      return;
+    }
     
     // If changing to Check In, show deposit popup only if no active deposit exists
     if (newStatus === "CI") {
@@ -270,7 +276,7 @@ export default function BookingDetailPopup({
     await executeStatusChange(newStatus);
   };
 
-  const executeStatusChange = async (newStatus: string) => {
+  const executeStatusChange = async (newStatus: string, cancelReason?: string) => {
     if (!booking || !bookingId) return;
     
     setUpdatingStatus(true);
@@ -289,6 +295,10 @@ export default function BookingDetailPopup({
         status: newStatus,
         updated_at: new Date().toISOString(),
       };
+      if (newStatus === "BATAL" && cancelReason) {
+        const reasonLine = `Alasan pembatalan: ${cancelReason}`;
+        updateData.note = booking.note ? `${booking.note}\n\n${reasonLine}` : reasonLine;
+      }
 
       // Add timestamp and user for specific status changes
       if (newStatus === "CI") {
@@ -321,7 +331,7 @@ export default function BookingDetailPopup({
         actionType: "updated",
         entityType: "Booking",
         entityId: bookingId,
-        description: `Mengubah status booking ${booking.customer_name} ke ${statusLabels[newStatus] || newStatus}`,
+        description: `Mengubah status booking ${booking.customer_name} ke ${statusLabels[newStatus] || newStatus}${cancelReason ? `. Alasan: ${cancelReason}` : ""}`,
         storeId: booking.store_id || currentStore?.id,
       });
 
@@ -783,6 +793,13 @@ export default function BookingDetailPopup({
       </DialogContent>
 
       {/* Check-In Deposit Popup */}
+      <CancelBookingDialog
+        open={cancelDialogOpen}
+        bookingName={booking?.customer_name}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={async (reason) => executeStatusChange("BATAL", reason)}
+      />
+
       {booking && checkInDepositPopup.open && (
         <CheckInDepositPopup
           open={checkInDepositPopup.open}

@@ -39,6 +39,7 @@ import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 import DepositDetailPopup from "@/components/deposit/DepositDetailPopup";
 import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
+import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
 
 interface PMSCalendarProps {
   selectedDate: Date;
@@ -114,6 +115,7 @@ export default function PMSCalendar({
   // Room deposits - map roomId -> true if has active deposit
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string; date: Date } | null>(null);
+  const [cancelBooking, setCancelBooking] = useState<{ bookingId: string; bookingData: BookingWithAdmin } | null>(null);
   
   // Check-in deposit popup state
   const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
@@ -583,6 +585,10 @@ export default function PMSCalendar({
   };
 
   const handleBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+    if (newStatus === "BATAL") {
+      setCancelBooking({ bookingId, bookingData });
+      return;
+    }
     // If changing to Check In, show deposit popup only if no active deposit exists
     if (newStatus === "CI") {
       const hasActiveDeposit = roomDeposits.has(bookingData.room_id);
@@ -630,7 +636,7 @@ export default function PMSCalendar({
     await executeBookingStatusChange(bookingId, newStatus, bookingData);
   };
 
-  const executeBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+  const executeBookingStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin, cancelReason?: string) => {
     setUpdatingStatus(bookingId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -643,6 +649,10 @@ export default function PMSCalendar({
         status: newStatus,
         updated_at: new Date().toISOString(),
       };
+      if (newStatus === "BATAL" && cancelReason) {
+        const reasonLine = `Alasan pembatalan: ${cancelReason}`;
+        updateData.note = bookingData.note ? `${bookingData.note}\n\n${reasonLine}` : reasonLine;
+      }
 
       if (newStatus === "CI") {
         updateData.checked_in_by = user.id;
@@ -686,7 +696,7 @@ export default function PMSCalendar({
         actionType: 'updated',
         entityType: 'Booking',
         entityId: bookingId,
-        description: `Mengubah status booking ${bookingData.customer_name} ke ${statusLabels[newStatus] || newStatus}`,
+        description: `Mengubah status booking ${bookingData.customer_name} ke ${statusLabels[newStatus] || newStatus}${cancelReason ? `. Alasan: ${cancelReason}` : ""}`,
       });
 
       // Update room_daily_status for CO status - use TODAY as the checkout date
@@ -1539,6 +1549,15 @@ export default function PMSCalendar({
         roomName={depositDetailPopup.roomName}
         onClose={() => setDepositDetailPopup({ open: false, roomId: null, roomName: "" })}
         onSuccess={() => fetchRoomDeposits()}
+      />
+      <CancelBookingDialog
+        open={Boolean(cancelBooking)}
+        bookingName={cancelBooking?.bookingData.customer_name}
+        onOpenChange={(open) => !open && setCancelBooking(null)}
+        onConfirm={async (reason) => {
+          if (!cancelBooking) return;
+          await executeBookingStatusChange(cancelBooking.bookingId, "BATAL", cancelBooking.bookingData, reason);
+        }}
       />
 
       {/* Stacked bookings list dialog (when multiple bookings overlap one cell) */}
