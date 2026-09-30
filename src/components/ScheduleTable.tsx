@@ -33,6 +33,7 @@ import {
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
+import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
 
 interface ScheduleTableProps {
   selectedDate: Date;
@@ -114,6 +115,7 @@ export default function ScheduleTable({
   const [roomDailyStatusData, setRoomDailyStatusData] = useState<Record<string, { status: string; updated_by_name?: string }>>({});
   const [updatingPopupStatus, setUpdatingPopupStatus] = useState<string | null>(null);
   const [confirmReadyRoom, setConfirmReadyRoom] = useState<{ roomId: string; roomName: string } | null>(null);
+  const [cancelBooking, setCancelBooking] = useState<{ bookingId: string; bookingData: BookingWithAdmin } | null>(null);
   const [roomsWithCheckout, setRoomsWithCheckout] = useState<Set<string>>(new Set());
   // Room deposits - map roomId -> true if has active deposit
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
@@ -726,6 +728,10 @@ export default function ScheduleTable({
   };
 
   const handlePopupStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+    if (newStatus === "BATAL") {
+      window.setTimeout(() => setCancelBooking({ bookingId, bookingData }), 150);
+      return;
+    }
     // If changing to Check In, show deposit popup only if no active deposit exists
     if (newStatus === "CI") {
       const hasActiveDeposit = roomDeposits.has(bookingData.room_id);
@@ -773,7 +779,7 @@ export default function ScheduleTable({
     await executeStatusChange(bookingId, newStatus, bookingData);
   };
 
-  const executeStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin) => {
+  const executeStatusChange = async (bookingId: string, newStatus: string, bookingData: BookingWithAdmin, cancelReason?: string) => {
     setUpdatingPopupStatus(bookingId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -786,6 +792,10 @@ export default function ScheduleTable({
         status: newStatus,
         updated_at: new Date().toISOString(),
       };
+      if (newStatus === "BATAL" && cancelReason) {
+        const reasonLine = `Alasan pembatalan: ${cancelReason}`;
+        updateData.note = bookingData.note ? `${bookingData.note}\n\n${reasonLine}` : reasonLine;
+      }
 
       if (newStatus === "CI") {
         updateData.checked_in_by = user.id;
@@ -844,7 +854,7 @@ export default function ScheduleTable({
         actionType: 'updated',
         entityType: 'Booking',
         entityId: bookingId,
-        description: `Mengubah status booking ${bookingData.customer_name} ke ${statusLabels[newStatus] || newStatus}`,
+        description: `Mengubah status booking ${bookingData.customer_name} ke ${statusLabels[newStatus] || newStatus}${cancelReason ? `. Alasan: ${cancelReason}` : ""}`,
       });
 
       toast.success(`Status berhasil diubah ke ${statusLabels[newStatus] || newStatus}`);
@@ -1726,6 +1736,16 @@ export default function ScheduleTable({
       </AlertDialog>
 
       {/* Check-In Deposit Popup */}
+      <CancelBookingDialog
+        open={Boolean(cancelBooking)}
+        bookingName={cancelBooking?.bookingData.customer_name}
+        onOpenChange={(open) => !open && setCancelBooking(null)}
+        onConfirm={async (reason) => {
+          if (!cancelBooking) return;
+          await executeStatusChange(cancelBooking.bookingId, "BATAL", cancelBooking.bookingData, reason);
+        }}
+      />
+
       {checkInDepositPopup.bookingData && (
         <CheckInDepositPopup
           open={checkInDepositPopup.open}

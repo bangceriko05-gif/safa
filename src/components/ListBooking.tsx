@@ -48,6 +48,7 @@ import BookingDetailPopup from "./BookingDetailPopup";
 import CancelledBookings from "./CancelledBookings";
 import AddOrderModal from "./booking-orders/AddOrderModal";
 import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
+import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
 
 interface ListBookingProps {
   userRole: string | null;
@@ -118,6 +119,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [orderItemsById, setOrderItemsById] = useState<Record<string, BookingOrderRow["items"]>>({});
   const [editingPosOrder, setEditingPosOrder] = useState<any | null>(null);
+  const [cancelBooking, setCancelBooking] = useState<{ bookingId: string; currentStatus: string | null; customerName?: string } | null>(null);
 
   const navigate = useNavigate();
   const openPosOrder = (orderId: string) => {
@@ -344,7 +346,16 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
     toast.success("BID berhasil disalin");
   };
 
-  const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null) => {
+  const handleStatusChange = async (bookingId: string, newStatus: string, currentStatus: string | null, cancelReason?: string) => {
+    if (newStatus === "BATAL" && !cancelReason) {
+      const selectedBooking = bookings.find((booking) => booking.id === bookingId);
+      window.setTimeout(
+        () => setCancelBooking({ bookingId, currentStatus, customerName: selectedBooking?.customer_name }),
+        150,
+      );
+      return;
+    }
+
     try {
       // Check permission first (for non-BATAL status changes)
       if (newStatus !== "BATAL" && !hasPermission("edit_bookings")) {
@@ -365,6 +376,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         .from("bookings")
         .select(`
           customer_name,
+          note,
           rooms (name)
         `)
         .eq("id", bookingId)
@@ -372,6 +384,10 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
 
       // Prepare update data
       const updateData: any = { status: newStatus };
+      if (newStatus === "BATAL" && cancelReason) {
+        const reasonLine = `Alasan pembatalan: ${cancelReason}`;
+        updateData.note = (bookingData as any)?.note ? `${(bookingData as any).note}\n\n${reasonLine}` : reasonLine;
+      }
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -441,7 +457,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           actionType,
           entityType: 'Booking',
           entityId: bookingId,
-          description: `Mengubah status booking ${bookingData.customer_name} di kamar ${roomName} dari ${currentStatus || 'BO'} menjadi ${newStatus}`,
+          description: `Mengubah status booking ${bookingData.customer_name} di kamar ${roomName} dari ${currentStatus || 'BO'} menjadi ${newStatus}${cancelReason ? `. Alasan: ${cancelReason}` : ""}`,
           storeId: currentStore?.id,
         });
       }
@@ -1133,6 +1149,15 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
           </div>
         )}
     </Tabs>
+    <CancelBookingDialog
+      open={Boolean(cancelBooking)}
+      bookingName={cancelBooking?.customerName}
+      onOpenChange={(open) => !open && setCancelBooking(null)}
+      onConfirm={async (reason) => {
+        if (!cancelBooking) return;
+        await handleStatusChange(cancelBooking.bookingId, "BATAL", cancelBooking.currentStatus, reason);
+      }}
+    />
     <TransactionBidPopup
       open={!!previewBooking}
       onClose={() => setPreviewBooking(null)}

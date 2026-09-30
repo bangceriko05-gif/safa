@@ -17,3 +17,4 @@
 - [x] Izinkan tanggal bulan sebelah dipilih dari kalender booking dan pindahkan kalender otomatis ke bulan tersebut.
 - [x] Tampilkan BID dan ikon salin di samping nama pelanggan pada setiap kartu kalender booking di semua outlet.
 - [x] Tampilkan BID beserta tombol salin pada judul formulir tambah dan ubah booking di semua outlet.
+- [x] Wajibkan konfirmasi dan alasan sebelum setiap pembatalan booking.
