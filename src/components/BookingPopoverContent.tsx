@@ -549,7 +549,11 @@ export default function BookingPopoverContent({
               size="sm"
               variant="destructive"
               className="flex-1"
-              onClick={() => onStatusChange(booking.id, "BATAL", booking)}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onStatusChange(booking.id, "BATAL", booking);
+              }}
             >
               <XCircle className="h-3 w-3 mr-1" />
               Batal
