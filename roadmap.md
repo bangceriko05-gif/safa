@@ -18,3 +18,4 @@
 - [x] Tampilkan BID dan ikon salin di samping nama pelanggan pada setiap kartu kalender booking di semua outlet.
 - [x] Tampilkan BID beserta tombol salin pada judul formulir tambah dan ubah booking di semua outlet.
 - [x] Wajibkan konfirmasi dan alasan sebelum setiap pembatalan booking.
+- [x] Perbaiki pembayaran booking multi-kamar agar nominal dibayar tidak berubah menjadi total penuh dan status lunas mengikuti sisa pembayaran.

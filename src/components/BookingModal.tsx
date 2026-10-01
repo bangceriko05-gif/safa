@@ -413,12 +413,13 @@ export default function BookingModal({
     }
   };
 
-  // Auto-fill Total Bayar with Grand Total (only if dual payment is NOT active and NOT OTA)
+  // Auto-fill Total Bayar with Grand Total for single-room bookings only.
+  // Multi-room bookings accept the amount actually paid by the guest.
   useEffect(() => {
     // Skip auto-fill if dual payment is active - user should manually split the payment
     // Skip auto-fill if OTA - user inputs price manually
     // Skip auto-fill during edit data loading or when price is protected (edit mode until user changes variant/duration)
-    if (formData.dual_payment || formData.booking_type === "ota") return;
+    if (formData.dual_payment || formData.booking_type === "ota" || isMultiRoom) return;
     if (isLoadingEditDataRef.current || isPriceProtectedRef.current) return;
     
     const grandTotal = calculateGrandTotal();
@@ -1816,19 +1817,24 @@ export default function BookingModal({
               booking_group_id: bookingGroupId,
               room_id: room.room_id,
               variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
-              price: index === 0
-                ? Math.max(0, calculateEnteredRoomTotal(room.price, room.variant_id) + calculateProductsTotal() - calculateDiscount())
-                : calculateEnteredRoomTotal(room.price, room.variant_id),
-              price_2: null,
-              dual_payment: false,
-              payment_method_2: null,
-              reference_no_2: null,
-              payment_proof_url_2: null,
+              // A multi-room BID has one shared payment. Store it only on the
+              // primary row so reports and edit forms never count it per room.
+              price: index === 0 ? parseFloat(parsePrice(formData.price)) : 0,
+              price_2: index === 0 && formData.dual_payment && formData.price_2
+                ? parseFloat(parsePrice(formData.price_2))
+                : null,
+              dual_payment: index === 0 ? formData.dual_payment : false,
+              payment_method: index === 0 ? (formData.payment_method || null) : null,
+              payment_method_2: index === 0 && formData.dual_payment ? (formData.payment_method_2 || null) : null,
+              reference_no: index === 0 ? (formData.reference_no || null) : null,
+              reference_no_2: index === 0 && formData.dual_payment ? (formData.reference_no_2 || null) : null,
+              payment_proof_url: index === 0 ? paymentProofUrl : null,
+              payment_proof_url_2: index === 0 && formData.dual_payment ? paymentProofUrl2 : null,
               discount_type: index === 0 && formData.has_discount ? formData.discount_type : null,
               discount_value: index === 0 && formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
               discount_applies_to: index === 0 && formData.has_discount ? formData.discount_applies_to : null,
               variant_price_override: null,
-              payment_status: "lunas",
+              payment_status: bookingData.payment_status,
             }))
           : [{ ...bookingData, booking_group_id: bookingGroupId }];
         const { data: createdBookings, error } = await supabase
