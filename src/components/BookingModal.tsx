@@ -1826,7 +1826,7 @@ export default function BookingModal({
               dual_payment: index === 0 ? formData.dual_payment : false,
               payment_method: index === 0 ? (formData.payment_method || null) : null,
               payment_method_2: index === 0 && formData.dual_payment ? (formData.payment_method_2 || null) : null,
-              reference_no: index === 0 ? (formData.reference_no || null) : null,
+              reference_no: index === 0 ? (formData.reference_no || "-") : "-",
               reference_no_2: index === 0 && formData.dual_payment ? (formData.reference_no_2 || null) : null,
               payment_proof_url: index === 0 ? paymentProofUrl : null,
               payment_proof_url_2: index === 0 && formData.dual_payment ? paymentProofUrl2 : null,
