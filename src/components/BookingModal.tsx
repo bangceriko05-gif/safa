@@ -990,6 +990,13 @@ export default function BookingModal({
 
   const numericPrice = (value: string) => parseFloat(parsePrice(value)) || 0;
 
+  const getOtaRoomShares = (total: number, roomCount: number) => {
+    if (roomCount <= 0) return [];
+    const baseShare = Math.floor(total / roomCount);
+    const remainder = total - (baseShare * roomCount);
+    return Array.from({ length: roomCount }, (_, index) => baseShare + (index < remainder ? 1 : 0));
+  };
+
   const filterVariantsForDate = (variants: RoomVariant[]) => {
     const bookingDate = isPMSMode ? checkInDate : selectedDate;
     if (!bookingDate) return variants;
@@ -1007,6 +1014,7 @@ export default function BookingModal({
 
   const calculateEnteredRoomTotal = (price: string, variantId: string) => {
     const unitPrice = numericPrice(price);
+    if (formData.booking_type === "ota") return unitPrice;
     const variant = variantId
       ? [...roomVariants, ...Object.values(additionalRoomVariants).flat()].find((item) => item.id === variantId)
       : undefined;
@@ -1051,6 +1059,22 @@ export default function BookingModal({
       return next;
     });
   };
+
+  useEffect(() => {
+    if (editingBooking || formData.booking_type !== "ota" || !isMultiRoom) return;
+
+    const shares = getOtaRoomShares(numericPrice(formData.price), additionalRooms.length + 1);
+    const nextPrimaryPrice = formatPrice(String(shares[0] || 0));
+    if (primaryRoomPrice !== nextPrimaryPrice) setPrimaryRoomPrice(nextPrimaryPrice);
+
+    setAdditionalRooms((previous) => {
+      const next = previous.map((room, index) => ({
+        ...room,
+        price: formatPrice(String(shares[index + 1] || 0)),
+      }));
+      return next.every((room, index) => room.price === previous[index]?.price) ? previous : next;
+    });
+  }, [editingBooking, formData.booking_type, formData.price, isMultiRoom, additionalRooms.length, primaryRoomPrice]);
 
   const handlePriceChange = (value: string) => {
     const formatted = formatPrice(value);
@@ -1817,16 +1841,18 @@ export default function BookingModal({
               booking_group_id: bookingGroupId,
               room_id: room.room_id,
               variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
-              // A multi-room BID has one shared payment. Store it only on the
-              // primary row so reports and edit forms never count it per room.
-              price: index === 0 ? parseFloat(parsePrice(formData.price)) : 0,
+              // OTA totals are distributed across all rooms. Walk-in payments
+              // remain stored once on the primary row.
+              price: formData.booking_type === "ota"
+                ? numericPrice(room.price)
+                : (index === 0 ? parseFloat(parsePrice(formData.price)) : 0),
               price_2: index === 0 && formData.dual_payment && formData.price_2
                 ? parseFloat(parsePrice(formData.price_2))
                 : null,
               dual_payment: index === 0 ? formData.dual_payment : false,
-              payment_method: index === 0 ? (formData.payment_method || null) : null,
+              payment_method: formData.booking_type === "ota" || index === 0 ? (formData.payment_method || null) : null,
               payment_method_2: index === 0 && formData.dual_payment ? (formData.payment_method_2 || null) : null,
-              reference_no: index === 0 ? (formData.reference_no || "-") : "-",
+              reference_no: formData.booking_type === "ota" || index === 0 ? (formData.reference_no || "-") : "-",
               reference_no_2: index === 0 && formData.dual_payment ? (formData.reference_no_2 || null) : null,
               payment_proof_url: index === 0 ? paymentProofUrl : null,
               payment_proof_url_2: index === 0 && formData.dual_payment ? paymentProofUrl2 : null,
@@ -2334,6 +2360,7 @@ export default function BookingModal({
                   value={primaryRoomPrice}
                   onChange={(event) => setPrimaryRoomPrice(formatPrice(event.target.value))}
                   placeholder="Harga kamar"
+                  readOnly={formData.booking_type === "ota"}
                   required
                 />
               </div>
@@ -2388,13 +2415,18 @@ export default function BookingModal({
                         onChange={(event) => updateAdditionalRoom(room.key, { price: formatPrice(event.target.value) })}
                         placeholder="Harga kamar"
                         disabled={!room.room_id}
+                        readOnly={formData.booking_type === "ota"}
                         required
                       />
                     </div>
                   </div>
                 );
               })}
-              <p className="text-xs text-muted-foreground">Tanggal, pelanggan, metode pembayaran, dan bukti bayar berlaku untuk semua kamar.</p>
+              <p className="text-xs text-muted-foreground">
+                {formData.booking_type === "ota"
+                  ? "Total bayar OTA dibagi rata otomatis ke semua kamar."
+                  : "Tanggal, pelanggan, metode pembayaran, dan bukti bayar berlaku untuk semua kamar."}
+              </p>
             </div>
           )}
 

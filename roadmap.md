@@ -19,3 +19,4 @@
 - [x] Tampilkan BID beserta tombol salin pada judul formulir tambah dan ubah booking di semua outlet.
 - [x] Wajibkan konfirmasi dan alasan sebelum setiap pembatalan booking.
 - [x] Perbaiki pembayaran booking multi-kamar agar nominal dibayar tidak berubah menjadi total penuh dan status lunas mengikuti sisa pembayaran.
+- [x] Bagi otomatis total bayar booking OTA baru secara rata ke seluruh kamar yang dipilih.
