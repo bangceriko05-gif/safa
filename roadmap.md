@@ -20,4 +20,4 @@
 - [x] Wajibkan konfirmasi dan alasan sebelum setiap pembatalan booking.
 - [x] Perbaiki pembayaran booking multi-kamar agar nominal dibayar tidak berubah menjadi total penuh dan status lunas mengikuti sisa pembayaran.
 - [x] Bagi otomatis total bayar booking OTA baru secara rata ke seluruh kamar yang dipilih.
-- [x] Haluskan input Total Bayar agar pemisah ribuan tidak membuat angka bergetar saat diketik.
+- [x] Haluskan input Total Bayar dengan menjaga tinggi Billing tetap stabil saat angka diketik.
