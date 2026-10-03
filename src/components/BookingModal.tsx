@@ -159,6 +159,7 @@ export default function BookingModal({
   const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
   const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
   const [isPriceInputFocused, setIsPriceInputFocused] = useState(false);
+  const [priceInputDraft, setPriceInputDraft] = useState("");
   const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
   const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
   const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
@@ -3099,13 +3100,19 @@ export default function BookingModal({
                 id="price"
                 type="text"
                 inputMode="numeric"
-                value={isPriceInputFocused ? parsePrice(formData.price) : formData.price}
-                onChange={(e) => handlePriceChange(e.target.value)}
-                onFocus={() => setIsPriceInputFocused(true)}
-                onBlur={() => setIsPriceInputFocused(false)}
+                value={isPriceInputFocused ? priceInputDraft : formData.price}
+                onChange={(e) => setPriceInputDraft(e.target.value.replace(/\D/g, ""))}
+                onFocus={() => {
+                  setPriceInputDraft(parsePrice(formData.price));
+                  setIsPriceInputFocused(true);
+                }}
+                onBlur={() => {
+                  handlePriceChange(priceInputDraft);
+                  setIsPriceInputFocused(false);
+                }}
                 placeholder={formData.dual_payment ? "Masukkan nilai pembayaran pertama" : "Masukan total bayar"}
                 required
-                className="tabular-nums"
+                className="font-mono tabular-nums"
               />
               {formData.dual_payment && (
                 <p className="text-xs text-muted-foreground">
