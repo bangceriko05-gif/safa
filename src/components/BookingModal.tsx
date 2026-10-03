@@ -3006,9 +3006,9 @@ export default function BookingModal({
                     </span>
                   </div>
 
-                  {/* Total Bayar Section */}
-                  {(formData.price || formData.price_2) && (
-                    <div className="border-t pt-2 mt-2">
+                  {/* Keep this area at a stable height so typing below it never shifts the form. */}
+                  <div className={`border-t pt-2 mt-2 ${formData.dual_payment ? "min-h-[116px]" : "min-h-[76px]"}`}>
+                    <div className={formData.price || formData.price_2 ? "" : "invisible"}>
                       <div className="flex justify-between items-center">
                         <span className="font-semibold">Total Bayar:</span>
                         <span className="font-semibold text-base">
@@ -3035,22 +3035,19 @@ export default function BookingModal({
                       {/* Payment Difference in Billing */}
                       {(() => {
                         const paymentDiff = calculatePaymentDifference();
-                        if (paymentDiff.isDifferent) {
-                          return (
-                            <div className={`flex justify-between items-center mt-2 pt-2 border-t ${paymentDiff.isOverpayment ? 'text-green-600' : 'text-yellow-600'}`}>
-                              <span className="font-bold">
-                                {paymentDiff.isOverpayment ? "Kelebihan Bayar:" : "Kekurangan Bayar:"}
-                              </span>
-                              <span className="font-bold text-base">
-                                Rp {Math.abs(paymentDiff.difference).toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                          );
-                        }
-                        return null;
+                        return (
+                          <div className={`flex justify-between items-center mt-2 pt-2 border-t ${paymentDiff.isDifferent ? (paymentDiff.isOverpayment ? 'text-green-600' : 'text-yellow-600') : 'invisible'}`}>
+                            <span className="font-bold">
+                              {paymentDiff.isOverpayment ? "Kelebihan Bayar:" : "Kekurangan Bayar:"}
+                            </span>
+                            <span className="font-bold text-base">
+                              Rp {Math.abs(paymentDiff.difference).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        );
                       })()}
                     </div>
-                  )}
+                  </div>
                 </div>
                 
                 <div className="border-t pt-2 mt-2 hidden">
