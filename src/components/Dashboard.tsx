@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon, QrCode, CreditCard } from "lucide-react";
+import { LogOut, FileDown, UserCog, Calendar, History, Users, FileText, Settings, Package, Inbox, Shield, Receipt, ChevronDown, ChevronRight, PanelLeft, UserCircle, Phone, Mail, Lock, ShoppingCart, Boxes, Bed, Globe, Store as StoreIcon, QrCode, CreditCard, Search, Bell } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -61,6 +61,7 @@ const Reports = lazyWithRetry(() => import("./Reports"));
 const PermissionManagement = lazyWithRetry(() => import("./PermissionManagement"));
 const SettingsPage = lazyWithRetry(() => import("./SettingsPage"));
 const TransactionManagement = lazyWithRetry(() => import("./TransactionManagement"));
+const DashboardOverview = lazyWithRetry(() => import("./DashboardOverview"));
 const DepositFormModal = lazyWithRetry(() => import("./deposit/DepositFormModal"));
 const WebsiteManagement = lazyWithRetry(() => import("./website/WebsiteManagement"));
 const RoomBarcodeSettings = lazyWithRetry(() => import("./rooms/RoomBarcodeSettings"));
@@ -123,7 +124,8 @@ export default function Dashboard() {
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "bookings");
+  const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "transactions");
+  const [dashboardSearch, setDashboardSearch] = useState("");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
   const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
   const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders" | "payments" | "barcode">("storefront");
@@ -694,17 +696,20 @@ export default function Dashboard() {
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "11rem",
+          "--sidebar-width": "14rem",
         } as React.CSSProperties
       }
     >
-      <div className="min-h-screen flex w-full" style={{ background: "var(--gradient-main)" }}>
+      <div className="dashboard-shell min-h-screen flex w-full">
         {/* Left Sidebar - Desktop only */}
-        <Sidebar collapsible="icon" className="hidden lg:flex border-r bg-background">
-          <SidebarHeader className="flex flex-row items-center justify-end px-2 pt-3">
-            <SidebarTrigger />
+        <Sidebar collapsible="icon" className="hidden lg:flex border-r border-border/60 bg-card">
+          <SidebarHeader className="border-b border-border/50 px-3 py-3">
+            <div className="flex items-center justify-between gap-1">
+              <StoreSelector />
+              <SidebarTrigger className="shrink-0" />
+            </div>
           </SidebarHeader>
-          <SidebarContent className="pt-4">
+          <SidebarContent className="pt-3">
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -717,7 +722,7 @@ export default function Dashboard() {
                         className={cn(
                           "gap-3",
                           activeTab === item.key &&
-                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                           "bg-primary text-primary-foreground font-bold shadow-sm hover:bg-primary/90 hover:text-primary-foreground [&>svg]:text-primary-foreground"
                         )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
@@ -767,7 +772,7 @@ export default function Dashboard() {
                         className={cn(
                           "gap-3",
                           activeTab === item.key &&
-                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                            "bg-primary text-primary-foreground font-bold shadow-sm hover:bg-primary/90 hover:text-primary-foreground [&>svg]:text-primary-foreground"
                         )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
@@ -785,7 +790,7 @@ export default function Dashboard() {
                         className={cn(
                           "gap-3",
                           activeTab === item.key &&
-                            "bg-primary/10 text-primary font-bold hover:bg-primary/15 hover:text-primary [&>svg]:text-primary"
+                            "bg-primary text-primary-foreground font-bold shadow-sm hover:bg-primary/90 hover:text-primary-foreground [&>svg]:text-primary-foreground"
                         )}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
@@ -833,10 +838,38 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="p-4 md:p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+          <header className="sticky top-0 z-30 flex h-[62px] items-center gap-3 border-b border-border/60 bg-card/95 px-4 backdrop-blur md:px-6">
+            <SidebarTrigger className="lg:hidden" />
+            <div className="relative w-full max-w-[460px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={dashboardSearch}
+                onChange={(event) => setDashboardSearch(event.target.value)}
+                placeholder="Cari transaksi, pelanggan, atau BID..."
+                className="h-9 rounded-lg border-border/70 bg-muted/45 pl-9 text-xs shadow-none"
+              />
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
+                <Bell className="h-4 w-4" />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-destructive" />
+              </Button>
+              <button onClick={openProfileDialog} className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-muted">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">{(profileData.name || user?.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="hidden text-left xl:block">
+                  <p className="max-w-[150px] truncate text-xs font-bold">{profileData.name || user?.email}</p>
+                  <p className="text-[10px] capitalize text-muted-foreground">{userRole || "user"}</p>
+                </div>
+                <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground xl:block" />
+              </button>
+            </div>
+          </header>
+          <div className="p-4 md:p-5">
+            <div className="mx-auto max-w-[1440px] space-y-5">
               {/* Header */}
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className={cn("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", activeTab === "transactions" && "hidden")}>
                 <div className="flex items-start gap-3">
                   <div className="space-y-2">
                     <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
@@ -849,7 +882,6 @@ export default function Dashboard() {
                         "User"
                       })
                     </p>
-                    <StoreSelector />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -977,8 +1009,10 @@ export default function Dashboard() {
 
           <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>
             {activeTab === "transactions" && (isFeatureEnabled("transactions") ? (
-              <TransactionManagement 
+              <DashboardOverview
                 userRole={userRole} 
+                userName={profileData.name || user?.email?.split("@")[0] || "Pengguna"}
+                searchQuery={dashboardSearch}
                 onEditBooking={handleEditBooking} 
                 onAddBooking={() => {
                   setEditingBooking(null);

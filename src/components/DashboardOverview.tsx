@@ -43,7 +43,7 @@ export default function DashboardOverview({
     Promise.all([
       supabase.from("bookings").select("price,price_2,status").eq("store_id", currentStore.id).eq("date", today),
       supabase.from("booking_orders").select("total_amount,process_status").eq("store_id", currentStore.id).eq("date", today),
-      supabase.from("purchases" as any).select("total_amount").eq("store_id", currentStore.id).eq("date", today),
+      supabase.from("purchases").select("amount").eq("store_id", currentStore.id).eq("date", today),
       supabase.from("expenses").select("amount").eq("store_id", currentStore.id).eq("date", today),
       supabase.from("customers").select("id", { count: "exact", head: true }).eq("store_id", currentStore.id),
     ]).then(([bookingsResult, ordersResult, purchasesResult, expensesResult, customersResult]) => {
@@ -58,7 +58,7 @@ export default function DashboardOverview({
       );
       setSummary({
         sales: bookingSales + orderSales,
-        purchases: (purchasesResult.data || []).reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0),
+        purchases: (purchasesResult.data || []).reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0),
         expenses: (expensesResult.data || []).reduce((sum, row: any) => sum + Number(row.amount || 0), 0),
         customers: customersResult.count || 0,
       });
