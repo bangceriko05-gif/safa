@@ -31,6 +31,7 @@ interface TransactionManagementProps {
   onAddBooking?: () => void;
   onAddDeposit?: () => void;
   depositRefreshTrigger: number;
+  initialSearchQuery?: string;
 }
 
 const ALL_TABS = [
@@ -40,7 +41,7 @@ const ALL_TABS = [
   { key: "incomes", feature: "transactions.incomes", label: "Pemasukan", icon: DollarSign },
 ];
 
-export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger }: TransactionManagementProps) {
+export default function TransactionManagement({ userRole, onEditBooking, onAddBooking, onAddDeposit, depositRefreshTrigger, initialSearchQuery = "" }: TransactionManagementProps) {
   const { hasPermission, hasAnyPermission, loading: permLoading } = usePermissions();
   const { currentStore } = useStore();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
@@ -53,6 +54,8 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
   const [searchQuery, setSearchQuery] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
+
+  const effectiveSearchQuery = initialSearchQuery || searchQuery;
 
   const hasTransactionAccess = hasAnyPermission([
     "view_bookings", "create_bookings", "edit_bookings",
@@ -87,7 +90,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
   const dateRangeLabel = getDateRangeDisplay(timeRange, customDateRange);
 
   return (
-    <div className="space-y-4">
+    <div className="dashboard-transactions space-y-3">
       <Tabs value={currentTab} onValueChange={setActiveSubTab}>
         {isMobile ? (
           <Select value={currentTab} onValueChange={setActiveSubTab}>
@@ -109,9 +112,9 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
             </SelectContent>
           </Select>
         ) : (
-          <TabsList className="grid w-full max-w-2xl" style={{ gridTemplateColumns: `repeat(${ALL_TABS.length}, 1fr)` }}>
+          <TabsList className="grid h-11 w-full max-w-[630px] rounded-lg border bg-card p-1 shadow-sm" style={{ gridTemplateColumns: `repeat(${ALL_TABS.length}, 1fr)` }}>
             {ALL_TABS.map(tab => (
-              <TabsTrigger key={tab.key} value={tab.key}>
+              <TabsTrigger key={tab.key} value={tab.key} className="h-9 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <tab.icon className="mr-2 h-4 w-4" />
                 {tab.label}
               </TabsTrigger>
@@ -120,7 +123,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         )}
 
         {/* Shared Date Filter & Search */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2 shadow-sm">
           {isMobile ? (
             <Select value={timeRange} onValueChange={(v) => handleDateFilterChange(v as ReportTimeRange)}>
               <SelectTrigger className="w-[160px]">
@@ -136,7 +139,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
               </SelectContent>
             </Select>
           ) : (
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("today")} className={cn(timeRange === "today" && "bg-primary text-primary-foreground")}>Hari Ini</Button>
               <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")} className={cn(timeRange === "yesterday" && "bg-primary text-primary-foreground")}>Kemarin</Button>
               <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")} className={cn(timeRange === "thisMonth" && "bg-primary text-primary-foreground")}>Bulan Ini</Button>
@@ -187,13 +190,13 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
           </Popover>
 
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative ml-auto min-w-[240px] flex-1 lg:max-w-[270px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Cari BID, nama, deskripsi..."
-              value={searchQuery}
+              value={effectiveSearchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="h-9 rounded-lg border-border/80 bg-background pl-9 text-xs shadow-none"
             />
           </div>
         </div>
@@ -206,7 +209,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
               onAddBooking={onAddBooking}
               timeRange={timeRange}
               customDateRange={customDateRange}
-              searchQuery={searchQuery}
+              searchQuery={effectiveSearchQuery}
             />
           ) : (
             <FeatureInactiveNotice featureName="Penjualan" icon={TrendingUp} price={getFeatureInfo("transactions.list_booking").price} description={getFeatureInfo("transactions.list_booking").description} />

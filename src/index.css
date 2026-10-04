@@ -35,6 +35,7 @@ All colors MUST be HSL.
     --border: 200 20% 88%;
     --input: 200 20% 88%;
     --ring: 220 90% 56%;
+    --success: 142 72% 37%;
 
     --radius: 0.75rem;
 
@@ -105,8 +106,37 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-jakarta;
+    letter-spacing: 0;
   }
+}
+
+@layer components {
+  .dashboard-shell {
+    background: radial-gradient(circle at 72% 12%, hsl(218 100% 97%), transparent 34%), hsl(216 33% 98%);
+  }
+
+  .dashboard-stat {
+    @apply flex min-h-[104px] items-center gap-4 rounded-lg border border-border/60 px-4 py-4 shadow-sm;
+  }
+
+  .dashboard-stat-sales { background: linear-gradient(135deg, hsl(214 100% 98%), hsl(216 100% 95%)); }
+  .dashboard-stat-purchase { background: linear-gradient(135deg, hsl(138 65% 98%), hsl(137 65% 94%)); }
+  .dashboard-stat-expense { background: linear-gradient(135deg, hsl(18 100% 98%), hsl(13 100% 94%)); }
+  .dashboard-stat-customer { background: linear-gradient(135deg, hsl(275 100% 98%), hsl(278 100% 95%)); }
+
+  .dashboard-stat-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-card/70 text-primary;
+  }
+  .dashboard-stat-purchase .dashboard-stat-icon { color: hsl(142 72% 37%); }
+  .dashboard-stat-expense .dashboard-stat-icon { color: hsl(2 82% 56%); }
+  .dashboard-stat-customer .dashboard-stat-icon { color: hsl(276 85% 56%); }
+  .text-success { color: hsl(var(--success)); }
+
+  .dashboard-transactions table { @apply text-xs; }
+  .dashboard-transactions thead tr { @apply border-0 bg-muted/55; }
+  .dashboard-transactions th { @apply h-9 px-3 text-[10px] font-bold uppercase; }
+  .dashboard-transactions td { @apply px-3 py-2.5; }
 }
 
 /* ===== Print: isolate .print-area when present, otherwise print the current page normally ===== */
