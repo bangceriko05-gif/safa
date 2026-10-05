@@ -77,6 +77,7 @@ interface Booking {
   confirmed_by?: string;
   confirmed_at?: string;
   bid?: string;
+  variant_price_override?: number | null;
 }
 
 interface BookingWithAdmin extends Booking {
@@ -583,7 +584,9 @@ export default function ScheduleTable({
         if (booking.variant_id) {
           const variant = variantMap.get(booking.variant_id);
           if (variant) {
-            variantPrice = variant.price;
+            variantPrice = booking.variant_price_override != null
+              ? Number(booking.variant_price_override)
+              : variant.price;
             // Calculate price per hour and multiply by booking duration
             const pricePerHour = variant.price / variant.duration;
             roomSubtotal = Math.round(pricePerHour * booking.duration);

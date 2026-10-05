@@ -376,10 +376,8 @@ export default function BookingModal({
       return parseFloat(formData.price.replace(/\./g, '')) || 0;
     }
 
-    const selectedRoom = rooms.find(r => r.id === formData.room_id);
-    const dynamic = !!selectedRoom?.dynamic_variant_price;
     const overrideRaw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
-    const overridePrice = dynamic && !isNaN(overrideRaw) && overrideRaw >= 0 ? overrideRaw : null;
+    const overridePrice = !isNaN(overrideRaw) && overrideRaw >= 0 ? overrideRaw : null;
 
     if (isPMSMode) {
       // For PMS mode, calculate based on nights
@@ -868,11 +866,7 @@ export default function BookingModal({
     // User explicitly changed variant - allow price auto-fill
     isPriceProtectedRef.current = false;
     const selectedVariant = roomVariants.find(v => v.id === variantId);
-    const selectedRoom = rooms.find(r => r.id === formData.room_id);
-    const dynamic = !!selectedRoom?.dynamic_variant_price;
-    const overrideInit = dynamic && selectedVariant
-      ? formatPrice(String(selectedVariant.price))
-      : "";
+    const overrideInit = selectedVariant ? formatPrice(String(selectedVariant.price)) : "";
     if (selectedVariant) {
       if (isMultiRoom) {
         setPrimaryRoomPrice(formatPrice(String(selectedVariant.price)));
@@ -1510,13 +1504,14 @@ export default function BookingModal({
           ? Math.max(0, calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id) + calculateProductsTotal() - calculateDiscount())
           : parseFloat(parsePrice(formData.price)),
         price_2: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : null,
-        variant_price_override: (() => {
-          const selectedRoom = rooms.find(r => r.id === formData.room_id);
-          const dynamic = !!selectedRoom?.dynamic_variant_price;
-          if (!dynamic) return null;
-          const raw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
-          return !isNaN(raw) && raw >= 0 ? raw : null;
-        })(),
+        // Snapshot the selected room rate so later rate changes never alter this booking.
+        variant_price_override: formData.booking_type === "walk_in" && formData.variant_id
+          ? (() => {
+              const raw = parseFloat((formData.variant_price_override || "").replace(/\./g, ''));
+              const selectedVariant = roomVariants.find((variant) => variant.id === formData.variant_id);
+              return !isNaN(raw) && raw >= 0 ? raw : (selectedVariant?.price ?? null);
+            })()
+          : null,
         discount_type: formData.has_discount ? formData.discount_type : null,
         discount_value: formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
         discount_applies_to: formData.has_discount ? formData.discount_applies_to : null,
@@ -1861,7 +1856,9 @@ export default function BookingModal({
               discount_type: index === 0 && formData.has_discount ? formData.discount_type : null,
               discount_value: index === 0 && formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
               discount_applies_to: index === 0 && formData.has_discount ? formData.discount_applies_to : null,
-              variant_price_override: null,
+              variant_price_override: formData.booking_type === "walk_in"
+                ? numericPrice(room.price)
+                : null,
               payment_status: bookingData.payment_status,
             }))
           : [{ ...bookingData, booking_group_id: bookingGroupId }];

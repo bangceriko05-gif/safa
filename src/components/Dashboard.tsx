@@ -552,7 +552,10 @@ export default function Dashboard() {
         const variant = booking.variant_id ? variantMap.get(booking.variant_id) : null;
         let variantPrice = 0;
         if (variant) {
-          const pricePerHour = Number(variant.price) / Number(variant.duration);
+          const savedUnitPrice = booking.variant_price_override != null
+            ? Number(booking.variant_price_override)
+            : Number(variant.price);
+          const pricePerHour = savedUnitPrice / Number(variant.duration);
           variantPrice = pricePerHour * Number(booking.duration || 0);
 
           // Apply discount if applies to room
