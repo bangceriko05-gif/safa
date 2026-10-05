@@ -23,3 +23,4 @@
 - [x] Haluskan input Total Bayar dengan menjaga tinggi Billing tetap stabil saat angka diketik.
 - [x] Pisahkan pengetikan Total Bayar dari hitung ulang formulir dan jalankan perhitungan sekali setelah pengguna selesai mengetik.
 - [x] Samakan tampilan dashboard dengan referensi, termasuk logo dan nama outlet di kiri atas.
+- [x] Verifikasi harga kamar tersimpan pada booking lama dan identifikasi riwayat perubahan harga kamar.

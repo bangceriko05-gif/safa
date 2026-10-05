@@ -413,7 +413,9 @@ export default function RoomManagement({ section }: RoomManagementProps = {}) {
           actionType: 'updated',
           entityType: 'RoomVariant',
           entityId: editingVariant.id,
-          description: `Mengubah varian ${variantData.variant_name} untuk kamar ${roomName}`,
+          description: editingVariant.price !== variantData.price
+            ? `Mengubah harga varian ${variantData.variant_name} untuk kamar ${roomName}: Rp ${editingVariant.price.toLocaleString('id-ID')} → Rp ${variantData.price.toLocaleString('id-ID')}`
+            : `Mengubah varian ${variantData.variant_name} untuk kamar ${roomName}`,
         });
 
         toast.success("Varian berhasil diupdate");
