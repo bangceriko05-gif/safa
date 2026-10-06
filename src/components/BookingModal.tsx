@@ -2227,7 +2227,7 @@ export default function BookingModal({
                 }}
                 placeholder="Masukkan total bayar OTA"
                 required
-                className="font-mono tabular-nums"
+                className="font-semibold tabular-nums"
               />
             </div>
           )}
@@ -2407,7 +2407,11 @@ export default function BookingModal({
                       <Select
                         value={room.room_id}
                         onValueChange={(roomId) => {
-                          updateAdditionalRoom(room.key, { room_id: roomId, variant_id: "", price: "" });
+                          updateAdditionalRoom(room.key, {
+                            room_id: roomId,
+                            variant_id: "",
+                            price: formData.booking_type === "ota" ? room.price : "",
+                          });
                           void fetchAdditionalRoomVariants(room.key, roomId);
                         }}
                       >
