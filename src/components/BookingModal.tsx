@@ -158,7 +158,7 @@ export default function BookingModal({
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null);
   const [paymentProofUrl2, setPaymentProofUrl2] = useState<string | null>(null);
   const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
-  const [isPriceInputFocused, setIsPriceInputFocused] = useState(false);
+  const [focusedPriceInput, setFocusedPriceInput] = useState<"ota" | "payment" | null>(null);
   const [priceInputDraft, setPriceInputDraft] = useState("");
   const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
   const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
@@ -1075,6 +1075,12 @@ export default function BookingModal({
   const handlePriceChange = (value: string) => {
     const formatted = formatPrice(value);
     setFormData((previous) => ({ ...previous, price: formatted }));
+  };
+
+  const handleSyncedPriceInput = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    setPriceInputDraft(digits);
+    handlePriceChange(digits);
   };
 
   const handlePrice2Change = (value: string) => {
@@ -2202,6 +2208,30 @@ export default function BookingModal({
             </Select>
           </div>
 
+          {formData.booking_type === "ota" && (
+            <div className="space-y-2">
+              <Label htmlFor="ota_total_price">Total Bayar OTA *</Label>
+              <Input
+                id="ota_total_price"
+                type="text"
+                inputMode="numeric"
+                value={focusedPriceInput === "ota" ? priceInputDraft : formData.price}
+                onChange={(event) => handleSyncedPriceInput(event.target.value)}
+                onFocus={(event) => {
+                  setPriceInputDraft(event.currentTarget.value.replace(/\D/g, ""));
+                  setFocusedPriceInput("ota");
+                }}
+                onBlur={() => {
+                  handlePriceChange(priceInputDraft);
+                  setFocusedPriceInput(null);
+                }}
+                placeholder="Masukkan total bayar OTA"
+                required
+                className="font-mono tabular-nums"
+              />
+            </div>
+          )}
+
           {!isMultiRoom && <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
@@ -3097,15 +3127,15 @@ export default function BookingModal({
                 id="price"
                 type="text"
                 inputMode="numeric"
-                value={isPriceInputFocused ? priceInputDraft : formData.price}
-                onChange={(e) => setPriceInputDraft(e.target.value.replace(/\D/g, ""))}
-                onFocus={() => {
-                  setPriceInputDraft(parsePrice(formData.price));
-                  setIsPriceInputFocused(true);
+                value={focusedPriceInput === "payment" ? priceInputDraft : formData.price}
+                onChange={(e) => handleSyncedPriceInput(e.target.value)}
+                onFocus={(event) => {
+                  setPriceInputDraft(event.currentTarget.value.replace(/\D/g, ""));
+                  setFocusedPriceInput("payment");
                 }}
                 onBlur={() => {
                   handlePriceChange(priceInputDraft);
-                  setIsPriceInputFocused(false);
+                  setFocusedPriceInput(null);
                 }}
                 placeholder={formData.dual_payment ? "Masukkan nilai pembayaran pertama" : "Masukan total bayar"}
                 required
