@@ -25,3 +25,4 @@
 - [x] Samakan tampilan dashboard dengan referensi, termasuk logo dan nama outlet di kiri atas.
 - [x] Verifikasi harga kamar tersimpan pada booking lama dan identifikasi riwayat perubahan harga kamar.
 - [x] Sinkronkan Total Bayar OTA di atas daftar kamar dengan Total Bayar pada bagian pembayaran.
+- [x] Pertahankan pembagian otomatis Total Bayar OTA saat kamar dipilih dan gunakan font input yang lebih modern.
