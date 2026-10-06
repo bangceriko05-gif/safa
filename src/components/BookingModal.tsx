@@ -2202,6 +2202,30 @@ export default function BookingModal({
             </Select>
           </div>
 
+          {formData.booking_type === "ota" && (
+            <div className="space-y-2">
+              <Label htmlFor="ota_total_price">Total Bayar OTA *</Label>
+              <Input
+                id="ota_total_price"
+                type="text"
+                inputMode="numeric"
+                value={isPriceInputFocused ? priceInputDraft : formData.price}
+                onChange={(event) => setPriceInputDraft(event.target.value.replace(/\D/g, ""))}
+                onFocus={() => {
+                  setPriceInputDraft(parsePrice(formData.price));
+                  setIsPriceInputFocused(true);
+                }}
+                onBlur={() => {
+                  handlePriceChange(priceInputDraft);
+                  setIsPriceInputFocused(false);
+                }}
+                placeholder="Masukkan total bayar OTA"
+                required
+                className="font-mono tabular-nums"
+              />
+            </div>
+          )}
+
           {!isMultiRoom && <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
