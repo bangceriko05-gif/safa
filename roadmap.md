@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Stabilkan pengetikan Total Bayar tanpa menghilangkan sinkronisasi dua arah, dan samakan font dengan Total Bayar OTA.
+- [x] Stabilkan pengetikan Total Bayar tanpa menghilangkan sinkronisasi dua arah, dan samakan font dengan Total Bayar OTA.
 
 - [x] Buat katalog publik `/shop` berisi produk aktif tiap outlet.
 - [x] Tambahkan pencarian, filter outlet/kategori, dan tampilan produk/varian.
