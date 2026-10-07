@@ -1080,7 +1080,8 @@ export default function BookingModal({
   const handleSyncedPriceInput = (value: string) => {
     const digits = value.replace(/\D/g, "");
     setPriceInputDraft(digits);
-    handlePriceChange(digits);
+    // Mirror the draft in both inputs, but only recalculate billing on blur.
+    // Recalculating on each digit changes the dialog height and its centered position.
   };
 
   const handlePrice2Change = (value: string) => {
@@ -2215,7 +2216,7 @@ export default function BookingModal({
                 id="ota_total_price"
                 type="text"
                 inputMode="numeric"
-                value={focusedPriceInput === "ota" ? priceInputDraft : formData.price}
+                value={focusedPriceInput ? (focusedPriceInput === "ota" ? priceInputDraft : formatPrice(priceInputDraft)) : formData.price}
                 onChange={(event) => handleSyncedPriceInput(event.target.value)}
                 onFocus={(event) => {
                   setPriceInputDraft(event.currentTarget.value.replace(/\D/g, ""));
@@ -3131,7 +3132,7 @@ export default function BookingModal({
                 id="price"
                 type="text"
                 inputMode="numeric"
-                value={focusedPriceInput === "payment" ? priceInputDraft : formData.price}
+                value={focusedPriceInput ? (focusedPriceInput === "payment" ? priceInputDraft : formatPrice(priceInputDraft)) : formData.price}
                 onChange={(e) => handleSyncedPriceInput(e.target.value)}
                 onFocus={(event) => {
                   setPriceInputDraft(event.currentTarget.value.replace(/\D/g, ""));
@@ -3143,7 +3144,7 @@ export default function BookingModal({
                 }}
                 placeholder={formData.dual_payment ? "Masukkan nilai pembayaran pertama" : "Masukan total bayar"}
                 required
-                className="font-mono tabular-nums"
+                className="font-semibold tabular-nums"
               />
               {formData.dual_payment && (
                 <p className="text-xs text-muted-foreground">
