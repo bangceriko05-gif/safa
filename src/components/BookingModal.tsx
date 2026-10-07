@@ -2973,7 +2973,7 @@ export default function BookingModal({
                       <div key={room.key} className="flex justify-between gap-4">
                         <span className="text-muted-foreground">
                           Kamar {index + 1} · {rooms.find((item) => item.id === room.room_id)?.name || "Belum dipilih"}
-                          {!isMonthly && ` · Rp ${numericPrice(room.price).toLocaleString("id-ID")} × ${multiplier} ${isPMSMode ? "malam" : "jam"}`}
+                          {!isMonthly && ` · Rp ${(formData.booking_type === "ota" && multiplier > 0 ? Math.round(numericPrice(room.price) / multiplier) : numericPrice(room.price)).toLocaleString("id-ID")} × ${multiplier} ${isPMSMode ? "malam" : "jam"}`}
                         </span>
                         <span className="font-medium tabular-nums">
                           Rp {roomTotal.toLocaleString("id-ID")}
