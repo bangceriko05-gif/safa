@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import {
@@ -160,6 +160,15 @@ export default function BookingModal({
   const [primaryRoomPrice, setPrimaryRoomPrice] = useState("");
   const [focusedPriceInput, setFocusedPriceInput] = useState<"ota" | "payment" | null>(null);
   const [priceInputDraft, setPriceInputDraft] = useState("");
+  const priceCaretRef = useRef<{ input: HTMLInputElement; position: number } | null>(null);
+  useLayoutEffect(() => {
+    const caret = priceCaretRef.current;
+    if (!caret) return;
+    if (document.activeElement === caret.input) {
+      caret.input.setSelectionRange(caret.position, caret.position);
+    }
+    priceCaretRef.current = null;
+  }, [priceInputDraft]);
   const [additionalRooms, setAdditionalRooms] = useState<AdditionalRoomBooking[]>([]);
   const [additionalRoomVariants, setAdditionalRoomVariants] = useState<Record<string, RoomVariant[]>>({});
   const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
@@ -1077,9 +1086,19 @@ export default function BookingModal({
     setFormData((previous) => ({ ...previous, price: formatted }));
   };
 
-  const handleSyncedPriceInput = (value: string) => {
+  const handleSyncedPriceInput = (input: HTMLInputElement) => {
+    const value = input.value;
     const digits = value.replace(/\D/g, "");
-    setPriceInputDraft(digits);
+    const digitsBeforeCaret = value.slice(0, input.selectionStart ?? value.length).replace(/\D/g, "").length;
+    const formatted = formatPrice(digits);
+    let position = 0;
+    let digitCount = 0;
+    while (position < formatted.length && digitCount < digitsBeforeCaret) {
+      if (/\d/.test(formatted[position])) digitCount += 1;
+      position += 1;
+    }
+    priceCaretRef.current = { input, position };
+    setPriceInputDraft(formatted);
     // Mirror the draft in both inputs, but only recalculate billing on blur.
     // Recalculating on each digit changes the dialog height and its centered position.
   };
@@ -2033,8 +2052,8 @@ export default function BookingModal({
       <DialogContent
         className={
           fullscreen || editingBooking
-            ? "max-w-none w-screen h-screen sm:rounded-none p-6 overflow-y-auto"
-            : "max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto"
+            ? "booking-dialog block max-w-none w-screen h-[100dvh] max-h-[100dvh] sm:rounded-none p-6 overflow-y-auto"
+            : "booking-dialog block max-w-4xl w-[95vw] h-[92dvh] max-h-[92dvh] overflow-y-auto"
         }
       >
         <DialogHeader>
@@ -2085,7 +2104,7 @@ export default function BookingModal({
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {/* Booking Type Selection */}
           <div className="space-y-2">
             <Label>Tipe Booking *</Label>
@@ -2216,10 +2235,10 @@ export default function BookingModal({
                 id="ota_total_price"
                 type="text"
                 inputMode="numeric"
-                value={focusedPriceInput ? (focusedPriceInput === "ota" ? priceInputDraft : formatPrice(priceInputDraft)) : formData.price}
-                onChange={(event) => handleSyncedPriceInput(event.target.value)}
+                value={focusedPriceInput ? priceInputDraft : formData.price}
+                onChange={(event) => handleSyncedPriceInput(event.currentTarget)}
                 onFocus={(event) => {
-                  setPriceInputDraft(event.currentTarget.value.replace(/\D/g, ""));
+                  setPriceInputDraft(formatPrice(event.currentTarget.value));
                   setFocusedPriceInput("ota");
                 }}
                 onBlur={() => {
@@ -2889,7 +2908,7 @@ export default function BookingModal({
           </div>
 
           {(duration > 0 || formData.booking_type === "ota") && (
-            <div className="border rounded-lg p-4 space-y-3 bg-card">
+            <div className="booking-billing border rounded-lg p-4 space-y-3 bg-card">
               <h3 className="font-semibold text-base border-b pb-2">Billing / Nota</h3>
               
               <div className="space-y-2 text-sm">
@@ -3048,8 +3067,8 @@ export default function BookingModal({
                           Rp {(parseFloat(formData.price.replace(/\./g, '')) || 0).toLocaleString('id-ID')}
                         </span>
                       </div>
-                      {formData.dual_payment && formData.price_2 && (
-                        <>
+                      {formData.dual_payment && (
+                        <div className={formData.price_2 ? "" : "invisible"}>
                           <div className="flex justify-between items-center mt-1">
                             <span className="font-semibold">Total Bayar 2:</span>
                             <span className="font-semibold text-base">
@@ -3062,7 +3081,7 @@ export default function BookingModal({
                               Rp {((parseFloat(formData.price.replace(/\./g, '')) || 0) + (parseFloat(formData.price_2.replace(/\./g, '')) || 0)).toLocaleString('id-ID')}
                             </span>
                           </div>
-                        </>
+                        </div>
                       )}
 
                       {/* Payment Difference in Billing */}
@@ -3132,10 +3151,10 @@ export default function BookingModal({
                 id="price"
                 type="text"
                 inputMode="numeric"
-                value={focusedPriceInput ? (focusedPriceInput === "payment" ? priceInputDraft : formatPrice(priceInputDraft)) : formData.price}
-                onChange={(e) => handleSyncedPriceInput(e.target.value)}
+                value={focusedPriceInput ? priceInputDraft : formData.price}
+                onChange={(e) => handleSyncedPriceInput(e.currentTarget)}
                 onFocus={(event) => {
-                  setPriceInputDraft(event.currentTarget.value.replace(/\D/g, ""));
+                  setPriceInputDraft(formatPrice(event.currentTarget.value));
                   setFocusedPriceInput("payment");
                 }}
                 onBlur={() => {
@@ -3276,9 +3295,8 @@ export default function BookingModal({
           {/* Payment Difference Alert */}
           {(() => {
             const paymentDiff = calculatePaymentDifference();
-            if (paymentDiff.isDifferent) {
               return (
-                <Alert className={paymentDiff.isOverpayment ? "border-green-500 bg-green-50" : "border-yellow-500 bg-yellow-50"}>
+                <Alert aria-hidden={!paymentDiff.isDifferent} className={cn("min-h-14", !paymentDiff.isDifferent && "invisible", paymentDiff.isOverpayment ? "border-green-500 bg-green-50" : "border-yellow-500 bg-yellow-50")}>
                   <div className="flex items-start gap-2">
                     {paymentDiff.isOverpayment ? (
                       <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
@@ -3294,8 +3312,6 @@ export default function BookingModal({
                   </div>
                 </Alert>
               );
-            }
-            return null;
           })()}
 
 

@@ -112,6 +112,37 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  /* Stable scroll surfaces prevent content updates from moving dialogs or columns. */
+  [role="dialog"], .dashboard-shell {
+    scrollbar-gutter: stable;
+    overflow-anchor: none;
+  }
+
+  .booking-billing {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .booking-billing .flex.justify-between {
+    gap: 1rem;
+    align-items: flex-start;
+    min-height: 1.5rem;
+  }
+
+  .booking-billing .flex.justify-between > span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .booking-billing .flex.justify-between > span:last-child {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .booking-billing .text-xl { font-size: 1rem; }
+    .booking-billing .text-base { font-size: 0.875rem; }
+  }
+
   .dashboard-shell {
     background: radial-gradient(circle at 72% 12%, hsl(218 100% 97%), transparent 34%), hsl(216 33% 98%);
   }
