@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +69,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const showVerification = isFeatureEnabled("reports.accounting");
   const { activeMethodNames } = usePaymentMethods();
   const [incomes, setIncomes] = useState<Income[]>([]);
+  const { requestCancellation, cancellationDialog } = useTransactionCancellation("Pemasukan");
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
   const isSuperAdmin = useIsSuperAdmin();
@@ -545,9 +547,18 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
-  const updateField = async (id: string, field: string, value: string) => {
+  const updateField = async (id: string, field: string, value: string, cancelReason?: string) => {
+    if (field === "status" && value === "batal" && !cancelReason?.trim()) {
+      requestCancellation(incomes.find((income) => income.id === id)?.bid, (reason) => updateField(id, field, value, reason));
+      return;
+    }
     try {
       const updateData: any = { [field]: value };
+      if (cancelReason) {
+        const { data, error } = await supabase.from("incomes").select("description").eq("id", id).single();
+        if (error) throw error;
+        updateData.description = appendCancellationReason(data.description, cancelReason);
+      }
       if (field === "status") {
         if (value === "tunda") updateData.process_status = "proses";
         else if (value === "selesai") updateData.process_status = "selesai";
@@ -567,6 +578,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
     } catch (error) {
       console.error("Error updating income:", error);
       toast.error("Gagal memperbarui data");
+      if (cancelReason) throw error;
     }
   };
 
@@ -1504,6 +1516,8 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
           onClose={() => setNoteDialogData(null)}
         />
       )}
+
+      {cancellationDialog}
 
       {/* Edit dialog removed - using inline detail/edit view */}
 

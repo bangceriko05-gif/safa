@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- BID transaction cancellation entry points use the shared reason-required cancellation dialog before writing cancelled status, preserving the reason in the existing notes or description field to keep confirmation and audit context consistent.
+
 - Sidebar tooltips render through a body portal above overlay layers; sidebar and main content use separate ordered stacking contexts so dashboard content cannot obscure navigation labels without changing menu layout or scroll behavior.
 
 - Multi-room bookings remain separate `bookings` rows linked by `booking_group_id`; the group owns the shared BID so room calendars and per-room pricing stay independent.

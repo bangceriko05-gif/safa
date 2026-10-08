@@ -522,6 +522,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
   };
 
   const doCancel = async () => {
+    if (!cancelReason.trim()) { toast.error("Alasan pembatalan wajib diisi"); return; }
     if (!stockInId && !bid) {
       onBack();
       return;
@@ -1262,12 +1263,12 @@ export default function StockInForm({ stockInId, onBack }: Props) {
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Dokumen ini akan ditandai sebagai dibatalkan dan tidak bisa diubah lagi.</p>
-            <Label>Alasan (opsional)</Label>
+            <Label>Alasan Pembatalan *</Label>
             <Textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={3} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCancelOpen(false)}>Tutup</Button>
-            <Button variant="destructive" onClick={doCancel}>Ya, Batalkan</Button>
+            <Button variant="destructive" onClick={doCancel} disabled={!cancelReason.trim()}>Ya, Batalkan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

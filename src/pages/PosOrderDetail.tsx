@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ export default function PosOrderDetail() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<any | null>(null);
+  const { requestCancellation, cancellationDialog } = useTransactionCancellation("Penjualan");
   const [items, setItems] = useState<OrderItem[]>([]);
   const [creatorName, setCreatorName] = useState<string>("-");
   const [customerName, setCustomerName] = useState<string>("-");
@@ -453,12 +455,19 @@ export default function PosOrderDetail() {
     }
   };
 
-  const cancelOrder = async () => {
+  const cancelOrder = async (reason?: string) => {
+    if (!id || order?.process_status === "batal") return;
+    if (!reason?.trim()) {
+      requestCancellation(order?.bid, (cancelReason) => cancelOrder(cancelReason));
+      return;
+    }
+    const { data, error: readError } = await supabase.from("booking_orders").select("note").eq("id", id).single();
+    if (readError) throw readError;
     const { error } = await supabase
-      .from("booking_orders").update({ process_status: "batal" } as any).eq("id", id!);
-    if (error) { toast.error("Gagal membatalkan"); return; }
+      .from("booking_orders").update({ process_status: "batal", note: appendCancellationReason(data.note, reason) }).eq("id", id);
+    if (error) { toast.error("Gagal membatalkan"); throw error; }
     toast.success("Order dibatalkan");
-    logChange(`Status proses: ${txt(order?.process_status || "proses")} → batal`);
+    logChange(`Status proses: ${txt(order?.process_status || "proses")} → batal. Alasan pembatalan: ${reason}`);
     load({ silent: true });
   };
 
@@ -918,6 +927,7 @@ export default function PosOrderDetail() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      {cancellationDialog}
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-4">
 
         {/* Status bar */}
@@ -968,7 +978,7 @@ export default function PosOrderDetail() {
                 <DropdownMenuItem onClick={() => setStatus("Proses")}>Proses</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatus("Selesai")}>Selesai</DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={cancelOrder}
+                  onClick={() => void cancelOrder()}
                   className="text-destructive focus:text-destructive"
                 >
                   Pembatalan
@@ -1416,12 +1426,12 @@ export default function PosOrderDetail() {
 
         {/* Batalkan orderan */}
         <div className="bg-card rounded-lg border">
-          <button
-            onClick={cancelOrder}
+          <Button variant="ghost"
+            onClick={() => void cancelOrder()}
             className="w-full py-4 flex items-center justify-center gap-2 text-destructive font-medium hover:bg-destructive/5"
           >
             <Trash2 className="h-4 w-4" /> Batalkan orderan
-          </button>
+          </Button>
         </div>
 
         {/* Log */}
