@@ -17,11 +17,13 @@ const reasonSchema = z.string().trim().min(1, "Alasan pembatalan wajib diisi").m
 interface Props {
   open: boolean;
   bookingName?: string;
+  transactionLabel?: string;
+  transactionBid?: string;
   onOpenChange: (open: boolean) => void;
   onConfirm: (reason: string) => Promise<void> | void;
 }
 
-export default function CancelBookingDialog({ open, bookingName, onOpenChange, onConfirm }: Props) {
+export default function CancelBookingDialog({ open, bookingName, transactionLabel, transactionBid, onOpenChange, onConfirm }: Props) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +46,8 @@ export default function CancelBookingDialog({ open, bookingName, onOpenChange, o
     try {
       await onConfirm(result.data);
       onOpenChange(false);
+    } catch {
+      setError("Pembatalan belum berhasil. Silakan coba lagi.");
     } finally {
       setSubmitting(false);
     }
@@ -53,9 +57,9 @@ export default function CancelBookingDialog({ open, bookingName, onOpenChange, o
     <AlertDialog open={open} onOpenChange={(next) => !submitting && onOpenChange(next)}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>Batalkan Booking?</AlertDialogTitle>
+          <AlertDialogTitle>Batalkan {transactionLabel || "Booking"}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Booking{bookingName ? ` atas nama ${bookingName}` : " ini"} akan dipindahkan ke daftar batal.
+            {transactionLabel || "Booking"}{transactionBid ? ` ${transactionBid}` : ""}{bookingName ? ` atas nama ${bookingName}` : " ini"} akan dipindahkan ke daftar batal.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
@@ -69,7 +73,7 @@ export default function CancelBookingDialog({ open, bookingName, onOpenChange, o
               setReason(event.target.value);
               if (error) setError("");
             }}
-            placeholder="Tuliskan alasan pembatalan booking ini..."
+            placeholder={`Tuliskan alasan pembatalan ${transactionLabel ? "transaksi" : "booking"} ini...`}
             maxLength={500}
             disabled={submitting}
             className="min-h-[96px] resize-y"
