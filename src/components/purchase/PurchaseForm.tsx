@@ -323,7 +323,7 @@ export default function PurchaseForm({
     if (!currentStore || !purchaseId) return;
     const isCancelled = Boolean(cancelReason) || status === "batal";
     if (isCancelled && !cancelReason?.trim()) {
-      requestCancellation(bid, (reason) => handleSubmit(reason));
+      requestCancellation(bid, async (reason) => { await handleSubmit(reason); });
       return;
     }
     const isDone = status === "selesai";
@@ -390,7 +390,7 @@ export default function PurchaseForm({
       }
 
       // If received (and not cancelled), mirror items into Inventory > Stock Masuk using the same BID
-      if (receiptStatus === "Diterima" && status !== "batal") {
+      if (receiptStatus === "Diterima" && !isCancelled) {
         const validItems = items.filter((it) => it.product_id);
         if (validItems.length === 0) {
           toast.warning("Penerimaan dicatat, namun tidak ada produk dengan referensi inventori untuk dikirim ke stok masuk.");
@@ -475,12 +475,13 @@ export default function PurchaseForm({
       // Auto-close and return to transaction list after successful save
       onSuccess();
       // If marked received (and not cancelled), navigate directly to Inventory > Stok Masuk
-      if (receiptStatus === "Diterima" && status !== "batal") {
+      if (receiptStatus === "Diterima" && !isCancelled) {
         window.dispatchEvent(new CustomEvent("anka:goto-inventory-stock-in"));
       }
     } catch (e) {
       console.error(e);
       toast.error("Gagal menyimpan pembelian");
+      if (cancelReason) throw e;
     } finally {
       setLoading(false);
     }
@@ -530,7 +531,7 @@ export default function PurchaseForm({
                 {isPaid ? "Lunas" : "Belum Bayar"}
               </Badge>
               <Select value={status} onValueChange={(v) => {
-                if (v === "batal") requestCancellation(bid, (reason) => handleSubmit(reason));
+                if (v === "batal") requestCancellation(bid, async (reason) => { await handleSubmit(reason); });
                 else setStatus(v as "proses" | "selesai");
               }}>
                 <SelectTrigger className="w-[140px]">
