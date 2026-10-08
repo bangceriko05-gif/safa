@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Wajibkan popup konfirmasi dan alasan pembatalan untuk semua transaksi ber-BID.
+- [x] Wajibkan popup konfirmasi dan alasan pembatalan untuk semua transaksi ber-BID.
 
 - [x] Tampilkan titik ribuan saat mengetik dan stabilkan perubahan Billing/Nota pada formulir booking di seluruh dashboard.
 
