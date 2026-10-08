@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Tampilkan titik ribuan saat mengetik dan stabilkan perubahan Billing/Nota pada formulir booking di seluruh dashboard.
+- [x] Tampilkan titik ribuan saat mengetik dan stabilkan perubahan Billing/Nota pada formulir booking di seluruh dashboard.
 
 - [x] Stabilkan pengetikan Total Bayar tanpa menghilangkan sinkronisasi dua arah, dan samakan font dengan Total Bayar OTA.
 
