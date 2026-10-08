@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
@@ -68,6 +69,7 @@ const TIME_RANGES = [
 export default function PurchaseManagement() {
   const { currentStore } = useStore();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const { requestCancellation, cancellationDialog } = useTransactionCancellation("Pembelian");
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; no_rek: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
@@ -190,9 +192,18 @@ export default function PurchaseManagement() {
   const { start, end } = getDateRange();
   const dateRangeLabel = `${format(start, "dd MMM yyyy", { locale: localeId })} - ${format(end, "dd MMM yyyy", { locale: localeId })}`;
 
-  const updateField = async (id: string, field: string, value: string) => {
+  const updateField = async (id: string, field: string, value: string, cancelReason?: string) => {
+    if (field === "status" && value === "batal" && !cancelReason?.trim()) {
+      requestCancellation(purchases.find((purchase) => purchase.id === id)?.bid, (reason) => updateField(id, field, value, reason));
+      return;
+    }
     try {
       const updates: any = { [field]: value };
+      if (cancelReason) {
+        const { data, error } = await supabase.from("purchases").select("notes").eq("id", id).single();
+        if (error) throw error;
+        updates.notes = appendCancellationReason(data.notes, cancelReason);
+      }
       // The status dropdown directly drives which tab (Proses / Selesai / Batal) the BID lives in.
       if (field === "status") {
         updates.process_status = value;
@@ -237,6 +248,7 @@ export default function PurchaseManagement() {
     } catch (error) {
       console.error("Error updating purchase:", error);
       toast.error("Gagal memperbarui data");
+      if (cancelReason) throw error;
     }
   };
 
@@ -702,6 +714,7 @@ export default function PurchaseManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {cancellationDialog}
     </div>
   );
 }

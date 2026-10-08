@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
@@ -66,6 +67,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const showVerification = isFeatureEnabled("reports.accounting");
   const { activeMethodNames } = usePaymentMethods();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { requestCancellation, cancellationDialog } = useTransactionCancellation("Pengeluaran");
   const [loading, setLoading] = useState(true);
   const [processTab, setProcessTab] = useState("proses");
   const isSuperAdmin = useIsSuperAdmin();
@@ -476,9 +478,18 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
-  const updateField = async (id: string, field: string, value: string) => {
+  const updateField = async (id: string, field: string, value: string, cancelReason?: string) => {
+    if (field === "status" && value === "batal" && !cancelReason?.trim()) {
+      requestCancellation(expenses.find((expense) => expense.id === id)?.bid, (reason) => updateField(id, field, value, reason));
+      return;
+    }
     try {
       const updateData: any = { [field]: value };
+      if (cancelReason) {
+        const { data, error } = await supabase.from("expenses").select("description").eq("id", id).single();
+        if (error) throw error;
+        updateData.description = appendCancellationReason(data.description, cancelReason);
+      }
       if (field === "status") {
         if (value === "tunda") updateData.process_status = "proses";
         else if (value === "selesai") updateData.process_status = "selesai";
@@ -505,6 +516,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
     } catch (error) {
       console.error("Error updating expense:", error);
       toast.error("Gagal memperbarui data");
+      if (cancelReason) throw error;
     }
   };
 
@@ -1405,6 +1417,7 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
       )}
 
       {/* Category Management Dialog */}
+      {cancellationDialog}
       <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
         <DialogContent>
           <DialogHeader>

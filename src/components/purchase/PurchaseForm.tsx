@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export default function PurchaseForm({
   const [notes, setNotes] = useState("");
   // UI status mirrors process_status: "proses" | "selesai" | "batal"
   const [status, setStatus] = useState<"proses" | "selesai" | "batal">("proses");
+  const { requestCancellation, cancellationDialog } = useTransactionCancellation("Pembelian");
   const [verificationStatus, setVerificationStatus] = useState<"Unverified" | "Verified">("Unverified");
   const [items, setItems] = useState<Item[]>([]);
   const [discountAll, setDiscountAll] = useState(0);
@@ -317,9 +319,13 @@ export default function PurchaseForm({
 
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (cancelReason?: string) => {
     if (!currentStore || !purchaseId) return;
-    const isCancelled = status === "batal";
+    const isCancelled = Boolean(cancelReason) || status === "batal";
+    if (isCancelled && !cancelReason?.trim()) {
+      requestCancellation(bid, (reason) => handleSubmit(reason));
+      return;
+    }
     const isDone = status === "selesai";
     if (!isCancelled && !supplier) return toast.error("Pilih supplier terlebih dahulu");
     if (!isCancelled && items.length === 0) return toast.error("Tambahkan minimal 1 produk");
@@ -335,7 +341,7 @@ export default function PurchaseForm({
         date,
         payment_method: paymentMethod,
         reff_no: reffNo || null,
-        notes: notes || null,
+        notes: cancelReason ? appendCancellationReason(notes, cancelReason) : notes || null,
         amount: grandTotal,
         discount_all: discountAll,
         rounding_amount: roundingAmount,
@@ -351,7 +357,7 @@ export default function PurchaseForm({
         is_draft: false,
         posted_by: user.id,
         posted_at: new Date().toISOString(),
-        process_status: status,
+        process_status: isCancelled ? "batal" : status,
       };
       if (verificationStatus === "Verified") {
         update.verified_by = user.id;
@@ -523,7 +529,10 @@ export default function PurchaseForm({
               <Badge className={isPaid ? "bg-green-500" : "bg-red-500"}>
                 {isPaid ? "Lunas" : "Belum Bayar"}
               </Badge>
-              <Select value={status} onValueChange={(v) => setStatus(v as "proses" | "selesai" | "batal")}>
+              <Select value={status} onValueChange={(v) => {
+                if (v === "batal") requestCancellation(bid, (reason) => handleSubmit(reason));
+                else setStatus(v as "proses" | "selesai");
+              }}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -533,7 +542,7 @@ export default function PurchaseForm({
               <SelectItem value="batal">Batal</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={handleSubmit} disabled={loading}>
+              <Button onClick={() => void handleSubmit()} disabled={loading}>
                 {loading ? "Menyimpan..." : "Simpan"}
               </Button>
             </div>
@@ -961,6 +970,8 @@ export default function PurchaseForm({
           setDiscountAllInput(value);
         }}
       />
+
+      {cancellationDialog}
 
       <PaymentDialog
         open={paymentDialogOpen}
