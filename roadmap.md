@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Percepat semua menu laporan: kurangi pemuatan ulang, siapkan halaman sebelum dipilih, dan verifikasi pergantian menu.
+- [x] Percepat semua menu laporan: kurangi pemuatan ulang, siapkan halaman sebelum dipilih, dan verifikasi pergantian menu.
 
 - [x] Wajibkan popup konfirmasi dan alasan pembatalan untuk semua transaksi ber-BID.
 
