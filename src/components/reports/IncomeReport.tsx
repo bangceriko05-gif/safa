@@ -1,3 +1,4 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,13 +50,15 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
     fetchData();
   }, [timeRange, customDateRange, currentStore?.id, processStatusFilter]);
 
-  const fetchData = async () => {
+  useReportRefresh(currentStore?.id, ["incomes"], () => { void fetchData(true); });
+
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
     const range = getDateRange(timeRange, customDateRange);
     const cacheKey = `IncomeReport:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}:${processStatusFilter}`;
     const cached = getReportCache<IncomeRow[]>(cacheKey);
     if (cached) { setRows(cached); }
-    setLoading(!cached);
+    if (!silent) setLoading(!cached);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");

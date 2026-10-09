@@ -1,3 +1,4 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ReportPagination, { usePagination } from "./ReportPagination";
@@ -193,6 +194,8 @@ export default function SalesReport() {
       if (data.user) setCurrentUserId(data.user.id);
     });
   }, []);
+
+  useReportRefresh(currentStore?.id, ["bookings", "booking_orders", "expenses"], () => { void fetchData(true); });
 
   const fetchData = async (silent = false) => {
     if (!currentStore) return;

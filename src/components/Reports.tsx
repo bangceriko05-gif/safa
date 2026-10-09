@@ -1,3 +1,4 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -408,7 +409,9 @@ export default function Reports() {
     }
   };
 
-  const fetchData = async () => {
+  useReportRefresh(currentStore?.id, ["bookings", "booking_orders", "incomes", "expenses", "purchases"], () => { void fetchData(true); });
+
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
     
     const range = getDateRangeInternal(timeRange);
@@ -417,7 +420,7 @@ export default function Reports() {
     if (cached) {
       setStats(cached.stats); setExpenses(cached.expenses); setAdditionalIncomes(cached.incomes); setBookingPayments(cached.payments);
     }
-    setLoading(!cached);
+    if (!silent) setLoading(!cached);
     try {
       const { startDate, endDate } = range;
       const startDateStr = format(startDate, "yyyy-MM-dd");
