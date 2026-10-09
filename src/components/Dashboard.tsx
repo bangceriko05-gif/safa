@@ -125,11 +125,13 @@ export default function Dashboard() {
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "transactions");
+  const [reportsVisited, setReportsVisited] = useState(activeTab === "reports");
   const [dashboardSearch, setDashboardSearch] = useState("");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
   const [customersSection, setCustomersSection] = useState<"customers" | "suppliers" | "crm" | null>(null);
   const [websiteSection, setWebsiteSection] = useState<"storefront" | "orders" | "payments" | "barcode">("storefront");
   const setActiveTab = (tab: string) => {
+    if (tab === "reports") setReportsVisited(true);
     setActiveTabRaw(tab);
     const params = new URLSearchParams(searchParams);
     params.set("tab", tab);
@@ -1090,8 +1092,8 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="reports" forceMount className={`mt-6 ${activeTab !== "reports" ? "hidden" : ""}`}>
-            {activeTab === "reports" && (isFeatureEnabled("reports") ? (
-              <Reports />
+            {(activeTab === "reports" || reportsVisited) && (isFeatureEnabled("reports") ? (
+              <Reports key={currentStore?.id} />
             ) : (
               <FeatureInactiveNotice featureName="Laporan" icon={FileText} price={getFeatureInfo("reports").price} description={getFeatureInfo("reports").description} />
             ))}
