@@ -57,43 +57,42 @@ export default function TaxReport() {
       const startStr = format(startDate, "yyyy-MM-dd");
       const endStr = format(endDate, "yyyy-MM-dd");
 
-      // 1. Bookings (kamar) dengan PPN
-      const { data: bks } = await supabase
+      const results = await Promise.all([
+supabase
         .from("bookings")
         .select("id, bid, date, customer_name, price, price_2, dual_payment, tax_enabled, tax_mode, tax_rate, tax_amount, dpp_amount")
         .eq("store_id", currentStore.id)
         .eq("tax_enabled", true)
         .gte("date", startStr)
         .lte("date", endStr)
-        .neq("status", "BATAL");
-
-      // 2. booking_products dengan PPN
-      const { data: bps } = await supabase
+        .neq("status", "BATAL"),
+supabase
         .from("booking_products")
         .select("id, product_name, quantity, subtotal, tax_enabled, tax_mode, tax_rate, tax_amount, dpp_amount, booking_id, bookings!inner(bid, date, store_id, status)")
         .eq("tax_enabled", true)
         .eq("bookings.store_id", currentStore.id)
         .gte("bookings.date", startStr)
         .lte("bookings.date", endStr)
-        .neq("bookings.status", "BATAL");
-
-      // 3. incomes dengan PPN
-      const { data: incs } = await supabase
+        .neq("bookings.status", "BATAL"),
+supabase
         .from("incomes")
         .select("id, bid, date, description, amount, tax_enabled, tax_mode, tax_rate, tax_amount, dpp_amount")
         .eq("store_id", currentStore.id)
         .eq("tax_enabled", true)
         .gte("date", startStr)
-        .lte("date", endStr);
-
-      // 4. income_products dengan PPN
-      const { data: ips } = await supabase
+        .lte("date", endStr),
+supabase
         .from("income_products")
         .select("id, product_name, quantity, subtotal, tax_enabled, tax_mode, tax_rate, tax_amount, dpp_amount, income_id, incomes!inner(bid, date, store_id)")
         .eq("tax_enabled", true)
         .eq("incomes.store_id", currentStore.id)
         .gte("incomes.date", startStr)
-        .lte("incomes.date", endStr);
+        .lte("incomes.date", endStr)
+      ]);
+      const [bks, bps, incs, ips] = results.map((result) => {
+        if (result.error) throw result.error;
+        return result.data;
+      });
 
       const out: TaxRow[] = [];
 

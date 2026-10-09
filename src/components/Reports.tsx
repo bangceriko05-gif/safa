@@ -316,10 +316,8 @@ export default function Reports() {
 
   useEffect(() => {
     if (!currentStore) return;
-    if (activeTab === "overview") {
-      fetchData();
-    }
-  }, [timeRange, customDateRange, currentStore?.id, activeTab]);
+    fetchData();
+  }, [timeRange, customDateRange, currentStore?.id]);
 
   useEffect(() => {
     if (showIncomeForm) { fetchProducts(); fetchCustomers(); }

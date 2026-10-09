@@ -952,7 +952,7 @@ export default function Dashboard() {
 
 
           <TabsContent value="bookings" forceMount className={`space-y-6 mt-6 ${activeTab !== "bookings" ? "hidden" : ""}`}>
-            {isFeatureEnabled("calendar") ? (
+            {activeTab === "bookings" && (isFeatureEnabled("calendar") ? (
               <>
                 {/* Room Summary - shown for all store types */}
                 <RoomSummary selectedDate={selectedDate} />
@@ -1009,7 +1009,7 @@ export default function Dashboard() {
               </>
             ) : (
               <FeatureInactiveNotice featureName="Kalender" icon={Calendar} price={getFeatureInfo("calendar").price} description={getFeatureInfo("calendar").description} />
-            )}
+            ))}
           </TabsContent>
 
           <TabsContent value="transactions" forceMount className={`mt-6 ${activeTab !== "transactions" ? "hidden" : ""}`}>

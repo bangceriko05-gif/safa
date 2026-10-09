@@ -1,3 +1,4 @@
+import RetainedReportPanel from "./RetainedReportPanel";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -271,9 +272,8 @@ export default function PurchaseTransactionReport() {
         )}
       </div>
 
-      {subView === "monthly" ? (
-        <MonthlyPurchaseAnalysis />
-      ) : loading ? (
+      <RetainedReportPanel active={subView === "monthly"}><MonthlyPurchaseAnalysis /></RetainedReportPanel>
+      {subView === "monthly" ? null : loading ? (
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
