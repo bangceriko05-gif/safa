@@ -1,3 +1,4 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,9 +50,11 @@ export default function PaymentMethodReport() {
     fetchData();
   }, [timeRange, customDateRange, currentStore]);
 
-  const fetchData = async () => {
+  useReportRefresh(currentStore?.id, ["bookings", "incomes"], () => { void fetchData(true); });
+
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);

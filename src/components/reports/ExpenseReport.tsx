@@ -1,3 +1,4 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import { getReportCache, setReportCache } from "@/utils/reportCache";
 
 interface ExpenseRow {
   id: string;
@@ -47,11 +49,17 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [timeRange, customDateRange, currentStore, processStatusFilter]);
+  }, [timeRange, customDateRange, currentStore?.id, processStatusFilter]);
 
-  const fetchData = async () => {
+  useReportRefresh(currentStore?.id, ["expenses"], () => { void fetchData(true); });
+
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    const range = getDateRange(timeRange, customDateRange);
+    const cacheKey = `ExpenseReport:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}:${processStatusFilter}`;
+    const cached = getReportCache<ExpenseRow[]>(cacheKey);
+    if (cached) { setRows(cached); }
+    if (!silent) setLoading(!cached);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
@@ -81,7 +89,9 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
         const { data: profiles } = await supabase.from("profiles").select("id, name").in("id", creatorIds);
         if (profiles) nameMap = Object.fromEntries(profiles.map((p) => [p.id, p.name]));
       }
-      setRows(list.map((r) => ({ ...r, creator_name: nameMap[r.created_by] || "-" })));
+      const nextRows = list.map((r) => ({ ...r, creator_name: nameMap[r.created_by] || "-" }));
+      setRows(nextRows);
+      setReportCache(cacheKey, nextRows);
     } catch (err) {
       console.error(err);
       toast.error("Gagal memuat data pengeluaran");

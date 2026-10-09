@@ -14,6 +14,7 @@ import ChartOfAccountsList from "./accounting/ChartOfAccountsList";
 import AccountingTransactions from "./accounting/AccountingTransactions";
 import AccountingActivityLog from "./accounting/AccountingActivityLog";
 import TaxReport from "./TaxReport";
+import RetainedReportPanel from "./RetainedReportPanel";
 
 type AccountingTab = "transaksi" | "balance" | "pl" | "cashflow" | "journal" | "payable" | "receivable" | "assets" | "bank" | "coa" | "tax" | "log";
 
@@ -63,7 +64,6 @@ export default function AccountingReport() {
 
   const activeTabData = tabs.find(t => t.key === activeTab);
   const ActiveIcon = activeTabData?.icon;
-  const ActiveComponent = COMPONENTS[activeTab];
 
   return (
     <div className="space-y-4 font-jakarta antialiased">
@@ -87,7 +87,14 @@ export default function AccountingReport() {
       </Select>
 
       <div className="mt-4">
-        <ActiveComponent />
+        {tabs.map(({ key }) => {
+          const ReportComponent = COMPONENTS[key];
+          return (
+            <RetainedReportPanel key={key} active={activeTab === key}>
+              <ReportComponent />
+            </RetainedReportPanel>
+          );
+        })}
       </div>
     </div>
   );

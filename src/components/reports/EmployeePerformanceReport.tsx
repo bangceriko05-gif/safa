@@ -1,3 +1,4 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,9 +53,11 @@ export default function EmployeePerformanceReport() {
     fetchData();
   }, [timeRange, customDateRange, currentStore]);
 
-  const fetchData = async () => {
+  useReportRefresh(currentStore?.id, ["rooms", "bookings"], () => { void fetchData(true); });
+
+  const fetchData = async (silent = false) => {
     if (!currentStore) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
@@ -119,7 +122,10 @@ export default function EmployeePerformanceReport() {
       const { data: bookingsData } = await supabase
         .from("bookings")
         .select("id, bid, room_id, customer_name, date, checked_in_at, checked_out_at")
+        .eq("store_id", currentStore.id)
         .in("room_id", roomIds)
+        .gte("checked_out_at", new Date(Math.min(...statusData.map(s => s.updated_at ? Date.parse(s.updated_at) : Date.now())) - 24 * 60 * 60 * 1000).toISOString())
+        .lte("checked_out_at", new Date(Math.max(...statusData.map(s => s.updated_at ? Date.parse(s.updated_at) : Date.now()))).toISOString())
         .not("checked_out_at", "is", null)
         .order("checked_out_at", { ascending: false });
 
@@ -134,7 +140,7 @@ export default function EmployeePerformanceReport() {
           const roomBookings = bookingsData.filter(b => b.room_id === s.room_id && b.checked_out_at);
           
           for (const booking of roomBookings) {
-            const checkoutTime = parseISO(booking.checked_out_at!);
+            const checkoutTime = parseISO(booking.checked_out_at || "");
             const diffMinutes = differenceInMinutes(roomReadyTime, checkoutTime);
             
             // The checkout should be before the room was readied and within reasonable time (e.g., 24 hours)

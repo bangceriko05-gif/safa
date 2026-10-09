@@ -1,3 +1,5 @@
+import { useReportRefresh } from "@/hooks/useReportRefresh";
+import RetainedReportPanel from "./RetainedReportPanel";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ReportPagination, { usePagination } from "./ReportPagination";
@@ -194,6 +196,8 @@ export default function SalesReport() {
     });
   }, []);
 
+  useReportRefresh(currentStore?.id, ["bookings", "booking_orders", "expenses"], () => { void fetchData(true); });
+
   const fetchData = async (silent = false) => {
     if (!currentStore) return;
     if (!silent) setLoading(true);
@@ -204,7 +208,7 @@ export default function SalesReport() {
       const endDateStr = format(endDate, "yyyy-MM-dd");
 
       // Fetch all bookings including cancelled
-      const { data: bookingsData, error: bookingsError } = await supabase
+      const [bookingsResult, ordersResult, expensesResult] = await Promise.all([supabase
         .from("bookings")
         .select(`
           id, bid, customer_name, phone, duration, price, price_2, 
@@ -219,7 +223,26 @@ export default function SalesReport() {
         .eq("store_id", currentStore.id)
         .gte("date", startDateStr)
         .lte("date", endDateStr)
-        .order("date", { ascending: false });
+        .order("date", { ascending: false }),
+        supabase
+        .from("booking_orders")
+        .select(`
+          id, bid, date, customer_name, payment_method, payment_proof_urls, process_status,
+          booking_order_items ( id, product_name, quantity, subtotal, product_id, products(purchase_price) )
+        `)
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr),
+        supabase
+        .from("expenses")
+        .select("id, amount, description, category, date")
+        .eq("store_id", currentStore.id)
+        .gte("date", startDateStr)
+        .lte("date", endDateStr),
+      ]);
+      const { data: bookingsData, error: bookingsError } = bookingsResult;
+      const { data: ordersData, error: ordersError } = ordersResult;
+      const { data: expensesData, error: expensesError } = expensesResult;
 
       if (bookingsError) throw bookingsError;
 
@@ -229,6 +252,7 @@ export default function SalesReport() {
         .filter((id: string | null) => id !== null);
       
       let variantDataMap: { [key: string]: { variant_name: string; booking_duration_type: string | null; booking_duration_value: number | null } } = {};
+      const fetchVariants = async () => {
       if (variantIds.length > 0) {
         const { data: variants } = await supabase
           .from("room_variants")
@@ -246,6 +270,8 @@ export default function SalesReport() {
         }
       }
 
+      };
+
       // Fetch user names for checked_in_by and checked_out_by
       const userIds = new Set<string>();
       (bookingsData || []).forEach((b: any) => {
@@ -254,6 +280,7 @@ export default function SalesReport() {
       });
 
       let userNameMap: { [key: string]: string } = {};
+      const fetchProfiles = async () => {
       if (userIds.size > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -267,9 +294,12 @@ export default function SalesReport() {
         }
       }
 
+      };
+
       // Fetch booking products
       const bookingIds = (bookingsData || []).map((b: any) => b.id);
       let productsData: any[] = [];
+      const fetchProducts = async () => {
       if (bookingIds.length > 0) {
         const { data: products, error: productsError } = await supabase
           .from("booking_products")
@@ -281,16 +311,8 @@ export default function SalesReport() {
         }
       }
 
-      // Fetch POS / booking orders items (penjualan item dari POS)
-      const { data: ordersData, error: ordersError } = await supabase
-        .from("booking_orders")
-        .select(`
-          id, bid, date, customer_name, payment_method, payment_proof_urls, process_status,
-          booking_order_items ( id, product_name, quantity, subtotal, product_id, products(purchase_price) )
-        `)
-        .eq("store_id", currentStore.id)
-        .gte("date", startDateStr)
-        .lte("date", endDateStr);
+      };
+      await Promise.all([fetchVariants(), fetchProfiles(), fetchProducts()]);
 
       if (ordersError) console.error("Error fetching POS orders:", ordersError);
 
@@ -312,14 +334,6 @@ export default function SalesReport() {
             purchase_price: Number(it.products?.purchase_price) || 0,
           }));
         });
-
-      // Fetch expenses for profit/loss
-      const { data: expensesData, error: expensesError } = await supabase
-        .from("expenses")
-        .select("id, amount, description, category, date")
-        .eq("store_id", currentStore.id)
-        .gte("date", startDateStr)
-        .lte("date", endDateStr);
 
       if (expensesError) throw expensesError;
 
@@ -897,13 +911,10 @@ export default function SalesReport() {
               )}
             </div>
 
-            {activeTab === "tax" ? (
-              <TaxReport />
-            ) : activeTab === "customer-type" ? (
-              <CustomerTypeReport />
-            ) : activeTab === "channel" ? (
-              <SalesChannelReport />
-            ) : (
+            <RetainedReportPanel active={activeTab === "tax"}><TaxReport /></RetainedReportPanel>
+            <RetainedReportPanel active={activeTab === "customer-type"}><CustomerTypeReport /></RetainedReportPanel>
+            <RetainedReportPanel active={activeTab === "channel"}><SalesChannelReport /></RetainedReportPanel>
+            {activeTab !== "tax" && activeTab !== "customer-type" && activeTab !== "channel" && (
               <>
 
             {/* Rincian Penjualan */}

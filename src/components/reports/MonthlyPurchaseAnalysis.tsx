@@ -44,27 +44,22 @@ export default function MonthlyPurchaseAnalysis() {
     if (!currentStore) return;
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStore, month]);
+  }, [currentStore?.id, month]);
 
   const aggregate = async (from: Date, to: Date): Promise<Record<string, Agg>> => {
-    const { data: purchases } = await supabase
+    if (!currentStore) return {};
+    const { data: purchases, error } = await supabase
       .from("purchases" as any)
-      .select("id, date, supplier_name, process_status")
-      .eq("store_id", currentStore!.id)
+      .select("id, supplier_name, purchase_items(purchase_id, product_name, quantity, unit_price, subtotal)")
+      .eq("store_id", currentStore.id)
       .in("process_status", ["proses", "selesai"])
       .gte("date", format(from, "yyyy-MM-dd"))
       .lte("date", format(to, "yyyy-MM-dd"));
-
+    if (error) throw error;
     const list = (purchases || []) as any[];
-    if (list.length === 0) return {};
-
     const supplierByPurchase: Record<string, string> = {};
     list.forEach((p) => (supplierByPurchase[p.id] = p.supplier_name || "-"));
-
-    const { data: itemsData } = await supabase
-      .from("purchase_items" as any)
-      .select("purchase_id, product_name, quantity, unit_price, subtotal")
-      .in("purchase_id", list.map((p) => p.id));
+    const itemsData = list.flatMap((p) => p.purchase_items || []);
 
     const map: Record<string, Agg> = {};
     (itemsData || []).forEach((it: any) => {

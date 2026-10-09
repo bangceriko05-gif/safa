@@ -1,3 +1,4 @@
+import RetainedReportPanel from "./RetainedReportPanel";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import { getReportCache, setReportCache } from "@/utils/reportCache";
 import MonthlyPurchaseAnalysis from "./MonthlyPurchaseAnalysis";
 import ReportPagination, { usePagination } from "./ReportPagination";
 
@@ -56,7 +58,7 @@ export default function PurchaseTransactionReport() {
     if (!currentStore) return;
     if (subView === "monthly") return;
     fetchData();
-  }, [timeRange, customDateRange, currentStore, subView]);
+  }, [timeRange, customDateRange, currentStore?.id, subView]);
 
   // Realtime: silently refresh when purchases change so the report never
   // shows stale data (no loading spinner on background refresh).
@@ -77,7 +79,11 @@ export default function PurchaseTransactionReport() {
 
   const fetchData = async (silent = false) => {
     if (!currentStore) return;
-    if (!silent) setLoading(true);
+    const range = getDateRange(timeRange, customDateRange);
+    const cacheKey = `PurchaseTransactionReport:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}:${(subView === "cancelled" ? "batal" : "active")}`;
+    const cached = getReportCache<{ rows: PurchaseRow[]; items: Record<string, PurchaseItemRow[]> }>(cacheKey);
+    if (cached) { setRows(cached.rows); setItems(cached.items); }
+    setLoading(!cached && !silent);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
@@ -108,6 +114,7 @@ export default function PurchaseTransactionReport() {
       });
       setRows(list);
       setItems(map);
+      setReportCache(cacheKey, { rows: list, items: map });
     } catch (err) {
       console.error("Error loading purchases:", err);
       if (!silent) toast.error("Gagal memuat data pembelian");
@@ -265,9 +272,8 @@ export default function PurchaseTransactionReport() {
         )}
       </div>
 
-      {subView === "monthly" ? (
-        <MonthlyPurchaseAnalysis />
-      ) : loading ? (
+      <RetainedReportPanel active={subView === "monthly"}><MonthlyPurchaseAnalysis /></RetainedReportPanel>
+      {subView === "monthly" ? null : loading ? (
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
