@@ -1,4 +1,5 @@
 import { useReportRefresh } from "@/hooks/useReportRefresh";
+import RetainedReportPanel from "./RetainedReportPanel";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ReportPagination, { usePagination } from "./ReportPagination";
@@ -910,13 +911,10 @@ export default function SalesReport() {
               )}
             </div>
 
-            {activeTab === "tax" ? (
-              <TaxReport />
-            ) : activeTab === "customer-type" ? (
-              <CustomerTypeReport />
-            ) : activeTab === "channel" ? (
-              <SalesChannelReport />
-            ) : (
+            <RetainedReportPanel active={activeTab === "tax"}><TaxReport /></RetainedReportPanel>
+            <RetainedReportPanel active={activeTab === "customer-type"}><CustomerTypeReport /></RetainedReportPanel>
+            <RetainedReportPanel active={activeTab === "channel"}><SalesChannelReport /></RetainedReportPanel>
+            {activeTab !== "tax" && activeTab !== "customer-type" && activeTab !== "channel" && (
               <>
 
             {/* Rincian Penjualan */}
