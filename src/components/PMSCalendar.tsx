@@ -1,6 +1,7 @@
 import AnkaLoader from "@/components/AnkaLoader";
 import { useEffect, useState, useMemo } from "react";
 import BookingPopoverContent from "@/components/BookingPopoverContent";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1271,8 +1272,8 @@ export default function PMSCalendar({
                                 )}
                                 colSpan={colspan}
                               >
-                                <Popover>
-                                  <PopoverTrigger asChild>
+                                <Dialog>
+                                  <DialogTrigger asChild>
                                     <Card
                                       className="p-2 h-full cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg relative min-h-[60px]"
                                       style={{
@@ -1371,8 +1372,9 @@ export default function PMSCalendar({
                                         )}
                                       </div>
                                     </Card>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-80 p-4 bg-card border-2 shadow-xl z-50" side="right" align="start">
+                                  </DialogTrigger>
+                                  <DialogContent className="w-[calc(100%-2rem)] max-w-sm max-h-[85dvh] overflow-y-auto p-4 bg-card border-2 shadow-xl" aria-describedby={undefined}>
+                                    <DialogTitle className="sr-only">Detail Booking</DialogTitle>
                                     <BookingPopoverContent
                                       booking={booking}
                                       nights={nights}
@@ -1389,8 +1391,8 @@ export default function PMSCalendar({
                                       onDeleteBooking={setDeleteBookingId}
                                       addDays={addDays}
                                     />
-                                  </PopoverContent>
-                                </Popover>
+                                  </DialogContent>
+                                </Dialog>
                               </td>
                             );
                           }
