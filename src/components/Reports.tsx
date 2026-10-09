@@ -24,19 +24,19 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
-const IncomeExpenseReportLazy = lazy(() => import("./reports/IncomeExpenseReport"));
+const IncomeExpenseReportLazy = lazyWithRetry(() => import("./reports/IncomeExpenseReport"));
 const IncomeExpenseReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <IncomeExpenseReportLazy {...props} />
   </Suspense>
 );
-const PurchaseReportLazy = lazy(() => import("./reports/PurchaseReport"));
+const PurchaseReportLazy = lazyWithRetry(() => import("./reports/PurchaseReport"));
 const PurchaseReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <PurchaseReportLazy {...props} />
   </Suspense>
 );
-const PurchaseTransactionReportLazy = lazy(() => import("./reports/PurchaseTransactionReport"));
+const PurchaseTransactionReportLazy = lazyWithRetry(() => import("./reports/PurchaseTransactionReport"));
 const PurchaseTransactionReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <PurchaseTransactionReportLazy {...props} />
@@ -44,20 +44,20 @@ const PurchaseTransactionReport = (props: any) => (
 );
 import IncomeReport from "./reports/IncomeReport";
 import ExpenseReport from "./reports/ExpenseReport";
-const ExpenseChartReportLazy = lazy(() => import("./reports/ExpenseChartReport"));
+const ExpenseChartReportLazy = lazyWithRetry(() => import("./reports/ExpenseChartReport"));
 const ExpenseChartReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <ExpenseChartReportLazy {...props} />
   </Suspense>
 );
-const EmployeePerformanceReportLazy = lazy(() => import("./reports/EmployeePerformanceReport"));
+const EmployeePerformanceReportLazy = lazyWithRetry(() => import("./reports/EmployeePerformanceReport"));
 const EmployeePerformanceReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <EmployeePerformanceReportLazy {...props} />
   </Suspense>
 );
 import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } from "./reports/ReportDateFilter";
-const OccupancyChartLazy = lazy(() => import("./reports/OccupancyChart"));
+const OccupancyChartLazy = lazyWithRetry(() => import("./reports/OccupancyChart"));
 const OccupancyChart = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <OccupancyChartLazy {...props} />
@@ -66,38 +66,40 @@ const OccupancyChart = (props: any) => (
 import RoomOccupancyList from "./reports/RoomOccupancyList";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
-const AccountingReportLazy = lazy(() => import("./reports/AccountingReport"));
+const AccountingReportLazy = lazyWithRetry(() => import("./reports/AccountingReport"));
 const AccountingReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <AccountingReportLazy {...props} />
   </Suspense>
 );
-const PaymentMethodReportLazy = lazy(() => import("./reports/PaymentMethodReport"));
+const PaymentMethodReportLazy = lazyWithRetry(() => import("./reports/PaymentMethodReport"));
 const PaymentMethodReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <PaymentMethodReportLazy {...props} />
   </Suspense>
 );
-const TaxReportLazy = lazy(() => import("./reports/TaxReport"));
+const TaxReportLazy = lazyWithRetry(() => import("./reports/TaxReport"));
 const TaxReport = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <TaxReportLazy {...props} />
   </Suspense>
 );
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
-const ProfitLossLazy = lazy(() => import("./reports/accounting/ProfitLoss"));
+import RetainedReportPanel from "./reports/RetainedReportPanel";
+import { lazyWithRetry } from "@/utils/lazyWithRetry";
+const ProfitLossLazy = lazyWithRetry(() => import("./reports/accounting/ProfitLoss"));
 const ProfitLoss = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <ProfitLossLazy {...props} />
   </Suspense>
 );
-const CashFlowLazy = lazy(() => import("./reports/accounting/CashFlow"));
+const CashFlowLazy = lazyWithRetry(() => import("./reports/accounting/CashFlow"));
 const CashFlow = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <CashFlowLazy {...props} />
   </Suspense>
 );
-const BalanceSheetLazy = lazy(() => import("./reports/accounting/BalanceSheet"));
+const BalanceSheetLazy = lazyWithRetry(() => import("./reports/accounting/BalanceSheet"));
 const BalanceSheet = (props: any) => (
   <Suspense fallback={<div className="py-10"><AnkaLoader /></div>}>
     <BalanceSheetLazy {...props} />
@@ -178,6 +180,16 @@ interface BookingPaymentDetail {
   payment_method: string;
   type: 'booking' | 'booking_2';
 }
+
+const warmReport = (tab: string | undefined) => {
+  const loaders: Record<string, () => Promise<unknown>> = {
+    purchase: () => import("./reports/PurchaseTransactionReport"),
+    employee: () => import("./reports/EmployeePerformanceReport"),
+    "payment-method": () => import("./reports/PaymentMethodReport"),
+    accounting: () => import("./reports/AccountingReport"),
+  };
+  void (tab ? loaders[tab]?.() : undefined)?.catch(() => undefined);
+};
 
 type ReportTab = "overview" | "sales" | "incomes" | "expenses" | "payment-method" | "purchase" | "employee" | "accounting";
 
@@ -304,11 +316,13 @@ export default function Reports() {
     if (!currentStore) return;
     if (activeTab === "overview") {
       fetchData();
-      fetchProducts();
-      fetchCustomers();
-      fetchExpenseCategories();
     }
-  }, [timeRange, customDateRange, currentStore, activeTab]);
+  }, [timeRange, customDateRange, currentStore?.id]);
+
+  useEffect(() => {
+    if (showIncomeForm) { fetchProducts(); fetchCustomers(); }
+    if (showExpenseForm || showCategoryManagement) fetchExpenseCategories();
+  }, [showIncomeForm, showExpenseForm, showCategoryManagement, currentStore?.id]);
 
   const fetchExpenseCategories = async () => {
     if (!currentStore) return;
@@ -1272,57 +1286,61 @@ export default function Reports() {
         <NoAccessMessage featureName="Laporan" />
       ) : (
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
-        <TabsList className="flex w-full">
+        <TabsList className="flex w-full" onPointerOver={(event) => {
+          const tab = (event.target as HTMLElement).closest<HTMLElement>('[role="tab"]');
+          if (tab) warmReport(tab.dataset.report);
+        }} onFocusCapture={(event) => { warmReport((event.target as HTMLElement).dataset.report); }}>
           {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
-            <TabsTrigger value="overview" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="overview" value="overview" className="flex items-center gap-1.5 flex-1">
               <LayoutGrid className="h-4 w-4" />
               <span className="hidden sm:inline">Keseluruhan</span>
             </TabsTrigger>
           )}
           {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
-            <TabsTrigger value="sales" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="sales" value="sales" className="flex items-center gap-1.5 flex-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Penjualan</span>
             </TabsTrigger>
           )}
           {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
-            <TabsTrigger value="purchase" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="purchase" value="purchase" className="flex items-center gap-1.5 flex-1">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline">Pembelian</span>
             </TabsTrigger>
           )}
           {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
-            <TabsTrigger value="incomes" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="incomes" value="incomes" className="flex items-center gap-1.5 flex-1">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Pemasukan</span>
             </TabsTrigger>
           )}
           {hasAnyPermission(["report_expense_view", "report_expense_detail"]) && (
-            <TabsTrigger value="expenses" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="expenses" value="expenses" className="flex items-center gap-1.5 flex-1">
               <TrendingDown className="h-4 w-4" />
               <span className="hidden sm:inline">Pengeluaran</span>
             </TabsTrigger>
           )}
           {isFeatureEnabled("reports.income_expense") && (
-            <TabsTrigger value="payment-method" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="payment-method" value="payment-method" className="flex items-center gap-1.5 flex-1">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Metode Payment</span>
             </TabsTrigger>
           )}
           {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
-            <TabsTrigger value="employee" className="flex items-center gap-1.5 flex-1">
+            <TabsTrigger data-report="employee" value="employee" className="flex items-center gap-1.5 flex-1">
               <UserCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Kinerja</span>
             </TabsTrigger>
           )}
-          <TabsTrigger value="accounting" className="flex items-center gap-1.5 flex-1">
+          <TabsTrigger data-report="accounting" value="accounting" className="flex items-center gap-1.5 flex-1">
             <Scale className="h-4 w-4" />
             <span className="hidden sm:inline">Akuntansi</span>
           </TabsTrigger>
         </TabsList>
 
         {hasAnyPermission(["report_overview_view", "report_overview_detail"]) && (
-          <TabsContent value="overview" className="mt-4">
+          <TabsContent value="overview" forceMount className={`mt-4 ${activeTab !== "overview" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "overview"}>
             {isFeatureEnabled("reports.overview") ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -1350,73 +1368,87 @@ export default function Reports() {
                   )}
                 </div>
                 {overviewSubReport === "ringkasan" && renderOverviewContent()}
-                {overviewSubReport === "profit-loss" && <ProfitLoss />}
-                {overviewSubReport === "cash-flow" && <CashFlow />}
-                {overviewSubReport === "balance-sheet" && <BalanceSheet />}
+                <RetainedReportPanel active={overviewSubReport === "profit-loss"}><ProfitLoss /></RetainedReportPanel>
+                <RetainedReportPanel active={overviewSubReport === "cash-flow"}><CashFlow /></RetainedReportPanel>
+                <RetainedReportPanel active={overviewSubReport === "balance-sheet"}><BalanceSheet /></RetainedReportPanel>
               </>
             ) : (
               <FeatureInactiveNotice featureName="Keseluruhan" icon={LayoutGrid} price={getFeatureInfo("reports.overview").price} description={getFeatureInfo("reports.overview").description} />
             )}
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
         {hasAnyPermission(["report_sales_view", "report_sales_detail"]) && (
-          <TabsContent value="sales" className="mt-4">
+          <TabsContent value="sales" forceMount className={`mt-4 ${activeTab !== "sales" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "sales"}>
             {isFeatureEnabled("reports.sales") ? (
               <SalesReport />
             ) : (
               <FeatureInactiveNotice featureName="Penjualan" icon={DollarSign} price={getFeatureInfo("reports.sales").price} description={getFeatureInfo("reports.sales").description} />
             )}
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
         {hasAnyPermission(["report_income_view", "report_income_detail"]) && (
-          <TabsContent value="incomes" className="mt-4">
+          <TabsContent value="incomes" forceMount className={`mt-4 ${activeTab !== "incomes" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "incomes"}>
             {isFeatureEnabled("reports.income_expense") ? (
               <IncomeSubMenu />
             ) : (
               <FeatureInactiveNotice featureName="Pemasukan" icon={TrendingUp} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
             )}
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
         {hasAnyPermission(["report_expense_view", "report_expense_detail"]) && (
-          <TabsContent value="expenses" className="mt-4">
+          <TabsContent value="expenses" forceMount className={`mt-4 ${activeTab !== "expenses" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "expenses"}>
             {isFeatureEnabled("reports.income_expense") ? (
               <ExpenseSubMenu />
             ) : (
               <FeatureInactiveNotice featureName="Pengeluaran" icon={TrendingDown} price={getFeatureInfo("reports.income_expense").price} description={getFeatureInfo("reports.income_expense").description} />
             )}
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
         {isFeatureEnabled("reports.income_expense") && (
-          <TabsContent value="payment-method" className="mt-4">
+          <TabsContent value="payment-method" forceMount className={`mt-4 ${activeTab !== "payment-method" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "payment-method"}>
             <PaymentMethodReport />
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
         {hasAnyPermission(["report_purchase_view", "report_purchase_detail"]) && (
-          <TabsContent value="purchase" className="mt-4">
+          <TabsContent value="purchase" forceMount className={`mt-4 ${activeTab !== "purchase" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "purchase"}>
             {isFeatureEnabled("reports.purchase") ? (
               <PurchaseTransactionReport />
             ) : (
               <FeatureInactiveNotice featureName="Pembelian" icon={ShoppingCart} price={getFeatureInfo("reports.purchase").price} description={getFeatureInfo("reports.purchase").description} />
             )}
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
         {hasAnyPermission(["report_performance_view", "report_performance_detail"]) && (
-          <TabsContent value="employee" className="mt-4">
+          <TabsContent value="employee" forceMount className={`mt-4 ${activeTab !== "employee" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "employee"}>
             {isFeatureEnabled("reports.employee") ? (
               <EmployeePerformanceReport />
             ) : (
               <FeatureInactiveNotice featureName="Kinerja Karyawan" icon={UserCheck} price={getFeatureInfo("reports.employee").price} description={getFeatureInfo("reports.employee").description} />
             )}
+          </RetainedReportPanel>
           </TabsContent>
         )}
 
-        <TabsContent value="accounting" className="mt-4">
+        <TabsContent value="accounting" forceMount className={`mt-4 ${activeTab !== "accounting" ? "hidden" : ""}`}>
+            <RetainedReportPanel active={activeTab === "accounting"}>
           {isFeatureEnabled("reports.accounting") ? (
             <AccountingReport />
           ) : (
@@ -1427,7 +1459,8 @@ export default function Reports() {
               description={getFeatureInfo("reports.accounting").description}
             />
           )}
-        </TabsContent>
+        </RetainedReportPanel>
+          </TabsContent>
       </Tabs>
       )}
 
@@ -1846,11 +1879,9 @@ function ExpenseSubMenu() {
           </SelectItem>
         </SelectContent>
       </Select>
-      {sub === "chart" ? (
-        <ExpenseChartReport />
-      ) : (
-        <ExpenseReport processStatusFilter={sub === "active" ? "active" : "batal"} />
-      )}
+      <RetainedReportPanel active={sub === "chart"}><ExpenseChartReport /></RetainedReportPanel>
+      <RetainedReportPanel active={sub === "active"}><ExpenseReport processStatusFilter="active" /></RetainedReportPanel>
+      <RetainedReportPanel active={sub === "batal"}><ExpenseReport processStatusFilter="batal" /></RetainedReportPanel>
     </div>
   );
 }
@@ -1885,7 +1916,8 @@ function IncomeSubMenu() {
           </SelectItem>
         </SelectContent>
       </Select>
-      <IncomeReport processStatusFilter={sub} />
+      <RetainedReportPanel active={sub === "active"}><IncomeReport processStatusFilter="active" /></RetainedReportPanel>
+      <RetainedReportPanel active={sub === "batal"}><IncomeReport processStatusFilter="batal" /></RetainedReportPanel>
     </div>
   );
 }
