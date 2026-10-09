@@ -706,8 +706,8 @@ export default function Dashboard() {
       <div className="dashboard-shell min-h-screen flex w-full">
         {/* Left Sidebar - Desktop only */}
         <Sidebar collapsible="icon" className="hidden lg:flex border-r border-border/60 bg-card">
-          <SidebarHeader className="border-b border-border/50 px-3 py-3">
-            <div className="flex items-center justify-between gap-1">
+          <SidebarHeader className="border-b border-border/50 px-3 py-3 group-data-[collapsible=icon]:px-2">
+            <div className="flex min-w-0 items-center justify-between gap-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
               <StoreSelector />
               <SidebarTrigger className="shrink-0" />
             </div>
