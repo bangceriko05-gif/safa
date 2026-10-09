@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -1290,8 +1291,8 @@ export default function ScheduleTable({
                               )}
                               
                               {/* Status Badge with Popover */}
-                              <Popover>
-                                <PopoverTrigger asChild>
+                              <Dialog>
+                                <DialogTrigger asChild>
                                   <div 
                                     className={`absolute top-1 right-1 ${size.buttonTextSize} font-bold px-2 py-0.5 rounded shadow-sm cursor-pointer hover:scale-105 transition-transform active:scale-95`}
                                     style={{
@@ -1301,16 +1302,15 @@ export default function ScheduleTable({
                                   >
                                     {status}
                                   </div>
-                                </PopoverTrigger>
-                                <PopoverContent 
-                                  className="w-80 p-4 bg-card border-2 shadow-xl animate-fade-in z-50" 
-                                  side="right"
-                                  align="start"
+                                </DialogTrigger>
+                                <DialogContent
+                                  className="w-[calc(100%-2rem)] max-w-sm max-h-[85dvh] overflow-y-auto p-4 bg-card border-2 shadow-xl"
+                                  aria-describedby={undefined}
                                 >
                                   <div className="space-y-3">
                                     {/* Header with Status */}
                                     <div className="flex items-center justify-between pb-2 border-b">
-                                      <h3 className="font-bold text-lg">Detail Booking</h3>
+                                      <DialogTitle className="font-bold text-lg">Detail Booking</DialogTitle>
                                       {getPopupAvailableStatuses(status).length > 0 ? (
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
@@ -1545,8 +1545,8 @@ export default function ScheduleTable({
                                       )}
                                     </div>
                                   </div>
-                                </PopoverContent>
-                              </Popover>
+                                </DialogContent>
+                              </Dialog>
                               
                               <div className={size.spacing}>
                                 <div className={`flex flex-wrap items-center gap-x-1 pr-10 font-medium ${size.fontSize}`} style={{ color: bookingTextColor }}>
