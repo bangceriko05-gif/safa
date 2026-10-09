@@ -86,6 +86,7 @@ const TaxReport = (props: any) => (
 );
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import RetainedReportPanel from "./reports/RetainedReportPanel";
+import { getReportCache, setReportCache } from "@/utils/reportCache";
 import { lazyWithRetry } from "@/utils/lazyWithRetry";
 const ProfitLossLazy = lazyWithRetry(() => import("./reports/accounting/ProfitLoss"));
 const ProfitLoss = (props: any) => (
@@ -317,7 +318,7 @@ export default function Reports() {
     if (activeTab === "overview") {
       fetchData();
     }
-  }, [timeRange, customDateRange, currentStore?.id]);
+  }, [timeRange, customDateRange, currentStore?.id, activeTab]);
 
   useEffect(() => {
     if (showIncomeForm) { fetchProducts(); fetchCustomers(); }
@@ -410,9 +411,15 @@ export default function Reports() {
   const fetchData = async () => {
     if (!currentStore) return;
     
-    setLoading(true);
+    const range = getDateRangeInternal(timeRange);
+    const cacheKey = `overview:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}`;
+    const cached = getReportCache<{ stats: ReportStats; expenses: Expense[]; incomes: AdditionalIncome[]; payments: BookingPaymentDetail[] }>(cacheKey);
+    if (cached) {
+      setStats(cached.stats); setExpenses(cached.expenses); setAdditionalIncomes(cached.incomes); setBookingPayments(cached.payments);
+    }
+    setLoading(!cached);
     try {
-      const { startDate, endDate } = getDateRangeInternal(timeRange);
+      const { startDate, endDate } = range;
       const startDateStr = format(startDate, "yyyy-MM-dd");
       const endDateStr = format(endDate, "yyyy-MM-dd");
       const startTimestamp = startOfDay(startDate).toISOString();
@@ -644,7 +651,7 @@ export default function Reports() {
       const totalPurchase = purchasesData.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
       const purchaseTransactionCount = purchasesData.length;
 
-      setStats({
+      const nextStats = {
         totalTransactions,
         paymentMethodTotals,
         additionalIncomePaymentTotals,
@@ -660,7 +667,9 @@ export default function Reports() {
         purchaseTransactionCount,
         incomeTransactionCount: incomesData.length,
         expenseTransactionCount: expensesData.length,
-      });
+      };
+      setStats(nextStats);
+      setReportCache(cacheKey, { stats: nextStats, expenses: expensesWithCreator, incomes: incomesWithCreator, payments: bookingPaymentDetails });
 
       setExpenses(expensesWithCreator);
       setAdditionalIncomes(incomesWithCreator);

@@ -15,6 +15,7 @@ import ReportDateFilter, { ReportTimeRange, getDateRange, getDateRangeDisplay } 
 import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
+import { getReportCache, setReportCache } from "@/utils/reportCache";
 import ReportPagination, { usePagination } from "./ReportPagination";
 
 interface IncomeRow {
@@ -46,11 +47,15 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
   useEffect(() => {
     if (!currentStore) return;
     fetchData();
-  }, [timeRange, customDateRange, currentStore, processStatusFilter]);
+  }, [timeRange, customDateRange, currentStore?.id, processStatusFilter]);
 
   const fetchData = async () => {
     if (!currentStore) return;
-    setLoading(true);
+    const range = getDateRange(timeRange, customDateRange);
+    const cacheKey = `IncomeReport:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}:${processStatusFilter}`;
+    const cached = getReportCache<IncomeRow[]>(cacheKey);
+    if (cached) { setRows(cached); }
+    setLoading(!cached);
     try {
       const { startDate, endDate } = getDateRange(timeRange, customDateRange);
       const startStr = format(startDate, "yyyy-MM-dd");
@@ -72,7 +77,9 @@ export default function IncomeReport({ processStatusFilter = "active" }: IncomeR
 
       const { data, error } = await q;
       if (error) throw error;
-      setRows((data || []) as any[]);
+      const nextRows = (data || []) as IncomeRow[];
+      setRows(nextRows);
+      setReportCache(cacheKey, nextRows);
     } catch (err) {
       console.error(err);
       toast.error("Gagal memuat data pemasukan");
