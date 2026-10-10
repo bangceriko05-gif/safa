@@ -70,6 +70,13 @@ export default function BookingPopoverContent({
   const [showPosNotice, setShowPosNotice] = useState(false);
   const [loadingIdentity, setLoadingIdentity] = useState(false);
 
+  const openReceipt = (suffix = "") => {
+    const receipt = window.open(`/receipt?id=${encodeURIComponent(booking.id)}${suffix}`, "_blank");
+    if (!receipt) {
+      toast.error("Nota tidak dapat dibuka. Izinkan pop-up untuk situs ini, lalu coba cetak kembali.");
+    }
+  };
+
   const handleOpenDataId = async () => {
     if (!isFeatureEnabled("pos")) {
       setShowPosNotice(true);
@@ -189,6 +196,22 @@ export default function BookingPopoverContent({
       <div className="flex items-center justify-between pb-2 border-b">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-lg">Detail Booking</h3>
+          {orderBids.length === 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0 text-primary"
+              aria-label="Cetak nota booking"
+              title="Cetak nota booking"
+              onClick={(event) => {
+                event.stopPropagation();
+                openReceipt();
+              }}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+          ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -196,28 +219,29 @@ export default function BookingPopoverContent({
                 variant="ghost"
                 className="h-7 w-7 p-0 text-primary"
                 onClick={(e) => e.stopPropagation()}
-                title="Print Receipt"
+                aria-label="Pilih nota untuk dicetak"
+                title="Pilih nota untuk dicetak"
               >
                 <Printer className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuContent align="start" className="z-[100]" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem
-                onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
+                onSelect={() => openReceipt()}
               >
                 Booking saja {booking.bid ? `(${booking.bid})` : ""}
               </DropdownMenuItem>
               {orderBids.map((o) => (
                 <DropdownMenuItem
                   key={o.id}
-                  onClick={() => window.open(`/receipt?id=${booking.id}&order=${o.id}`, '_blank')}
+                  onSelect={() => openReceipt(`&order=${encodeURIComponent(o.id)}`)}
                 >
                   Order {o.bid || o.id.slice(0, 6)}
                 </DropdownMenuItem>
               ))}
               {orderBids.length > 0 && (
                 <DropdownMenuItem
-                  onClick={() => window.open(`/receipt?id=${booking.id}&combined=1`, '_blank')}
+                  onSelect={() => openReceipt("&combined=1")}
                   className="font-semibold"
                 >
                   Gabungkan Semua BID
@@ -225,6 +249,7 @@ export default function BookingPopoverContent({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
         {getAvailableStatuses(status).length > 0 ? (
           <DropdownMenu>
