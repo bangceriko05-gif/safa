@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Nomor kalender hitam dengan ikon WhatsApp, pesan sesuai status, dan submenu Pesan WhatsApp per outlet.
+- [x] Nomor kalender hitam dengan ikon WhatsApp, pesan sesuai status, dan submenu Pesan WhatsApp per outlet.
 
 - [x] Percepat semua menu laporan: kurangi pemuatan ulang, siapkan halaman sebelum dipilih, dan verifikasi pergantian menu.
 
