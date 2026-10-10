@@ -1592,6 +1592,7 @@ export default function ScheduleTable({
                                     {bookingPaymentCaption(booking as any)}
                                   </div>
                                   <div>Total: Rp {grandTotal.toLocaleString('id-ID')}</div>
+                                  {booking.phone && <BookingWhatsAppPhone booking={booking} className="text-xs" />}
                                   <div>Admin: {booking.admin_name}</div>
                                   {booking.note && (
                                     <div className="italic">Catatan: {booking.note}</div>

@@ -21,7 +21,7 @@ export interface WhatsAppBooking {
 }
 export const whatsappVariables = ["nama", "outlet", "bid", "tanggal_check_in", "jam_check_in", "tanggal_check_out", "jam_check_out"];
 
-export function bookingWhatsAppLink(booking: WhatsAppBooking, outlet: string, messages: WhatsAppMessages): string | null {
+export function bookingWhatsAppLink(booking: WhatsAppBooking, outlet: string, messages: WhatsAppMessages, isPms = true): string | null {
   const raw = booking.phone?.trim() || "";
   let phone = raw.replace(/\D/g, "");
   if (phone.startsWith("00")) phone = phone.slice(2);
@@ -36,7 +36,8 @@ export function bookingWhatsAppLink(booking: WhatsAppBooking, outlet: string, me
   let checkout = booking.check_out_date;
   if (!checkout && booking.date) {
     const start = parseISO(booking.date);
-    if (!Number.isNaN(start.getTime())) checkout = format(addDays(start, Math.max(1, booking.duration || 1)), "yyyy-MM-dd");
+    const days = isPms ? Math.max(1, booking.duration || 1) : (booking.end_time || "") <= (booking.start_time || "") ? 1 : 0;
+    if (!Number.isNaN(start.getTime())) checkout = format(addDays(start, days), "yyyy-MM-dd");
   }
   const values: Record<string, string> = {
     nama: booking.customer_name, outlet, bid: booking.bid || "-",

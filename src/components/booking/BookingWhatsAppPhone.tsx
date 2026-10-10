@@ -13,7 +13,7 @@ export default function BookingWhatsAppPhone({ booking, className, icon = true }
   const { currentStore } = useStore();
   const { data, isError } = useWhatsAppMessages(currentStore?.id);
   if (!booking.phone) return <span>-</span>;
-  const href = data ? bookingWhatsAppLink(booking, currentStore?.name || "", data) : null;
+  const href = data ? bookingWhatsAppLink(booking, currentStore?.name || "", data, currentStore?.calendar_type === "pms") : null;
   return <Button variant="link" className={cn("booking-whatsapp-phone h-auto min-w-0 justify-start gap-1 p-0 font-semibold", className)} aria-label={`WhatsApp ${booking.phone}`} title="Buka WhatsApp" onClick={(event) => {
     event.preventDefault(); event.stopPropagation();
     if (!href) { toast.error(isError ? "Gagal memuat pesan WhatsApp. Coba kembali." : !data ? "Pesan WhatsApp sedang dimuat. Coba kembali." : "Nomor WhatsApp tidak valid atau booking dibatalkan."); return; }
