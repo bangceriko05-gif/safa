@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -1587,6 +1588,7 @@ export default function ScheduleTable({
                                     <span className={`font-bold ${(booking as any).payment_status === "lunas" ? "text-emerald-700" : "text-red-600"}`}>
                                       ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
                                     </span>
+                                    {bookingPaymentCaption(booking as any)}
                                   </div>
                                   <div>Total: Rp {grandTotal.toLocaleString('id-ID')}</div>
                                   <div>Admin: {booking.admin_name}</div>

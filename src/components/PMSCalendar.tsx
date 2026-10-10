@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
 import { useEffect, useState, useMemo } from "react";
 import BookingPopoverContent from "@/components/BookingPopoverContent";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
@@ -1346,7 +1347,7 @@ export default function PMSCalendar({
                                           </Button>
                                         </div>
                                       )}
-                                      <div className="text-[11px] font-medium truncate">
+                                      <div className="text-[11px] font-medium break-words">
                                         {nights} malam {' '}
                                         <span className={cn(
                                           "font-bold",
@@ -1356,6 +1357,7 @@ export default function PMSCalendar({
                                         )}>
                                           ({(booking as any).payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"})
                                         </span>
+                                        {bookingPaymentCaption(booking as any)}
                                       </div>
                                       <div className="flex items-center justify-between gap-1">
                                         {booking.phone ? (
