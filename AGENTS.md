@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Booking WhatsApp links use a shared status-aware formatter and outlet-keyed message settings query; links open prefilled chats without sending messages or using connector credentials.
+
 - Calendar payment captions share a display-only formatter for received payment methods, so both calendar types stay consistent without altering financial status.
 
 - Report panels mount on first selection and retain their loaded state until the outlet changes; this removes repeat tab-loading delays without fetching every report at startup.

@@ -18,6 +18,8 @@ import VariantScheduleSettings from "./VariantScheduleSettings";
 import ScheduleTimeSettings from "./ScheduleTimeSettings";
 
 import NotificationSettings from "./NotificationSettings";
+import WhatsAppMessageSettings from "./WhatsAppMessageSettings";
+import { WhatsAppIcon } from "./booking/BookingWhatsAppPhone";
 import PrintSettingsComponent from "./PrintSettings";
 import ThermalPrinterSettings from "./ThermalPrinterSettings";
 import OtaSourceManagement from "./OtaSourceManagement";
@@ -351,6 +353,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             { value: "display", label: "Tampilan", icon: Monitor },
             { value: "colors", label: "Warna", icon: Palette },
             { value: "notifications", label: "Notifikasi", icon: Bell },
+            { value: "whatsapp", label: "Pesan WhatsApp", icon: WhatsAppIcon },
           ];
           if (isManager) {
             tabs.push(
@@ -653,6 +656,11 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
           ) : (
             <FeatureInactiveNotice featureName="Notifikasi" icon={Bell} price={getFeatureInfo("settings.notifications").price} description={getFeatureInfo("settings.notifications").description} />
           )}
+        </TabsContent>
+
+        {/* Print Settings */}
+        <TabsContent value="whatsapp" className="mt-4">
+          <WhatsAppMessageSettings key={currentStore?.id} />
         </TabsContent>
 
         {/* Print Settings */}
