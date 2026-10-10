@@ -113,7 +113,7 @@ All colors MUST be HSL.
 }
 
 @layer components {
-  .booking-whatsapp-phone { color: hsl(var(--booking-contact-foreground)); }
+  .booking-whatsapp-phone.booking-whatsapp-phone { color: hsl(var(--booking-contact-foreground)); }
   /* Stable scroll surfaces prevent content updates from moving dialogs or columns. */
   [role="dialog"], .dashboard-shell {
     scrollbar-gutter: stable;
