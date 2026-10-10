@@ -36,6 +36,7 @@ All colors MUST be HSL.
     --input: 200 20% 88%;
     --ring: 220 90% 56%;
     --success: 142 72% 37%;
+    --booking-contact-foreground: 0 0% 0%;
 
     --radius: 0.75rem;
 
@@ -112,6 +113,7 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  .booking-whatsapp-phone.booking-whatsapp-phone { color: hsl(var(--booking-contact-foreground)); }
   /* Stable scroll surfaces prevent content updates from moving dialogs or columns. */
   [role="dialog"], .dashboard-shell {
     scrollbar-gutter: stable;

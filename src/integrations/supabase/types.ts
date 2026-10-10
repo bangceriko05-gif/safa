@@ -3791,6 +3791,38 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_message_settings: {
+        Row: {
+          booking_message: string
+          check_in_message: string
+          check_out_message: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_message: string
+          check_in_message: string
+          check_out_message: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_message?: string
+          check_in_message?: string
+          check_out_message?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

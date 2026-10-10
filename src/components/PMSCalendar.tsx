@@ -1,5 +1,6 @@
 import AnkaLoader from "@/components/AnkaLoader";
 import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
+import BookingWhatsAppPhone from "@/components/booking/BookingWhatsAppPhone";
 import { useEffect, useState, useMemo } from "react";
 import BookingPopoverContent from "@/components/BookingPopoverContent";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
@@ -1361,10 +1362,7 @@ export default function PMSCalendar({
                                       </div>
                                       <div className="flex items-center justify-between gap-1">
                                         {booking.phone ? (
-                                          <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
-                                            <Phone className="w-2 h-2" />
-                                            {booking.phone}
-                                          </div>
+                                          <BookingWhatsAppPhone booking={booking} className="text-[10px] [&_svg]:h-2.5 [&_svg]:w-2.5" />
                                         ) : <span />}
                                         {(booking as any).admin_name && (booking as any).admin_name !== "Unknown" && (
                                           <div className="text-[10px] text-black font-bold truncate flex items-center gap-0.5 ml-auto" title={`Dibuat oleh ${(booking as any).admin_name}`}>

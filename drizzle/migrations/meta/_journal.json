@@ -29,6 +29,13 @@
       "when": 1790399872770,
       "tag": "0003_group_multi_room_bookings_under_one_bid",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791598002331,
+      "tag": "0004_create_whatsapp_message_settings",
+      "breakpoints": true
     }
   ]
 }
