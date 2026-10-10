@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Calendar payment captions share a display-only formatter for received payment methods, so both calendar types stay consistent without altering financial status.
+
 - Report panels mount on first selection and retain their loaded state until the outlet changes; this removes repeat tab-loading delays without fetching every report at startup.
 - Independent report queries run in parallel, and report caches are keyed by outlet, date range, and status; this reduces network waterfalls without mixing financial scopes.
 
