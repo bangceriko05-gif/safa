@@ -101,23 +101,14 @@ interface ExpenseData {
 }
 
 type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type" | "channel";
-const getDiscountAmount = (b: { price: number; price_2: number; discount_type: string | null; discount_value: number | null; discount_applies_to?: string | null }, productTotal: number = 0) => {
-  const roomSubtotal = (Number(b.price) || 0) + (Number(b.price_2) || 0);
-  const dv = Number(b.discount_value) || 0;
-  if (dv <= 0) return 0;
-  
-  let base = roomSubtotal;
-  if (b.discount_applies_to === "product") {
-    base = productTotal;
-  } else if (b.discount_applies_to === "all") {
-    base = roomSubtotal + productTotal;
-  }
-  
-  if (b.discount_type === "percent" || b.discount_type === "percentage") {
-    return Math.round((base * dv) / 100);
-  }
-  return Math.min(dv, base > 0 ? base : dv);
-};
+export default function SalesReport() {
+  const { currentStore } = useStore();
+  const navigate = useNavigate();
+  const goToCRM = (name?: string, phone?: string) => {
+    if (!name) return;
+    const params = new URLSearchParams({ tab: "customers", customersSection: "crm" });
+    if (phone && phone !== "-") params.set("crmPhone", phone);
+    params.set("crmName", name);
     navigate(`/dashboard?${params.toString()}`);
   };
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("today");
