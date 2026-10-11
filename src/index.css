@@ -37,6 +37,8 @@ All colors MUST be HSL.
     --ring: 220 90% 56%;
     --success: 142 72% 37%;
     --booking-contact-foreground: 0 0% 0%;
+    --navigation-active: 259 90% 66%;
+    --navigation-active-foreground: 0 0% 100%;
 
     --radius: 0.75rem;
 
@@ -113,6 +115,26 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  /* Shared active navigation remains consistent with browser-local theme settings. */
+  [role="tab"][data-state="active"],
+  [data-sidebar="menu-button"][data-active="true"],
+  [data-sidebar="menu-sub-button"][data-active="true"],
+  [data-navigation][aria-pressed="true"],
+  [data-navigation="select"] {
+    background-color: hsl(var(--navigation-active)) !important;
+    color: hsl(var(--navigation-active-foreground)) !important;
+  }
+
+  [role="option"][data-state="checked"] {
+    background-color: hsl(var(--navigation-active));
+    color: hsl(var(--navigation-active-foreground));
+  }
+
+  [data-sidebar="menu-button"][data-active="true"] svg,
+  [data-sidebar="menu-sub-button"][data-active="true"] svg {
+    color: inherit;
+  }
+
   .booking-whatsapp-phone.booking-whatsapp-phone { color: hsl(var(--booking-contact-foreground)); }
   /* Stable scroll surfaces prevent content updates from moving dialogs or columns. */
   [role="dialog"], .dashboard-shell {

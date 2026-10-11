@@ -101,7 +101,7 @@ export default function ReportDateFilter({
           onTimeRangeChange(value);
         }}
       >
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger data-navigation="select" className="w-[280px]">
           <SelectValue>
             {(() => {
               const labelMap: Record<ReportTimeRange, string> = {

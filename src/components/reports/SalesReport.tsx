@@ -831,7 +831,7 @@ export default function SalesReport() {
             {/* Toolbar: dropdown + search + date filter + export (matches mockup) */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
               <Select value={activeTab} onValueChange={(v) => setActiveTab(v as SalesTab)}>
-                <SelectTrigger className="w-full lg:w-[280px] font-semibold">
+                <SelectTrigger data-navigation="select" className="w-full lg:w-[280px] font-semibold">
                   <SelectValue placeholder="Pilih Laporan" />
                 </SelectTrigger>
                 <SelectContent>

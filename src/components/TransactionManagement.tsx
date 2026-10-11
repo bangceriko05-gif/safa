@@ -94,7 +94,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
       <Tabs value={currentTab} onValueChange={setActiveSubTab}>
         {isMobile ? (
           <Select value={currentTab} onValueChange={setActiveSubTab}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger data-navigation="select" className="w-full">
               <div className="flex items-center gap-2">
                 {currentTabData && <currentTabData.icon className="h-4 w-4" />}
                 <SelectValue />
@@ -126,7 +126,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2 shadow-sm">
           {isMobile ? (
             <Select value={timeRange} onValueChange={(v) => handleDateFilterChange(v as ReportTimeRange)}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger data-navigation="select" className="w-[160px]">
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -140,11 +140,11 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
             </Select>
           ) : (
             <div className="flex flex-wrap gap-1">
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("today")} className={cn(timeRange === "today" && "bg-primary text-primary-foreground")}>Hari Ini</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")} className={cn(timeRange === "yesterday" && "bg-primary text-primary-foreground")}>Kemarin</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")} className={cn(timeRange === "thisMonth" && "bg-primary text-primary-foreground")}>Bulan Ini</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("lastMonth")} className={cn(timeRange === "lastMonth" && "bg-primary text-primary-foreground")}>Bulan Lalu</Button>
-              <Button variant="outline" size="sm" onClick={() => handleDateFilterChange("allTime")} className={cn("gap-1", timeRange === "allTime" && "bg-primary text-primary-foreground")}><Infinity className="h-3 w-3" />All Time</Button>
+              <Button data-navigation aria-pressed={timeRange === "today"} variant="outline" size="sm" onClick={() => handleDateFilterChange("today")}>Hari Ini</Button>
+              <Button data-navigation aria-pressed={timeRange === "yesterday"} variant="outline" size="sm" onClick={() => handleDateFilterChange("yesterday")}>Kemarin</Button>
+              <Button data-navigation aria-pressed={timeRange === "thisMonth"} variant="outline" size="sm" onClick={() => handleDateFilterChange("thisMonth")}>Bulan Ini</Button>
+              <Button data-navigation aria-pressed={timeRange === "lastMonth"} variant="outline" size="sm" onClick={() => handleDateFilterChange("lastMonth")}>Bulan Lalu</Button>
+              <Button data-navigation aria-pressed={timeRange === "allTime"} variant="outline" size="sm" onClick={() => handleDateFilterChange("allTime")} className="gap-1"><Infinity className="h-3 w-3" />All Time</Button>
             </div>
           )}
 
@@ -153,6 +153,8 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
               <Button
                 variant="outline"
                 size="sm"
+                data-navigation
+                aria-pressed={timeRange === "custom"}
                 className={cn("gap-2", timeRange === "custom" && "bg-primary text-primary-foreground")}
                 onClick={() => handleDateFilterChange("custom")}
               >

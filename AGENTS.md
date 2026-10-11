@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Active navigation is styled through shared semantic navigation tokens and state selectors; custom period buttons expose data-navigation and aria-pressed so selections stay consistent without recoloring form inputs.
+
 - Sales report costs and discounts use room price snapshots plus line-item subtotals; received payments stay separate and are never discounted again, including exports.
 
 - Booking WhatsApp links use a shared status-aware formatter and outlet-keyed message settings query; links open prefilled chats without sending messages or using connector credentials.

@@ -1338,6 +1338,8 @@ function CollapsibleSidebarMenu({
             {subItems.map((sub) => (
               <DropdownMenuItem
                 key={sub.key}
+                data-navigation
+                aria-pressed={isActive && activeSubKey === sub.key}
                 onSelect={() => onSelect(sub.key)}
                 className={cn(
                   "gap-2 cursor-pointer",
