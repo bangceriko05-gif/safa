@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Perbaiki Total Biaya sebelum diskon dan Jumlah Bayar aktual pada laporan penjualan tanpa pemotongan diskon ganda.
+- [x] Perbaiki Total Biaya sebelum diskon dan Jumlah Bayar aktual pada laporan penjualan tanpa pemotongan diskon ganda.
 
 - [x] Nomor kalender hitam dengan ikon WhatsApp, pesan sesuai status, dan submenu Pesan WhatsApp per outlet.
 
