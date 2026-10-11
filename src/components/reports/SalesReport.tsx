@@ -30,6 +30,7 @@ import CustomerTypeReport from "./CustomerTypeReport";
 import SalesChannelReport from "./SalesChannelReport";
 import { Receipt } from "lucide-react";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
+import { salesBookingTotals } from "@/utils/salesBookingTotals";
 
 interface BookingData {
   id: string;
@@ -39,6 +40,8 @@ interface BookingData {
   duration: number;
   price: number;
   price_2: number;
+  dual_payment?: boolean;
+  variant_price_override?: number | null;
   payment_method: string;
   payment_method_2: string;
   date: string;
@@ -99,18 +102,6 @@ interface ExpenseData {
 
 type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type" | "channel";
 
-// Harga yang tersimpan (price + price_2) adalah harga asli SEBELUM diskon.
-// Diskon dihitung dari nilai tersebut sesuai tipe diskonnya.
-const getDiscountAmount = (b: { price: number; price_2: number; discount_type: string | null; discount_value: number | null }) => {
-  const base = (Number(b.price) || 0) + (Number(b.price_2) || 0);
-  const dv = Number(b.discount_value) || 0;
-  if (dv <= 0 || base <= 0) return 0;
-  if (b.discount_type === "percent" || b.discount_type === "percentage") {
-    return Math.round((base * dv) / 100);
-  }
-  return Math.min(dv, base);
-};
-
 export default function SalesReport() {
   const { currentStore } = useStore();
   const navigate = useNavigate();
@@ -170,7 +161,7 @@ export default function SalesReport() {
   const salesCacheKey = (() => {
     if (!currentStore) return "";
     const { startDate, endDate } = getDateRange(timeRange, customDateRange);
-    return `sales:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
+    return `sales-v2:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
   })();
 
   useEffect(() => {
@@ -213,7 +204,7 @@ export default function SalesReport() {
         .select(`
           id, bid, customer_name, phone, duration, price, price_2, 
           payment_method, payment_method_2, date, start_time, end_time,
-          status, variant_id,
+          status, variant_id, variant_price_override,
           checked_in_at, checked_in_by, checked_out_at, checked_out_by,
           discount_type, discount_value, discount_applies_to,
           payment_proof_url, payment_proof_url_2, room_id, note,
@@ -347,6 +338,7 @@ export default function SalesReport() {
           duration: Number(b.duration) || 0,
           price: Number(b.price) || 0,
           price_2: Number(b.price_2) || 0,
+          variant_price_override: b.variant_price_override,
           payment_method: b.payment_method || "",
           payment_method_2: b.payment_method_2 || "",
           date: b.date,
@@ -433,9 +425,10 @@ export default function SalesReport() {
 
       // Hitung Total Biaya (harga asli sebelum diskon), Total Diskon,
       // Jumlah Bayar (setelah diskon), HPP, dan Laba per booking
-      const totalBiaya = activeBookings.reduce((sum, b) => sum + b.price + b.price_2, 0);
-      const totalDiskon = activeBookings.reduce((sum, b) => sum + getDiscountAmount(b), 0);
-      const jumlahBayar = totalBiaya - totalDiskon;
+      const totals = activeBookings.map(b => salesBookingTotals(b, mappedProducts.filter(p => p.booking_id === b.id).reduce((sum, p) => sum + p.subtotal, 0)));
+      const totalBiaya = totals.reduce((sum, t) => sum + t.gross, 0);
+      const totalDiskon = totals.reduce((sum, t) => sum + t.discount, 0);
+      const jumlahBayar = totals.reduce((sum, t) => sum + t.paid, 0);
       const totalHPP = mappedProducts.reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
       const totalLaba = jumlahBayar - totalHPP;
 
@@ -648,15 +641,7 @@ export default function SalesReport() {
       }
 
       // Calculate final total after discount
-      const totalBeforeDiscount = b.price + b.price_2;
-      let totalAfterDiscount = totalBeforeDiscount;
-      if (b.discount_value && b.discount_value > 0) {
-        if (b.discount_type === "percent") {
-          totalAfterDiscount = totalBeforeDiscount - (totalBeforeDiscount * b.discount_value / 100);
-        } else {
-          totalAfterDiscount = totalBeforeDiscount - b.discount_value;
-        }
-      }
+      const totals = salesBookingTotals(b, (productsByBookingId[b.id] || []).reduce((sum, p) => sum + p.subtotal, 0));
 
       return {
         'BID': b.bid,
@@ -681,7 +666,9 @@ export default function SalesReport() {
         'Metode Pembayaran 2': b.payment_method_2 || "-",
         'Total Pembayaran 2': b.price_2 || 0,
         'Diskon': discountDisplay,
-        'Total Setelah Diskon': totalAfterDiscount,
+        'Total Biaya': totals.gross,
+        'Total Setelah Diskon': totals.net,
+        'Jumlah Bayar': totals.paid,
       };
     });
 
@@ -730,7 +717,7 @@ export default function SalesReport() {
   // ===== Laporan Penjualan Kamar (room only) =====
   const roomStats = filteredDetailBookings.reduce(
     (acc, b) => {
-      const total = b.price + b.price_2;
+      const total = salesBookingTotals(b).roomTotal;
       acc.count += 1;
       acc.totalBiaya += total;
       acc.jumlahBayar += (b.payment_method ? b.price : 0) + (b.payment_method_2 ? b.price_2 : 0);
@@ -978,9 +965,10 @@ export default function SalesReport() {
                           </TableRow>
                         ) : (
                           detailsPg.paginated.map((booking) => {
-                            const totalBiaya = booking.price + booking.price_2;
-                            const diskon = getDiscountAmount(booking);
-                            const jumlahBayar = totalBiaya - diskon;
+                            const totals = salesBookingTotals(booking, (productsByBookingId[booking.id] || []).reduce((sum, p) => sum + p.subtotal, 0));
+                            const totalBiaya = totals.gross;
+                            const diskon = totals.discount;
+                            const jumlahBayar = totals.paid;
                             const hpp = getBookingHPP(booking.id);
                             const laba = jumlahBayar - hpp;
                             const items = productsByBookingId[booking.id] || [];
@@ -1117,7 +1105,7 @@ export default function SalesReport() {
                           </TableRow>
                         ) : (
                           roomsPg.paginated.map((booking) => {
-                            const totalBiaya = booking.price + booking.price_2;
+                            const totalBiaya = salesBookingTotals(booking).roomTotal;
                             const jumlahBayar = (booking.payment_method ? booking.price : 0) + (booking.payment_method_2 ? booking.price_2 : 0);
                             return (
                               <TableRow key={booking.id}>

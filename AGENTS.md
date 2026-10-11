@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Sales report costs and discounts use room price snapshots plus line-item subtotals; received payments stay separate and are never discounted again, including exports.
+
 - Booking WhatsApp links use a shared status-aware formatter and outlet-keyed message settings query; links open prefilled chats without sending messages or using connector credentials.
 
 - Calendar payment captions share a display-only formatter for received payment methods, so both calendar types stay consistent without altering financial status.
