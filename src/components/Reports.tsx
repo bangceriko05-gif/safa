@@ -1358,7 +1358,7 @@ export default function Reports() {
                     value={overviewSubReport}
                     onValueChange={(v) => setOverviewSubReport(v as typeof overviewSubReport)}
                   >
-                    <SelectTrigger className="w-full sm:w-[280px]">
+                    <SelectTrigger data-navigation="select" className="w-full sm:w-[280px]">
                       <SelectValue placeholder="Pilih Laporan" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1831,7 +1831,7 @@ function SalesSubMenu() {
   return (
     <div className="space-y-4">
       <Select value={sub} onValueChange={(v) => onChange(v as "sales" | "tax")}>
-        <SelectTrigger className="w-[240px]">
+        <SelectTrigger data-navigation="select" className="w-[240px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -1868,7 +1868,7 @@ function ExpenseSubMenu() {
   return (
     <div className="space-y-4">
       <Select value={sub} onValueChange={(v) => onChange(v as any)}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger data-navigation="select" className="w-[280px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -1910,7 +1910,7 @@ function IncomeSubMenu() {
   return (
     <div className="space-y-4">
       <Select value={sub} onValueChange={(v) => onChange(v as any)}>
-        <SelectTrigger className="w-[280px]">
+        <SelectTrigger data-navigation="select" className="w-[280px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
