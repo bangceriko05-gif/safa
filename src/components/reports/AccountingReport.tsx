@@ -68,7 +68,7 @@ export default function AccountingReport() {
   return (
     <div className="space-y-4 font-jakarta antialiased">
       <Select value={activeTab} onValueChange={(v) => setActiveTab(v as AccountingTab)}>
-        <SelectTrigger className="w-[220px]">
+        <SelectTrigger data-navigation="select" className="w-[220px]">
           <div className="flex items-center gap-2">
             {ActiveIcon && <ActiveIcon className="h-4 w-4" />}
             <SelectValue />
