@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Satukan billing dan edit pembayaran semua kamar dalam satu BID, tanpa menyatukan status check-in/check-out.
+- [x] Satukan billing dan edit pembayaran semua kamar dalam satu BID, tanpa menyatukan status check-in/check-out.
 
 - [x] Perbaiki Total Biaya sebelum diskon dan Jumlah Bayar aktual pada laporan penjualan tanpa pemotongan diskon ganda.
 
