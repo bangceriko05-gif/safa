@@ -55,12 +55,15 @@ export function groupBillingTotals(rooms: BillingRoom[], productTotal = 0) {
 }
 
 export async function fetchGroupBilling(booking: { id: string; store_id?: string | null; booking_group_id?: string | null }) {
-  let query = supabase.from("bookings").select("*, rooms(name), room_variants(price, variant_name, booking_duration_type, booking_duration_value)");
+  let query = supabase.from("bookings").select("*, rooms(name)");
   query = booking.booking_group_id ? query.eq("booking_group_id", booking.booking_group_id) : query.eq("id", booking.id);
   if (booking.store_id) query = query.eq("store_id", booking.store_id);
   const { data, error } = await query;
   if (error) throw error;
-  const rooms = (data || []) as BillingRoom[];
+  const variantIds = [...new Set((data || []).flatMap(room => room.variant_id ? [room.variant_id] : []))];
+  const { data: variants, error: variantError } = await supabase.from("room_variants").select("id, price, variant_name, booking_duration_type, booking_duration_value").in("id", variantIds);
+  if (variantError) throw variantError;
+  const rooms: BillingRoom[] = (data || []).map(room => ({ ...room, room_variants: variants?.find(variant => variant.id === room.variant_id) || null }));
   const ids = rooms.map(room => room.id);
   const { data: products, error: productError } = await supabase.from("booking_products").select("*").in("booking_id", ids.length ? ids : [booking.id]);
   if (productError) throw productError;
