@@ -3988,6 +3988,15 @@ export type Database = {
         Args: { p_new_status: string; p_request_id: string; p_user_id: string }
         Returns: undefined
       }
+      update_shared_booking_billing: {
+        Args: {
+          p_booking_id: string
+          p_payment: Json
+          p_products: Json
+          p_room_rates: Json
+        }
+        Returns: undefined
+      }
       user_has_store_admin_access: {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean

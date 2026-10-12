@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, X } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { fetchGroupBilling } from "@/utils/groupBookingBilling";
+import { supabase } from "@/integrations/supabase/client";
 
 export type TxType = "purchase" | "expense" | "income" | "booking";
 
@@ -39,6 +42,22 @@ interface Props {
  * provides an Edit action that opens the full edit page in the parent.
  */
 export default function TransactionBidPopup({ open, onClose, onEdit, type, data }: Props) {
+  const [shared, setShared] = useState<Awaited<ReturnType<typeof fetchGroupBilling>> | null>(null);
+  useEffect(() => {
+    let active = true;
+    setShared(null);
+    if (open && type === "booking" && data?.id) {
+      void (async () => {
+        const { data: booking, error } = await supabase.from("bookings").select("id, store_id, booking_group_id").eq("id", data.id).single();
+        if (error) throw error;
+        if (booking.booking_group_id) {
+          const billing = await fetchGroupBilling(booking);
+          if (active && billing.rooms.length > 1) setShared(billing);
+        }
+      })().catch(error => console.error("Unable to load shared billing", error));
+    }
+    return () => { active = false; };
+  }, [open, type, data?.id]);
   if (!data) return null;
 
   const rows: Array<[string, string]> = [];
@@ -69,8 +88,9 @@ export default function TransactionBidPopup({ open, onClose, onEdit, type, data 
     rows.push(["Pelanggan", data.customer_name || "-"]);
     rows.push(["Kamar", data.room_name || data.rooms?.name || "-"]);
     rows.push(["Status", data.status || "-"]);
-    rows.push(["Pembayaran", data.payment_status === "lunas" ? "LUNAS" : "BELUM LUNAS"]);
-    rows.push(["Total", fmtMoney(Number(data.price) || 0)]);
+    rows.push(["Pembayaran", (shared ? shared.totals.paid >= shared.totals.total && shared.totals.total > 0 : data.payment_status === "lunas") ? "LUNAS" : "BELUM LUNAS"]);
+    if (shared) rows.push(["Total Tagihan", fmtMoney(shared.totals.total)]);
+    rows.push([shared ? "Jumlah Bayar" : "Total", fmtMoney(shared?.totals.paid ?? (Number(data.price) || 0))]);
   }
 
   return (

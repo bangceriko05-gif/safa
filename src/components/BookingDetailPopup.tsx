@@ -1,3 +1,4 @@
+import { fetchGroupBilling, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -103,6 +104,7 @@ export default function BookingDetailPopup({
   const [loading, setLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [sharedBilling, setSharedBilling] = useState<Awaited<ReturnType<typeof fetchGroupBilling>> | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
@@ -188,7 +190,9 @@ export default function BookingDetailPopup({
         .select("*")
         .eq("booking_id", bookingId);
 
-      setProducts(productsData || []);
+      const shared = bookingData.booking_group_id ? await fetchGroupBilling(bookingData) : null;
+      setSharedBilling(shared && shared.rooms.length > 1 ? shared : null);
+      setProducts(shared?.products || productsData || []);
 
       // Fetch activity logs for this booking
       const { data: logsData } = await supabase
@@ -610,7 +614,8 @@ export default function BookingDetailPopup({
               <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
                 {(() => {
                   // Calculate room subtotal - for monthly/weekly variants, use duration_value not days
-                  const roomSubtotal = booking.variant_price 
+                  const financial = sharedBilling?.totals.owner || booking;
+                  const roomSubtotal = sharedBilling ? sharedBilling.totals.roomTotal : booking.variant_price 
                     ? (booking.variant_duration_type === "months" || booking.variant_duration_type === "weeks")
                       ? booking.variant_price * (booking.variant_duration_value || 1)
                       : booking.variant_price * booking.duration
@@ -625,13 +630,15 @@ export default function BookingDetailPopup({
                       discountAmount = booking.discount_value;
                     }
                   }
+                  if (sharedBilling) discountAmount = sharedBilling.totals.discount;
                   const grandTotal = roomSubtotal + productTotal - discountAmount;
-                  const totalPaid = (booking.price || 0) + (booking.dual_payment && booking.price_2 ? booking.price_2 : 0);
+                  const totalPaid = sharedBilling?.totals.paid ?? ((booking.price || 0) + (booking.dual_payment && booking.price_2 ? booking.price_2 : 0));
                   const remaining = grandTotal - totalPaid;
-                  const isLunas = booking.payment_status === "lunas";
+                  const isLunas = totalPaid >= grandTotal && grandTotal > 0;
 
                   return (
                     <>
+                      {sharedBilling?.rooms.map((room, index) => <div key={room.id} className="flex justify-between gap-3"><span>Kamar {index + 1} · {room.rooms?.name}</span><span>{formatCurrency(billingRoomTotal(room))}</span></div>)}
                       {/* Room Price */}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
@@ -649,9 +656,9 @@ export default function BookingDetailPopup({
                       )}
 
                       {/* Discount */}
-                      {booking.discount_value && booking.discount_value > 0 && (
+                      {financial.discount_value && financial.discount_value > 0 && (
                         <div className="flex justify-between text-red-600">
-                          <span>Diskon {booking.discount_type === "percentage" ? `(${booking.discount_value}%)` : ""}</span>
+                          <span>Diskon {financial.discount_type === "percentage" ? `(${financial.discount_value}%)` : ""}</span>
                           <span>- {formatCurrency(discountAmount)}</span>
                         </div>
                       )}
@@ -669,28 +676,28 @@ export default function BookingDetailPopup({
                       {/* Payment 1 */}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
-                          {booking.dual_payment ? "Pembayaran 1" : "Total Bayar"}
+                          {financial.dual_payment ? "Pembayaran 1" : "Total Bayar"}
                         </span>
-                        <span>{formatCurrency(booking.price)}</span>
+                        <span>{formatCurrency(sharedBilling?.totals.paid1 ?? booking.price)}</span>
                       </div>
-                      {booking.payment_method && (
+                      {financial.payment_method && (
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Metode</span>
-                          <span>{booking.payment_method} {booking.reference_no && booking.reference_no !== "-" ? `(${booking.reference_no})` : ""}</span>
+                          <span>{financial.payment_method} {financial.reference_no && financial.reference_no !== "-" ? `(${financial.reference_no})` : ""}</span>
                         </div>
                       )}
 
                       {/* Payment 2 */}
-                      {booking.dual_payment && (
+                      {financial.dual_payment && (
                         <>
                           <div className="flex justify-between mt-1">
                             <span className="text-muted-foreground">Pembayaran 2</span>
-                            <span>{booking.price_2 ? formatCurrency(booking.price_2) : formatCurrency(0)}</span>
+                            <span>{financial.price_2 ? formatCurrency(financial.price_2) : formatCurrency(0)}</span>
                           </div>
-                          {booking.payment_method_2 && (
+                          {financial.payment_method_2 && (
                             <div className="flex justify-between text-xs">
                               <span className="text-muted-foreground">Metode</span>
-                              <span>{booking.payment_method_2} {booking.reference_no_2 ? `(${booking.reference_no_2})` : ""}</span>
+                              <span>{financial.payment_method_2} {financial.reference_no_2 ? `(${financial.reference_no_2})` : ""}</span>
                             </div>
                           )}
 

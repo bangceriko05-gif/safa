@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchGroupBilling, billingOwner, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import {
   Dialog,
@@ -134,6 +135,8 @@ export default function BookingModal({
   const [originalProducts, setOriginalProducts] = useState<SelectedProduct[]>([]);
   const [initialSnapshot, setInitialSnapshot] = useState<any>(null);
   const [editDataLoaded, setEditDataLoaded] = useState(false);
+  const [groupRooms, setGroupRooms] = useState<BillingRoom[]>([]);
+  const isGroupEdit = Boolean(editingBooking && groupRooms.length > 1);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -428,7 +431,7 @@ export default function BookingModal({
     // Skip auto-fill if dual payment is active - user should manually split the payment
     // Skip auto-fill if OTA - user inputs price manually
     // Skip auto-fill during edit data loading or when price is protected (edit mode until user changes variant/duration)
-    if (formData.dual_payment || formData.booking_type === "ota" || isMultiRoom) return;
+    if (editingBooking?.booking_group_id || formData.dual_payment || formData.booking_type === "ota" || isMultiRoom) return;
     if (isLoadingEditDataRef.current || isPriceProtectedRef.current) return;
     
     const grandTotal = calculateGrandTotal();
@@ -495,6 +498,7 @@ export default function BookingModal({
   // Initialize form when modal opens or data changes
   useEffect(() => {
     if (!isOpen) return; // Only run when modal is open
+    setGroupRooms([]);
     
     if (editingBooking) {
       setEditDataLoaded(false);
@@ -547,8 +551,8 @@ export default function BookingModal({
       };
       setFormData(loadedFormData as typeof formData);
       // Set payment proof URL from existing booking
-      const loadedProof1 = editingBooking.payment_proof_url || null;
-      const loadedProof2 = (editingBooking as any).payment_proof_url_2 || null;
+      let loadedProof1 = editingBooking.payment_proof_url || null;
+      let loadedProof2 = (editingBooking as any).payment_proof_url_2 || null;
       setPaymentProofUrl(loadedProof1);
       setPaymentProofUrl2(loadedProof2);
       setPrimaryRoomPrice("");
@@ -578,7 +582,29 @@ export default function BookingModal({
 
       // Fetch booking products then lock the initial snapshot
       (async () => {
-        const products = await fetchBookingProducts(editingBooking.id);
+        let products = await fetchBookingProducts(editingBooking.id);
+        if (editingBooking.booking_group_id) {
+          const shared = await fetchGroupBilling(editingBooking);
+          if (shared.rooms.length > 1 && shared.totals.owner) {
+            const owner = shared.totals.owner;
+            setGroupRooms(shared.rooms);
+            Object.assign(loadedFormData, {
+              price: formatPrice(String(shared.totals.paid1)),
+              price_2: shared.totals.paid2 ? formatPrice(String(shared.totals.paid2)) : "",
+              dual_payment: Boolean(owner.dual_payment), payment_method: owner.payment_method || "",
+              payment_method_2: owner.payment_method_2 || "", reference_no: owner.reference_no || "-",
+              reference_no_2: owner.reference_no_2 || "", discount_type: owner.discount_type || "percentage",
+              discount_value: owner.discount_value ? String(owner.discount_value) : "",
+              has_discount: Boolean(owner.discount_value), discount_applies_to: owner.discount_applies_to || "variant",
+            });
+            loadedProof1 = owner.payment_proof_url || null;
+            loadedProof2 = owner.payment_proof_url_2 || null;
+            setPaymentProofUrl(loadedProof1); setPaymentProofUrl2(loadedProof2);
+            setFormData({ ...loadedFormData } as typeof formData);
+            products = shared.products.map(p => ({ product_id: p.product_id || p.id, name: p.product_name, price: p.product_price, quantity: p.quantity, subtotal: p.subtotal }));
+            setSelectedProducts(products); setOriginalProducts(products);
+          }
+        }
         setInitialSnapshot({
           formData: loadedFormData,
           selectedProducts: products,
@@ -588,7 +614,10 @@ export default function BookingModal({
           checkOutDate: loadedCheckOutDate ? loadedCheckOutDate.toISOString() : null,
         });
         setEditDataLoaded(true);
-      })();
+      })().catch(error => {
+        console.error("Unable to load booking billing", error);
+        toast.error("Gagal memuat billing booking. Tutup lalu buka kembali formulir.");
+      });
 
       // Clear the initial loading flag after a delay
       // but keep price protected until user explicitly changes variant/duration
@@ -1181,10 +1210,18 @@ export default function BookingModal({
     return selectedProducts.reduce((sum, p) => sum + p.subtotal, 0);
   };
 
+  const currentGroupRooms = () => groupRooms.map(room => room.id === editingBooking?.id
+    ? { ...room, variant_price_override: formData.booking_type === "ota"
+        ? room.variant_price_override ?? billingRoomTotal(room) / Math.max(1, room.duration)
+        : formData.variant_price_override !== "" ? Number(parsePrice(formData.variant_price_override)) : room.variant_price_override,
+        duration: isPMSMode && checkInDate && checkOutDate ? Math.max(1, differenceInCalendarDays(checkOutDate, checkInDate)) : room.duration }
+    : room);
+  const groupRoomSubtotal = () => currentGroupRooms().filter(room => room.status !== "BATAL").reduce((sum, room) => sum + billingRoomTotal(room), 0);
+
   const calculateDiscount = () => {
     if (!formData.has_discount || !formData.discount_value) return 0;
 
-    const roomPrice = isMultiRoom
+    const roomPrice = isGroupEdit ? groupRoomSubtotal() : isMultiRoom
       ? calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id)
         + additionalRooms.reduce((sum, room) => sum + calculateEnteredRoomTotal(room.price, room.variant_id), 0)
       : calculateRoomSubtotal();
@@ -1202,7 +1239,7 @@ export default function BookingModal({
   };
 
   const calculateGrandTotal = () => {
-    const roomPrice = isMultiRoom
+    const roomPrice = isGroupEdit ? groupRoomSubtotal() : isMultiRoom
       ? calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id)
         + additionalRooms.reduce((sum, room) => sum + calculateEnteredRoomTotal(room.price, room.variant_id), 0)
       : calculateRoomSubtotal();
@@ -1633,9 +1670,22 @@ export default function BookingModal({
         // Log what we're updating for debugging
         console.log('Updating booking with data:', bookingData);
         
+        if (isGroupEdit) {
+          const { error: sharedError } = await supabase.rpc("update_shared_booking_billing", {
+            p_booking_id: editingBooking.id,
+            p_payment: bookingData,
+            p_room_rates: currentGroupRooms().filter(room => room.status !== "BATAL").map(room => ({ id: room.id, rate: room.variant_price_override ?? (room.ota_source || room.ota_booking_id ? billingRoomTotal(room) / Math.max(1, room.duration) : room.room_variants?.price ?? 0) })),
+            p_products: selectedProducts.map(p => ({ product_id: p.product_id, product_name: p.name, product_price: p.price, quantity: p.quantity, subtotal: p.subtotal })),
+          });
+          if (sharedError) throw sharedError;
+        }
+        const operationalData = { ...bookingData };
+        if (isGroupEdit) {
+          for (const key of ["price", "price_2", "dual_payment", "payment_method", "payment_method_2", "reference_no", "reference_no_2", "payment_proof_url", "payment_proof_url_2", "discount_type", "discount_value", "discount_applies_to", "payment_status", "variant_price_override"]) delete operationalData[key];
+        }
         const { error } = await supabase
           .from("bookings")
-          .update(bookingData)
+          .update(operationalData)
           .eq("id", editingBooking.id);
 
         if (error) throw error;
@@ -1658,6 +1708,7 @@ export default function BookingModal({
           if (dailyError) throw dailyError;
         }
 
+        if (!isGroupEdit) {
         // Delete existing products
         await supabase
           .from("booking_products")
@@ -1682,6 +1733,7 @@ export default function BookingModal({
           if (productsError) throw productsError;
         }
         
+        }
         // Build detailed change description (singkat tapi jelas)
         const changes: string[] = [];
 
@@ -1827,7 +1879,7 @@ export default function BookingModal({
         
         // Handle hutang changes on edit
         await handleHutangOnEdit({
-          previousPaymentMethod: editingBooking.payment_method,
+          previousPaymentMethod: isGroupEdit ? billingOwner(groupRooms)?.payment_method : editingBooking.payment_method,
           newPaymentMethod: formData.payment_method,
           amount: parseFloat(parsePrice(formData.price)),
           supplierName: formData.customer_name,
@@ -1840,7 +1892,7 @@ export default function BookingModal({
         // Handle dual payment hutang changes
         if (formData.dual_payment || editingBooking.dual_payment) {
           await handleHutangOnEdit({
-            previousPaymentMethod: editingBooking.payment_method_2,
+            previousPaymentMethod: isGroupEdit ? billingOwner(groupRooms)?.payment_method_2 : editingBooking.payment_method_2,
             newPaymentMethod: formData.dual_payment ? formData.payment_method_2 : null,
             amount: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : 0,
             supplierName: formData.customer_name,
@@ -2927,7 +2979,7 @@ export default function BookingModal({
                 )}
 
                 {/* Walk-in Variant Info */}
-                {!isMultiRoom && formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
+                {!isGroupEdit && !isMultiRoom && formData.booking_type === "walk_in" && formData.variant_id && roomVariants.length > 0 && (() => {
                   const selectedVariant = roomVariants.find(v => v.id === formData.variant_id);
                   const isMonthlyVariant = selectedVariant?.booking_duration_type === "months";
                   const selectedRoom = rooms.find(r => r.id === formData.room_id);
@@ -2978,6 +3030,12 @@ export default function BookingModal({
                   );
                 })()}
 
+                {isGroupEdit && <div className="space-y-2">{currentGroupRooms().map((room, index) => (
+                  <div key={room.id} className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Kamar {index + 1} · {room.rooms?.name} · Rp {Number(room.variant_price_override ?? room.room_variants?.price ?? 0).toLocaleString("id-ID")} × {room.duration} malam</span>
+                    <span className="font-medium tabular-nums">Rp {billingRoomTotal(room).toLocaleString("id-ID")}</span>
+                  </div>
+                ))}</div>}
                 {isMultiRoom && (
                   <div className="space-y-2">
                     {[
@@ -3025,7 +3083,7 @@ export default function BookingModal({
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">{formData.booking_type === "ota" ? "Harga OTA:" : "Subtotal Kamar:"}</span>
                     <span className="font-bold text-primary">
-                      Rp {(isMultiRoom
+                      Rp {(isGroupEdit ? groupRoomSubtotal() : isMultiRoom
                         ? calculateEnteredRoomTotal(primaryRoomPrice, formData.variant_id)
                           + additionalRooms.reduce((sum, room) => sum + calculateEnteredRoomTotal(room.price, room.variant_id), 0)
                         : calculateRoomSubtotal()).toLocaleString('id-ID')}
