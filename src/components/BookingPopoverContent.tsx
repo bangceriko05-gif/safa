@@ -1,3 +1,4 @@
+import { fetchGroupBilling, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ export default function BookingPopoverContent({
   onDeleteBooking,
   addDays,
 }: BookingPopoverContentProps) {
+  const [sharedBilling, setSharedBilling] = useState<Awaited<ReturnType<typeof fetchGroupBilling>> | null>(null);
   const [products, setProducts] = useState<BookingProduct[]>([]);
   const [variantPrice, setVariantPrice] = useState<number | null>(null);
   const [variantDurationType, setVariantDurationType] = useState<string | null>(null);
@@ -128,6 +130,8 @@ export default function BookingPopoverContent({
   const fetchPaymentDetails = async () => {
     setLoadingDetails(true);
     try {
+      const shared = booking.booking_group_id ? await fetchGroupBilling(booking) : null;
+      setSharedBilling(shared && shared.rooms.length > 1 ? shared : null);
       // Fetch products and variant price in parallel
       const [productsResult, variantResult] = await Promise.all([
         supabase
@@ -143,7 +147,7 @@ export default function BookingPopoverContent({
           : Promise.resolve({ data: null }),
       ]);
 
-      setProducts(productsResult.data || []);
+      setProducts(shared?.products || productsResult.data || []);
       if (variantResult.data && "price" in variantResult.data) {
         const override = (booking as any).variant_price_override;
         setVariantPrice(override != null ? Number(override) : (variantResult.data as any).price);
@@ -167,7 +171,8 @@ export default function BookingPopoverContent({
 
   // Calculate financial breakdown
   // For monthly/weekly variants, price is per unit (per month/week), not per day
-  const roomSubtotal = variantPrice
+  const financial = sharedBilling?.totals.owner || booking;
+  const roomSubtotal = sharedBilling ? sharedBilling.totals.roomTotal : variantPrice
     ? (variantDurationType === "months" || variantDurationType === "weeks")
       ? variantPrice * (variantDurationValue || 1)
       : variantPrice * booking.duration
@@ -184,12 +189,13 @@ export default function BookingPopoverContent({
     }
   }
 
+  if (sharedBilling) discountAmount = sharedBilling.totals.discount;
   const grandTotal = roomSubtotal + productTotal - discountAmount;
-  const totalPaid =
+  const totalPaid = sharedBilling?.totals.paid ?? (
     (booking.price || 0) +
-    (booking.dual_payment && booking.price_2 ? booking.price_2 : 0);
+    (booking.dual_payment && booking.price_2 ? booking.price_2 : 0));
   const remaining = grandTotal - totalPaid;
-  const isLunas = booking.payment_status === "lunas";
+  const isLunas = totalPaid >= grandTotal && grandTotal > 0;
 
   return (
     <div className="space-y-3">
@@ -430,6 +436,7 @@ export default function BookingPopoverContent({
           </div>
         ) : (
           <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-sm">
+            {sharedBilling?.rooms.map((room, index) => <div key={room.id} className="flex justify-between gap-3"><span>Kamar {index + 1} · {room.rooms?.name}</span><span>{formatCurrency(billingRoomTotal(room))}</span></div>)}
             {/* Room Price */}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Harga Kamar</span>
@@ -459,8 +466,8 @@ export default function BookingPopoverContent({
               <div className="flex justify-between text-red-600">
                 <span>
                   Diskon{" "}
-                  {(booking.discount_type === "percent" || booking.discount_type === "percentage")
-                    ? `(${booking.discount_value}%)`
+                  {(financial.discount_type === "percent" || financial.discount_type === "percentage")
+                    ? `(${financial.discount_value}%)`
                     : ""}
                 </span>
                 <span>- {formatCurrency(discountAmount)}</span>
@@ -480,37 +487,37 @@ export default function BookingPopoverContent({
             {/* Payment 1 */}
             <div className="flex justify-between">
               <span className="text-muted-foreground">
-                {booking.dual_payment ? "Pembayaran 1" : "Total Bayar"}
+                {financial.dual_payment ? "Pembayaran 1" : "Total Bayar"}
               </span>
-              <span>{formatCurrency(booking.price)}</span>
+              <span>{formatCurrency(sharedBilling?.totals.paid1 ?? booking.price)}</span>
             </div>
-            {booking.payment_method && (
+            {financial.payment_method && (
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Metode</span>
                 <span>
-                  {booking.payment_method}{" "}
-                  {booking.reference_no && booking.reference_no !== "-"
-                    ? `(${booking.reference_no})`
+                  {financial.payment_method}{" "}
+                  {financial.reference_no && financial.reference_no !== "-"
+                    ? `(${financial.reference_no})`
                     : ""}
                 </span>
               </div>
             )}
 
             {/* Payment 2 */}
-            {booking.dual_payment && (
+            {financial.dual_payment && (
               <>
                 <div className="flex justify-between mt-1">
                   <span className="text-muted-foreground">Pembayaran 2</span>
                   <span>
-                    {booking.price_2 ? formatCurrency(booking.price_2) : formatCurrency(0)}
+                    {financial.price_2 ? formatCurrency(financial.price_2) : formatCurrency(0)}
                   </span>
                 </div>
-                {booking.payment_method_2 && (
+                {financial.payment_method_2 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Metode</span>
                     <span>
-                      {booking.payment_method_2}{" "}
-                      {booking.reference_no_2 ? `(${booking.reference_no_2})` : ""}
+                      {financial.payment_method_2}{" "}
+                      {financial.reference_no_2 ? `(${financial.reference_no_2})` : ""}
                     </span>
                   </div>
                 )}

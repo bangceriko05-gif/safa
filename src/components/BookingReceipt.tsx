@@ -1,3 +1,4 @@
+import { fetchGroupBilling, billingRoomTotal } from "@/utils/groupBookingBilling";
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +63,7 @@ export default function BookingReceipt() {
   const orderId = searchParams.get("order");
   const combined = searchParams.get("combined") === "1";
   
+  const [sharedBilling, setSharedBilling] = useState<Awaited<ReturnType<typeof fetchGroupBilling>> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [printSettings, setPrintSettings] = useState<PrintSettings | null>(null);
@@ -277,7 +279,9 @@ export default function BookingReceipt() {
         .select("product_name, quantity, product_price, subtotal")
         .eq("booking_id", bookingId);
 
-      let mergedProducts = (productsData || []) as BookingProduct[];
+      const shared = bookingData.booking_group_id && !orderId ? await fetchGroupBilling(bookingData) : null;
+      setSharedBilling(shared && shared.rooms.length > 1 ? shared : null);
+      let mergedProducts = (shared?.products || productsData || []) as BookingProduct[];
 
       if (orderId) {
         // Order-only receipt: replace products with this order's items
@@ -354,6 +358,14 @@ export default function BookingReceipt() {
 
       setBooking({
         ...bookingData,
+        ...(shared?.rooms.length && shared.rooms.length > 1 && shared.totals.owner ? {
+          price: shared.totals.paid1, price_2: shared.totals.paid2,
+          dual_payment: Boolean(shared.totals.owner.dual_payment),
+          payment_method: shared.totals.owner.payment_method || undefined,
+          payment_method_2: shared.totals.owner.payment_method_2 || undefined,
+          discount_type: shared.totals.owner.discount_type || undefined,
+          discount_value: shared.totals.discount,
+        } : {}),
         room_name: bookingData.rooms?.name || "Unknown",
         variant_name: variantName,
         variant_price: variantPrice,
@@ -378,6 +390,7 @@ export default function BookingReceipt() {
   const getRoomSubtotal = () => {
     if (!booking) return 0;
     if (orderOnlyMode) return 0;
+    if (sharedBilling) return sharedBilling.totals.roomTotal;
     // Match popup logic: variant_price * duration, fallback to price for OTA
     return booking.variant_price 
       ? booking.variant_price * booking.duration 
@@ -385,6 +398,7 @@ export default function BookingReceipt() {
   };
 
   const calculateDiscount = () => {
+    if (sharedBilling && !orderOnlyMode) return sharedBilling.totals.discount;
     if (!booking || !booking.discount_value || booking.discount_value <= 0) return 0;
     
     const roomSubtotal = getRoomSubtotal();
@@ -654,6 +668,7 @@ export default function BookingReceipt() {
             fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
           }}
         >
+          {!orderOnlyMode && sharedBilling?.rooms.map((room, index) => <div key={room.id} className="flex justify-between mb-1"><span>Kamar {index + 1} · {room.rooms?.name} · {room.duration} malam</span><span>{formatCurrency(billingRoomTotal(room))}</span></div>)}
           {!orderOnlyMode && (<div className="flex justify-between mb-1">
             <span>Total Biaya</span>
             <span>{formatCurrency(getRoomSubtotal())}</span>
