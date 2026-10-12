@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchGroupBilling, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
+import { fetchGroupBilling, billingOwner, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import {
   Dialog,
@@ -614,7 +614,10 @@ export default function BookingModal({
           checkOutDate: loadedCheckOutDate ? loadedCheckOutDate.toISOString() : null,
         });
         setEditDataLoaded(true);
-      })();
+      })().catch(error => {
+        console.error("Unable to load booking billing", error);
+        toast.error("Gagal memuat billing booking. Tutup lalu buka kembali formulir.");
+      });
 
       // Clear the initial loading flag after a delay
       // but keep price protected until user explicitly changes variant/duration
@@ -1210,10 +1213,10 @@ export default function BookingModal({
   const currentGroupRooms = () => groupRooms.map(room => room.id === editingBooking?.id
     ? { ...room, variant_price_override: formData.booking_type === "ota"
         ? room.variant_price_override ?? billingRoomTotal(room) / Math.max(1, room.duration)
-        : Number(parsePrice(formData.variant_price_override)) || room.variant_price_override,
+        : formData.variant_price_override !== "" ? Number(parsePrice(formData.variant_price_override)) : room.variant_price_override,
         duration: isPMSMode && checkInDate && checkOutDate ? Math.max(1, differenceInCalendarDays(checkOutDate, checkInDate)) : room.duration }
     : room);
-  const groupRoomSubtotal = () => currentGroupRooms().reduce((sum, room) => sum + billingRoomTotal(room), 0);
+  const groupRoomSubtotal = () => currentGroupRooms().filter(room => room.status !== "BATAL").reduce((sum, room) => sum + billingRoomTotal(room), 0);
 
   const calculateDiscount = () => {
     if (!formData.has_discount || !formData.discount_value) return 0;
@@ -1678,7 +1681,7 @@ export default function BookingModal({
         }
         const operationalData = { ...bookingData };
         if (isGroupEdit) {
-          for (const key of ["price", "price_2", "dual_payment", "payment_method", "payment_method_2", "reference_no", "reference_no_2", "payment_proof_url", "payment_proof_url_2", "discount_type", "discount_value", "discount_applies_to", "payment_status"]) delete operationalData[key];
+          for (const key of ["price", "price_2", "dual_payment", "payment_method", "payment_method_2", "reference_no", "reference_no_2", "payment_proof_url", "payment_proof_url_2", "discount_type", "discount_value", "discount_applies_to", "payment_status", "variant_price_override"]) delete operationalData[key];
         }
         const { error } = await supabase
           .from("bookings")
@@ -1876,7 +1879,7 @@ export default function BookingModal({
         
         // Handle hutang changes on edit
         await handleHutangOnEdit({
-          previousPaymentMethod: editingBooking.payment_method,
+          previousPaymentMethod: isGroupEdit ? billingOwner(groupRooms)?.payment_method : editingBooking.payment_method,
           newPaymentMethod: formData.payment_method,
           amount: parseFloat(parsePrice(formData.price)),
           supplierName: formData.customer_name,
@@ -1889,7 +1892,7 @@ export default function BookingModal({
         // Handle dual payment hutang changes
         if (formData.dual_payment || editingBooking.dual_payment) {
           await handleHutangOnEdit({
-            previousPaymentMethod: editingBooking.payment_method_2,
+            previousPaymentMethod: isGroupEdit ? billingOwner(groupRooms)?.payment_method_2 : editingBooking.payment_method_2,
             newPaymentMethod: formData.dual_payment ? formData.payment_method_2 : null,
             amount: formData.price_2 ? parseFloat(parsePrice(formData.price_2)) : 0,
             supplierName: formData.customer_name,
