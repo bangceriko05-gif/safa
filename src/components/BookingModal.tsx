@@ -136,6 +136,7 @@ export default function BookingModal({
   const [initialSnapshot, setInitialSnapshot] = useState<any>(null);
   const [editDataLoaded, setEditDataLoaded] = useState(false);
   const [groupRooms, setGroupRooms] = useState<BillingRoom[]>([]);
+  const [groupRoomVariants, setGroupRoomVariants] = useState<Record<string, RoomVariant[]>>({});
   const isGroupEdit = Boolean(editingBooking && groupRooms.length > 1);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
