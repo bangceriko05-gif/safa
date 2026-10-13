@@ -2308,7 +2308,83 @@ export default function BookingModal({
             </div>
           )}
 
-          {!isMultiRoom && <div className="space-y-2">
+          {isGroupEdit && (
+            <div className="space-y-3 rounded-md border p-3">
+              <Label>Semua Kamar (satu BID)</Label>
+              {currentGroupRooms().map((room, index) => {
+                const isActiveRoom = room.id === editingBooking?.id;
+                const variants = filterVariantsForDate(groupRoomVariants[room.id] || []);
+                const updateRoom = (patch: Partial<BillingRoom>) => {
+                  if (isActiveRoom) {
+                    setFormData(previous => ({
+                      ...previous,
+                      room_id: patch.room_id ?? previous.room_id,
+                      variant_id: patch.variant_id ?? previous.variant_id,
+                      variant_price_override: patch.variant_price_override != null ? formatPrice(String(patch.variant_price_override)) : previous.variant_price_override,
+                    }));
+                  }
+                  setGroupRooms(previous => previous.map(item => item.id === room.id ? { ...item, ...patch } : item));
+                };
+                return (
+                  <div key={room.id} className="space-y-3 border-t pt-3 first:border-t-0 first:pt-0">
+                    <Label>Kamar {index + 1}{isActiveRoom ? " (sedang diedit)" : ""}</Label>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Select
+                        value={room.room_id}
+                        onValueChange={(roomId) => {
+                          updateRoom({ room_id: roomId, variant_id: null, variant_price_override: null });
+                          void (async () => {
+                            if (!currentStore) return;
+                            const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
+                            const data = await fetchRoomVariantsByRoom(currentStore.id, roomId, true);
+                            setGroupRoomVariants(previous => ({ ...previous, [room.id]: data || [] }));
+                          })();
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Pilih kamar" /></SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          {rooms.filter(candidate => candidate.id === room.room_id || !currentGroupRooms().some(selected => selected.id !== room.id && selected.room_id === candidate.id)).map(candidate => (
+                            <SelectItem key={candidate.id} value={candidate.id}>{candidate.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formData.booking_type === "walk_in" ? (
+                        <Select
+                          value={room.variant_id || ""}
+                          onValueChange={(variantId) => {
+                            const variant = variants.find(item => item.id === variantId);
+                            updateRoom({ variant_id: variantId, variant_price_override: variant ? variant.price : room.variant_price_override });
+                          }}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            {variants.map(variant => (
+                              <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : <div />}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Rp</span>
+                        <Input
+                          inputMode="numeric"
+                          value={room.variant_price_override != null ? formatPrice(String(room.variant_price_override)) : ""}
+                          onChange={(event) => updateRoom({ variant_price_override: Number(parsePrice(event.target.value)) || 0 })}
+                          placeholder="Harga kamar"
+                          className="tabular-nums"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">
+                Tanggal, pelanggan, metode pembayaran, dan bukti bayar berlaku untuk semua kamar. Check-in dan check-out tiap kamar tetap terpisah.
+              </p>
+            </div>
+          )}
+
+          {!isMultiRoom && !isGroupEdit && <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="room_id">{isMultiRoom ? "Kamar 1 *" : "Ruangan *"}</Label>
               {!editingBooking && !isFunFury && (
