@@ -3382,12 +3382,10 @@ export default function BookingModal({
               checked={formData.dual_payment}
               onCheckedChange={(checked) => {
                 if (checked) {
-                  // When enabling dual payment, reset price fields so user can split payment correctly
+                  // Keep the first payment value; only prepare the second payment field
                   setFormData({ 
                     ...formData, 
                     dual_payment: true,
-                    price: "",
-                    price_2: ""
                   });
                   setIsPrice2ManuallyEdited(false);
                   toast.info("Masukkan nilai pembayaran pertama dan kedua yang terpisah");
