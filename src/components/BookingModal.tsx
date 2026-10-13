@@ -2421,7 +2421,7 @@ export default function BookingModal({
           </div>}
 
           {/* Varian Kamar - Only show for Walk-in */}
-          {!isMultiRoom && formData.room_id && formData.booking_type === "walk_in" && (
+          {!isMultiRoom && !isGroupEdit && formData.room_id && formData.booking_type === "walk_in" && (
             <div className="space-y-2">
               <Label htmlFor="variant_id">Varian Kamar *</Label>
               {getFilteredVariants.length > 0 ? (
