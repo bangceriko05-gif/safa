@@ -1682,6 +1682,15 @@ export default function BookingModal({
             p_products: selectedProducts.map(p => ({ product_id: p.product_id, product_name: p.name, product_price: p.price, quantity: p.quantity, subtotal: p.subtotal })),
           });
           if (sharedError) throw sharedError;
+          // Persist sibling room/variant changes (payment fields stay on the owner via the RPC).
+          for (const room of currentGroupRooms()) {
+            if (room.id === editingBooking.id) continue;
+            const { error: siblingError } = await supabase
+              .from("bookings")
+              .update({ room_id: room.room_id, variant_id: room.variant_id, variant_price_override: room.variant_price_override })
+              .eq("id", room.id);
+            if (siblingError) throw siblingError;
+          }
         }
         const operationalData = { ...bookingData };
         if (isGroupEdit) {
