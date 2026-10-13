@@ -589,6 +589,9 @@ export default function BookingModal({
           if (shared.rooms.length > 1 && shared.totals.owner) {
             const owner = shared.totals.owner;
             setGroupRooms(shared.rooms);
+            const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
+            const variantEntries = await Promise.all(shared.rooms.map(async room => [room.id, room.room_id ? await fetchRoomVariantsByRoom(currentStore.id, room.room_id, true) : []] as const));
+            setGroupRoomVariants(Object.fromEntries(variantEntries));
             Object.assign(loadedFormData, {
               price: formatPrice(String(shared.totals.paid1)),
               price_2: shared.totals.paid2 ? formatPrice(String(shared.totals.paid2)) : "",
