@@ -2260,9 +2260,28 @@ export default function BookingModal({
               <Input
                 id="phone"
                 value={formData.phone}
-                onChange={(e) => handlePhoneChange(e.target.value)}
+                onChange={(e) => { setPhoneSuggestionIndex(-1); handlePhoneChange(e.target.value); }}
                 onFocus={() => setShowPhoneSuggestions(formData.phone.length > 0)}
                 onBlur={() => setTimeout(() => setShowPhoneSuggestions(false), 200)}
+                onKeyDown={(e) => {
+                  if (!showPhoneSuggestions || filteredCustomersByPhone.length === 0) return;
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const delta = e.key === "ArrowDown" ? 1 : -1;
+                    setPhoneSuggestionIndex((prev) => {
+                      const next = prev < 0 ? (delta === 1 ? 0 : filteredCustomersByPhone.length - 1) : (prev + delta + filteredCustomersByPhone.length) % filteredCustomersByPhone.length;
+                      document.getElementById(`phone-suggestion-${next}`)?.scrollIntoView({ block: "nearest" });
+                      return next;
+                    });
+                  } else if ((e.key === "Enter" || e.key === "Tab") && phoneSuggestionIndex >= 0) {
+                    e.preventDefault();
+                    selectCustomer(filteredCustomersByPhone[phoneSuggestionIndex]);
+                    setPhoneSuggestionIndex(-1);
+                  } else if (e.key === "Escape") {
+                    setShowPhoneSuggestions(false);
+                    setPhoneSuggestionIndex(-1);
+                  }
+                }}
                 placeholder={formData.booking_type === "ota" ? "Opsional untuk OTA..." : "Ketik nomor HP..."}
                 autoComplete="off"
                 autoCorrect="off"
@@ -2273,11 +2292,13 @@ export default function BookingModal({
 
               {showPhoneSuggestions && filteredCustomersByPhone.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {filteredCustomersByPhone.map((customer) => (
+                  {filteredCustomersByPhone.map((customer, index) => (
                     <div
                       key={customer.id}
-                      className="px-3 py-2 hover:bg-accent cursor-pointer"
+                      id={`phone-suggestion-${index}`}
+                      className={`px-3 py-2 cursor-pointer ${index === phoneSuggestionIndex ? "bg-accent" : "hover:bg-accent"}`}
                       onMouseDown={() => selectCustomer(customer)}
+                      onMouseEnter={() => setPhoneSuggestionIndex(index)}
                     >
                       <div className="font-medium">{customer.phone || "-"}</div>
                       <div className="text-sm text-muted-foreground">{customer.name}</div>
