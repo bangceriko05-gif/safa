@@ -144,6 +144,8 @@ export default function BookingModal({
   const [productQuantity, setProductQuantity] = useState("1");
   const [showProductSuggestions, setShowProductSuggestions] = useState(false);
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [nameSuggestionIndex, setNameSuggestionIndex] = useState(-1);
+  const [phoneSuggestionIndex, setPhoneSuggestionIndex] = useState(-1);
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
   const [isPrice2ManuallyEdited, setIsPrice2ManuallyEdited] = useState(false);
   const isLoadingEditDataRef = useRef(false);
