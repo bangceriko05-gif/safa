@@ -98,6 +98,14 @@ interface BookingOrderRow {
 export default function ListBooking({ userRole, onEditBooking, onAddBooking, timeRange: externalTimeRange, customDateRange: externalCustomDateRange, searchQuery: externalSearchQuery }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
+  const { data: whatsAppMessages } = useWhatsAppMessages(currentStore?.id);
+  const openBookingWhatsApp = (booking: BookingWithRoom) => {
+    if (!booking.phone) { toast.error("Nomor WhatsApp pelanggan tidak tersedia."); return; }
+    if (!whatsAppMessages) { toast.error("Pesan WhatsApp sedang dimuat. Coba kembali."); return; }
+    const href = bookingWhatsAppLink(booking, currentStore?.name || "", whatsAppMessages, currentStore?.calendar_type === "pms");
+    if (!href) { toast.error("Nomor WhatsApp tidak valid atau booking dibatalkan."); return; }
+    window.open(href, "_blank", "noopener,noreferrer");
+  };
   const [activeSubTab, setActiveSubTab] = useState("proses");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
