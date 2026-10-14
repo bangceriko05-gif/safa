@@ -187,6 +187,16 @@ All colors MUST be HSL.
   .dashboard-stat-expense .dashboard-stat-icon { color: hsl(2 82% 56%); }
   .dashboard-stat-customer .dashboard-stat-icon { color: hsl(276 85% 56%); }
   .text-success { color: hsl(var(--success)); }
+  .booking-payment-dialog { z-index: 110; }
+  .booking-payment-methods { z-index: 120; }
+  .booking-settled { animation: booking-settled-in 650ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  @keyframes booking-settled-in {
+    from { opacity: 0; transform: scale(0.8) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .booking-settled { animation: none; }
+  }
 
   .dashboard-transactions table { @apply text-xs; }
   .dashboard-transactions thead tr { @apply border-0 bg-muted/55; }
