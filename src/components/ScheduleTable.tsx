@@ -105,6 +105,7 @@ export default function ScheduleTable({
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<BookingWithAdmin[]>([]);
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
+  const [paymentBookingId, setPaymentBookingId] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
@@ -1505,6 +1506,7 @@ export default function ScheduleTable({
                                     </div>
 
                                     {/* Notes */}
+                                    {status !== "BATAL" && hasPermission("edit_bookings") && <Button type="button" className="w-full gap-2" onClick={event => { event.stopPropagation(); setPaymentBookingId(booking.id); }}><DollarSign className="h-4 w-4" />Pembayaran</Button>}
                                     {booking.note && (
                                       <div className="pt-2 border-t">
                                         <div className="flex items-start gap-2">
@@ -1710,6 +1712,7 @@ export default function ScheduleTable({
       </div>
       )}
 
+      {paymentBookingId && <BookingPaymentDialog open={Boolean(paymentBookingId)} onOpenChange={open => { if (!open) setPaymentBookingId(null); }} bookingId={paymentBookingId} onPaid={fetchBookings} />}
       <AlertDialog open={!!deleteBookingId} onOpenChange={() => setDeleteBookingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
