@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/select";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
+import { useWhatsAppMessages } from "@/hooks/useWhatsAppMessages";
+import { bookingWhatsAppLink } from "@/utils/bookingWhatsApp";
+import { WhatsAppIcon } from "@/components/booking/BookingWhatsAppPhone";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
