@@ -913,14 +913,26 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                               </DropdownMenu>
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
-                                title="Print Nota"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openBookingWhatsApp(booking)}
+                                  title="Hubungi via WhatsApp"
+                                  aria-label={`WhatsApp ${booking.customer_name}`}
+                                  className="text-[#25D366] hover:text-[#25D366]"
+                                >
+                                  <WhatsAppIcon className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
+                                  title="Print Nota"
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                           {isExpanded && bookingChildOrders.length > 0 && (
