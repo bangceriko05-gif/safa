@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/select";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
+import { useWhatsAppMessages } from "@/hooks/useWhatsAppMessages";
+import { bookingWhatsAppLink } from "@/utils/bookingWhatsApp";
+import { WhatsAppIcon } from "@/components/booking/BookingWhatsAppPhone";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
 import { cn } from "@/lib/utils";
@@ -95,6 +98,14 @@ interface BookingOrderRow {
 export default function ListBooking({ userRole, onEditBooking, onAddBooking, timeRange: externalTimeRange, customDateRange: externalCustomDateRange, searchQuery: externalSearchQuery }: ListBookingProps) {
   const isMobile = useIsMobile();
   const { currentStore } = useStore();
+  const { data: whatsAppMessages } = useWhatsAppMessages(currentStore?.id);
+  const openBookingWhatsApp = (booking: BookingWithRoom) => {
+    if (!booking.phone) { toast.error("Nomor WhatsApp pelanggan tidak tersedia."); return; }
+    if (!whatsAppMessages) { toast.error("Pesan WhatsApp sedang dimuat. Coba kembali."); return; }
+    const href = bookingWhatsAppLink(booking, currentStore?.name || "", whatsAppMessages, currentStore?.calendar_type === "pms");
+    if (!href) { toast.error("Nomor WhatsApp tidak valid atau booking dibatalkan."); return; }
+    window.open(href, "_blank", "noopener,noreferrer");
+  };
   const [activeSubTab, setActiveSubTab] = useState("proses");
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -902,14 +913,26 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                               </DropdownMenu>
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
-                                title="Print Nota"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openBookingWhatsApp(booking)}
+                                  title="Hubungi via WhatsApp"
+                                  aria-label={`WhatsApp ${booking.customer_name}`}
+                                  className="text-[#25D366] hover:text-[#25D366]"
+                                >
+                                  <WhatsAppIcon className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
+                                  title="Print Nota"
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                           {isExpanded && bookingChildOrders.length > 0 && (
