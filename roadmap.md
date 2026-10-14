@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Tambahkan popup pembayaran detail booking, bukti bayar dan referensi; tampilkan animasi LUNAS serta suara laci hanya setelah pelunasan berhasil.
+
 - [x] Satukan billing dan edit pembayaran semua kamar dalam satu BID, tanpa menyatukan status check-in/check-out.
 
 - [x] Perbaiki Total Biaya sebelum diskon dan Jumlah Bayar aktual pada laporan penjualan tanpa pemotongan diskon ganda.
