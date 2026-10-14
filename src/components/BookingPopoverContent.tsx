@@ -20,6 +20,8 @@ import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "@/components/FeatureInactiveNotice";
 import { IdCard } from "lucide-react";
 import BookingWhatsAppPhone, { WhatsAppIcon } from "./booking/BookingWhatsAppPhone";
+import BookingPaymentDialog from "./booking/BookingPaymentDialog";
+import { CreditCard } from "lucide-react";
 
 interface BookingPopoverContentProps {
   booking: any;
@@ -72,6 +74,7 @@ export default function BookingPopoverContent({
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(booking.store_id);
   const [showPosNotice, setShowPosNotice] = useState(false);
   const [loadingIdentity, setLoadingIdentity] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const openReceipt = (suffix = "") => {
     const receipt = window.open(`/receipt?id=${encodeURIComponent(booking.id)}${suffix}`, "_blank");
@@ -130,8 +133,8 @@ export default function BookingPopoverContent({
   const fetchPaymentDetails = async () => {
     setLoadingDetails(true);
     try {
-      const shared = booking.booking_group_id ? await fetchGroupBilling(booking) : null;
-      setSharedBilling(shared && shared.rooms.length > 1 ? shared : null);
+      const shared = await fetchGroupBilling(booking);
+      setSharedBilling(shared);
       // Fetch products and variant price in parallel
       const [productsResult, variantResult] = await Promise.all([
         supabase
@@ -550,10 +553,16 @@ export default function BookingPopoverContent({
             >
               {isLunas ? "✓ LUNAS" : "✕ BELUM LUNAS"}
             </div>
+            {status !== "BATAL" && hasPermission("edit_bookings") && (
+              <Button type="button" className="w-full gap-2 mt-2" disabled={isLunas} onClick={event => { event.stopPropagation(); setPaymentOpen(true); }}>
+                <CreditCard className="h-4 w-4" />Pembayaran
+              </Button>
+            )}
           </div>
         )}
       </div>
 
+      <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} onPaid={fetchPaymentDetails} />
       <Separator />
 
       {/* Booking Orders */}

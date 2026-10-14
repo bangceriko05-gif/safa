@@ -25,6 +25,9 @@ import { logActivity } from "@/utils/activityLogger";
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
+import BookingPaymentDialog from "@/components/booking/BookingPaymentDialog";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CreditCard } from "lucide-react";
 
 interface BookingDetailPopupProps {
   isOpen: boolean;
@@ -109,6 +112,8 @@ export default function BookingDetailPopup({
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const { hasPermission } = usePermissions(isOpen);
   
   // Check-in deposit popup state
   const [checkInDepositPopup, setCheckInDepositPopup] = useState<{
@@ -190,8 +195,8 @@ export default function BookingDetailPopup({
         .select("*")
         .eq("booking_id", bookingId);
 
-      const shared = bookingData.booking_group_id ? await fetchGroupBilling(bookingData) : null;
-      setSharedBilling(shared && shared.rooms.length > 1 ? shared : null);
+      const shared = await fetchGroupBilling(bookingData);
+      setSharedBilling(shared);
       setProducts(shared?.products || productsData || []);
 
       // Fetch activity logs for this booking
@@ -727,6 +732,7 @@ export default function BookingDetailPopup({
                       }`}>
                         {isLunas ? "✓ LUNAS" : "✕ BELUM LUNAS"}
                       </div>
+                      {booking.status !== "BATAL" && hasPermission("edit_bookings") && <Button type="button" className="w-full gap-2" disabled={isLunas} onClick={() => setPaymentOpen(true)}><CreditCard className="h-4 w-4" />Pembayaran</Button>}
                     </>
                   );
                 })()}
@@ -800,6 +806,7 @@ export default function BookingDetailPopup({
       </DialogContent>
 
       {/* Check-In Deposit Popup */}
+      {booking && <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} onPaid={async () => { await fetchBookingDetail(); onStatusChange?.(); }} />}
       <CancelBookingDialog
         open={cancelDialogOpen}
         bookingName={booking?.customer_name}

@@ -37,6 +37,7 @@ import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 import { fetchCurrentUserPermissionAccess } from "@/utils/permissionCache";
 import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
+import BookingPaymentDialog from "@/components/booking/BookingPaymentDialog";
 
 interface ScheduleTableProps {
   selectedDate: Date;
