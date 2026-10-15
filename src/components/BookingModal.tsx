@@ -191,7 +191,7 @@ export default function BookingModal({
   const [otaSources, setOtaSources] = useState<{ id: string; name: string }[]>([]);
   const [customerTypes, setCustomerTypes] = useState<{ id: string; name: string }[]>([]);
   const [typeManagerOpen, setTypeManagerOpen] = useState(false);
-  const [formData, setFormDataRaw] = useState({
+  const [formData, setFormData] = useState({
     customer_name: "",
     phone: "",
     customer_type: "Reguler",
@@ -217,19 +217,6 @@ export default function BookingModal({
     ota_source: "",
     variant_price_override: "",
   });
-
-  // TEMP DEBUG: trace who clears payment_method during edit
-  const formDataRef = useRef(formData);
-  formDataRef.current = formData;
-  const setFormData: typeof setFormDataRaw = (value: any) => {
-    try {
-      const next = typeof value === "function" ? (value as any)(formDataRef.current) : value;
-      if (next && typeof next === "object" && next.payment_method === "" && formDataRef.current?.payment_method) {
-        console.log("[pm-clear]", new Error().stack?.split("\n").slice(2, 5).join(" <= "));
-      }
-    } catch { /* debug only */ }
-    return setFormDataRaw(value);
-  };
 
   // Check if PMS mode based on store calendar_type
   const isPMSMode = (currentStore as any)?.calendar_type === "pms";
@@ -350,15 +337,6 @@ export default function BookingModal({
       groupRooms,
     };
     const dirty = JSON.stringify(initialSnapshot) !== JSON.stringify(current);
-    if (import.meta.env.DEV && dirty && typeof console !== "undefined") {
-      const diffs: string[] = [];
-      for (const key of Object.keys(initialSnapshot)) {
-        if (JSON.stringify((initialSnapshot as any)[key]) !== JSON.stringify((current as any)[key])) {
-          diffs.push(`${key}: snap=${JSON.stringify((initialSnapshot as any)[key])} cur=${JSON.stringify((current as any)[key])}`);
-        }
-      }
-      console.log("[isDirty-debug]", diffs.join(" | "));
-    }
     return dirty;
   }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate, groupRooms, focusedPriceInput, priceInputDraft]);
 
