@@ -584,12 +584,14 @@ export default function BookingModal({
       }
 
       // Fetch booking products then lock the initial snapshot
+      let loadedGroupRooms: typeof groupRooms = [];
       (async () => {
         let products = await fetchBookingProducts(editingBooking.id);
         if (editingBooking.booking_group_id) {
           const shared = await fetchGroupBilling(editingBooking);
           if (shared.rooms.length > 1 && shared.totals.owner) {
             const owner = shared.totals.owner;
+            loadedGroupRooms = shared.rooms;
             setGroupRooms(shared.rooms);
             const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
             const variantEntries = await Promise.all(shared.rooms.map(async room => [room.id, room.room_id ? await fetchRoomVariantsByRoom(currentStore.id, room.room_id, true) : []] as const));
