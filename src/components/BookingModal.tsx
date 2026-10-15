@@ -2747,8 +2747,8 @@ export default function BookingModal({
                       </div>
                     ) : (
                       [...new Set([...otaSources.map((s) => s.name), ...(formData.ota_source ? [formData.ota_source] : [])])].map((source) => (
-                        <SelectItem key={source.id} value={source.name}>
-                          {source.name}
+                        <SelectItem key={source} value={source}>
+                          {source}
                         </SelectItem>
                       ))
                     )}
