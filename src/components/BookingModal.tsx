@@ -620,6 +620,7 @@ export default function BookingModal({
           paymentProofUrl2: loadedProof2,
           checkInDate: loadedCheckInDate ? loadedCheckInDate.toISOString() : null,
           checkOutDate: loadedCheckOutDate ? loadedCheckOutDate.toISOString() : null,
+          groupRooms: loadedGroupRooms,
         });
         setEditDataLoaded(true);
       })().catch(error => {
