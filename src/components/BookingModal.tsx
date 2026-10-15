@@ -336,7 +336,22 @@ export default function BookingModal({
       checkOutDate: checkOutDate ? checkOutDate.toISOString() : null,
       groupRooms,
     };
-    return JSON.stringify(initialSnapshot) !== JSON.stringify(current);
+    const dirty = JSON.stringify(initialSnapshot) !== JSON.stringify(current);
+    if (import.meta.env.DEV && dirty && typeof console !== "undefined") {
+      const firstDiff = (a: any, b: any, path: string): string => {
+        if (JSON.stringify(a) === JSON.stringify(b)) return "";
+        if (a && b && typeof a === "object" && typeof b === "object") {
+          const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+          for (const key of keys) {
+            const hit = firstDiff(a[key], b[key], `${path}.${key}`);
+            if (hit) return hit;
+          }
+        }
+        return `${path}: snapshot=${JSON.stringify(a)} current=${JSON.stringify(b)}`;
+      };
+      console.log("[isDirty-debug]", firstDiff(initialSnapshot, current, "root"));
+    }
+    return dirty;
   }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate, groupRooms, focusedPriceInput, priceInputDraft]);
 
 
