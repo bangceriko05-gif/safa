@@ -3460,14 +3460,17 @@ export default function BookingModal({
                 <Label htmlFor="payment_method_2">Metode Pembayaran Kedua *</Label>
                 <Select
                   value={formData.payment_method_2}
-                  onValueChange={(value) => setFormData({ ...formData, payment_method_2: value })}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setFormData({ ...formData, payment_method_2: value });
+                  }}
                   required={formData.dual_payment}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih metode pembayaran kedua *" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
-                    {paymentMethodOptions.map(method => (
+                    {paymentMethodSelectOptions.map(method => (
                       <SelectItem key={method} value={method}>{method}</SelectItem>
                     ))}
                   </SelectContent>
