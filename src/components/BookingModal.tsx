@@ -362,6 +362,15 @@ export default function BookingModal({
     return dirty;
   }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate, groupRooms, focusedPriceInput, priceInputDraft]);
 
+  // Radix Select resets its value (and fires onValueChange with "") when the
+  // saved method is missing from the item list, which silently dirtied the
+  // edit form. Keep the saved method selectable and ignore empty selections.
+  const paymentMethodSelectOptions = [...new Set([
+    ...paymentMethodOptions,
+    ...(formData.payment_method ? [formData.payment_method] : []),
+    ...(formData.payment_method_2 ? [formData.payment_method_2] : []),
+  ])];
+
 
   // Fetch data when modal opens or store changes - always refetch rooms to ensure latest data
   useEffect(() => {
