@@ -2530,7 +2530,7 @@ export default function BookingModal({
                       <SelectValue placeholder="Pilih varian" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {getFilteredVariants.map((variant) => {
+                      {variantSelectOptions.map((variant) => {
                         const durationType = variant.booking_duration_type || "hours";
                         const durationValue = variant.booking_duration_value || variant.duration || 1;
                         const durationLabel = durationType === "months" ? `${durationValue} bulan` :
