@@ -771,6 +771,7 @@ export default function BookingModal({
         .order("name");
       if (!editingBooking) query = query.eq("status", "Aktif");
 
+      const { data, error } = await query;
       if (error) throw error;
       setRooms(data || []);
     } catch (error) {
