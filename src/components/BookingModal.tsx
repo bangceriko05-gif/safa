@@ -2365,14 +2365,17 @@ export default function BookingModal({
             </div>
             <Select
               value={formData.customer_type || "Reguler"}
-              onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+              onValueChange={(v) => {
+                if (!v) return;
+                setFormData({ ...formData, customer_type: v });
+              }}
             >
               <SelectTrigger id="customer_type">
                 <SelectValue placeholder="Pilih tipe pelanggan" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                {customerTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                {[...new Set([...customerTypes.map((t) => t.name), ...(formData.customer_type ? [formData.customer_type] : [])])].map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -2728,19 +2731,22 @@ export default function BookingModal({
                 <Label htmlFor="ota_source">Sumber OTA *</Label>
                 <Select
                   value={formData.ota_source}
-                  onValueChange={(value) => setFormData({ ...formData, ota_source: value })}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setFormData({ ...formData, ota_source: value });
+                  }}
                   required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih sumber OTA" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
-                    {otaSources.length === 0 ? (
+                    {[...new Set([...otaSources.map((s) => s.name), ...(formData.ota_source ? [formData.ota_source] : [])])].length === 0 ? (
                       <div className="p-2 text-sm text-muted-foreground">
                         Belum ada sumber OTA. Tambahkan di Pengaturan &gt; Kamar.
                       </div>
                     ) : (
-                      otaSources.map((source) => (
+                      [...new Set([...otaSources.map((s) => s.name), ...(formData.ota_source ? [formData.ota_source] : [])])].map((source) => (
                         <SelectItem key={source.id} value={source.name}>
                           {source.name}
                         </SelectItem>
