@@ -321,16 +321,23 @@ export default function BookingModal({
   const isDirty = useMemo(() => {
     if (!editingBooking) return true;
     if (!editDataLoaded || !initialSnapshot) return false;
+    // While a price input is focused its value lives in the draft, not in
+    // formData yet; compare against the draft so typing marks the form dirty
+    // immediately, without waiting for blur.
+    const effectiveFormData = focusedPriceInput !== null
+      ? { ...formData, price: priceInputDraft }
+      : formData;
     const current = {
-      formData,
+      formData: effectiveFormData,
       selectedProducts,
       paymentProofUrl,
       paymentProofUrl2,
       checkInDate: checkInDate ? checkInDate.toISOString() : null,
       checkOutDate: checkOutDate ? checkOutDate.toISOString() : null,
+      groupRooms,
     };
     return JSON.stringify(initialSnapshot) !== JSON.stringify(current);
-  }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate]);
+  }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate, groupRooms, focusedPriceInput, priceInputDraft]);
 
 
   // Fetch data when modal opens or store changes - always refetch rooms to ensure latest data
