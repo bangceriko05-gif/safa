@@ -909,6 +909,15 @@ export default function BookingModal({
     });
   }, [roomVariants, selectedDate, checkInDate, isPMSMode]);
 
+  // Keep the saved variant visible in edit mode even when it is hidden by
+  // day-visibility filters; Radix Select resets a value missing from its list.
+  const variantSelectOptions = useMemo(() => {
+    if (!formData.variant_id) return getFilteredVariants;
+    if (getFilteredVariants.some((v) => v.id === formData.variant_id)) return getFilteredVariants;
+    const saved = roomVariants.find((v) => v.id === formData.variant_id);
+    return saved ? [saved, ...getFilteredVariants] : getFilteredVariants;
+  }, [getFilteredVariants, roomVariants, formData.variant_id]);
+
   // Calculate booking end date based on variant duration settings
   const calculateBookingEndDate = (variant: RoomVariant, startDate: Date): Date => {
     const durationType = variant.booking_duration_type || "hours";
@@ -938,6 +947,7 @@ export default function BookingModal({
   };
 
   const handleVariantChange = (variantId: string) => {
+    if (!variantId) return;
     // User explicitly changed variant - allow price auto-fill
     isPriceProtectedRef.current = false;
     const selectedVariant = roomVariants.find(v => v.id === variantId);
