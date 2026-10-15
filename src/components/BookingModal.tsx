@@ -3352,7 +3352,7 @@ export default function BookingModal({
             <Select
               value={formData.payment_method}
               onValueChange={(value) => {
-                console.log('Payment method changed to:', value);
+                if (!value) return;
                 setFormData({ ...formData, payment_method: value });
               }}
               required
@@ -3361,7 +3361,7 @@ export default function BookingModal({
                 <SelectValue placeholder="Pilih metode pembayaran" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                {paymentMethodOptions.map(method => (
+                {paymentMethodSelectOptions.map(method => (
                   <SelectItem key={method} value={method}>{method}</SelectItem>
                 ))}
               </SelectContent>
