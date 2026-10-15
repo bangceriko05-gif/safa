@@ -337,6 +337,15 @@ export default function BookingModal({
       groupRooms,
     };
     const dirty = JSON.stringify(initialSnapshot) !== JSON.stringify(current);
+    if (import.meta.env.DEV && dirty && typeof console !== "undefined") {
+      const diffs: string[] = [];
+      for (const key of Object.keys(initialSnapshot)) {
+        if (JSON.stringify((initialSnapshot as any)[key]) !== JSON.stringify((current as any)[key])) {
+          diffs.push(`${key}: snap=${JSON.stringify((initialSnapshot as any)[key])} cur=${JSON.stringify((current as any)[key])}`);
+        }
+      }
+      console.log("[isDirty-debug]", diffs.join(" | "));
+    }
     return dirty;
   }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate, groupRooms, focusedPriceInput, priceInputDraft]);
 
