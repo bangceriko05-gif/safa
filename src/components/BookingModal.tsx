@@ -761,13 +761,15 @@ export default function BookingModal({
   const fetchRooms = async () => {
     try {
       if (!currentStore) return;
-      
-      const { data, error } = await supabase
+
+      // When editing, include inactive/occupied rooms so the saved room stays
+      // selectable; Radix Select would otherwise reset it and dirty the form.
+      let query = supabase
         .from("rooms")
         .select("id, name, status, dynamic_variant_price")
-        .eq("status", "Aktif")
         .eq("store_id", currentStore.id)
         .order("name");
+      if (!editingBooking) query = query.eq("status", "Aktif");
 
       if (error) throw error;
       setRooms(data || []);
@@ -2478,6 +2480,7 @@ export default function BookingModal({
             <Select
               value={formData.room_id}
               onValueChange={(value) => {
+                if (!value) return;
                 setFormData({ ...formData, room_id: value, variant_id: "" });
                 setPrimaryRoomPrice("");
               }}
