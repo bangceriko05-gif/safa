@@ -191,7 +191,7 @@ export default function BookingModal({
   const [otaSources, setOtaSources] = useState<{ id: string; name: string }[]>([]);
   const [customerTypes, setCustomerTypes] = useState<{ id: string; name: string }[]>([]);
   const [typeManagerOpen, setTypeManagerOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormDataRaw] = useState({
     customer_name: "",
     phone: "",
     customer_type: "Reguler",
@@ -221,15 +221,14 @@ export default function BookingModal({
   // TEMP DEBUG: trace who clears payment_method during edit
   const formDataRef = useRef(formData);
   formDataRef.current = formData;
-  const rawSetFormData = setFormData;
-  const setFormData: typeof rawSetFormData = (value: any) => {
+  const setFormData: typeof setFormDataRaw = (value: any) => {
     try {
       const next = typeof value === "function" ? (value as any)(formDataRef.current) : value;
       if (next && typeof next === "object" && next.payment_method === "" && formDataRef.current?.payment_method) {
         console.log("[pm-clear]", new Error().stack?.split("\n").slice(2, 5).join(" <= "));
       }
     } catch { /* debug only */ }
-    return rawSetFormData(value);
+    return setFormDataRaw(value);
   };
 
   // Check if PMS mode based on store calendar_type
