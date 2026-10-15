@@ -321,16 +321,33 @@ export default function BookingModal({
   const isDirty = useMemo(() => {
     if (!editingBooking) return true;
     if (!editDataLoaded || !initialSnapshot) return false;
+    // While a price input is focused its value lives in the draft, not in
+    // formData yet; compare against the draft so typing marks the form dirty
+    // immediately, without waiting for blur.
+    const effectiveFormData = focusedPriceInput !== null
+      ? { ...formData, price: priceInputDraft }
+      : formData;
     const current = {
-      formData,
+      formData: effectiveFormData,
       selectedProducts,
       paymentProofUrl,
       paymentProofUrl2,
       checkInDate: checkInDate ? checkInDate.toISOString() : null,
       checkOutDate: checkOutDate ? checkOutDate.toISOString() : null,
+      groupRooms,
     };
-    return JSON.stringify(initialSnapshot) !== JSON.stringify(current);
-  }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate]);
+    const dirty = JSON.stringify(initialSnapshot) !== JSON.stringify(current);
+    return dirty;
+  }, [editingBooking, editDataLoaded, initialSnapshot, formData, selectedProducts, paymentProofUrl, paymentProofUrl2, checkInDate, checkOutDate, groupRooms, focusedPriceInput, priceInputDraft]);
+
+  // Radix Select resets its value (and fires onValueChange with "") when the
+  // saved method is missing from the item list, which silently dirtied the
+  // edit form. Keep the saved method selectable and ignore empty selections.
+  const paymentMethodSelectOptions = [...new Set([
+    ...paymentMethodOptions,
+    ...(formData.payment_method ? [formData.payment_method] : []),
+    ...(formData.payment_method_2 ? [formData.payment_method_2] : []),
+  ])];
 
 
   // Fetch data when modal opens or store changes - always refetch rooms to ensure latest data
@@ -584,12 +601,14 @@ export default function BookingModal({
       }
 
       // Fetch booking products then lock the initial snapshot
+      let loadedGroupRooms: typeof groupRooms = [];
       (async () => {
         let products = await fetchBookingProducts(editingBooking.id);
         if (editingBooking.booking_group_id) {
           const shared = await fetchGroupBilling(editingBooking);
           if (shared.rooms.length > 1 && shared.totals.owner) {
             const owner = shared.totals.owner;
+            loadedGroupRooms = shared.rooms;
             setGroupRooms(shared.rooms);
             const { fetchRoomVariantsByRoom } = await import("@/utils/roomVariantCache");
             const variantEntries = await Promise.all(shared.rooms.map(async room => [room.id, room.room_id ? await fetchRoomVariantsByRoom(currentStore.id, room.room_id, true) : []] as const));
@@ -618,6 +637,7 @@ export default function BookingModal({
           paymentProofUrl2: loadedProof2,
           checkInDate: loadedCheckInDate ? loadedCheckInDate.toISOString() : null,
           checkOutDate: loadedCheckOutDate ? loadedCheckOutDate.toISOString() : null,
+          groupRooms: loadedGroupRooms,
         });
         setEditDataLoaded(true);
       })().catch(error => {
@@ -732,14 +752,17 @@ export default function BookingModal({
   const fetchRooms = async () => {
     try {
       if (!currentStore) return;
-      
-      const { data, error } = await supabase
+
+      // When editing, include inactive/occupied rooms so the saved room stays
+      // selectable; Radix Select would otherwise reset it and dirty the form.
+      let query = supabase
         .from("rooms")
         .select("id, name, status, dynamic_variant_price")
-        .eq("status", "Aktif")
         .eq("store_id", currentStore.id)
         .order("name");
+      if (!editingBooking) query = query.eq("status", "Aktif");
 
+      const { data, error } = await query;
       if (error) throw error;
       setRooms(data || []);
     } catch (error) {
@@ -878,6 +901,15 @@ export default function BookingModal({
     });
   }, [roomVariants, selectedDate, checkInDate, isPMSMode]);
 
+  // Keep the saved variant visible in edit mode even when it is hidden by
+  // day-visibility filters; Radix Select resets a value missing from its list.
+  const variantSelectOptions = useMemo(() => {
+    if (!formData.variant_id) return getFilteredVariants;
+    if (getFilteredVariants.some((v) => v.id === formData.variant_id)) return getFilteredVariants;
+    const saved = roomVariants.find((v) => v.id === formData.variant_id);
+    return saved ? [saved, ...getFilteredVariants] : getFilteredVariants;
+  }, [getFilteredVariants, roomVariants, formData.variant_id]);
+
   // Calculate booking end date based on variant duration settings
   const calculateBookingEndDate = (variant: RoomVariant, startDate: Date): Date => {
     const durationType = variant.booking_duration_type || "hours";
@@ -907,6 +939,7 @@ export default function BookingModal({
   };
 
   const handleVariantChange = (variantId: string) => {
+    if (!variantId) return;
     // User explicitly changed variant - allow price auto-fill
     isPriceProtectedRef.current = false;
     const selectedVariant = roomVariants.find(v => v.id === variantId);
@@ -2324,14 +2357,17 @@ export default function BookingModal({
             </div>
             <Select
               value={formData.customer_type || "Reguler"}
-              onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+              onValueChange={(v) => {
+                if (!v) return;
+                setFormData({ ...formData, customer_type: v });
+              }}
             >
               <SelectTrigger id="customer_type">
                 <SelectValue placeholder="Pilih tipe pelanggan" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                {customerTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                {[...new Set([...customerTypes.map((t) => t.name), ...(formData.customer_type ? [formData.customer_type] : [])])].map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -2449,6 +2485,7 @@ export default function BookingModal({
             <Select
               value={formData.room_id}
               onValueChange={(value) => {
+                if (!value) return;
                 setFormData({ ...formData, room_id: value, variant_id: "" });
                 setPrimaryRoomPrice("");
               }}
@@ -2488,7 +2525,7 @@ export default function BookingModal({
                       <SelectValue placeholder="Pilih varian" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {getFilteredVariants.map((variant) => {
+                      {variantSelectOptions.map((variant) => {
                         const durationType = variant.booking_duration_type || "hours";
                         const durationValue = variant.booking_duration_value || variant.duration || 1;
                         const durationLabel = durationType === "months" ? `${durationValue} bulan` :
@@ -2582,7 +2619,7 @@ export default function BookingModal({
                   <Select value={formData.variant_id} onValueChange={handleVariantChange}>
                     <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {getFilteredVariants.map((variant) => (
+                      {variantSelectOptions.map((variant) => (
                         <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -2686,21 +2723,24 @@ export default function BookingModal({
                 <Label htmlFor="ota_source">Sumber OTA *</Label>
                 <Select
                   value={formData.ota_source}
-                  onValueChange={(value) => setFormData({ ...formData, ota_source: value })}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setFormData({ ...formData, ota_source: value });
+                  }}
                   required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih sumber OTA" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
-                    {otaSources.length === 0 ? (
+                    {[...new Set([...otaSources.map((s) => s.name), ...(formData.ota_source ? [formData.ota_source] : [])])].length === 0 ? (
                       <div className="p-2 text-sm text-muted-foreground">
                         Belum ada sumber OTA. Tambahkan di Pengaturan &gt; Kamar.
                       </div>
                     ) : (
-                      otaSources.map((source) => (
-                        <SelectItem key={source.id} value={source.name}>
-                          {source.name}
+                      [...new Set([...otaSources.map((s) => s.name), ...(formData.ota_source ? [formData.ota_source] : [])])].map((source) => (
+                        <SelectItem key={source} value={source}>
+                          {source}
                         </SelectItem>
                       ))
                     )}
@@ -3310,7 +3350,7 @@ export default function BookingModal({
             <Select
               value={formData.payment_method}
               onValueChange={(value) => {
-                console.log('Payment method changed to:', value);
+                if (!value) return;
                 setFormData({ ...formData, payment_method: value });
               }}
               required
@@ -3319,7 +3359,7 @@ export default function BookingModal({
                 <SelectValue placeholder="Pilih metode pembayaran" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                {paymentMethodOptions.map(method => (
+                {paymentMethodSelectOptions.map(method => (
                   <SelectItem key={method} value={method}>{method}</SelectItem>
                 ))}
               </SelectContent>
@@ -3418,14 +3458,17 @@ export default function BookingModal({
                 <Label htmlFor="payment_method_2">Metode Pembayaran Kedua *</Label>
                 <Select
                   value={formData.payment_method_2}
-                  onValueChange={(value) => setFormData({ ...formData, payment_method_2: value })}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setFormData({ ...formData, payment_method_2: value });
+                  }}
                   required={formData.dual_payment}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih metode pembayaran kedua *" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
-                    {paymentMethodOptions.map(method => (
+                    {paymentMethodSelectOptions.map(method => (
                       <SelectItem key={method} value={method}>{method}</SelectItem>
                     ))}
                   </SelectContent>
