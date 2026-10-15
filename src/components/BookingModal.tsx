@@ -2624,7 +2624,7 @@ export default function BookingModal({
                   <Select value={formData.variant_id} onValueChange={handleVariantChange}>
                     <SelectTrigger><SelectValue placeholder="Pilih varian" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {getFilteredVariants.map((variant) => (
+                      {variantSelectOptions.map((variant) => (
                         <SelectItem key={variant.id} value={variant.id}>{variant.variant_name}</SelectItem>
                       ))}
                     </SelectContent>
