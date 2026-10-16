@@ -74,6 +74,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const { data: verifiedSession, error: sessionError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (sessionError || verifiedSession.user?.id !== requestingUserId) throw new Error('Invalid token');
+
     // Verify requesting user is an admin
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -445,9 +448,12 @@ Deno.serve(async (req) => {
     if (body.action === 'create') {
       const { email, password, name, role, storeId } = body as CreateUserRequest;
 
-      if (!email || !password || !name) {
+      if (typeof email !== 'string' || typeof password !== 'string' || typeof name !== 'string' || !email.trim() || !password || !name.trim()) {
         throw new Error('Missing required fields: email, password, or name');
       }
+
+      if (password.length < 6) throw new Error('Password must be at least 6 characters');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw new Error('Invalid email');
 
       if (!storeId) {
         throw new Error('Store ID is required for user registration');

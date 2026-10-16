@@ -41,6 +41,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const { data: verifiedSession, error: sessionError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (sessionError || verifiedSession.user?.id !== requestingUserId) throw new Error('Invalid token');
+
     // Verify requesting user is an admin or leader
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -63,7 +66,7 @@ Deno.serve(async (req) => {
     const body: ResetPasswordRequest = await req.json();
     const { userId, newPassword } = body;
 
-    if (!userId || !newPassword) {
+    if (typeof userId !== 'string' || typeof newPassword !== 'string' || !userId || !newPassword) {
       throw new Error('Missing required fields: userId or newPassword');
     }
 

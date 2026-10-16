@@ -5,6 +5,7 @@ export function userFacingError(error: unknown, fallback = DEFAULT_MESSAGE): str
   const details = typeof error === "string" ? { message: error } :
     error && typeof error === "object" ? error as { message?: unknown; code?: unknown; error?: unknown } : {};
   const message = String(details.error ?? details.message ?? "");
+  if (/^(Password ini mudah ditebak atau pernah bocor\.|Password terlalu pendek\.|Password belum memenuhi syarat keamanan\.|Sesi Anda sudah berakhir\.|Anda tidak memiliki izin\.|Data belum lengkap\.|Pilih outlet terlebih dahulu\.|Perubahan akun belum berhasil\.)/.test(message)) return message;
   const text = `${details.code ?? ""} ${message}`.toLowerCase();
   if (/pwned|breach|leaked|compromised|weak_password|known to be weak|mudah ditebak|pernah bocor/.test(text)) {
     return "Password ini mudah ditebak atau pernah bocor. Gunakan password lain, misalnya gabungan beberapa kata yang tidak berkaitan.";

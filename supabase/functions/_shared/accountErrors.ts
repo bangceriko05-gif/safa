@@ -1,6 +1,7 @@
 export function accountError(error: unknown): string {
   const details = error && typeof error === 'object' ? error as { message?: unknown; code?: unknown } : {};
   const message = typeof error === 'string' ? error : String(details.message ?? '');
+  if (/^(Password ini mudah ditebak atau pernah bocor\.|Password terlalu pendek\.|Password belum memenuhi syarat keamanan\.|Sesi Anda sudah berakhir\.|Anda tidak memiliki izin\.|Data belum lengkap\.|Pilih outlet terlebih dahulu\.|Perubahan akun belum berhasil\.)/.test(message)) return message;
   const text = `${details.code ?? ''} ${message}`.toLowerCase();
   if (/pwned|breach|leaked|compromised|weak_password|known to be weak/.test(text)) return 'Password ini mudah ditebak atau pernah bocor. Gunakan password lain, misalnya gabungan beberapa kata yang tidak berkaitan.';
   if (/password.*(least|minimum|minimal|short|characters)/.test(text)) {
