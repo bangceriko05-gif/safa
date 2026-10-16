@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { accountError } from '../_shared/accountErrors.ts'
 
 // Helper to decode JWT and extract user ID
 function getUserIdFromToken(authHeader: string): string | null {
@@ -96,7 +92,7 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error('Error updating password:', updateError);
-      throw new Error('Failed to update password: ' + updateError.message);
+      throw new Error(accountError(updateError));
     }
 
     console.log(`Password reset successfully for user: ${userId}`);
@@ -129,7 +125,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in reset-user-password function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    const errorMessage = accountError(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { 

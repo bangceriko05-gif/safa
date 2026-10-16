@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { accountError } from '../_shared/accountErrors.ts'
 
 // Helper to decode JWT and extract user ID
 function getUserIdFromToken(authHeader: string): string | null {
@@ -596,7 +592,7 @@ Deno.serve(async (req) => {
         if (authError.message.includes('already been registered') || authError.code === 'email_exists') {
           throw new Error('Email sudah terdaftar, gunakan email lain');
         }
-        throw new Error(authError.message);
+        throw new Error(accountError(authError));
       }
       
       if (!authData.user) {
@@ -780,7 +776,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in manage-users function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    const errorMessage = accountError(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { 
