@@ -14,6 +14,7 @@ import { Loader2, UserCog, Pencil, Key, Trash2, UserPlus, Building2, X } from "l
 import { logActivity } from "@/utils/activityLogger";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/contexts/StoreContext";
+import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 
 interface User {
   id: string;
@@ -175,7 +176,7 @@ export default function UserManagement() {
 
       setUsers(usersWithRoles);
     } catch (error: any) {
-      toast.error("Gagal memuat data pengguna: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Data pengguna belum dapat dimuat. Silakan coba lagi."));
     } finally {
       setLoading(false);
     }
@@ -312,13 +313,12 @@ export default function UserManagement() {
         body: { action: 'list_auth_orphans' },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) throw new Error(await functionErrorMessage(error, data));
 
       setAuthOrphans(data?.orphans || []);
     } catch (error: any) {
       console.error("Error fetching auth orphans:", error);
-      toast.error("Gagal memuat Auth orphans: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Daftar pengguna tanpa akses belum dapat dimuat. Silakan coba lagi."));
     } finally {
       setLoadingAuthOrphans(false);
     }
@@ -391,7 +391,7 @@ export default function UserManagement() {
       toast.success("Role pengguna berhasil diperbarui!");
       fetchUsers();
     } catch (error: any) {
-      toast.error("Gagal memperbarui role: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Peran pengguna belum berhasil diubah. Silakan coba lagi."));
     } finally {
       setUpdating(null);
     }
@@ -432,7 +432,7 @@ export default function UserManagement() {
       fetchUsers();
       handleCloseDialog();
     } catch (error: any) {
-      toast.error("Gagal memperbarui data: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Data pengguna belum berhasil diubah. Silakan coba lagi."));
     }
   };
 
@@ -478,8 +478,7 @@ export default function UserManagement() {
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) throw new Error(await functionErrorMessage(error, data));
 
       await logActivity({
         actionType: 'updated',
@@ -494,7 +493,7 @@ export default function UserManagement() {
       // Refresh temp passwords
       handleShowPassword(passwordUser);
     } catch (error: any) {
-      toast.error("Gagal mereset password: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Password belum berhasil diubah. Silakan coba lagi atau hubungi admin."));
     }
   };
 
@@ -530,46 +529,8 @@ export default function UserManagement() {
 
       const { data, error } = response;
 
-      // Handle edge function errors properly
-      // When edge function returns non-2xx, error is set but data may also contain the response
       if (error || data?.error) {
-        console.error('Edge function error:', error, data);
-        
-        // First check if data contains the error message (from JSON response body)
-        if (data?.error) {
-          toast.error(data.error);
-          return;
-        }
-        
-        // Then check error message
-        const errorMessage = error?.message || "Unknown error";
-        
-        // Check if error message contains our custom messages
-        if (errorMessage.includes("sudah") || 
-            errorMessage.includes("already") || 
-            errorMessage.includes("email_exists")) {
-          toast.error(errorMessage.includes("akses") 
-            ? "Pengguna dengan email ini sudah memiliki akses ke toko ini"
-            : "Email sudah terdaftar, gunakan email lain");
-          return;
-        }
-        
-        // Try to parse error context if available
-        if (error?.context) {
-          try {
-            const context = typeof error.context === 'string' 
-              ? JSON.parse(error.context) 
-              : error.context;
-            if (context?.error) {
-              toast.error(context.error);
-              return;
-            }
-          } catch (e) {
-            // Context parsing failed, continue with default error
-          }
-        }
-        
-        toast.error("Gagal menambah pengguna: " + errorMessage);
+        toast.error(await functionErrorMessage(error, data, "Pengguna belum berhasil ditambahkan. Silakan coba lagi atau hubungi admin."));
         return;
       }
 
@@ -591,7 +552,7 @@ export default function UserManagement() {
       handleCloseAddDialog();
     } catch (error: any) {
       console.error('Unexpected error in handleAddUser:', error);
-      toast.error("Gagal menambah pengguna: " + (error.message || "Terjadi kesalahan"));
+      toast.error(await functionErrorMessage(error, undefined, "Pengguna belum berhasil ditambahkan. Silakan coba lagi atau hubungi admin."));
     }
   };
 
@@ -617,8 +578,7 @@ export default function UserManagement() {
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) throw new Error(await functionErrorMessage(error, data));
 
       await logActivity({
         actionType: 'deleted',
@@ -632,7 +592,7 @@ export default function UserManagement() {
       fetchOrphanUsers(); // Also refresh orphan users
       handleCloseDeleteDialog();
     } catch (error: any) {
-      toast.error("Gagal menghapus pengguna: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Pengguna belum berhasil dihapus. Silakan coba lagi."));
     }
   };
 
@@ -694,7 +654,7 @@ export default function UserManagement() {
       if (error.code === "23505") {
         toast.error("User sudah memiliki akses ke cabang ini");
       } else {
-        toast.error("Gagal menambahkan akses: " + error.message);
+        toast.error(userFacingError(error, "Akses outlet belum berhasil ditambahkan. Silakan coba lagi."));
       }
     }
   };
@@ -723,7 +683,7 @@ export default function UserManagement() {
       handleManageStoreAccess(storeAccessUser);
       fetchUsers();
     } catch (error: any) {
-      toast.error("Gagal menghapus akses: " + error.message);
+      toast.error(userFacingError(error, "Akses outlet belum berhasil dihapus. Silakan coba lagi."));
     }
   };
 
@@ -754,8 +714,7 @@ export default function UserManagement() {
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) throw new Error(await functionErrorMessage(error, data));
 
       await logActivity({
         actionType: 'deleted',
@@ -767,7 +726,7 @@ export default function UserManagement() {
       toast.success("Pengguna berhasil dihapus!");
       fetchOrphanUsers();
     } catch (error: any) {
-      toast.error("Gagal menghapus pengguna: " + error.message);
+      toast.error(await functionErrorMessage(error, undefined, "Pengguna belum berhasil dihapus. Silakan coba lagi."));
     }
   };
 
@@ -800,15 +759,14 @@ export default function UserManagement() {
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) throw new Error(await functionErrorMessage(error, data));
 
       toast.success("User berhasil diperbaiki & diberi akses cabang ini");
       setRepairEmail("");
       fetchUsers();
       fetchOrphanUsers();
     } catch (e: any) {
-      toast.error(e?.message || "Gagal memperbaiki user");
+      toast.error(await functionErrorMessage(e, undefined, "Akun belum berhasil diperbaiki. Silakan coba lagi atau hubungi admin."));
     } finally {
       setRepairing(false);
     }
@@ -827,8 +785,7 @@ export default function UserManagement() {
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) throw new Error(await functionErrorMessage(error, data));
 
       await logActivity({
         actionType: 'deleted',
@@ -839,7 +796,7 @@ export default function UserManagement() {
       toast.success(`${email} berhasil dihapus permanen dari sistem`);
       fetchAuthOrphans();
     } catch (e: any) {
-      toast.error(e?.message || "Gagal menghapus user");
+      toast.error(await functionErrorMessage(e, undefined, "Pengguna belum berhasil dihapus. Silakan coba lagi."));
     }
   };
 
@@ -1309,7 +1266,7 @@ export default function UserManagement() {
                   minLength={6}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Minimal 6 karakter
+                  Minimal 6 karakter. Tidak wajib huruf besar, angka, atau simbol; hindari password yang umum.
                 </p>
               </div>
               <Button type="submit">Simpan Password</Button>
@@ -1394,7 +1351,7 @@ export default function UserManagement() {
                 minLength={6}
               />
               <p className="text-xs text-muted-foreground">
-                Minimal 6 karakter
+                Minimal 6 karakter. Tidak wajib huruf besar, angka, atau simbol; hindari password yang umum.
               </p>
             </div>
 

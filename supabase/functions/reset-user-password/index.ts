@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { accountError } from '../_shared/accountErrors.ts'
 
 // Helper to decode JWT and extract user ID
 function getUserIdFromToken(authHeader: string): string | null {
@@ -45,6 +41,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const { data: verifiedSession, error: sessionError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (sessionError || verifiedSession.user?.id !== requestingUserId) throw new Error('Invalid token');
+
     // Verify requesting user is an admin or leader
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -67,7 +66,7 @@ Deno.serve(async (req) => {
     const body: ResetPasswordRequest = await req.json();
     const { userId, newPassword } = body;
 
-    if (!userId || !newPassword) {
+    if (typeof userId !== 'string' || typeof newPassword !== 'string' || !userId || !newPassword) {
       throw new Error('Missing required fields: userId or newPassword');
     }
 
@@ -96,7 +95,7 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error('Error updating password:', updateError);
-      throw new Error('Failed to update password: ' + updateError.message);
+      throw new Error(accountError(updateError));
     }
 
     console.log(`Password reset successfully for user: ${userId}`);
@@ -129,7 +128,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in reset-user-password function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    const errorMessage = accountError(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { 
