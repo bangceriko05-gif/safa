@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Perjelas pesan kegagalan pembuatan/reset akun dan longgarkan syarat kombinasi password tanpa menonaktifkan perlindungan password bocor.
-- [ ] Gunakan penanganan pesan ramah pengguna pada alur manajemen akun dan jadikan aturan untuk perubahan berikutnya.
+- [x] Perjelas pesan kegagalan pembuatan/reset akun dan longgarkan syarat kombinasi password tanpa menonaktifkan perlindungan password bocor.
+- [x] Gunakan penanganan pesan ramah pengguna pada alur manajemen akun dan jadikan aturan untuk perubahan berikutnya.
 
 - [x] Tambahkan popup pembayaran detail booking, bukti bayar dan referensi; tampilkan animasi LUNAS serta suara laci hanya setelah pelunasan berhasil.
 
