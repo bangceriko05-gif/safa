@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { signupSchema, loginSchema } from "@/utils/authValidation";
+import { userFacingError } from "@/utils/userFacingError";
 
 interface ValidationErrors {
   name?: string;
@@ -107,7 +108,7 @@ export default function Auth() {
           } else if (error.message.includes("Email not confirmed")) {
             toast.error("Email belum dikonfirmasi. Cek inbox email Anda.");
           } else {
-            toast.error(error.message || "Terjadi kesalahan");
+            toast.error(userFacingError(error));
           }
           setLoading(false);
           return;
@@ -170,7 +171,7 @@ export default function Auth() {
             setErrors({ email: "Email sudah terdaftar" });
             toast.error("Email sudah terdaftar, silakan login");
           } else {
-            toast.error(error.message || "Terjadi kesalahan");
+            toast.error(userFacingError(error));
           }
           setLoading(false);
           return;
@@ -198,7 +199,7 @@ export default function Auth() {
         setErrors({});
       }
     } catch (error: any) {
-      toast.error(error.message || "Terjadi kesalahan");
+      toast.error(userFacingError(error));
     } finally {
       setLoading(false);
     }
@@ -274,7 +275,7 @@ export default function Auth() {
               )}
               {!isLogin && !errors.password && (
                 <p className="text-xs text-muted-foreground">
-                  Minimal 8 karakter, mengandung huruf besar dan angka
+                  Minimal 8 karakter. Tidak wajib huruf besar, angka, atau simbol; hindari password yang umum.
                 </p>
               )}
             </div>

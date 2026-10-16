@@ -1,5 +1,8 @@
 # Project Architecture Rules
 
+- User-visible account errors must pass through the shared safe-message mapper, including parsed non-success function response bodies; raw service messages remain diagnostic-only so users receive actionable Indonesian explanations.
+- Password forms do not impose character-combination rules beyond the hosted policy; leaked-password protection stays enabled so flexibility does not weaken compromised-password checks.
+
 - Active navigation is styled through shared semantic navigation tokens and state selectors; custom period buttons expose data-navigation and aria-pressed so selections stay consistent without recoloring form inputs.
 
 - Sales report costs and discounts use room price snapshots plus line-item subtotals; received payments stay separate and are never discounted again, including exports.

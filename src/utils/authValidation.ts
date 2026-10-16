@@ -10,9 +10,7 @@ export const signupSchema = z.object({
     .email('Format email tidak valid')
     .max(255, 'Email maksimal 255 karakter'),
   password: z.string()
-    .min(8, 'Password minimal 8 karakter')
-    .regex(/[A-Z]/, 'Password harus mengandung huruf besar')
-    .regex(/[0-9]/, 'Password harus mengandung angka'),
+    .min(8, 'Password minimal 8 karakter'),
 });
 
 export const loginSchema = z.object({
