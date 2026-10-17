@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
 import MonthlyPurchaseAnalysis from "./MonthlyPurchaseAnalysis";
 import ReportPagination, { usePagination } from "./ReportPagination";
+import useReportColumnFilters, { ReportFilterColumn } from "./useReportColumnFilters";
 
 type SubView = "active" | "cancelled" | "items" | "monthly";
 
@@ -42,6 +43,22 @@ interface PurchaseItemRow {
   unit_price: number;
   subtotal: number;
 }
+
+const purchaseColumns: ReportFilterColumn[] = [
+  { key: "bid", label: "BID" }, { key: "date", label: "Tanggal", date: true },
+  { key: "item", label: "Item" }, { key: "quantity", label: "Jumlah", numeric: true },
+  { key: "amount", label: "Total", numeric: true, currency: true },
+  { key: "payment_method", label: "Metode Bayar" }, { key: "proof", label: "Nota" },
+  { key: "process_status", label: "Status" },
+];
+const purchaseItemColumns: ReportFilterColumn[] = [
+  { key: "bid", label: "BID" }, { key: "date", label: "Tanggal", date: true },
+  { key: "product_name", label: "Produk" }, { key: "quantity", label: "Qty", numeric: true },
+  { key: "unit_price", label: "Harga Satuan", numeric: true, currency: true },
+  { key: "subtotal", label: "Subtotal", numeric: true, currency: true },
+  { key: "supplier_name", label: "Supplier" }, { key: "process_status", label: "Status" },
+];
+const purchaseStatus = (status: string) => status === "selesai" ? "Selesai" : status === "batal" ? "Batal" : "Proses";
 
 export default function PurchaseTransactionReport() {
   const { currentStore } = useStore();
@@ -126,16 +143,24 @@ export default function PurchaseTransactionReport() {
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
-  const filtered = useMemo(() => {
+  const purchaseValue = (r: PurchaseRow, key: string): string | number => {
+    const list = items[r.id] || [];
+    switch (key) {
+      case "item": return list.length ? list.map(i => i.product_name).join(", ") : r.supplier_name || "-";
+      case "quantity": return list.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+      case "amount": return Number(r.amount) || 0;
+      case "proof": return r.payment_proof_url ? "Tersedia" : "Tidak ada";
+      case "process_status": return purchaseStatus(r.process_status);
+      default: return String(r[key as keyof PurchaseRow] || "-");
+    }
+  };
+  const searched = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        (r.bid || "").toLowerCase().includes(q) ||
-        (r.supplier_name || "").toLowerCase().includes(q) ||
-        (r.notes || "").toLowerCase().includes(q),
-    );
-  }, [rows, searchQuery]);
+    return !q ? rows : rows.filter(r => [r.bid, r.supplier_name, r.notes, ...(items[r.id] || []).map(i => i.product_name)]
+      .some(value => (value || "").toLowerCase().includes(q)));
+  }, [rows, items, searchQuery]);
+  const rowFilters = useReportColumnFilters(searched, purchaseColumns, purchaseValue, `${currentStore?.id}:${subView}`);
+  const filtered = rowFilters.filtered;
 
   const stats = useMemo(() => {
     const total = filtered.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -145,11 +170,11 @@ export default function PurchaseTransactionReport() {
   }, [filtered]);
 
   // Flatten purchase items for the "Laporan Pembelian Item" sub-view.
-  const itemRows = useMemo(() => {
+  const searchedItemRows = useMemo(() => {
     if (subView !== "items") return [] as Array<PurchaseItemRow & { bid: string; date: string; supplier_name: string | null; payment_method: string | null; process_status: string }>;
     const q = searchQuery.trim().toLowerCase();
     const out: Array<PurchaseItemRow & { bid: string; date: string; supplier_name: string | null; payment_method: string | null; process_status: string }> = [];
-    filtered.forEach((r) => {
+    rows.forEach((r) => {
       (items[r.id] || []).forEach((it) => {
         const matches =
           !q ||
@@ -169,7 +194,15 @@ export default function PurchaseTransactionReport() {
       });
     });
     return out;
-  }, [filtered, items, subView, searchQuery]);
+  }, [rows, items, subView, searchQuery]);
+
+  const itemValue = (r: typeof searchedItemRows[number], key: string): string | number => {
+    if (key === "process_status") return purchaseStatus(r.process_status);
+    if (["quantity", "unit_price", "subtotal"].includes(key)) return Number(r[key as keyof typeof r]) || 0;
+    return String(r[key as keyof typeof r] || "-");
+  };
+  const itemFilters = useReportColumnFilters(searchedItemRows, purchaseItemColumns, itemValue, `${currentStore?.id}:${subView}`);
+  const itemRows = itemFilters.filtered;
 
   const itemStats = useMemo(() => {
     // stats always computed on the full filtered set
@@ -178,8 +211,8 @@ export default function PurchaseTransactionReport() {
     return { count: itemRows.length, totalQty, totalAmt };
   }, [itemRows]);
 
-  const itemPg = usePagination(itemRows, [searchQuery, timeRange, customDateRange, subView]);
-  const rowPg = usePagination(filtered, [searchQuery, timeRange, customDateRange, subView]);
+  const itemPg = usePagination(itemRows, [searchQuery, timeRange, customDateRange, subView, itemFilters.selections, itemFilters.sort]);
+  const rowPg = usePagination(filtered, [searchQuery, timeRange, customDateRange, subView, rowFilters.selections, rowFilters.sort]);
 
   const handleExport = () => {
     if (!currentStore) return;
@@ -336,14 +369,7 @@ export default function PurchaseTransactionReport() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>BID</TableHead>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Produk</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Harga Satuan</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Status</TableHead>
+                      {itemFilters.headers}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -398,14 +424,7 @@ export default function PurchaseTransactionReport() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>BID</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Jumlah</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Metode Bayar</TableHead>
-                    <TableHead>Nota</TableHead>
-                    <TableHead>Status</TableHead>
+                    {rowFilters.headers}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -441,7 +460,7 @@ export default function PurchaseTransactionReport() {
                             {r.payment_proof_url ? (
                               <button
                                 className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
-                                onClick={() => setProofPreview(r.payment_proof_url!)}
+                                onClick={() => setProofPreview(r.payment_proof_url || null)}
                               >
                                 <FileText className="h-3.5 w-3.5" />
                                 Lihat Nota
