@@ -3,6 +3,7 @@
 - Expense report system receipts reuse the authenticated transaction receipt page rather than storing generated copies, so receipt data and outlet print settings stay consistent.
 
 - Report column filters commit draft selections and sorting only on confirmation; a shared pure filtering pipeline feeds totals, pagination, and exports to keep every output aligned.
+- Purchase and sales tables reuse the report column-filter hook with display-aligned value accessors and outlet/view-scoped state, so filter controls stay consistent without changing stored financial data.
 
 - User-visible account errors must pass through the shared safe-message mapper, including parsed non-success function response bodies; raw service messages remain diagnostic-only so users receive actionable Indonesian explanations.
 - Password forms do not impose character-combination rules beyond the hosted policy; leaked-password protection stays enabled so flexibility does not weaken compromised-password checks.
