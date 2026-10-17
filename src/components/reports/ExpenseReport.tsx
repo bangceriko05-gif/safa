@@ -18,6 +18,8 @@ import { DateRange } from "react-day-picker";
 import { exportToExcel, getExportFileName } from "@/utils/reportExport";
 import { toast } from "sonner";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
+import ReportColumnFilter from "./ReportColumnFilter";
+import { applyColumnFilters, ColumnSelections, ColumnSort } from "@/utils/tableColumnFilters";
 
 interface ExpenseRow {
   id: string;
@@ -37,6 +39,29 @@ interface ExpenseReportProps {
   processStatusFilter?: "active" | "batal";
 }
 
+const expenseColumns = [
+  { key: "bid", label: "No. ID" },
+  { key: "date", label: "Tanggal" },
+  { key: "description", label: "Deskripsi" },
+  { key: "category", label: "Kategori" },
+  { key: "amount", label: "Jumlah" },
+  { key: "payment_method", label: "Metode Bayar" },
+  { key: "receipt", label: "Bukti Nota" },
+  { key: "proof", label: "Bukti Bayar" },
+  { key: "process_status", label: "Status" },
+  { key: "creator_name", label: "Dibuat Oleh" },
+];
+
+function expenseColumnValue(row: ExpenseRow, key: string): string | number {
+  switch (key) {
+    case "amount": return Number(row.amount) || 0;
+    case "receipt": return "Tersedia";
+    case "proof": return row.payment_proof_url ? "Tersedia" : "Tidak ada";
+    case "process_status": return row.process_status === "selesai" ? "Selesai" : row.process_status === "batal" ? "Batal" : "Proses";
+    default: return String(row[key as keyof ExpenseRow] || "-");
+  }
+}
+
 export default function ExpenseReport({ processStatusFilter = "active" }: ExpenseReportProps) {
   const { currentStore } = useStore();
   const [timeRange, setTimeRange] = useState<ReportTimeRange>("thisMonth");
@@ -45,6 +70,22 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [columnSelections, setColumnSelections] = useState<ColumnSelections>({});
+  const [columnSort, setColumnSort] = useState<ColumnSort>(null);
+
+  useEffect(() => {
+    setColumnSelections({});
+    setColumnSort(null);
+  }, [currentStore?.id, processStatusFilter]);
+
+  const columnOptions = useMemo(() => Object.fromEntries(expenseColumns.map(column => {
+    const values = [...new Set(rows.map(row => expenseColumnValue(row, column.key)))];
+    values.sort((a, b) => typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b), "id", { numeric: true }));
+    return [column.key, values.map(value => ({ value: String(value), label: column.key === "date" && value !== "-"
+      ? format(new Date(String(value)), "dd MMM yyyy", { locale: localeId })
+      : column.key === "amount" ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(Number(value))
+      : String(value) }))];
+  })), [rows]);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -105,16 +146,16 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
+    const searched = !q ? rows : rows.filter(
       (r) =>
         (r.bid || "").toLowerCase().includes(q) ||
         (r.description || "").toLowerCase().includes(q) ||
         (r.category || "").toLowerCase().includes(q),
     );
-  }, [rows, searchQuery]);
+    return applyColumnFilters(searched, columnSelections, columnSort, expenseColumnValue);
+  }, [rows, searchQuery, columnSelections, columnSort]);
 
-  const pg = usePagination(filtered, [searchQuery, timeRange, customDateRange, processStatusFilter]);
+  const pg = usePagination(filtered, [searchQuery, timeRange, customDateRange, processStatusFilter, columnSelections, columnSort]);
   const paginated = pg.paginated;
 
   const stats = useMemo(() => {
@@ -227,16 +268,21 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>No. ID</TableHead>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead>Kategori</TableHead>
-                      <TableHead className="text-right">Jumlah</TableHead>
-                      <TableHead>Metode Bayar</TableHead>
-                      <TableHead>Bukti Nota</TableHead>
-                      <TableHead>Bukti Bayar</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Dibuat Oleh</TableHead>
+                      {expenseColumns.map(column => (
+                        <TableHead key={column.key} className={column.key === "amount" ? "text-right" : undefined}>
+                          <div className={`flex items-center gap-1 ${column.key === "amount" ? "justify-end" : ""}`}>
+                            <span>{column.label}</span>
+                            <ReportColumnFilter label={column.label} options={columnOptions[column.key] || []}
+                              selected={columnSelections[column.key]}
+                              direction={columnSort?.key === column.key ? columnSort.direction : undefined}
+                              numeric={column.key === "amount"} date={column.key === "date"}
+                              onApply={(selected, direction) => {
+                                setColumnSelections(previous => ({ ...previous, [column.key]: selected }));
+                                setColumnSort(previous => direction ? { key: column.key, direction } : previous?.key === column.key ? null : previous);
+                              }} />
+                          </div>
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
