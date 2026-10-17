@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Tambahkan dan uji filter centang per kolom laporan pengeluaran: pencarian, pilih semua/kosongkan, urutan, Oke/Batal, total dan export mengikuti filter.
+
 - [x] Perjelas pesan kegagalan pembuatan/reset akun dan longgarkan syarat kombinasi password tanpa menonaktifkan perlindungan password bocor.
 - [x] Gunakan penanganan pesan ramah pengguna pada alur manajemen akun dan jadikan aturan untuk perubahan berikutnya.
 
