@@ -233,6 +233,7 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
                       <TableHead>Kategori</TableHead>
                       <TableHead className="text-right">Jumlah</TableHead>
                       <TableHead>Metode Bayar</TableHead>
+                      <TableHead>Bukti Nota</TableHead>
                       <TableHead>Bukti Bayar</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Dibuat Oleh</TableHead>
@@ -241,7 +242,7 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
                   <TableBody>
                     {paginated.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                           Tidak ada data pengeluaran
                         </TableCell>
                       </TableRow>
@@ -272,14 +273,28 @@ export default function ExpenseReport({ processStatusFilter = "active" }: Expens
                             </TableCell>
                             <TableCell className="text-xs">{r.payment_method || "-"}</TableCell>
                             <TableCell className="text-xs">
-                              {r.payment_proof_url ? (
-                                <button
-                                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                                  onClick={() => setProofPreview(r.payment_proof_url!)}
+                              <Button asChild variant="link" className="h-auto p-0 text-xs font-normal">
+                                <a
+                                  href={`/receipt/transaction?id=${encodeURIComponent(r.id)}&type=expense`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`Lihat bukti nota ${r.bid || r.id}`}
                                 >
-                                  <FileText className="h-3.5 w-3.5" />
+                                  <FileText className="mr-1 h-3.5 w-3.5" />
                                   Lihat
-                                </button>
+                                </a>
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {r.payment_proof_url ? (
+                                <Button
+                                  variant="link"
+                                  className="h-auto p-0 text-xs font-normal"
+                                  onClick={() => setProofPreview(r.payment_proof_url)}
+                                >
+                                  <FileText className="mr-1 h-3.5 w-3.5" />
+                                  Lihat
+                                </Button>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
