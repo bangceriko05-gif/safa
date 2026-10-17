@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Expense report system receipts reuse the authenticated transaction receipt page rather than storing generated copies, so receipt data and outlet print settings stay consistent.
+
 - User-visible account errors must pass through the shared safe-message mapper, including parsed non-success function response bodies; raw service messages remain diagnostic-only so users receive actionable Indonesian explanations.
 - Password forms do not impose character-combination rules beyond the hosted policy; leaked-password protection stays enabled so flexibility does not weaken compromised-password checks.
 
