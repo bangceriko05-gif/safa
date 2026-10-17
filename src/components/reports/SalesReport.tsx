@@ -31,6 +31,7 @@ import SalesChannelReport from "./SalesChannelReport";
 import { Receipt } from "lucide-react";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
 import { salesBookingTotals } from "@/utils/salesBookingTotals";
+import useReportColumnFilters, { ReportFilterColumn } from "./useReportColumnFilters";
 
 interface BookingData {
   id: string;
@@ -101,6 +102,28 @@ interface ExpenseData {
 }
 
 type SalesTab = "details" | "rooms" | "item-detail" | "source" | "profit-loss" | "cancelled" | "items" | "tax" | "customer-type" | "channel";
+const detailColumns: ReportFilterColumn[] = [
+  { key: "bid", label: "No. Booking" }, { key: "date", label: "Tanggal", date: true },
+  { key: "customer_name", label: "Pelanggan" }, { key: "item", label: "Item" },
+  { key: "room_name", label: "Room" }, { key: "duration", label: "Durasi/Qty" },
+  { key: "gross", label: "Total Biaya", numeric: true, currency: true },
+  { key: "discount", label: "Diskon", numeric: true, currency: true },
+  { key: "paid", label: "Jumlah Bayar", numeric: true, currency: true },
+  { key: "status", label: "Status" }, { key: "payment_method", label: "Metode Bayar" },
+  { key: "proof", label: "Bukti Bayar" }, { key: "hpp", label: "HPP", numeric: true, currency: true },
+  { key: "profit", label: "Laba", numeric: true, currency: true },
+];
+const roomColumns = detailColumns.filter(column => !["item", "discount"].includes(column.key));
+const itemColumns: ReportFilterColumn[] = [
+  { key: "bid", label: "No. Booking" }, { key: "date", label: "Tanggal", date: true },
+  { key: "customerName", label: "Pelanggan" }, { key: "itemLabel", label: "Item" },
+  { key: "hpp", label: "HPP", numeric: true, currency: true },
+  { key: "total", label: "Harga Jual", numeric: true, currency: true },
+  { key: "profit", label: "Profit", numeric: true, currency: true },
+  { key: "totalAmount", label: "Total", numeric: true, currency: true },
+  { key: "paymentMethod", label: "Metode Bayar" }, { key: "proof", label: "Bukti Bayar" },
+];
+
 export default function SalesReport() {
   const { currentStore } = useStore();
   const navigate = useNavigate();
@@ -624,8 +647,18 @@ export default function SalesReport() {
     
     const dateRangeStr = getDateRangeDisplay(timeRange, customDateRange).replace(/\s/g, '_');
     
+    if (activeTab === "item-detail") {
+      const data = itemRows.map(r => ({ BID: r.bid, Tanggal: r.date, Pelanggan: r.customerName, Item: r.itemLabel,
+        HPP: r.hpp, "Harga Jual": r.total, Profit: r.profit, Total: r.total, "Metode Bayar": r.paymentMethod || "-" }));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(data), "Penjualan Item");
+      XLSX.writeFile(workbook, `Penjualan_Item_${currentStore.name.replace(/[^a-zA-Z0-9]/g, "_")}_${dateRangeStr}.xlsx`);
+      toast.success("Laporan item berhasil di-export!");
+      return;
+    }
+
     // Prepare export data with all requested fields
-    const exportData = activeBookings.map(b => {
+    const exportData = (activeTab === "rooms" ? filteredRoomBookings : filteredDetailBookings).map(b => {
       // Calculate discount
       let discountDisplay = "-";
       if (b.discount_value && b.discount_value > 0) {
@@ -695,7 +728,7 @@ export default function SalesReport() {
   };
 
   // Filtered list for details table by search query
-  const filteredDetailBookings = activeBookings.filter((b) => {
+  const searchedDetailBookings = activeBookings.filter((b) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const items = (productsByBookingId[b.id] || []).map((p) => p.product_name).join(" ").toLowerCase();
@@ -713,8 +746,40 @@ export default function SalesReport() {
       .reduce((sum, p) => sum + (p.purchase_price || 0) * p.quantity, 0);
   };
 
+  const bookingColumnValue = (b: BookingData, key: string, roomOnly = false): string | number => {
+    const products = productsByBookingId[b.id] || [];
+    const totals = salesBookingTotals(b, products.reduce((sum, p) => sum + p.subtotal, 0));
+    const hpp = roomOnly ? 0 : getBookingHPP(b.id);
+    switch (key) {
+      case "item": return products.length ? products.map(p => `${p.product_name} (x${p.quantity})`).join(", ") : "-";
+      case "duration": return formatDuration(b);
+      case "gross": return roomOnly ? salesBookingTotals(b).roomTotal : totals.gross;
+      case "discount": return totals.discount;
+      case "paid": return roomOnly ? (b.payment_method ? b.price : 0) + (b.payment_method_2 ? b.price_2 : 0) : totals.paid;
+      case "hpp": return hpp;
+      case "profit": return roomOnly ? salesBookingTotals(b).roomTotal : totals.paid - hpp;
+      case "proof": return b.payment_proof_url || b.payment_proof_url_2 ? "Tersedia" : "Tidak ada";
+      case "status": return b.status === "Selesai" || b.checked_out_at ? "Selesai" : b.status || "-";
+      default: return String(b[key as keyof BookingData] || "-");
+    }
+  };
+  const detailFilters = useReportColumnFilters(searchedDetailBookings, detailColumns, bookingColumnValue, `${currentStore?.id}:${activeTab}`);
+  const roomFilters = useReportColumnFilters(searchedDetailBookings, roomColumns, (b, key) => bookingColumnValue(b, key, true), `${currentStore?.id}:${activeTab}`);
+  const filteredDetailBookings = detailFilters.filtered;
+  const filteredRoomBookings = roomFilters.filtered;
+  const detailStats = filteredDetailBookings.reduce((acc, b) => {
+    const totals = salesBookingTotals(b, (productsByBookingId[b.id] || []).reduce((sum, p) => sum + p.subtotal, 0));
+    acc.totalBookings += 1;
+    acc.totalBiaya += totals.gross;
+    acc.totalDiskon += totals.discount;
+    acc.jumlahBayar += totals.paid;
+    acc.totalHPP += getBookingHPP(b.id);
+    acc.totalLaba += totals.paid - getBookingHPP(b.id);
+    return acc;
+  }, { totalBookings: 0, totalBiaya: 0, totalDiskon: 0, jumlahBayar: 0, totalHPP: 0, totalLaba: 0 });
+
   // ===== Laporan Penjualan Kamar (room only) =====
-  const roomStats = filteredDetailBookings.reduce(
+  const roomStats = filteredRoomBookings.reduce(
     (acc, b) => {
       const total = salesBookingTotals(b).roomTotal;
       acc.count += 1;
@@ -786,7 +851,7 @@ export default function SalesReport() {
     };
   });
 
-  const itemRows: ItemRow[] = [...bookingItemRows, ...posItemRows]
+  const searchedItemRows: ItemRow[] = [...bookingItemRows, ...posItemRows]
     .filter((r) => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
@@ -797,6 +862,14 @@ export default function SalesReport() {
       );
     })
     .sort((a, c) => (c.date || "").localeCompare(a.date || ""));
+
+  const itemColumnValue = (r: ItemRow, key: string): string | number => {
+    if (key === "proof") return r.proofUrl || r.proofUrl2 ? "Tersedia" : "Tidak ada";
+    if (key === "totalAmount") return r.total;
+    return r[key as keyof ItemRow] ?? "-";
+  };
+  const itemFilters = useReportColumnFilters(searchedItemRows, itemColumns, itemColumnValue, `${currentStore?.id}:${activeTab}`);
+  const itemRows = itemFilters.filtered;
 
   const itemStats = itemRows.reduce(
     (acc, r) => {
@@ -809,9 +882,9 @@ export default function SalesReport() {
     { count: 0, totalBiaya: 0, totalHPP: 0, totalLaba: 0 }
   );
 
-  const detailsPg = usePagination(filteredDetailBookings, [searchQuery, filteredDetailBookings.length]);
-  const roomsPg = usePagination(filteredDetailBookings, [searchQuery, filteredDetailBookings.length]);
-  const itemsPg = usePagination(itemRows, [searchQuery, itemRows.length]);
+  const detailsPg = usePagination(filteredDetailBookings, [searchQuery, timeRange, customDateRange, detailFilters.selections, detailFilters.sort]);
+  const roomsPg = usePagination(filteredRoomBookings, [searchQuery, timeRange, customDateRange, roomFilters.selections, roomFilters.sort]);
+  const itemsPg = usePagination(itemRows, [searchQuery, timeRange, customDateRange, itemFilters.selections, itemFilters.sort]);
 
   return (
     <div className="space-y-4">
@@ -888,7 +961,7 @@ export default function SalesReport() {
                 <Button
                   variant="outline"
                   onClick={handleExportBookings}
-                  disabled={loading || activeBookings.length === 0}
+                  disabled={loading || (activeTab === "item-detail" ? itemRows.length === 0 : activeTab === "rooms" ? filteredRoomBookings.length === 0 : filteredDetailBookings.length === 0)}
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export
@@ -909,27 +982,27 @@ export default function SalesReport() {
               <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Transaksi</CardTitle></CardHeader>
-                  <CardContent><div className="text-2xl font-bold">{stats.totalBookings}</div></CardContent>
+                  <CardContent><div className="text-2xl font-bold">{detailStats.totalBookings}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Biaya</CardTitle></CardHeader>
-                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(stats.totalBiaya)}</div></CardContent>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(detailStats.totalBiaya)}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Diskon</CardTitle></CardHeader>
-                  <CardContent><div className="text-xl font-bold text-red-600">{formatCurrency(stats.totalDiskon)}</div></CardContent>
+                  <CardContent><div className="text-xl font-bold text-red-600">{formatCurrency(detailStats.totalDiskon)}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Jumlah Bayar</CardTitle></CardHeader>
-                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(stats.jumlahBayar)}</div></CardContent>
+                  <CardContent><div className="text-xl font-bold text-green-600">{formatCurrency(detailStats.jumlahBayar)}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total HPP</CardTitle></CardHeader>
-                  <CardContent><div className="text-xl font-bold text-orange-600">{formatCurrency(stats.totalHPP)}</div></CardContent>
+                  <CardContent><div className="text-xl font-bold text-orange-600">{formatCurrency(detailStats.totalHPP)}</div></CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Laba</CardTitle></CardHeader>
-                  <CardContent><div className="text-xl font-bold text-blue-600">{formatCurrency(stats.totalLaba)}</div></CardContent>
+                  <CardContent><div className="text-xl font-bold text-blue-600">{formatCurrency(detailStats.totalLaba)}</div></CardContent>
                 </Card>
               </div>
 
@@ -939,20 +1012,7 @@ export default function SalesReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>No. Booking</TableHead>
-                          <TableHead>Tanggal</TableHead>
-                          <TableHead>Pelanggan</TableHead>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Room</TableHead>
-                          <TableHead>Durasi/Qty</TableHead>
-                          <TableHead className="text-right">Total Biaya</TableHead>
-                          <TableHead className="text-right">Diskon</TableHead>
-                          <TableHead className="text-right">Jumlah Bayar</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Metode Bayar</TableHead>
-                          <TableHead>Bukti Bayar</TableHead>
-                          <TableHead className="text-right">HPP</TableHead>
-                          <TableHead className="text-right">Laba</TableHead>
+                          {detailFilters.headers}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1083,18 +1143,7 @@ export default function SalesReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>No. Booking</TableHead>
-                          <TableHead>Tanggal</TableHead>
-                          <TableHead>Pelanggan</TableHead>
-                          <TableHead>Room</TableHead>
-                          <TableHead>Durasi/Qty</TableHead>
-                          <TableHead className="text-right">Total Biaya</TableHead>
-                          <TableHead className="text-right">Jumlah Bayar</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Metode Bayar</TableHead>
-                          <TableHead>Bukti Bayar</TableHead>
-                          <TableHead className="text-right">HPP</TableHead>
-                          <TableHead className="text-right">Laba</TableHead>
+                          {roomFilters.headers}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1207,16 +1256,7 @@ export default function SalesReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>No. Booking</TableHead>
-                          <TableHead>Tanggal</TableHead>
-                          <TableHead>Pelanggan</TableHead>
-                          <TableHead>Item</TableHead>
-                          <TableHead className="text-right">HPP</TableHead>
-                          <TableHead className="text-right">Harga Jual</TableHead>
-                          <TableHead className="text-right">Profit</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead>Metode Bayar</TableHead>
-                          <TableHead>Bukti Bayar</TableHead>
+                          {itemFilters.headers}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
