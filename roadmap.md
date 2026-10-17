@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Tambahkan dan uji filter kolom yang sama pada laporan pembelian dan penjualan; total, pagination, dan export mengikuti pilihan.
+- [x] Tambahkan dan uji filter kolom yang sama pada laporan pembelian dan penjualan; total, pagination, dan export mengikuti pilihan.
 
 - [x] Tambahkan dan uji filter centang per kolom laporan pengeluaran: pencarian, pilih semua/kosongkan, urutan, Oke/Batal, total dan export mengikuti filter.
 
