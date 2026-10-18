@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CreditCard, Loader2, LockKeyhole, Save } from "lucide-react";
+import { AlertCircle, CreditCard, ExternalLink, Info, Loader2, LockKeyhole, Save } from "lucide-react";
 import { toast } from "sonner";
 import { userFacingError } from "@/utils/userFacingError";
 
@@ -118,10 +118,24 @@ export default function DokuSettings() {
           return <section key={group.name} className="border-b pb-4 last:border-0"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{group.name}</h3><Button variant="outline" size="sm" disabled={saving} onClick={() => toggleChannels(codes, !allOn)}>{allOn ? "Nonaktifkan semua" : "Aktifkan semua"}</Button></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{group.channels.map(([code, name]) => <div key={code} className="flex items-center justify-between gap-3 py-2"><Label htmlFor={`doku-${code}`} className="text-sm">{name}</Label><Switch id={`doku-${code}`} disabled={saving} checked={draft.channels.includes(code)} onCheckedChange={(on) => toggleChannels([code], on)} /></div>)}</div></section>;
         })}
       </TabsContent>
-      <TabsContent value="connection" className="mt-6 max-w-2xl space-y-4 text-sm">
-        <h3 className="font-semibold">Status koneksi: belum terhubung</h3>
-        <p className="text-muted-foreground">Client ID tersedia di akun bisnis DOKU. Secret Key harus ditambahkan melalui formulir rahasia yang aman, bukan melalui percakapan atau kolom biasa.</p>
-        <p className="text-muted-foreground">Penerimaan pembayaran dan sinkronisasi transaksi memerlukan sambungan DOKU beserta notifikasi pembayaran yang belum diaktifkan.</p>
+      <TabsContent value="connection" className="mt-6">
+        <div className="flex items-start gap-3 rounded-lg border border-border bg-background p-4 text-sm leading-6">
+          <Info className="mt-1 h-4 w-4 shrink-0 text-foreground" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium text-foreground">Langkah Menghubungkan ANKA PMS dengan DOKU</h3>
+            <ol className="mt-1 list-decimal space-y-2 pl-5 text-foreground">
+              <li>Daftar / login ke DOKU Dashboard: <a href="https://dashboard.doku.com" target="_blank" rel="noopener noreferrer" className="break-words text-primary underline underline-offset-2">dashboard.doku.com<ExternalLink className="ml-1 inline h-3 w-3" /></a>.</li>
+              <li>Untuk uji coba, buat akun Sandbox lewat <a href="https://sandbox.doku.com" target="_blank" rel="noopener noreferrer" className="break-words text-primary underline underline-offset-2">sandbox.doku.com<ExternalLink className="ml-1 inline h-3 w-3" /></a>.</li>
+              <li>Masuk ke menu <strong>Integration → API Key</strong> di DOKU. Salin <strong>Client ID</strong> ke tab “Kredensial DOKU”, pilih mode yang sesuai, lalu klik <strong>Simpan</strong>. <strong>Secret Key</strong> perlu ditambahkan melalui formulir rahasia yang aman; formulir tersebut belum tersedia di halaman ini.</li>
+              <li>Di DOKU Dashboard, masuk ke menu <strong>Integration → Notification URL</strong>. Gunakan alamat penerima notifikasi ANKA PMS setelah koneksi tersedia:
+                <div className="mt-2 rounded border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">Alamat notifikasi belum tersedia — jangan gunakan alamat dari gambar contoh.</div>
+              </li>
+              <li>Aktifkan metode pembayaran yang ingin diterima di tab “Metode Pembayaran”, lalu klik <strong>Simpan</strong>. Pilihan tersimpan untuk outlet ini, tetapi pembayaran DOKU belum aktif.</li>
+              <li>Setelah koneksi dan notifikasi pembayaran diaktifkan serta diuji, booking online atau pembayaran POS dapat membuat tagihan DOKU sesuai metode yang dipilih pelanggan. Status <strong>LUNAS</strong> otomatis hanya dapat digunakan setelah konfirmasi pembayaran berhasil diterima dari DOKU.</li>
+            </ol>
+            <p className="mt-3 text-xs">Dokumentasi resmi: <a href="https://developers.doku.com" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">developers.doku.com<ExternalLink className="ml-1 inline h-3 w-3" /></a></p>
+          </div>
+        </div>
       </TabsContent>
     </Tabs>
   </section>;
