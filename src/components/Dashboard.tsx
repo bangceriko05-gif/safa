@@ -45,6 +45,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import StoreSelector from "./StoreSelector";
+import DokuLogo from "./doku/DokuLogo";
+const DokuDashboard = lazyWithRetry(() => import("./doku/DokuDashboard"));
 const DateNavigation = lazyWithRetry(() => import("./DateNavigation"));
 const RoomSummary = lazyWithRetry(() => import("./RoomSummary"));
 const ScheduleTable = lazyWithRetry(() => import("./ScheduleTable"));
@@ -675,6 +677,7 @@ export default function Dashboard() {
   const sidebarMenuItemsFooter = [
     { key: "reports", label: "Laporan", icon: FileText },
     { key: "settings", label: "Pengaturan", icon: Settings },
+    { key: "doku", label: "DOKU", icon: DokuLogo },
   ];
 
   const roomsSubItems: { key: "products" | "inventory" | "rooms"; label: string; icon: typeof Package }[] = [
@@ -874,7 +877,7 @@ export default function Dashboard() {
           <div className="p-4 md:p-5">
             <div className="mx-auto max-w-[1440px] space-y-5">
               {/* Header */}
-              <div className={cn("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", activeTab === "transactions" && "hidden")}>
+              <div className={cn("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", (activeTab === "transactions" || activeTab === "doku") && "hidden")}>
                 <div className="flex items-start gap-3">
                   <div className="space-y-2">
                     <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
@@ -1105,6 +1108,10 @@ export default function Dashboard() {
             ) : (
               <FeatureInactiveNotice featureName="Pengaturan" icon={Settings} price={getFeatureInfo("settings").price} description={getFeatureInfo("settings").description} />
             ))}
+          </TabsContent>
+
+          <TabsContent value="doku" className="mt-6">
+            {activeTab === "doku" && <Suspense fallback={<AnkaLoader />}><DokuDashboard key={currentStore.id} /></Suspense>}
           </TabsContent>
 
           <TabsContent value="rooms" forceMount className={`mt-6 ${activeTab !== "rooms" ? "hidden" : ""}`}>
