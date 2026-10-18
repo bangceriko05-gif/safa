@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- DOKU dashboard reads only an explicit non-secret projection of outlet payment settings and never labels manual transactions as gateway transactions; provider synchronization remains separate from saved configuration.
+
 - Expense report system receipts reuse the authenticated transaction receipt page rather than storing generated copies, so receipt data and outlet print settings stay consistent.
 
 - Report column filters commit draft selections and sorting only on confirmation; a shared pure filtering pipeline feeds totals, pagination, and exports to keep every output aligned.

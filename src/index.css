@@ -36,6 +36,9 @@ All colors MUST be HSL.
     --input: 200 20% 88%;
     --ring: 220 90% 56%;
     --success: 142 72% 37%;
+    --doku-success: 180 100% 34%;
+    --doku-failed: 0 85% 45%;
+    --doku-pending: 26 100% 58%;
     --booking-contact-foreground: 0 0% 0%;
     --navigation-active: 259 90% 66%;
     --navigation-active-foreground: 0 0% 100%;
@@ -187,6 +190,9 @@ All colors MUST be HSL.
   .dashboard-stat-expense .dashboard-stat-icon { color: hsl(2 82% 56%); }
   .dashboard-stat-customer .dashboard-stat-icon { color: hsl(276 85% 56%); }
   .text-success { color: hsl(var(--success)); }
+  .doku-summary-success { color: hsl(var(--doku-success)); border-color: hsl(var(--doku-success)); }
+  .doku-summary-failed { color: hsl(var(--doku-failed)); border-color: hsl(var(--doku-failed)); }
+  .doku-summary-pending { color: hsl(var(--doku-pending)); border-color: hsl(var(--doku-pending)); }
   .booking-payment-dialog { z-index: 110; }
   .booking-payment-methods { z-index: 120; }
   .booking-settled { animation: booking-settled-in 650ms cubic-bezier(0.16, 1, 0.3, 1) both; }
