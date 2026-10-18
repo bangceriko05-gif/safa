@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Tambahkan menu DOKU di bawah Pengaturan dengan logo, halaman Transaksi dan Pengaturan; verifikasi navigasi serta penyimpanan pengaturan outlet.
+- [x] Tambahkan menu DOKU di bawah Pengaturan dengan logo, halaman Transaksi dan Pengaturan; verifikasi navigasi serta penyimpanan pengaturan outlet.
+- [ ] Hubungkan transaksi dan Secret Key DOKU melalui sambungan aman; menunggu persetujuan integrasi dan kredensial DOKU dari pengguna.
 
 - [x] Tambahkan dan uji filter kolom yang sama pada laporan pembelian dan penjualan; total, pagination, dan export mengikuti pilihan.
 
