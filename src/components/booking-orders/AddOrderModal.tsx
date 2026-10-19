@@ -1394,8 +1394,132 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             <GripVertical className="h-4 w-4 text-white/70 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* RIGHT — Product grid */}
+          {/* RIGHT — Product grid / Atur Item Pesanan */}
           <div className="flex-1 flex flex-col overflow-hidden">
+          {itemConfig ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <div className="bg-primary text-primary-foreground px-4 py-3 shrink-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Pengaturan Item</p>
+                <h3 className="text-lg font-bold leading-tight mt-0.5">Atur Item Pesanan</h3>
+                <p className="text-xs opacity-90 mt-0.5">Sesuaikan harga, jumlah, diskon, dan catatan sebelum disimpan.</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {(() => {
+                  const { product, variant } = itemConfig;
+                  const productId = variant ? variant.id : product.id;
+                  const name = variant ? `${product.name} - ${variant.variant_name}` : product.name;
+                  const imgs = (variant ? undefined : product.images);
+                  const img = Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : null;
+                  const fixed = !isDynamicPriceItem(productId);
+                  const qty = Math.max(1, Math.floor(cfgQty) || 1);
+                  const price = fixed ? Number(variant ? variant.price : product.price) || 0 : Math.max(0, Math.floor(cfgPrice) || 0);
+                  const discAbs = cfgDiscMode === "pct"
+                    ? Math.round((Math.min(100, Math.max(0, cfgDiscValue)) / 100) * qty * price)
+                    : Math.max(0, Math.floor(cfgDiscValue) || 0);
+                  const subtotal = Math.max(0, qty * price - discAbs);
+                  return (
+                    <>
+                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                      <div className="h-14 w-14 shrink-0 rounded-md bg-muted overflow-hidden flex items-center justify-center">
+                        {img ? (
+                          <img src={img} alt={name} className="h-full w-full object-cover" />
+                        ) : (
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{name}</div>
+                        {!fixed && <div className="text-xs text-primary mt-0.5">Harga bebas ubah</div>}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Harga</Label>
+                        <Input
+                          inputMode="numeric"
+                          disabled={fixed}
+                          value={price ? new Intl.NumberFormat("id-ID").format(price) : ""}
+                          placeholder="0"
+                          onChange={(e) => setCfgPrice(parseNum(e.target.value))}
+                          className="h-10"
+                        />
+                        {fixed && <p className="text-[11px] text-muted-foreground">Harga produk ini tidak dapat diubah.</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Jumlah</Label>
+                        <div className="flex items-center gap-1">
+                          <Button type="button" variant="outline" size="icon" className="h-10 w-9 shrink-0" onClick={() => setCfgQty((q) => Math.max(1, (Math.floor(q) || 1) - 1))}>
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <Input
+                            inputMode="numeric"
+                            value={cfgQty ? String(Math.floor(cfgQty)) : ""}
+                            onChange={(e) => setCfgQty(parseNum(e.target.value) || 0)}
+                            className="h-10 text-center"
+                          />
+                          <Button type="button" variant="outline" size="icon" className="h-10 w-9 shrink-0" onClick={() => setCfgQty((q) => (Math.floor(q) || 0) + 1)}>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Diskon Item</Label>
+                      <div className="flex gap-2">
+                        <div className="flex shrink-0 rounded-md border overflow-hidden h-10">
+                          <button
+                            type="button"
+                            onClick={() => setCfgDiscMode("pct")}
+                            aria-pressed={cfgDiscMode === "pct"}
+                            className={`w-9 text-sm font-semibold transition ${cfgDiscMode === "pct" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-accent"}`}
+                          >
+                            %
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCfgDiscMode("rp")}
+                            aria-pressed={cfgDiscMode === "rp"}
+                            className={`w-9 text-xs font-semibold transition border-l ${cfgDiscMode === "rp" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-accent"}`}
+                          >
+                            Rp
+                          </button>
+                        </div>
+                        <Input
+                          inputMode="numeric"
+                          value={cfgDiscValue ? new Intl.NumberFormat("id-ID").format(cfgDiscValue) : ""}
+                          placeholder="0"
+                          onChange={(e) => setCfgDiscValue(parseNum(e.target.value))}
+                          className="h-10 flex-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Catatan Item</Label>
+                      <Textarea
+                        placeholder="Contoh: tanpa pedas, saus dipisah..."
+                        value={cfgNotes}
+                        onChange={(e) => setCfgNotes(e.target.value)}
+                        className="min-h-20 resize-y"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border bg-primary/5 px-4 py-3">
+                      <span className="text-sm font-medium">Subtotal item</span>
+                      <span className="text-lg font-bold text-primary">{fmt(subtotal)}</span>
+                    </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="flex gap-2 p-4 pt-0 shrink-0">
+                <Button variant="outline" className="flex-1 h-11" onClick={() => setItemConfig(null)}>
+                  <X className="mr-2 h-4 w-4" />Batal
+                </Button>
+                <Button className="flex-1 h-11" onClick={commitItemConfig}>
+                  <Check className="mr-2 h-4 w-4" />Simpan
+                </Button>
+              </div>
+            </div>
+          ) : (<>
             <div className="p-3 shrink-0">
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
