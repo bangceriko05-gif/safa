@@ -594,35 +594,54 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return false;
   };
 
+  const openItemConfig = (p: Product, v: ProductVariant | null) => {
+    setItemConfig({ product: p, variant: v });
+    setCfgQty(1);
+    setCfgPrice(Number(v ? v.price : p.price) || 0);
+    setCfgDiscMode("rp");
+    setCfgDiscValue(0);
+    setCfgNotes("");
+  };
+
   const addProduct = (p: Product) => {
     const productVariants = variants.filter((v) => v.product_id === p.id);
     if (productVariants.length > 0) {
       setVariantPickerFor(p);
       return;
     }
-    setItems((prev) => {
-      const ix = prev.findIndex((i) => i.product_id === p.id);
-      if (ix >= 0) {
-        const next = [...prev];
-        next[ix] = { ...next[ix], quantity: next[ix].quantity + 1 };
-        return next;
-      }
-      return [...prev, { product_id: p.id, product_name: p.name, quantity: 1, unit_price: Number(p.price) }];
-    });
+    openItemConfig(p, null);
   };
 
   const addVariant = (p: Product, v: ProductVariant) => {
-    const composedName = `${p.name} - ${v.variant_name}`;
+    setVariantPickerFor(null);
+    openItemConfig(p, v);
+  };
+
+  const commitItemConfig = () => {
+    if (!itemConfig) return;
+    const { product, variant } = itemConfig;
+    const productId = variant ? variant.id : product.id;
+    const name = variant ? `${product.name} - ${variant.variant_name}` : product.name;
+    const qty = Math.max(1, Math.floor(cfgQty) || 1);
+    const base = Number(variant ? variant.price : product.price) || 0;
+    const price = isDynamicPriceItem(productId) ? Math.max(0, Math.floor(cfgPrice) || 0) : base;
+    const discAbs =
+      cfgDiscMode === "pct"
+        ? Math.round((Math.min(100, Math.max(0, cfgDiscValue)) / 100) * qty * price)
+        : Math.max(0, Math.floor(cfgDiscValue) || 0);
+    const disc = discAbs > 0 ? { discount: discAbs, discount_mode: cfgDiscMode, discount_value: Math.floor(cfgDiscValue) || 0 } : {};
+    const note = cfgNotes.trim() ? { notes: cfgNotes.trim() } : {};
     setItems((prev) => {
-      const ix = prev.findIndex((i) => i.product_id === v.id);
-      if (ix >= 0) {
+      const ix = prev.findIndex((i) => i.product_id === productId);
+      // Gabungkan hanya jika baris lama belum punya diskon/catatan sendiri
+      if (ix >= 0 && !(prev[ix].discount || 0) && !prev[ix].notes) {
         const next = [...prev];
-        next[ix] = { ...next[ix], quantity: next[ix].quantity + 1 };
+        next[ix] = { ...next[ix], quantity: next[ix].quantity + qty, unit_price: price, ...disc, ...note };
         return next;
       }
-      return [...prev, { product_id: v.id, product_name: composedName, quantity: 1, unit_price: Number(v.price) }];
+      return [...prev, { product_id: productId, product_name: name, quantity: qty, unit_price: price, ...disc, ...note }];
     });
-    setVariantPickerFor(null);
+    setItemConfig(null);
   };
 
   const updateQty = (ix: number, qty: number) => {
