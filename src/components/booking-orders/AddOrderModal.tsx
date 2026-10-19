@@ -66,6 +66,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [variantPickerFor, setVariantPickerFor] = useState<Product | null>(null);
+  // Panel "Atur Item Pesanan" — muncul menggantikan katalog saat produk dipilih
+  const [itemConfig, setItemConfig] = useState<{ product: Product; variant: ProductVariant | null } | null>(null);
+  const [cfgQty, setCfgQty] = useState<number>(1);
+  const [cfgPrice, setCfgPrice] = useState<number>(0);
+  const [cfgDiscMode, setCfgDiscMode] = useState<"rp" | "pct">("rp");
+  const [cfgDiscValue, setCfgDiscValue] = useState<number>(0);
+  const [cfgNotes, setCfgNotes] = useState<string>("");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
