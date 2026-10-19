@@ -1599,6 +1599,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 )}
               </div>
             </ScrollArea>
+            </>
+            )}
           </div>
         </div>
         {discountFor !== null && items[discountFor] && (
