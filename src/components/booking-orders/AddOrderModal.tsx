@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink, Copy, Check } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink, Copy, Check, X, Package } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -45,6 +45,7 @@ interface OrderItem {
   discount?: number;
   discount_mode?: "rp" | "pct";
   discount_value?: number;
+  notes?: string;
 }
 
 interface AddOrderModalProps {
