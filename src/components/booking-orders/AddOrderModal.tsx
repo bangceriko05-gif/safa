@@ -1083,6 +1083,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       <div key={ix} className="grid grid-cols-[1fr_88px_90px] gap-2 px-3 py-2 text-xs items-center">
                         <div className="min-w-0">
                           <div className="font-medium truncate leading-tight">{it.product_name}</div>
+                          {it.notes && (
+                            <div className="text-[10px] text-muted-foreground italic truncate mt-0.5" title={it.notes}>
+                              “{it.notes}”
+                            </div>
+                          )}
                           <div className="flex items-center gap-1.5 mt-1">
                             <button
                               type="button"
