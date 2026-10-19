@@ -431,6 +431,7 @@ export type Database = {
           discount_mode: string
           discount_value: number
           id: string
+          notes: string | null
           product_id: string | null
           product_name: string
           quantity: number
@@ -444,6 +445,7 @@ export type Database = {
           discount_mode?: string
           discount_value?: number
           id?: string
+          notes?: string | null
           product_id?: string | null
           product_name: string
           quantity?: number
@@ -457,6 +459,7 @@ export type Database = {
           discount_mode?: string
           discount_value?: number
           id?: string
+          notes?: string | null
           product_id?: string | null
           product_name?: string
           quantity?: number
