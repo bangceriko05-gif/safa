@@ -814,7 +814,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setDraftOrder(null); onOpenChange(o); }}>
-      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none sm:rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 [&>button.absolute]:hidden">
+      <DialogContent className="inset-0 max-w-none w-screen h-screen max-h-none sm:max-w-none rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 shadow-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 [&>button.absolute]:hidden">
         {/* Top blue header bar */}
         <div className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           <div className="font-semibold text-lg truncate">
