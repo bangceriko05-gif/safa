@@ -43,6 +43,13 @@
       "when": 1791765843592,
       "tag": "0005_update_shared_booking_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792419161615,
+      "tag": "0006_add_order_item_notes",
+      "breakpoints": true
     }
   ]
 }

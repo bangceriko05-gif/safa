@@ -1,0 +1,1 @@
+ALTER TABLE public.booking_order_items ADD COLUMN IF NOT EXISTS notes text;
