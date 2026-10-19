@@ -486,6 +486,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               discount: Number(d.discount) || 0,
               discount_mode: (d.discount_mode as "rp" | "pct") || "rp",
               discount_value: Number(d.discount_value) || 0,
+              notes: d.notes || undefined,
             }))
           );
         });
@@ -760,6 +761,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         discount: it.discount || 0,
         discount_mode: it.discount_mode || "rp",
         discount_value: it.discount_value || 0,
+        notes: it.notes || null,
         subtotal: Math.max(0, it.quantity * it.unit_price - (it.discount || 0)),
       }));
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
