@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Pindahkan fitur POS ke sidebar sebagai menu "POS Kasir" pertama di bawah tombol menu; hapus tombol POS dari header.
+
+
 - [x] Tambahkan menu DOKU di bawah Pengaturan dengan logo, halaman Transaksi dan Pengaturan; verifikasi navigasi serta penyimpanan pengaturan outlet.
 - [ ] Hubungkan transaksi dan Secret Key DOKU melalui sambungan aman; menunggu persetujuan integrasi dan kredensial DOKU dari pengguna.
 
