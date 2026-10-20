@@ -17,6 +17,9 @@ import DiscountDialog from "@/components/purchase/DiscountDialog";
 import ProductCategoryManager from "@/components/products/ProductCategoryManager";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import CustomerNameInput from "@/components/customers/CustomerNameInput";
+import PosPaymentPanel from "./PosPaymentPanel";
+import { canConfirmPosService } from "@/utils/posServiceConfirmation";
+import { userFacingError } from "@/utils/userFacingError";
 
 interface Product {
   id: string;
@@ -319,6 +322,48 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const effectiveBooking = booking || matchedBooking;
   // Order yang sedang diedit: dari prop (mode booking) atau draft yang dibuka dari daftar transaksi POS
   const activeOrder = draftOrder || order;
+  const [paymentView, setPaymentView] = useState(false);
+  const [serviceConfirmOpen, setServiceConfirmOpen] = useState(false);
+  const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [attendantName, setAttendantName] = useState("");
+
+  useEffect(() => {
+    setPaymentView(false);
+    setServiceConfirmOpen(false);
+    setItemConfig(null);
+    setAttendantName((draftOrder || order)?.attendant_name || "");
+    setStaffOptions([]);
+    if (!open || !posMode || !currentStore) return;
+    let cancelled = false;
+    setStaffLoading(true);
+    (async () => {
+      try {
+        const [{ data: access, error }, { data: auth }] = await Promise.all([
+          supabase.from("user_store_access").select("user_id").eq("store_id", currentStore.id),
+          supabase.auth.getUser(),
+        ]);
+        if (error) throw error;
+        const ids = [...new Set((access || []).map((row) => row.user_id))];
+        const { data: profiles, error: profileError } = ids.length
+          ? await supabase.from("profiles").select("id, name, email").in("id", ids)
+          : { data: [], error: null };
+        if (profileError) throw profileError;
+        if (cancelled) return;
+        const options = (profiles || []).map((profile) => ({ id: profile.id, name: profile.name || profile.email || "Petugas" }));
+        options.sort((a, b) => a.name.localeCompare(b.name));
+        setStaffOptions(options);
+        const current = options.find((option) => option.id === auth.user?.id);
+        if (!(draftOrder || order)?.attendant_name && current) setAttendantName(current.name);
+      } catch (error) {
+        if (!cancelled) toast.error(userFacingError(error, "Daftar petugas belum dapat dimuat. Tutup POS dan buka kembali."));
+      } finally {
+        if (!cancelled) setStaffLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, posMode, currentStore?.id, draftOrder, order]);
+
 
   // POS settings (per store)
   const [posSettings, setPosSettings] = useState<{
@@ -680,6 +725,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       toast.error("Silakan pilih pelanggan terlebih dahulu");
       return;
     }
+    if (posMode && (!paymentView || !canConfirmPosService(attendantName) || !staffOptions.some((staff) => staff.name === attendantName))) {
+      toast.error("Pilih dan konfirmasi petugas yang melayani transaksi terlebih dahulu.");
+      return;
+    }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -708,6 +757,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         store_id: currentStore.id,
         date,
+        ...(posMode ? { attendant_name: attendantName.trim() } : {}),
         payment_method: paymentMethod,
         reference_no: referenceNo || null,
         dual_payment: dualPayment,
@@ -806,11 +856,149 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
-      toast.error(e.message || "Gagal menyimpan order");
+      toast.error(userFacingError(e, "Transaksi belum berhasil disimpan. Silakan coba lagi."));
     } finally {
       setSaving(false);
     }
   };
+
+  const paymentFields = (
+<div className={posMode ? "space-y-3" : "border-t px-3 py-2 space-y-2 overflow-y-auto max-h-[40%]"}>
+              <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Tanggal</Label>
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8" />
+              </div>
+              {!posMode && <div>
+                <Label className="text-xs">Metode</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {methods.map((m) => (
+                      <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>}
+              <div>
+                <Label className="text-xs">Nominal Bayar</Label>
+                <Input
+                  inputMode="numeric"
+                  value={fmtNum(amount)}
+                  onChange={(e) => setAmount(parseNum(e.target.value))}
+                  className="h-8"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">No. Referensi</Label>
+                <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} className="h-8" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox id="dual" checked={dualPayment} onCheckedChange={(v) => setDualPayment(!!v)} />
+              <Label htmlFor="dual" className="text-xs cursor-pointer">Pembayaran Ganda</Label>
+            </div>
+
+            {dualPayment && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Metode 2</Label>
+                  <Select value={paymentMethod2} onValueChange={setPaymentMethod2}>
+                    <SelectTrigger className="h-8"><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectContent>
+                      {methods.map((m) => (
+                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Nominal 2</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={fmtNum(amount2)}
+                    onChange={(e) => setAmount2(parseNum(e.target.value))}
+                    className="h-8"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">No. Referensi 2</Label>
+                  <Input value={referenceNo2} onChange={(e) => setReferenceNo2(e.target.value)} className="h-8" />
+                </div>
+              </div>
+            )}
+
+            <PaymentProofUpload
+              value={proofUrl}
+              onChange={setProofUrl}
+              required={posMode ? posSettings.require_payment_proof : true}
+              compact={!posMode}
+              disabled={saving}
+              label="Bukti Pembayaran"
+            />
+
+            {posSettings.service_charge_enabled && (
+              <div className="flex items-center justify-between text-xs px-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={applyServiceCharge}
+                    onCheckedChange={(v) => setApplyServiceCharge(!!v)}
+                  />
+                  <span className="text-muted-foreground">
+                    Service Charge
+                    {posSettings.service_charge_type === "percent"
+                      ? ` (${posSettings.service_charge_value}%)`
+                      : ""}
+                  </span>
+                </label>
+                <span className={`font-semibold ${applyServiceCharge ? "" : "text-muted-foreground line-through"}`}>
+                  + {fmt(
+                    posSettings.service_charge_type === "percent"
+                      ? Math.round((netAfterDiscount * posSettings.service_charge_value) / 100)
+                      : Math.max(0, posSettings.service_charge_value)
+                  )}
+                </span>
+              </div>
+            )}
+
+            {(taxSummary.hasExclude || taxSummary.hasInclude) && (
+              <div className="space-y-0.5 px-1">
+                {taxSummary.hasExclude && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      PPN ({storeTax.rate}%)
+                    </span>
+                    <span className="font-semibold">
+                      + {fmt(taxSummary.excludeTax)}
+                    </span>
+                  </div>
+                )}
+                {taxSummary.hasInclude && (
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>PPN ({storeTax.rate}%) termasuk harga</span>
+                    <span>{fmt(taxSummary.includeTax)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div>
+              <Label className="text-xs">Catatan</Label>
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="text-xs" />
+            </div>
+
+            <div className={`text-center py-1 rounded-md font-bold text-xs ${
+              paymentStatus === "lunas"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-red-100 text-red-700"
+            }`}>
+              {paymentStatus === "lunas" ? "✓ LUNAS" : "✕ BELUM LUNAS"}
+            </div>
+            </div>
+  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setDraftOrder(null); onOpenChange(o); }}>
@@ -1008,7 +1196,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
-  <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r">
+  <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r max-w-[45vw] md:max-w-none">
             <div className="px-3 py-2 flex items-center justify-between border-b">
               {posMode && !booking ? (
                 <button
@@ -1231,139 +1419,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               </div>
             </div>
 
-            <div className="border-t px-3 py-2 space-y-2 overflow-y-auto max-h-[40%]">
-              <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Tanggal</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8" />
-              </div>
-              <div>
-                <Label className="text-xs">Metode</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {methods.map((m) => (
-                      <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Nominal Bayar</Label>
-                <Input
-                  inputMode="numeric"
-                  value={fmtNum(amount)}
-                  onChange={(e) => setAmount(parseNum(e.target.value))}
-                  className="h-8"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">No. Referensi</Label>
-                <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} className="h-8" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox id="dual" checked={dualPayment} onCheckedChange={(v) => setDualPayment(!!v)} />
-              <Label htmlFor="dual" className="text-xs cursor-pointer">Pembayaran Ganda</Label>
-            </div>
-
-            {dualPayment && (
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Metode 2</Label>
-                  <Select value={paymentMethod2} onValueChange={setPaymentMethod2}>
-                    <SelectTrigger className="h-8"><SelectValue placeholder="Pilih..." /></SelectTrigger>
-                    <SelectContent>
-                      {methods.map((m) => (
-                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Nominal 2</Label>
-                  <Input
-                    inputMode="numeric"
-                    value={fmtNum(amount2)}
-                    onChange={(e) => setAmount2(parseNum(e.target.value))}
-                    className="h-8"
-                    placeholder="0"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">No. Referensi 2</Label>
-                  <Input value={referenceNo2} onChange={(e) => setReferenceNo2(e.target.value)} className="h-8" />
-                </div>
-              </div>
-            )}
-
-            <PaymentProofUpload
-              value={proofUrl}
-              onChange={setProofUrl}
-              required={posMode ? posSettings.require_payment_proof : true}
-              compact
-            />
-
-            {posSettings.service_charge_enabled && (
-              <div className="flex items-center justify-between text-xs px-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={applyServiceCharge}
-                    onCheckedChange={(v) => setApplyServiceCharge(!!v)}
-                  />
-                  <span className="text-muted-foreground">
-                    Service Charge
-                    {posSettings.service_charge_type === "percent"
-                      ? ` (${posSettings.service_charge_value}%)`
-                      : ""}
-                  </span>
-                </label>
-                <span className={`font-semibold ${applyServiceCharge ? "" : "text-muted-foreground line-through"}`}>
-                  + {fmt(
-                    posSettings.service_charge_type === "percent"
-                      ? Math.round((netAfterDiscount * posSettings.service_charge_value) / 100)
-                      : Math.max(0, posSettings.service_charge_value)
-                  )}
-                </span>
-              </div>
-            )}
-
-            {(taxSummary.hasExclude || taxSummary.hasInclude) && (
-              <div className="space-y-0.5 px-1">
-                {taxSummary.hasExclude && (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      PPN ({storeTax.rate}%)
-                    </span>
-                    <span className="font-semibold">
-                      + {fmt(taxSummary.excludeTax)}
-                    </span>
-                  </div>
-                )}
-                {taxSummary.hasInclude && (
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>PPN ({storeTax.rate}%) termasuk harga</span>
-                    <span>{fmt(taxSummary.includeTax)}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div>
-              <Label className="text-xs">Catatan</Label>
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="text-xs" />
-            </div>
-
-            <div className={`text-center py-1 rounded-md font-bold text-xs ${
-              paymentStatus === "lunas"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-red-100 text-red-700"
-            }`}>
-              {paymentStatus === "lunas" ? "✓ LUNAS" : "✕ BELUM LUNAS"}
-            </div>
-            </div>
+            {!posMode && paymentFields}
 
             {/* Big green total / save bar */}
             <button
@@ -1379,13 +1435,15 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                      pickedCustomerPhone ||
                      "",
                  );
-                setFinishOpen(true);
+                if (posMode) {
+                  if (!paymentView) setServiceConfirmOpen(true);
+                } else setFinishOpen(true);
               }}
               disabled={saving}
               className="mt-auto h-16 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-2xl font-bold flex items-center justify-center gap-3 shrink-0"
             >
               {saving && <Loader2 className="h-5 w-5 animate-spin" />}
-              {fmt(total)}
+              {posMode ? (paymentView ? "Pembayaran" : "Pembayaran · ") : ""}{!posMode || !paymentView ? fmt(total) : ""}
             </button>
           </div>
 
@@ -1402,8 +1460,16 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           </div>
 
           {/* RIGHT — Product grid / Atur Item Pesanan */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-          {itemConfig ? (
+          <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {posMode && paymentView ? (
+            <PosPaymentPanel total={fmt(total)} attendant={attendantName} methods={methods} selected={paymentMethod} onSelect={setPaymentMethod} saving={saving}
+              onBack={() => setPaymentView(false)} onSave={() => {
+                setWaPhone(effectiveBooking?.phone || effectiveBooking?.customer_phone || pickedCustomerPhone || "");
+                setFinishOpen(true);
+              }}>
+              {paymentFields}
+            </PosPaymentPanel>
+          ) : itemConfig ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <div className="bg-primary text-primary-foreground px-4 py-3 shrink-0">
                 <p className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Pengaturan Item</p>
@@ -1835,6 +1901,25 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                   {savingNewCustomer ? "Menyimpan..." : "Ya, Simpan"}
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={serviceConfirmOpen} onOpenChange={setServiceConfirmOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Dilayani Oleh</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">Transaksi ini dilayani oleh siapa?</p>
+            <div className="space-y-2">
+              <Label htmlFor="pos-attendant">Petugas</Label>
+              <Select value={attendantName} onValueChange={setAttendantName} disabled={staffLoading}>
+                <SelectTrigger id="pos-attendant"><SelectValue placeholder={staffLoading ? "Memuat petugas..." : "Pilih petugas"} /></SelectTrigger>
+                <SelectContent>{staffOptions.map((staff) => <SelectItem key={staff.id} value={staff.name}>{staff.name}</SelectItem>)}</SelectContent>
+              </Select>
+              {!staffLoading && staffOptions.length === 0 && <p className="text-sm text-destructive">Belum ada petugas yang dapat dipilih di outlet ini. Hubungi admin untuk memberikan akses outlet.</p>}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setServiceConfirmOpen(false)}>Batal</Button>
+              <Button disabled={staffLoading || !canConfirmPosService(attendantName) || !staffOptions.some((staff) => staff.name === attendantName)} onClick={() => { setItemConfig(null); setPaymentView(true); setServiceConfirmOpen(false); }}>Ya, Benar</Button>
             </div>
           </DialogContent>
         </Dialog>
