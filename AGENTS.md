@@ -1,6 +1,6 @@
 # Project Architecture Rules
 
-- POS checkout confirms the attendant before switching the catalog to payment; attribution uses the existing transaction note without changing creator identity or treating unconnected DOKU channels as paid gateway transactions.
+- POS checkout confirms an outlet staff member before switching the catalog to payment; attribution uses the existing attendant_name field without changing creator identity or treating unconnected DOKU channels as paid gateway transactions.
 
 - DOKU dashboard reads only an explicit non-secret projection of outlet payment settings and never labels manual transactions as gateway transactions; provider synchronization remains separate from saved configuration.
 
