@@ -721,6 +721,24 @@ export default function Dashboard() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  {isFeatureEnabled("transactions") && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={posOpen}
+                        onClick={() => setPosOpen(true)}
+                        tooltip="POS Kasir"
+                        className={cn(
+                          "gap-3",
+                          posOpen &&
+                            "bg-primary text-primary-foreground font-bold shadow-sm hover:bg-primary/90 hover:text-primary-foreground [&>svg]:text-primary-foreground"
+                        )}
+                      >
+                        <ShoppingCart className="h-5 w-5 shrink-0" />
+                        <span>POS Kasir</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
                   {sidebarMenuItemsTop.map((item) => (
                     <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton
@@ -893,16 +911,6 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {isFeatureEnabled("transactions") && (
-                    <Button
-                      onClick={() => setPosOpen(true)}
-                      variant="outline"
-                      size="default"
-                    >
-                      <ShoppingCart className="lg:mr-2 h-4 w-4" />
-                      <span className="hidden lg:inline">POS</span>
-                    </Button>
-                  )}
                   {isFeatureEnabled("deposit") && activeTab === "bookings" && (
                     <Button 
                       onClick={() => setDepositMode(!depositMode)} 
