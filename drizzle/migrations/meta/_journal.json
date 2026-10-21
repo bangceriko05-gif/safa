@@ -50,6 +50,13 @@
       "when": 1792419161615,
       "tag": "0006_add_order_item_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792573184731,
+      "tag": "0007_add_doku_payment_attempts",
+      "breakpoints": true
     }
   ]
 }
