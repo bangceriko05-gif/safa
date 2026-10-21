@@ -7,12 +7,28 @@ export function dokuAdmin() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-export function dokuCredentials() {
-  const clientId = Deno.env.get("DOKU_CLIENT_ID")?.trim();
-  const secret = Deno.env.get("DOKU_SECRET_KEY")?.trim();
-  const environment = Deno.env.get("DOKU_ENVIRONMENT")?.trim();
-  if (!clientId || !secret || !["sandbox", "live"].includes(environment || "")) return null;
-  return { clientId, secret, environment };
+async function encryptionKey() {
+  const raw = Deno.env.get("DOKU_CREDENTIAL_ENCRYPTION_KEY");
+  if (!raw) throw new Error("Encryption unavailable");
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return crypto.subtle.importKey("raw", hash, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+export async function encryptDokuSecret(secret: string) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await encryptionKey(), new TextEncoder().encode(secret)));
+  const bytes = new Uint8Array(iv.length + encrypted.length);
+  bytes.set(iv); bytes.set(encrypted, iv.length);
+  return btoa(String.fromCharCode(...bytes));
+}
+
+export async function dokuCredentials(storeId: string, environment: string) {
+  const { data, error } = await dokuAdmin().from("doku_outlet_credentials").select("client_id,secret_ciphertext").eq("store_id", storeId).eq("environment", environment).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const bytes = Uint8Array.from(atob(data.secret_ciphertext), c => c.charCodeAt(0));
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.subarray(0, 12) }, await encryptionKey(), bytes.subarray(12));
+  return { clientId: data.client_id, secret: new TextDecoder().decode(decrypted), environment };
 }
 
 const base64 = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));

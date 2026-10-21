@@ -6,7 +6,7 @@
 
 - POS checkout confirms an outlet staff member before switching the catalog to payment; attribution uses the existing attendant_name field without changing creator identity or treating unconnected DOKU channels as paid gateway transactions.
 
-- DOKU dashboard reads only an explicit non-secret projection of outlet payment settings and never labels manual transactions as gateway transactions; provider synchronization remains separate from saved configuration.
+- DOKU credentials are entered directly in outlet settings, encrypted server-side in a service-only table, and never returned to the browser; configuration writes require outlet-admin authorization, while signed idempotent notifications alone settle gateway orders.
 
 - Expense report system receipts reuse the authenticated transaction receipt page rather than storing generated copies, so receipt data and outlet print settings stay consistent.
 

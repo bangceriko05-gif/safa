@@ -1156,6 +1156,38 @@ export type Database = {
         }
         Relationships: []
       }
+      doku_outlet_credentials: {
+        Row: {
+          client_id: string
+          environment: string
+          secret_ciphertext: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          environment: string
+          secret_ciphertext: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          environment?: string
+          secret_ciphertext?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doku_outlet_credentials_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doku_payment_attempts: {
         Row: {
           amount: number
@@ -4045,6 +4077,17 @@ export type Database = {
       safe_promote_first_admin: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      save_doku_outlet_settings: {
+        Args: {
+          p_channels: Json
+          p_ciphertext: string
+          p_client_id: string
+          p_enabled: boolean
+          p_environment: string
+          p_store_id: string
+        }
+        Returns: undefined
       }
       settle_doku_order: {
         Args: { p_amount: number; p_attempt_id: string; p_channel: string }

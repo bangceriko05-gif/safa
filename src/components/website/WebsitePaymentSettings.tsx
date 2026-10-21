@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { AlertTriangle, Landmark, Loader2, QrCode, Save, Store, Wallet, CreditCard, Clock } from "lucide-react";
 import PaymentMethodSettings from "@/components/PaymentMethodSettings";
+import DokuSettings from "@/components/doku/DokuSettings";
 
 const WEBSITE_INACTIVE_MESSAGE =
   "Mohon maaf, fitur website di outlet anda tidak aktif. Lakukan pembayaran tambahan untuk mengaktifkan fitur ini. Terima kasih";
@@ -99,7 +100,7 @@ export default function WebsitePaymentSettings() {
       setLoading(true);
       const { data, error } = await supabase
         .from("website_payment_settings")
-        .select("*")
+        .select("doku_enabled,doku_environment,doku_client_id,doku_channels,manual_transfer_note")
         .eq("store_id", currentStore.id)
         .maybeSingle();
       if (!active) return;
@@ -108,7 +109,7 @@ export default function WebsitePaymentSettings() {
         setDokuEnabled(!!data.doku_enabled);
         setEnvironment(data.doku_environment === "live" ? "live" : "sandbox");
         setClientId(data.doku_client_id || "");
-        setSecretKey(data.doku_secret_key || "");
+        setSecretKey("");
         setChannels(Array.isArray(data.doku_channels) ? (data.doku_channels as string[]) : []);
         setNote(data.manual_transfer_note || "");
       } else {
@@ -158,7 +159,6 @@ export default function WebsitePaymentSettings() {
         doku_enabled: dokuEnabled,
         doku_environment: environment,
         doku_client_id: clientId.trim() || null,
-        doku_secret_key: secretKey.trim() || null,
         doku_channels: channels,
         manual_transfer_note: note.trim() || null,
       },
@@ -191,8 +191,9 @@ export default function WebsitePaymentSettings() {
       )}
 
       <PaymentMethodSettings />
+      <DokuSettings />
 
-      <Card>
+      <Card className="hidden">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
