@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Unsubmitted POS orders are persisted as browser drafts scoped to cashier and outlet, then converted to normal orders only at checkout; this keeps suggested payment amounts and unfinished carts out of financial reports.
+
 - Sidebar colors alias the shared surface and text tokens; mobile navigation uses an opaque sheet and touch-sized controls independently of desktop collapse state, preventing background content from obscuring labels.
 
 - POS checkout confirms an outlet staff member before switching the catalog to payment; attribution uses the existing attendant_name field without changing creator identity or treating unconnected DOKU channels as paid gateway transactions.

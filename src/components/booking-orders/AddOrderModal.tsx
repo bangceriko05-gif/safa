@@ -20,6 +20,7 @@ import CustomerNameInput from "@/components/customers/CustomerNameInput";
 import PosPaymentPanel from "./PosPaymentPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { userFacingError } from "@/utils/userFacingError";
+import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
 interface Product {
   id: string;
@@ -177,7 +178,15 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       rows = rows.map((o) => (synced.has(o.id) ? { ...o, process_status: "selesai" } : o));
     }
 
-    setTxOrders(rows);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const drafts = user ? readPosOrderDrafts(localStorage, currentStore.id, user.id) : [];
+      const resumedServerIds = new Set(drafts.map((draft) => draft.server_order_id).filter(Boolean));
+      setTxOrders([...drafts, ...rows.filter((row) => !resumedServerIds.has(row.id))]);
+    } catch (error) {
+      setTxOrders(rows);
+      toast.error(userFacingError(error, "Draft belum dapat dimuat. Silakan coba lagi."));
+    }
     setTxLoading(false);
   };
 
@@ -232,6 +241,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   // Buka transaksi draft langsung di POS (tanpa tab baru) untuk dilanjutkan/diedit
   const openDraftInPos = async (o: any) => {
+    if (isLocalPosDraft(o)) {
+      setTxListOpen(false);
+      setMatchedBooking(o.matched_booking || null);
+      setDraftOrder(o);
+      toast.success("Draft dibuka di POS");
+      return;
+    }
     const { data: full } = await supabase
       .from("booking_orders")
       .select("*")
@@ -249,7 +265,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         .select("*")
         .eq("id", (full as any).booking_id)
         .maybeSingle();
-      if (bk) setMatchedBooking(bk);
+      setMatchedBooking(bk || null);
+    } else {
+      setMatchedBooking(null);
     }
     toast.success(`Draft ${(full as any).bid || ""} dibuka di POS`);
   };
@@ -517,6 +535,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setProofUrl(activeOrder.payment_proof_urls?.[0] || null);
       setNote(activeOrder.note || "");
       if (activeOrder.customer_name) setManualCustomerName(activeOrder.customer_name);
+      if (isLocalPosDraft(activeOrder)) {
+        setItems(activeOrder.items || []);
+        setPickedCustomerPhone(activeOrder.customer_phone || "");
+        setTxDiscountMode(activeOrder.tx_discount_mode || "rp");
+        setTxDiscountValue(activeOrder.tx_discount_value || 0);
+        setApplyServiceCharge(activeOrder.apply_service_charge ?? true);
+        return;
+      }
       supabase
         .from("booking_order_items")
         .select("*")
@@ -757,6 +783,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         store_id: currentStore.id,
         date,
+        customer_name: customerDisplayName,
+        customer_phone: effectiveBooking?.phone || pickedCustomerPhone || activeOrder?.customer_phone || null,
         ...(posMode ? { attendant_name: attendantName.trim() } : {}),
         payment_method: paymentMethod,
         reference_no: referenceNo || null,
@@ -786,11 +814,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         tax_included_amount: taxSummary.includeTax,
       };
 
-      let orderId = activeOrder?.id;
-      if (activeOrder) {
-        const { error } = await supabase.from("booking_orders").update(payload).eq("id", activeOrder.id);
+      let orderId = isLocalPosDraft(activeOrder) ? activeOrder?.server_order_id : activeOrder?.id;
+      if (orderId) {
+        const { error } = await supabase.from("booking_orders").update(payload).eq("id", orderId).eq("store_id", currentStore.id);
         if (error) throw error;
-        await supabase.from("booking_order_items").delete().eq("booking_order_id", activeOrder.id);
+        const { error: deleteError } = await supabase.from("booking_order_items").delete().eq("booking_order_id", orderId);
+        if (deleteError) throw deleteError;
       } else {
         payload.created_by = user?.id;
         const { data, error } = await supabase
@@ -816,6 +845,10 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }));
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
       if (itemErr) throw itemErr;
+
+      if (isLocalPosDraft(activeOrder) && user) {
+        removePosOrderDraft(localStorage, currentStore.id, user.id, activeOrder.id);
+      }
 
       toast.success(activeOrder ? "Order diperbarui" : "Order ditambahkan");
       setDraftOrder(null);
@@ -857,6 +890,85 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       onOpenChange(false);
     } catch (e: any) {
       toast.error(userFacingError(e, "Transaksi belum berhasil disimpan. Silakan coba lagi."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startNewOrder = async () => {
+    if (saving || !currentStore) return;
+    setSaving(true);
+    try {
+      if (items.length > 0) {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) throw error || new Error("Sign in required");
+        // Keep unsubmitted amounts in the draft, never in received revenue.
+        // Existing server orders keep their original row until checkout.
+        const draftId = isLocalPosDraft(activeOrder) ? activeOrder.id : `pos-draft:${activeOrder?.id || crypto.randomUUID()}`;
+        savePosOrderDraft(localStorage, currentStore.id, user.id, {
+          ...activeOrder,
+          id: draftId,
+          server_order_id: activeOrder?.server_order_id || (isLocalPosDraft(activeOrder) ? null : activeOrder?.id) || null,
+          store_id: currentStore.id,
+          created_at: activeOrder?.created_at || new Date().toISOString(),
+          date,
+          process_status: "proses",
+          payment_status: "belum_lunas",
+          order_source: activeOrder?.order_source || (presetRoomId ? "barcode" : "pos"),
+          customer_name: effectiveBooking?.customer_name || manualCustomerName || null,
+          customer_phone: effectiveBooking?.phone || pickedCustomerPhone || null,
+          matched_booking: effectiveBooking,
+          items,
+          booking_order_items: items,
+          total_amount: total,
+          payment_method: paymentMethod,
+          reference_no: referenceNo,
+          dual_payment: dualPayment,
+          payment_method_2: paymentMethod2,
+          reference_no_2: referenceNo2,
+          amount,
+          amount_2: amount2,
+          payment_proof_urls: proofUrl ? [proofUrl] : [],
+          note,
+          attendant_name: attendantName,
+          tx_discount_mode: txDiscountMode,
+          tx_discount_value: txDiscountValue,
+          apply_service_charge: applyServiceCharge,
+        });
+        toast.success("Pesanan disimpan sebagai draft");
+      }
+      setDraftOrder(null);
+      setMatchedBooking(null);
+      setItems([]);
+      setItemConfig(null);
+      setVariantPickerFor(null);
+      setPosCustomerName("");
+      setManualCustomerName("");
+      setPickedCustomerPhone("");
+      setShowSuggest(false);
+      setCustomerSearch("");
+      setSearch("");
+      setDate(new Date().toISOString().slice(0, 10));
+      setPaymentMethod("Cash");
+      setReferenceNo("");
+      setDualPayment(false);
+      setPaymentMethod2("");
+      setReferenceNo2("");
+      setAmount(0);
+      setAmount2(0);
+      setProofUrl(null);
+      setNote("");
+      setTxDiscountMode("rp");
+      setTxDiscountValue(0);
+      setApplyServiceCharge(true);
+      setPaymentView(false);
+      setServiceConfirmOpen(false);
+      setPriceEditFor(null);
+      setDiscountFor(null);
+      setFinishOpen(false);
+      void fetchTxOrders();
+    } catch (error) {
+      toast.error(userFacingError(error, "Pesanan belum dapat disimpan sebagai draft. Pesanan Anda tetap terbuka; silakan coba lagi."));
     } finally {
       setSaving(false);
     }
@@ -1014,7 +1126,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {activeOrder?.id && (!posMode || posSettings.enable_print) && (
+            {activeOrder?.id && !isLocalPosDraft(activeOrder) && (!posMode || posSettings.enable_print) && (
               <button
                 type="button"
                 onClick={() => window.open(`/receipt?${booking?.id ? `id=${booking.id}&` : ""}order=${activeOrder.id}`, "_blank")}
@@ -1028,7 +1140,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {draftOrder && (
               <button
                 type="button"
-                onClick={() => { setDraftOrder(null); setMatchedBooking(null); }}
+                onClick={() => void startNewOrder()}
+                disabled={saving}
                 className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
                 title="Keluar dari mode ubah draft dan buat order baru"
               >
@@ -1218,6 +1331,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               <div className="font-semibold text-sm">Pesanan Baru</div>
               {posMode ? (
                 <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-primary"
+                    aria-label="Tambah pesanan baru"
+                    title="Tambah pesanan baru"
+                    onClick={() => void startNewOrder()}
+                    disabled={saving}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-5 w-5" />}
+                  </Button>
                   <button
                     type="button"
                     onClick={() => openTxList("draft")}

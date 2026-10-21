@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Tambahkan ikon + di POS: pesanan aktif menjadi draft per akun/outlet pada browser yang sama; pesanan kosong dan lanjutkan draft setelah muat ulang teruji.
+
 - [x] Perjelas menu HP dengan latar solid, teks kontras, tombol nyaman, dan submenu yang tetap terbaca; buka/tutup dan submenu diuji dengan akun aktif.
 
 - [x] Konfirmasi petugas saat klik Pembayaran POS, lalu tampilkan metode dan bukti pembayaran di panel kanan seperti referensi; pilihan metode, kembali, dan batal teruji.
