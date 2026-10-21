@@ -1328,7 +1328,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               ) : (
                 <User className="h-4 w-4 text-muted-foreground" />
               )}
-              <div className="font-semibold text-sm">Pesanan Baru</div>
+              <div
+                className="min-w-0 flex-1 px-2 text-center font-semibold text-sm break-words"
+                data-pos-order-title
+              >
+                {items.length > 0 ? activeOrder?.bid || effectiveBooking?.bid || "Pesanan Baru" : "Pesanan Baru"}
+              </div>
               {posMode ? (
                 <div className="flex items-center gap-1.5">
                   <Button
