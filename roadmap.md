@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Tambahkan ikon + di POS: simpan pesanan aktif sebagai draft, buka pesanan kosong, dan uji draft dapat dilanjutkan.
+- [x] Tambahkan ikon + di POS: pesanan aktif menjadi draft per akun/outlet pada browser yang sama; pesanan kosong dan lanjutkan draft setelah muat ulang teruji.
 
 - [x] Perjelas menu HP dengan latar solid, teks kontras, tombol nyaman, dan submenu yang tetap terbaca; buka/tutup dan submenu diuji dengan akun aktif.
 

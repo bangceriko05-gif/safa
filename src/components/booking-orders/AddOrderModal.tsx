@@ -783,6 +783,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         store_id: currentStore.id,
         date,
+        customer_name: customerDisplayName,
+        customer_phone: effectiveBooking?.phone || pickedCustomerPhone || activeOrder?.customer_phone || null,
         ...(posMode ? { attendant_name: attendantName.trim() } : {}),
         payment_method: paymentMethod,
         reference_no: referenceNo || null,
@@ -945,6 +947,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setPickedCustomerPhone("");
       setShowSuggest(false);
       setCustomerSearch("");
+      setSearch("");
       setDate(new Date().toISOString().slice(0, 10));
       setPaymentMethod("Cash");
       setReferenceNo("");
