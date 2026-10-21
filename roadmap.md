@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Perbaiki laporan item POS OAK LAWANG yang kosong, periksa penyebab dan verifikasi penjualan tersimpan muncul tanpa mencampur outlet.
+
 - [x] Judul POS menampilkan BID transaksi item tambahan saat item ada, dan “Pesanan Baru” saat kosong; teruji membuka draft ber-BID dan menghapus seluruh item.
 
 - [x] Tambahkan ikon + di POS: pesanan aktif menjadi draft per akun/outlet pada browser yang sama; pesanan kosong dan lanjutkan draft setelah muat ulang teruji.
