@@ -181,7 +181,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const drafts = user ? readPosOrderDrafts(localStorage, currentStore.id, user.id) : [];
-      setTxOrders([...drafts, ...rows]);
+      const resumedServerIds = new Set(drafts.map((draft) => draft.server_order_id).filter(Boolean));
+      setTxOrders([...drafts, ...rows.filter((row) => !resumedServerIds.has(row.id))]);
     } catch (error) {
       setTxOrders(rows);
       toast.error(userFacingError(error, "Draft belum dapat dimuat. Silakan coba lagi."));
@@ -811,11 +812,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         tax_included_amount: taxSummary.includeTax,
       };
 
-      let orderId = activeOrder?.id;
-      if (activeOrder && !isLocalPosDraft(activeOrder)) {
-        const { error } = await supabase.from("booking_orders").update(payload).eq("id", activeOrder.id);
+      let orderId = isLocalPosDraft(activeOrder) ? activeOrder?.server_order_id : activeOrder?.id;
+      if (orderId) {
+        const { error } = await supabase.from("booking_orders").update(payload).eq("id", orderId).eq("store_id", currentStore.id);
         if (error) throw error;
-        await supabase.from("booking_order_items").delete().eq("booking_order_id", activeOrder.id);
+        const { error: deleteError } = await supabase.from("booking_order_items").delete().eq("booking_order_id", orderId);
+        if (deleteError) throw deleteError;
       } else {
         payload.created_by = user?.id;
         const { data, error } = await supabase
@@ -1121,7 +1123,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {activeOrder?.id && (!posMode || posSettings.enable_print) && (
+            {activeOrder?.id && !isLocalPosDraft(activeOrder) && (!posMode || posSettings.enable_print) && (
               <button
                 type="button"
                 onClick={() => window.open(`/receipt?${booking?.id ? `id=${booking.id}&` : ""}order=${activeOrder.id}`, "_blank")}
