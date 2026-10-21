@@ -159,6 +159,13 @@ All colors MUST be HSL.
     flex-shrink: 0;
     background-color: hsl(var(--sidebar-background));
   }
+  [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="menu-button"] > span,
+  [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="menu-sub-button"] > span {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
   /* Stable scroll surfaces prevent content updates from moving dialogs or columns. */
   [role="dialog"], .dashboard-shell {
     scrollbar-gutter: stable;
