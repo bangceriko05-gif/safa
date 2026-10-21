@@ -19,6 +19,7 @@
 - Active navigation is styled through shared semantic navigation tokens and state selectors; custom period buttons expose data-navigation and aria-pressed so selections stay consistent without recoloring form inputs.
 
 - Sales report costs and discounts use room price snapshots plus line-item subtotals; received payments stay separate and are never discounted again, including exports.
+- POS item reports read saved order items without an item-to-product embedded relationship; resolve product costs separately within the outlet so absent product links cannot hide historical sales, and expose load failures instead of treating them as empty results.
 
 - Booking WhatsApp links use a shared status-aware formatter and outlet-keyed message settings query; links open prefilled chats without sending messages or using connector credentials.
 

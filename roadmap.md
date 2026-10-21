@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Perbaiki laporan item POS OAK LAWANG: hapus pembacaan relasi produk yang tidak tersedia, muat HPP terpisah per outlet, dan tampilkan pesan jika gagal; 1.224 rincian item semua waktu dan 7 item hari ini teruji muncul, 10 tes lulus.
+
 - [x] Judul POS menampilkan BID transaksi item tambahan saat item ada, dan “Pesanan Baru” saat kosong; teruji membuka draft ber-BID dan menghapus seluruh item.
 
 - [x] Tambahkan ikon + di POS: pesanan aktif menjadi draft per akun/outlet pada browser yang sama; pesanan kosong dan lanjutkan draft setelah muat ulang teruji.

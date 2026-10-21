@@ -31,6 +31,8 @@ import SalesChannelReport from "./SalesChannelReport";
 import { Receipt } from "lucide-react";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
 import { salesBookingTotals } from "@/utils/salesBookingTotals";
+import { mapPosReportItems } from "@/utils/posReportItems";
+import { userFacingError } from "@/utils/userFacingError";
 import useReportColumnFilters, { ReportFilterColumn } from "./useReportColumnFilters";
 
 interface BookingData {
@@ -148,6 +150,7 @@ export default function SalesReport() {
     setSearchParams(params, { replace: true });
   };
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [bookingProducts, setBookingProducts] = useState<BookingProductData[]>([]);
   const [posItems, setPosItems] = useState<PosItemData[]>([]);
@@ -183,7 +186,7 @@ export default function SalesReport() {
   const salesCacheKey = (() => {
     if (!currentStore) return "";
     const { startDate, endDate } = getDateRange(timeRange, customDateRange);
-    return `sales-v2:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
+    return `sales-v3:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
   })();
 
   useEffect(() => {
@@ -209,7 +212,7 @@ export default function SalesReport() {
     });
   }, []);
 
-  useReportRefresh(currentStore?.id, ["bookings", "booking_orders", "expenses"], () => { void fetchData(true); });
+  useReportRefresh(currentStore?.id, ["bookings", "booking_orders", "booking_order_items", "expenses"], () => { void fetchData(true); });
 
   const fetchData = async (silent = false) => {
     if (!currentStore) return;
@@ -241,7 +244,7 @@ export default function SalesReport() {
         .from("booking_orders")
         .select(`
           id, bid, date, customer_name, payment_method, payment_proof_urls, process_status,
-          booking_order_items ( id, product_name, quantity, subtotal, product_id, products(purchase_price) )
+          booking_order_items ( id, product_name, quantity, subtotal, product_id )
         `)
         .eq("store_id", currentStore.id)
         .gte("date", startDateStr)
@@ -258,6 +261,26 @@ export default function SalesReport() {
       const { data: expensesData, error: expensesError } = expensesResult;
 
       if (bookingsError) throw bookingsError;
+      if (ordersError) throw ordersError;
+
+      // Item product_id is a historical reference, not an embedded API relationship.
+      // Load costs separately and restrict them to the same outlet as the orders.
+      const productIds = [...new Set((ordersData || []).flatMap(order =>
+        (order.booking_order_items || []).flatMap(item => item.product_id ? [item.product_id] : [])
+      ))];
+      const productCosts = new Map<string, number>();
+      const fetchPosCosts = async () => {
+        const chunks: string[][] = [];
+        for (let offset = 0; offset < productIds.length; offset += 200) {
+          chunks.push(productIds.slice(offset, offset + 200));
+        }
+        await Promise.all(chunks.map(async ids => {
+          const { data, error } = await supabase.from("products")
+            .select("id, purchase_price").eq("store_id", currentStore.id).in("id", ids);
+          if (error) throw error;
+          for (const product of data || []) productCosts.set(product.id, Number(product.purchase_price) || 0);
+        }));
+      };
 
       // Fetch variant data separately for bookings with variant_id
       const variantIds = (bookingsData || [])
@@ -325,28 +348,9 @@ export default function SalesReport() {
       }
 
       };
-      await Promise.all([fetchVariants(), fetchProfiles(), fetchProducts()]);
+      await Promise.all([fetchVariants(), fetchProfiles(), fetchProducts(), fetchPosCosts()]);
 
-      if (ordersError) console.error("Error fetching POS orders:", ordersError);
-
-      const mappedPosItems: PosItemData[] = (ordersData || [])
-        .filter((o: any) => (o.process_status || "").toLowerCase() !== "batal")
-        .flatMap((o: any) => {
-          const proofs = Array.isArray(o.payment_proof_urls) ? o.payment_proof_urls : [];
-          return (o.booking_order_items || []).map((it: any) => ({
-            id: it.id,
-            order_id: o.id,
-            bid: o.bid || "-",
-            date: o.date,
-            customer_name: o.customer_name || "Walk-in POS",
-            payment_method: o.payment_method || "",
-            proof_url: proofs.length > 0 ? String(proofs[0]) : null,
-            product_name: it.product_name,
-            quantity: Number(it.quantity) || 0,
-            subtotal: Number(it.subtotal) || 0,
-            purchase_price: Number(it.products?.purchase_price) || 0,
-          }));
-        });
+      const mappedPosItems: PosItemData[] = mapPosReportItems(ordersData || [], productCosts);
 
       if (expensesError) throw expensesError;
 
@@ -457,6 +461,7 @@ export default function SalesReport() {
       setBookings(mappedBookings);
       setBookingProducts(mappedProducts);
       setPosItems(mappedPosItems);
+      setLoadError(null);
       setExpenses(mappedExpenses);
       const nextStats = {
         totalBookings: activeBookings.length,
@@ -488,6 +493,7 @@ export default function SalesReport() {
       });
     } catch (error) {
       console.error("Error fetching sales data:", error);
+      setLoadError(userFacingError(error, "Laporan penjualan belum berhasil dimuat. Silakan coba lagi."));
     } finally {
       setLoading(false);
     }
@@ -888,6 +894,12 @@ export default function SalesReport() {
 
   return (
     <div className="space-y-4">
+      {loadError && (
+        <div role="alert" className="flex items-center justify-between gap-3 border border-destructive rounded-md p-3 text-destructive">
+          <span>{loadError}</span>
+          <Button variant="outline" onClick={() => { void fetchData(); }}>Coba lagi</Button>
+        </div>
+      )}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -1262,7 +1274,7 @@ export default function SalesReport() {
                       <TableBody>
                         {itemsPg.paginated.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Tidak ada data</TableCell>
+                            <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">{loadError ? "Laporan belum tersedia. Silakan coba lagi." : "Tidak ada data"}</TableCell>
                           </TableRow>
                         ) : (
                           itemsPg.paginated.map((r) => (
