@@ -1156,6 +1156,69 @@ export type Database = {
         }
         Relationships: []
       }
+      doku_payment_attempts: {
+        Row: {
+          amount: number
+          channel: string | null
+          checkout_url: string | null
+          client_id: string
+          created_at: string
+          environment: string
+          id: string
+          invoice_number: string
+          order_id: string
+          paid_at: string | null
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          channel?: string | null
+          checkout_url?: string | null
+          client_id: string
+          created_at?: string
+          environment: string
+          id?: string
+          invoice_number: string
+          order_id: string
+          paid_at?: string | null
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          channel?: string | null
+          checkout_url?: string | null
+          client_id?: string
+          created_at?: string
+          environment?: string
+          id?: string
+          invoice_number?: string
+          order_id?: string
+          paid_at?: string | null
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doku_payment_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "booking_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doku_payment_attempts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           created_at: string
@@ -3981,6 +4044,10 @@ export type Database = {
       }
       safe_promote_first_admin: {
         Args: { p_user_id: string }
+        Returns: boolean
+      }
+      settle_doku_order: {
+        Args: { p_amount: number; p_attempt_id: string; p_channel: string }
         Returns: boolean
       }
       start_payment_timer: {
