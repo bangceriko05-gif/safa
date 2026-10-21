@@ -1326,8 +1326,8 @@ function CollapsibleSidebarMenu({
   activeSubKey: string | null;
   onSelect: (key: any) => void;
 }) {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { state, isMobile } = useSidebar();
+  const isCollapsed = !isMobile && state === "collapsed";
 
   if (isCollapsed) {
     return (

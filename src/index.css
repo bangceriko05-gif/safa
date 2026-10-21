@@ -42,6 +42,14 @@ All colors MUST be HSL.
     --booking-contact-foreground: 0 0% 0%;
     --navigation-active: 259 90% 66%;
     --navigation-active-foreground: 0 0% 100%;
+    --sidebar-background: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
 
     --radius: 0.75rem;
 
@@ -139,6 +147,18 @@ All colors MUST be HSL.
   }
 
   .booking-whatsapp-phone.booking-whatsapp-phone { color: hsl(var(--booking-contact-foreground)); }
+  [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="menu-button"],
+  [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="menu-sub-button"] {
+    min-height: 44px;
+    height: auto;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="header"],
+  [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="footer"] {
+    flex-shrink: 0;
+    background-color: hsl(var(--sidebar-background));
+  }
   /* Stable scroll surfaces prevent content updates from moving dialogs or columns. */
   [role="dialog"], .dashboard-shell {
     scrollbar-gutter: stable;

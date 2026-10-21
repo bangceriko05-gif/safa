@@ -1,5 +1,7 @@
 # Project Architecture Rules
 
+- Sidebar colors alias the shared surface and text tokens; mobile navigation uses an opaque sheet and touch-sized controls independently of desktop collapse state, preventing background content from obscuring labels.
+
 - POS checkout confirms an outlet staff member before switching the catalog to payment; attribution uses the existing attendant_name field without changing creator identity or treating unconnected DOKU channels as paid gateway transactions.
 
 - DOKU dashboard reads only an explicit non-secret projection of outlet payment settings and never labels manual transactions as gateway transactions; provider synchronization remains separate from saved configuration.

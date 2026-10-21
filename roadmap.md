@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Perjelas menu HP dengan latar solid, teks kontras, tombol nyaman, dan submenu yang tetap terbaca.
+
 - [x] Konfirmasi petugas saat klik Pembayaran POS, lalu tampilkan metode dan bukti pembayaran di panel kanan seperti referensi; pilihan metode, kembali, dan batal teruji.
 
 - [x] Pindahkan fitur POS ke sidebar sebagai menu "POS Kasir" pertama di bawah tombol menu; hapus tombol POS dari header.
