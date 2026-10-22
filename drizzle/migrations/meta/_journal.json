@@ -71,6 +71,13 @@
       "when": 1792631857249,
       "tag": "0009_restrict_doku_credential_access",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792632121230,
+      "tag": "0010_harden_doku_settlement",
+      "breakpoints": true
     }
   ]
 }
