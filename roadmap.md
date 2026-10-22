@@ -15,7 +15,7 @@
 
 - [x] Tambahkan menu DOKU di bawah Pengaturan dengan logo, halaman Transaksi dan Pengaturan; verifikasi navigasi serta penyimpanan pengaturan outlet.
 - [ ] Hubungkan pembayaran otomatis DOKU: kredensial aman per outlet, tagihan POS/website, verifikasi notifikasi dan pembaruan pembayaran tanpa duplikasi; pengujian akun DOKU pengguna diperlukan.
-- [ ] Izinkan pengguna memasukkan Client ID dan Secret Key langsung di Pengaturan DOKU ANKA seperti Treebox, tanpa formulir melalui chat; simpan terenkripsi dan jangan tampilkan kembali Secret Key.
+- [x] Izinkan pengguna memasukkan Client ID dan Secret Key langsung di Pengaturan DOKU ANKA seperti Treebox, tanpa formulir melalui chat; simpan terenkripsi dan jangan tampilkan kembali Secret Key.
 
 - [x] Tambahkan dan uji filter kolom yang sama pada laporan pembelian dan penjualan; total, pagination, dan export mengikuti pilihan.
 
