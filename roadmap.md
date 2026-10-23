@@ -14,7 +14,8 @@
 
 
 - [x] Tambahkan menu DOKU di bawah Pengaturan dengan logo, halaman Transaksi dan Pengaturan; verifikasi navigasi serta penyimpanan pengaturan outlet.
-- [ ] Hubungkan pembayaran otomatis DOKU: kredensial aman per outlet, tagihan POS/website, verifikasi notifikasi dan pembaruan pembayaran tanpa duplikasi; pengujian akun DOKU pengguna diperlukan.
+- [x] Aktifkan pembayaran otomatis DOKU di POS: metode DOKU aktif sesuai channel outlet, simpan transaksi sebagai belum lunas, buat tagihan lewat fungsi doku-checkout, dan buka halaman pembayaran DOKU; notifikasi doku-webhook melunaskan transaksi tanpa duplikasi; menu Transaksi DOKU menampilkan data nyata; teruji dengan sesi pengguna (403 untuk order outlet lain, tombol dan panduan tampil).
+- [ ] Uji pembayaran DOKU ujung-ke-ujung dengan akun DOKU pengguna — terhambat: memerlukan Client ID/Secret Key asli di Pengaturan DOKU dan Notification URL yang dipasang di dashboard DOKU oleh pengguna.
 - [x] Izinkan pengguna memasukkan Client ID dan Secret Key langsung di Pengaturan DOKU ANKA seperti Treebox, tanpa formulir melalui chat; simpan terenkripsi dan jangan tampilkan kembali Secret Key.
 
 - [x] Tambahkan dan uji filter kolom yang sama pada laporan pembelian dan penjualan; total, pagination, dan export mengikuti pilihan.
