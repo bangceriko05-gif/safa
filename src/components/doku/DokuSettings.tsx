@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CreditCard, ExternalLink, Info, Loader2, LockKeyhole, Save } from "lucide-react";
+import { AlertCircle, Copy, CreditCard, ExternalLink, Info, Loader2, LockKeyhole, Save } from "lucide-react";
 import { toast } from "sonner";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 
@@ -138,8 +138,11 @@ export default function DokuSettings() {
               <li>Daftar / login ke DOKU Dashboard: <a href="https://dashboard.doku.com" target="_blank" rel="noopener noreferrer" className="break-words text-primary underline underline-offset-2">dashboard.doku.com<ExternalLink className="ml-1 inline h-3 w-3" /></a>.</li>
               <li>Untuk uji coba, buat akun Sandbox lewat <a href="https://sandbox.doku.com" target="_blank" rel="noopener noreferrer" className="break-words text-primary underline underline-offset-2">sandbox.doku.com<ExternalLink className="ml-1 inline h-3 w-3" /></a>.</li>
               <li>Masuk ke menu <strong>Settings → API Keys</strong> di DOKU. Salin <strong>Client ID</strong> dan <strong>Active Secret Key</strong> langsung ke tab “Kredensial DOKU” ANKA, pilih mode yang sesuai, aktifkan metode pembayaran, lalu klik <strong>Simpan</strong>.</li>
-              <li>Di DOKU Dashboard, masuk ke menu <strong>Integration → Notification URL</strong>. Gunakan alamat penerima notifikasi ANKA PMS setelah koneksi tersedia:
-                <div className="mt-2 rounded border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">Alamat notifikasi belum tersedia — jangan gunakan alamat dari gambar contoh.</div>
+              <li>Di DOKU Dashboard, masuk ke menu <strong>Integration → Notification URL</strong>. Salin alamat penerima notifikasi ANKA PMS ini persis seperti tertulis:
+                <div className="mt-2 flex items-center gap-2 rounded border border-border bg-muted px-3 py-2">
+                  <code className="flex-1 break-all text-xs text-foreground">{`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/doku-webhook`}</code>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { void navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/doku-webhook`).then(() => toast.success("Alamat notifikasi disalin")); }}><Copy className="mr-1 h-3 w-3" />Salin</Button>
+                </div>
               </li>
               <li>Aktifkan metode pembayaran yang ingin diterima di tab “Metode Pembayaran”, lalu klik <strong>Simpan</strong>. Pilihan tersimpan untuk outlet ini, tetapi pembayaran DOKU belum aktif.</li>
               <li>Setelah koneksi dan notifikasi pembayaran diaktifkan serta diuji, booking online atau pembayaran POS dapat membuat tagihan DOKU sesuai metode yang dipilih pelanggan. Status <strong>LUNAS</strong> otomatis hanya dapat digunakan setelah konfirmasi pembayaran berhasil diterima dari DOKU.</li>
