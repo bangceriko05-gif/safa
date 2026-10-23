@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const client = createClient(url, anon, { global: { headers: { Authorization: authorization } } });
     const { data: { user } } = await client.auth.getUser();
     if (!user) return reply(401, { error: "Sesi Anda sudah berakhir. Silakan masuk kembali." });
-    const parsed = z.object({ order_id: z.string().uuid() }).safeParse(await req.json());
+    const parsed = z.object({ order_id: z.string().uuid(), channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional() }).safeParse(await req.json());
     if (!parsed.success) return reply(400, { error: "Pilih transaksi yang akan dibayar." });
     const { data: order, error: orderError } = await client.from("booking_orders").select("id,store_id,total_amount,amount,amount_2,process_status,payment_status").eq("id", parsed.data.order_id).maybeSingle();
     if (orderError || !order) return reply(403, { error: "Anda tidak memiliki izin. Transaksi tidak ditemukan di outlet ini." });
@@ -23,6 +23,9 @@ Deno.serve(async (req) => {
     if (!settings?.doku_enabled || !Array.isArray(settings.doku_channels) || !settings.doku_channels.length) return reply(400, { error: "DOKU belum aktif. Lengkapi pengaturan pembayaran outlet." });
     const credentials = await dokuCredentials(order.store_id, settings.doku_environment);
     if (!credentials || credentials.clientId !== settings.doku_client_id) return reply(400, { error: "Masukkan Secret Key DOKU untuk Client ID dan mode yang dipilih." });
+    const enabledChannels = settings.doku_channels as string[];
+    const channels = parsed.data.channels?.length ? parsed.data.channels : enabledChannels;
+    if (channels.some((code) => !enabledChannels.includes(code))) return reply(400, { error: "Metode pembayaran DOKU yang dipilih tidak aktif untuk outlet ini." });
     const remaining = Number(order.total_amount) - Number(order.amount) - Number(order.amount_2);
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
@@ -36,7 +39,7 @@ Deno.serve(async (req) => {
     const { data: attempt, error: insertError } = await admin.from("doku_payment_attempts").insert({ store_id: order.store_id, order_id: order.id, invoice_number: invoice, environment: credentials.environment, client_id: credentials.clientId, amount: remaining }).select("id").single();
     if (insertError || !attempt) return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     const target = "/checkout/v1/payment";
-    const body = JSON.stringify({ order: { amount: remaining, invoice_number: invoice }, payment: { payment_method_types: settings.doku_channels } });
+    const body = JSON.stringify({ order: { amount: remaining, invoice_number: invoice }, payment: { payment_method_types: channels } });
     const requestId = crypto.randomUUID();
     const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     const signature = await dokuSignature(credentials.secret, credentials.clientId, requestId, timestamp, target, body);
