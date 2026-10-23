@@ -4,7 +4,7 @@
 
 - Sidebar colors alias the shared surface and text tokens; mobile navigation uses an opaque sheet and touch-sized controls independently of desktop collapse state, preventing background content from obscuring labels.
 
-- POS checkout confirms an outlet staff member before switching the catalog to payment; attribution uses the existing attendant_name field without changing creator identity or treating unconnected DOKU channels as paid gateway transactions.
+- POS checkout confirms an outlet staff member before switching the catalog to payment; attribution uses the existing attendant_name field without changing creator identity. Selecting a DOKU method group saves the order as unpaid, creates a hosted invoice through the doku-checkout function, and opens the DOKU payment page; only the signed doku-webhook notification may mark it paid.
 
 - DOKU credentials are entered directly in outlet settings, encrypted server-side in a service-only table, and never returned to the browser; configuration writes require outlet-admin authorization, while signed idempotent notifications alone settle gateway orders.
 

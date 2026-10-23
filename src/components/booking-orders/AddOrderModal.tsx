@@ -19,7 +19,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import CustomerNameInput from "@/components/customers/CustomerNameInput";
 import PosPaymentPanel from "./PosPaymentPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
-import { userFacingError } from "@/utils/userFacingError";
+import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
+import { dokuGroupForMethod, enabledDokuCodes } from "@/utils/dokuChannels";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
 interface Product {
@@ -65,6 +66,18 @@ interface AddOrderModalProps {
 export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false, presetRoomId = null }: AddOrderModalProps) {
   const { currentStore } = useStore();
   const { methods } = usePaymentMethods();
+  // Channel DOKU aktif untuk outlet ini (dari Pengaturan DOKU)
+  const [dokuChannels, setDokuChannels] = useState<string[]>([]);
+  useEffect(() => {
+    if (!currentStore?.id) { setDokuChannels([]); return; }
+    let active = true;
+    void (async () => {
+      const { data } = await supabase.from("website_payment_settings").select("doku_enabled,doku_channels").eq("store_id", currentStore.id).maybeSingle();
+      if (!active) return;
+      setDokuChannels(data?.doku_enabled && Array.isArray(data.doku_channels) ? data.doku_channels.filter((v): v is string => typeof v === "string") : []);
+    })();
+    return () => { active = false; };
+  }, [currentStore?.id]);
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -641,6 +654,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const total = netAfterDiscount + taxSummary.excludeTax + serviceChargeAmount;
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
+  // Metode DOKU aktif hanya di POS; pembayaran diselesaikan lewat halaman DOKU.
+  const dokuGroup = posMode ? dokuGroupForMethod(paymentMethod) : null;
 
   // Auto-fill Nominal Bayar with total when not dual payment (and not editing an existing order)
   useEffect(() => {
@@ -743,7 +758,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       return;
     }
     const proofRequired = posMode ? posSettings.require_payment_proof : true;
-    if (proofRequired && !proofUrl) {
+    if (proofRequired && !proofUrl && !dokuGroup) {
       toast.error("Bukti pembayaran wajib diunggah");
       return;
     }
@@ -814,6 +829,21 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         tax_included_amount: taxSummary.includeTax,
       };
 
+      // Pembayaran DOKU tidak dianggap uang diterima: tagihan dibuat ke DOKU dan
+      // status lunas hanya berubah lewat notifikasi resmi DOKU (webhook).
+      if (dokuGroup) {
+        const priorPaid = Number(activeOrder?.amount || 0) + Number(activeOrder?.amount_2 || 0);
+        payload.amount = Number(activeOrder?.amount || 0);
+        payload.amount_2 = Number(activeOrder?.amount_2 || 0);
+        payload.dual_payment = !!activeOrder?.dual_payment;
+        payload.payment_method = paymentMethod;
+        payload.payment_method_2 = activeOrder?.payment_method_2 ?? null;
+        payload.reference_no = activeOrder?.reference_no ?? null;
+        payload.reference_no_2 = activeOrder?.reference_no_2 ?? null;
+        payload.payment_proof_urls = activeOrder?.payment_proof_urls ?? [];
+        payload.payment_status = priorPaid >= total && total > 0 ? "lunas" : "belum_lunas";
+      }
+
       let orderId = isLocalPosDraft(activeOrder) ? activeOrder?.server_order_id : activeOrder?.id;
       if (orderId) {
         const { error } = await supabase.from("booking_orders").update(payload).eq("id", orderId).eq("store_id", currentStore.id);
@@ -845,6 +875,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       }));
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
       if (itemErr) throw itemErr;
+
+      if (dokuGroup) {
+        const { data: dokuData, error: dokuError } = await supabase.functions.invoke("doku-checkout", {
+          body: { order_id: orderId, channels: enabledDokuCodes(dokuGroup, dokuChannels) },
+        });
+        if (dokuError || !dokuData?.checkout_url) {
+          toast.error(await functionErrorMessage(dokuError, dokuData, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas."));
+        } else {
+          window.open(dokuData.checkout_url, "_blank", "noopener");
+          toast.success("Tagihan DOKU dibuat. Status menjadi LUNAS otomatis setelah DOKU mengonfirmasi pembayaran.");
+        }
+      }
 
       if (isLocalPosDraft(activeOrder) && user) {
         removePosOrderDraft(localStorage, currentStore.id, user.id, activeOrder.id);
@@ -974,7 +1016,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     }
   };
 
-  const paymentFields = (
+  const paymentFields = posMode && dokuGroup ? (
+    <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+      <p className="font-semibold text-foreground">Pembayaran online DOKU ({paymentMethod})</p>
+      <p>Tagihan DOKU terbuka setelah transaksi disimpan. Status menjadi LUNAS otomatis setelah DOKU mengonfirmasi pembayaran; bukti bayar tidak perlu diunggah.</p>
+    </div>
+  ) : (
 <div className={posMode ? "space-y-3" : "border-t px-3 py-2 space-y-2 overflow-y-auto max-h-[40%]"}>
               <div className="grid grid-cols-2 gap-2">
               <div>
@@ -1592,8 +1639,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           {/* RIGHT — Product grid / Atur Item Pesanan */}
           <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {posMode && paymentView ? (
-            <PosPaymentPanel total={fmt(total)} attendant={attendantName} methods={methods} selected={paymentMethod} onSelect={setPaymentMethod} saving={saving}
+            <PosPaymentPanel total={fmt(total)} attendant={attendantName} methods={methods} selected={paymentMethod} onSelect={setPaymentMethod} saving={saving} dokuChannels={dokuChannels}
               onBack={() => setPaymentView(false)} onSave={() => {
+                if (dokuGroup) { void handleSave(null); return; }
                 setWaPhone(effectiveBooking?.phone || effectiveBooking?.customer_phone || pickedCustomerPhone || "");
                 setFinishOpen(true);
               }}>
