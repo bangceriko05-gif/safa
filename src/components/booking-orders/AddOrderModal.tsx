@@ -18,9 +18,10 @@ import ProductCategoryManager from "@/components/products/ProductCategoryManager
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import CustomerNameInput from "@/components/customers/CustomerNameInput";
 import PosPaymentPanel from "./PosPaymentPanel";
+import DokuCheckoutPanel, { type DokuCheckoutState } from "./DokuCheckoutPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
-import { dokuGroupForMethod, enabledDokuCodes } from "@/utils/dokuChannels";
+import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
 interface Product {
@@ -68,6 +69,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const { methods } = usePaymentMethods();
   // Channel DOKU aktif untuk outlet ini (dari Pengaturan DOKU)
   const [dokuChannels, setDokuChannels] = useState<string[]>([]);
+  const [dokuCheckout, setDokuCheckout] = useState<DokuCheckoutState | null>(null);
+  const savedDokuOrderId = useRef<string | null>(null);
+  useEffect(() => {
+    setDokuCheckout(null);
+    savedDokuOrderId.current = null;
+  }, [open, currentStore?.id]);
   useEffect(() => {
     if (!currentStore?.id) { setDokuChannels([]); return; }
     let active = true;
@@ -751,14 +758,34 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return d ? parseInt(d, 10) : 0;
   };
 
-  const handleSave = async (afterAction: "print" | "whatsapp" | null = null, waPhoneOverride?: string) => {
-    if (!currentStore) return;
+  const openDokuCheckout = async (orderId: string, method: string) => {
+    const group = dokuGroupForMethod(method);
+    if (!group) return;
+    setDokuCheckout({ orderId, url: null, error: null });
+    try {
+      const { data, error } = await supabase.functions.invoke("doku-checkout", {
+        body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels) },
+      });
+      if (error || !isVerifiedDokuCheckoutUrl(data?.checkout_url)) {
+        setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas.") });
+      } else {
+        setDokuCheckout({ orderId, url: data.checkout_url, error: null });
+      }
+    } catch {
+      setDokuCheckout({ orderId, url: null, error: "Halaman pembayaran belum dapat dibuka. Transaksi tersimpan; silakan coba lagi." });
+    }
+  };
+
+  const handleSave = async (afterAction: "print" | "whatsapp" | null = null, waPhoneOverride?: string, methodOverride?: string) => {
+    if (!currentStore || saving) return;
+    const selectedMethod = methodOverride || paymentMethod;
+    const selectedDokuGroup = posMode ? dokuGroupForMethod(selectedMethod) : null;
     if (items.length === 0) {
       toast.error("Tambahkan minimal satu produk");
       return;
     }
     const proofRequired = posMode ? posSettings.require_payment_proof : true;
-    if (proofRequired && !proofUrl && !dokuGroup) {
+    if (proofRequired && !proofUrl && !selectedDokuGroup) {
       toast.error("Bukti pembayaran wajib diunggah");
       return;
     }
@@ -771,6 +798,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       return;
     }
     setSaving(true);
+    if (selectedDokuGroup) setDokuCheckout({ orderId: "", url: null, error: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const discountNote =
@@ -801,7 +829,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         customer_name: customerDisplayName,
         customer_phone: effectiveBooking?.phone || pickedCustomerPhone || activeOrder?.customer_phone || null,
         ...(posMode ? { attendant_name: attendantName.trim() } : {}),
-        payment_method: paymentMethod,
+        payment_method: selectedMethod,
         reference_no: referenceNo || null,
         dual_payment: dualPayment,
         payment_method_2: dualPayment ? paymentMethod2 : null,
@@ -831,12 +859,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
       // Pembayaran DOKU tidak dianggap uang diterima: tagihan dibuat ke DOKU dan
       // status lunas hanya berubah lewat notifikasi resmi DOKU (webhook).
-      if (dokuGroup) {
+      if (selectedDokuGroup) {
         const priorPaid = Number(activeOrder?.amount || 0) + Number(activeOrder?.amount_2 || 0);
         payload.amount = Number(activeOrder?.amount || 0);
         payload.amount_2 = Number(activeOrder?.amount_2 || 0);
         payload.dual_payment = !!activeOrder?.dual_payment;
-        payload.payment_method = paymentMethod;
+        payload.payment_method = selectedMethod;
         payload.payment_method_2 = activeOrder?.payment_method_2 ?? null;
         payload.reference_no = activeOrder?.reference_no ?? null;
         payload.reference_no_2 = activeOrder?.reference_no_2 ?? null;
@@ -844,7 +872,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         payload.payment_status = priorPaid >= total && total > 0 ? "lunas" : "belum_lunas";
       }
 
-      let orderId = isLocalPosDraft(activeOrder) ? activeOrder?.server_order_id : activeOrder?.id;
+      let orderId = savedDokuOrderId.current || (isLocalPosDraft(activeOrder) ? activeOrder?.server_order_id : activeOrder?.id);
       if (orderId) {
         const { error } = await supabase.from("booking_orders").update(payload).eq("id", orderId).eq("store_id", currentStore.id);
         if (error) throw error;
@@ -861,6 +889,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         orderId = data.id;
       }
 
+      if (selectedDokuGroup) savedDokuOrderId.current = orderId;
+
       const itemsPayload = items.map((it) => ({
         booking_order_id: orderId,
         product_id: it.product_id,
@@ -876,16 +906,14 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const { error: itemErr } = await supabase.from("booking_order_items").insert(itemsPayload);
       if (itemErr) throw itemErr;
 
-      if (dokuGroup) {
-        const { data: dokuData, error: dokuError } = await supabase.functions.invoke("doku-checkout", {
-          body: { order_id: orderId, channels: enabledDokuCodes(dokuGroup, dokuChannels) },
-        });
-        if (dokuError || !dokuData?.checkout_url) {
-          toast.error(await functionErrorMessage(dokuError, dokuData, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas."));
-        } else {
-          window.open(dokuData.checkout_url, "_blank", "noopener");
-          toast.success("Tagihan DOKU dibuat. Status menjadi LUNAS otomatis setelah DOKU mengonfirmasi pembayaran.");
+      if (selectedDokuGroup) {
+        savedDokuOrderId.current = orderId;
+        if (isLocalPosDraft(activeOrder) && user) {
+          removePosOrderDraft(localStorage, currentStore.id, user.id, activeOrder.id);
         }
+        await openDokuCheckout(orderId, selectedMethod);
+        onSaved();
+        return;
       }
 
       if (isLocalPosDraft(activeOrder) && user) {
@@ -931,6 +959,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
+      setDokuCheckout(null);
       toast.error(userFacingError(e, "Transaksi belum berhasil disimpan. Silakan coba lagi."));
     } finally {
       setSaving(false);
@@ -1356,7 +1385,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
-  <div style={{ width: leftWidth }} className="shrink-0 bg-background flex flex-col border-r max-w-[45vw] md:max-w-none">
+  <fieldset disabled={saving || !!dokuCheckout} style={{ width: leftWidth }} className="min-w-0 shrink-0 bg-background flex flex-col border-r max-w-[45vw] md:max-w-none">
             <div className="px-3 py-2 flex items-center justify-between border-b">
               {posMode && !booking ? (
                 <button
@@ -1622,7 +1651,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               {saving && <Loader2 className="h-5 w-5 animate-spin" />}
               {posMode ? (paymentView ? "Pembayaran" : "Pembayaran · ") : ""}{!posMode || !paymentView ? fmt(total) : ""}
             </button>
-          </div>
+          </fieldset>
 
           {/* Resizer between left and right */}
           <div
@@ -1639,7 +1668,15 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           {/* RIGHT — Product grid / Atur Item Pesanan */}
           <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {posMode && paymentView ? (
-            <PosPaymentPanel total={fmt(total)} attendant={attendantName} methods={methods} selected={paymentMethod} onSelect={setPaymentMethod} saving={saving} dokuChannels={dokuChannels}
+            <PosPaymentPanel total={fmt(total)} attendant={attendantName} methods={methods} selected={paymentMethod} onSelect={(method) => {
+              setPaymentMethod(method);
+              if (opensDokuOnSelection(method)) void handleSave(null, undefined, method);
+            }} saving={saving} dokuChannels={dokuChannels}
+              checkout={dokuCheckout && currentStore ? <DokuCheckoutPanel checkout={dokuCheckout} storeId={currentStore.id} saving={saving} onRetry={() => {
+                if (!dokuCheckout.orderId || saving) return;
+                setSaving(true);
+                void openDokuCheckout(dokuCheckout.orderId, paymentMethod).finally(() => setSaving(false));
+              }} /> : undefined}
               onBack={() => setPaymentView(false)} onSave={() => {
                 if (dokuGroup) { void handleSave(null); return; }
                 setWaPhone(effectiveBooking?.phone || effectiveBooking?.customer_phone || pickedCustomerPhone || "");
