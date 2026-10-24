@@ -22,3 +22,17 @@ export function dokuGroupForMethod(name: string): DokuMethodGroup | null {
 export function enabledDokuCodes(group: DokuMethodGroup, enabled: string[]): string[] {
   return group.codes.filter((code) => enabled.includes(code));
 }
+
+export function opensDokuOnSelection(method: string): boolean {
+  return method === "QRIS DOKU";
+}
+
+export function isVerifiedDokuCheckoutUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && (url.hostname === "doku.com" || url.hostname.endsWith(".doku.com"));
+  } catch {
+    return false;
+  }
+}

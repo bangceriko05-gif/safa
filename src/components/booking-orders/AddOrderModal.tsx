@@ -21,7 +21,7 @@ import PosPaymentPanel from "./PosPaymentPanel";
 import DokuCheckoutPanel, { type DokuCheckoutState } from "./DokuCheckoutPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
-import { dokuGroupForMethod, enabledDokuCodes } from "@/utils/dokuChannels";
+import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
 interface Product {
@@ -766,7 +766,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const { data, error } = await supabase.functions.invoke("doku-checkout", {
         body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels) },
       });
-      if (error || !data?.checkout_url) {
+      if (error || !isVerifiedDokuCheckoutUrl(data?.checkout_url)) {
         setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas.") });
       } else {
         setDokuCheckout({ orderId, url: data.checkout_url, error: null });
@@ -888,6 +888,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         if (error) throw error;
         orderId = data.id;
       }
+
+      if (selectedDokuGroup) savedDokuOrderId.current = orderId;
 
       const itemsPayload = items.map((it) => ({
         booking_order_id: orderId,
@@ -1668,7 +1670,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           {posMode && paymentView ? (
             <PosPaymentPanel total={fmt(total)} attendant={attendantName} methods={methods} selected={paymentMethod} onSelect={(method) => {
               setPaymentMethod(method);
-              if (method === "QRIS DOKU") void handleSave(null, undefined, method);
+              if (opensDokuOnSelection(method)) void handleSave(null, undefined, method);
             }} saving={saving} dokuChannels={dokuChannels}
               checkout={dokuCheckout && currentStore ? <DokuCheckoutPanel checkout={dokuCheckout} storeId={currentStore.id} saving={saving} onRetry={() => {
                 if (!dokuCheckout.orderId || saving) return;
