@@ -98,6 +98,9 @@ export default function DokuSettings() {
     channels: on ? [...new Set([...value.channels, ...codes])] : value.channels.filter((code) => !codes.includes(code)),
   }));
 
+  // Fixed display mask only: never fetch or submit the stored secret as an input value.
+  const hasSavedSecret = configured && draft.environment === saved.environment && draft.clientId.trim() === saved.clientId;
+
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (loadFailed) return <div className="space-y-4 py-8"><p>Pengaturan DOKU belum dapat dimuat.</p><Button variant="outline" onClick={() => setReload((v) => v + 1)}>Coba lagi</Button></div>;
 
@@ -119,7 +122,7 @@ export default function DokuSettings() {
         <fieldset disabled={saving} className="max-w-md space-y-5">
           <div className="space-y-2"><Label htmlFor="doku-mode">Mode</Label><Select value={draft.environment} onValueChange={(environment) => setDraft({ ...draft, environment })}><SelectTrigger id="doku-mode"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="sandbox">Sandbox (uji coba)</SelectItem><SelectItem value="live">Production (uang sungguhan)</SelectItem></SelectContent></Select></div>
           <div className="space-y-2"><Label htmlFor="doku-client">Client ID</Label><Input id="doku-client" autoComplete="off" value={draft.clientId} onChange={(e) => setDraft({ ...draft, clientId: e.target.value })} placeholder="Client ID dari akun DOKU" /></div>
-          <div className="space-y-2"><Label htmlFor="doku-secret">Secret Key</Label><div className="relative"><Input id="doku-secret" type="password" autoComplete="new-password" maxLength={512} value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={configured ? "Sudah tersimpan — isi hanya untuk mengganti" : "Secret Key dari akun DOKU"} className="pr-10" /><LockKeyhole className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /></div><p className="text-xs text-muted-foreground">Secret Key disimpan terenkripsi dan tidak ditampilkan kembali. Kosongkan untuk mempertahankan kunci yang sudah tersimpan pada mode yang sama.</p></div>
+          <div className="space-y-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="doku-secret">Secret Key</Label>{hasSavedSecret && !secretKey && <span className="text-xs text-muted-foreground">Sudah tersimpan</span>}</div><div className="relative"><Input id="doku-secret" type="password" autoComplete="new-password" maxLength={512} value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={hasSavedSecret ? "••••••••••••••••" : "Secret Key dari akun DOKU"} aria-describedby="doku-secret-note" className={`pr-10 ${hasSavedSecret ? "placeholder:text-foreground" : ""}`} /><LockKeyhole aria-hidden="true" className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /></div><p id="doku-secret-note" className="text-xs text-muted-foreground">{hasSavedSecret ? "Secret Key sudah tersimpan dan tetap disensor. Isi hanya untuk mengganti; biarkan kosong untuk mempertahankan kunci tersimpan." : "Secret Key disimpan terenkripsi dan tidak ditampilkan kembali."}</p></div>
         </fieldset>
       </TabsContent>
       <TabsContent value="methods" className="mt-6 space-y-5">
