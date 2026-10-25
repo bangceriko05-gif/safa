@@ -333,7 +333,7 @@ export default function CancelledBookings({ userRole, onEditBooking, timeRange: 
   };
 
   const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom") => {
-    setDateFilter(filter);
+    setInternalDateFilter(filter);
     if (filter === "custom") {
       setPendingDateRange(customDateRange);
       setCalendarOpen(true);
@@ -342,7 +342,7 @@ export default function CancelledBookings({ userRole, onEditBooking, timeRange: 
 
   const handleCustomDateConfirm = () => {
     if (pendingDateRange?.from) {
-      setCustomDateRange(pendingDateRange);
+      setInternalCustomRange(pendingDateRange);
       setCalendarOpen(false);
     } else {
       toast.error("Pilih tanggal terlebih dahulu");
@@ -410,8 +410,10 @@ export default function CancelledBookings({ userRole, onEditBooking, timeRange: 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Date Filter */}
+        {/* Date Filter & Search — hidden when the parent page supplies shared filters */}
         <div className="flex flex-wrap items-center gap-2">
+          {!hasExternalFilter && (
+          <>
           <div className="flex gap-1 flex-wrap">
             <Button
               variant="outline"
@@ -521,10 +523,12 @@ export default function CancelledBookings({ userRole, onEditBooking, timeRange: 
             <Input
               placeholder="Cari nama, telepon, BID..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setInternalSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
+          </>
+          )}
           {isSuperAdmin && (
             <BulkDeleteBatalBar
               selectedCount={selectedIds.size}
