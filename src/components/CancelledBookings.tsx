@@ -40,6 +40,9 @@ import BulkDeleteBatalBar from "./shared/BulkDeleteBatalBar";
 interface CancelledBookingsProps {
   userRole: string | null;
   onEditBooking: (booking: any) => void;
+  timeRange?: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom";
+  customDateRange?: DateRange;
+  searchQuery?: string;
 }
 
 interface BookingWithRoom {
@@ -61,18 +64,22 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
-export default function CancelledBookings({ userRole, onEditBooking }: CancelledBookingsProps) {
+export default function CancelledBookings({ userRole, onEditBooking, timeRange: externalTimeRange, customDateRange: externalCustomRange, searchQuery: externalSearchQuery }: CancelledBookingsProps) {
   const { currentStore } = useStore();
   const isSuperAdmin = useIsSuperAdmin();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("thisMonth");
+  const [internalDateFilter, setInternalDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("thisMonth");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [internalCustomRange, setInternalCustomRange] = useState<DateRange | undefined>(undefined);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [internalSearchQuery, setInternalSearchQuery] = useState("");
+  const dateFilter = externalTimeRange ?? internalDateFilter;
+  const customDateRange = externalCustomRange ?? internalCustomRange;
+  const searchQuery = externalSearchQuery ?? internalSearchQuery;
+  const hasExternalFilter = externalTimeRange !== undefined;
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
     CI: "#90EE90",

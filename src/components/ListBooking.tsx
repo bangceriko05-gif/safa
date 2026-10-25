@@ -1168,7 +1168,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
         {/* Batal tab uses its own component */}
         {activeSubTab === "batal" && (
           <div className="mt-4">
-            <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} />
+            <CancelledBookings userRole={userRole} onEditBooking={onEditBooking} timeRange={dateFilter} customDateRange={customDateRange} searchQuery={searchQuery} />
           </div>
         )}
     </Tabs>
