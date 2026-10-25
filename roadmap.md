@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Samakan durasi, tanggal keluar, dan total nota dengan detail booking BO-STR-20261023-032; periksa BID lainnya tanpa mengubah transaksi tersimpan.
+- [x] Samakan durasi, tanggal keluar, dan total nota dengan detail booking BO-STR-20261023-032; 5 tes lulus dan nota asli 4 BID teruji, termasuk tarif bulanan, harian, dan varian jam dalam kalender PMS, tanpa mengubah transaksi tersimpan.
 
 - [x] Tampilkan halaman pembayaran QRIS DOKU langsung di panel kanan saat metode dipilih, dengan muat ulang, cek status, dan buka di tab baru; 6 tes lulus, alur akun aktif diuji memakai respons pembayaran simulasi tanpa menulis transaksi sungguhan.
 - [ ] Verifikasi QRIS asli dan izin tampil halaman DOKU dalam panel — memerlukan tagihan DOKU sungguhan; dokumentasi DOKU tidak menjamin izin sematan langsung, tombol Buka di tab baru tersedia sebagai alternatif.
