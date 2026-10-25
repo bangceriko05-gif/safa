@@ -1,8 +1,9 @@
 import { fetchGroupBilling, billingRoomTotal } from "@/utils/groupBookingBilling";
+import { bookingReceiptStay } from "@/utils/bookingReceiptStay";
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, addMonths } from "date-fns";
+import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ interface BookingData {
   variant_price?: number;
   store_id: string;
   duration_unit?: string;
+  checkout_date?: Date;
 }
 
 interface PrintSettings {
@@ -213,8 +215,6 @@ export default function BookingReceipt() {
       // Fetch variant name if exists
       let variantName = undefined;
       let variantPrice = undefined;
-      // Default: OTA bookings always use "hari" (displayed as "malam")
-      let durationUnit = bookingData.bid?.startsWith("OTA") ? "hari" : "jam";
       if (bookingData.variant_id) {
         const { data: variantData } = await supabase
           .from("room_variants")
@@ -227,23 +227,20 @@ export default function BookingReceipt() {
         if ((bookingData as any).variant_price_override != null) {
           variantPrice = Number((bookingData as any).variant_price_override);
         }
-        if (variantData?.booking_duration_type === "hari" || variantData?.booking_duration_type === "days") {
-          durationUnit = "hari";
-        } else if (variantData?.booking_duration_type === "bulan" || variantData?.booking_duration_type === "months") {
-          durationUnit = "bulan";
-        }
       }
 
       const storeId = bookingData.store_id || bookingData.rooms?.store_id;
+      let calendarType: string | null = null;
 
       // Fetch store name
       if (storeId) {
         const { data: storeData } = await supabase
           .from("stores")
-          .select("name")
+          .select("name, calendar_type")
           .eq("id", storeId)
           .single();
         setStoreName(storeData?.name || "");
+        calendarType = storeData?.calendar_type || null;
       }
 
       // Fetch print settings
@@ -279,8 +276,8 @@ export default function BookingReceipt() {
         .select("product_name, quantity, product_price, subtotal")
         .eq("booking_id", bookingId);
 
-      const shared = bookingData.booking_group_id && !orderId ? await fetchGroupBilling(bookingData) : null;
-      setSharedBilling(shared && shared.rooms.length > 1 ? shared : null);
+      const shared = !orderId ? await fetchGroupBilling(bookingData) : null;
+      setSharedBilling(shared);
       let mergedProducts = (shared?.products || productsData || []) as BookingProduct[];
 
       if (orderId) {
@@ -356,6 +353,7 @@ export default function BookingReceipt() {
         setDeposit(depositData);
       }
 
+      const stay = bookingReceiptStay(bookingData, calendarType);
       setBooking({
         ...bookingData,
         ...(shared?.rooms.length && shared.rooms.length > 1 && shared.totals.owner ? {
@@ -369,7 +367,8 @@ export default function BookingReceipt() {
         room_name: bookingData.rooms?.name || "Unknown",
         variant_name: variantName,
         variant_price: variantPrice,
-        duration_unit: durationUnit,
+        duration_unit: stay.unit,
+        checkout_date: stay.checkout,
         store_id: storeId,
       });
     } catch (error) {
@@ -391,10 +390,7 @@ export default function BookingReceipt() {
     if (!booking) return 0;
     if (orderOnlyMode) return 0;
     if (sharedBilling) return sharedBilling.totals.roomTotal;
-    // Match popup logic: variant_price * duration, fallback to price for OTA
-    return booking.variant_price 
-      ? booking.variant_price * booking.duration 
-      : booking.price;
+    return booking.price;
   };
 
   const calculateDiscount = () => {
@@ -625,23 +621,12 @@ export default function BookingReceipt() {
           <div className="flex justify-between">
             <span>Tanggal Check Out:</span>
             <span>
-              {(() => {
-                const checkInDate = new Date(booking.date);
-                const unit = booking.duration_unit || "hari";
-                if (unit === "bulan") {
-                  return format(addMonths(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
-                } else if (unit === "hari") {
-                  return format(addDays(checkInDate, booking.duration), "dd MMMM yyyy", { locale: idLocale });
-                } else {
-                  // For jam (hours), show end time on same day or calculate
-                  return format(checkInDate, "dd MMMM yyyy", { locale: idLocale });
-                }
-              })()}
+              {format(booking.checkout_date || new Date(booking.date), "dd MMMM yyyy", { locale: idLocale })}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Durasi:</span>
-            <span>{booking.duration} {booking.duration_unit === "bulan" ? "bulan" : booking.duration_unit === "jam" ? "jam" : "malam"}</span>
+            <span>{booking.duration} {booking.duration_unit === "jam" ? "jam" : "malam"}</span>
           </div>
           <div className="flex justify-between">
             <span>Ruangan:</span>
@@ -668,7 +653,7 @@ export default function BookingReceipt() {
             fontSize: printSettings?.paper_size === "58mm" ? "9px" : "11px",
           }}
         >
-          {!orderOnlyMode && sharedBilling?.rooms.map((room, index) => <div key={room.id} className="flex justify-between mb-1"><span>Kamar {index + 1} · {room.rooms?.name} · {room.duration} malam</span><span>{formatCurrency(billingRoomTotal(room))}</span></div>)}
+          {!orderOnlyMode && sharedBilling && sharedBilling.rooms.length > 1 && sharedBilling.rooms.map((room, index) => <div key={room.id} className="flex justify-between mb-1"><span>Kamar {index + 1} · {room.rooms?.name} · {room.duration} {booking.duration_unit === "jam" ? "jam" : "malam"}</span><span>{formatCurrency(billingRoomTotal(room))}</span></div>)}
           {!orderOnlyMode && (<div className="flex justify-between mb-1">
             <span>Total Biaya</span>
             <span>{formatCurrency(getRoomSubtotal())}</span>
