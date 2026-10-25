@@ -40,6 +40,9 @@ import BulkDeleteBatalBar from "./shared/BulkDeleteBatalBar";
 interface CancelledBookingsProps {
   userRole: string | null;
   onEditBooking: (booking: any) => void;
+  timeRange?: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom";
+  customDateRange?: DateRange;
+  searchQuery?: string;
 }
 
 interface BookingWithRoom {
@@ -61,18 +64,22 @@ interface BookingWithRoom {
   payment_status: string;
 }
 
-export default function CancelledBookings({ userRole, onEditBooking }: CancelledBookingsProps) {
+export default function CancelledBookings({ userRole, onEditBooking, timeRange: externalTimeRange, customDateRange: externalCustomRange, searchQuery: externalSearchQuery }: CancelledBookingsProps) {
   const { currentStore } = useStore();
   const isSuperAdmin = useIsSuperAdmin();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bookings, setBookings] = useState<BookingWithRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("thisMonth");
+  const [internalDateFilter, setInternalDateFilter] = useState<"today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom">("thisMonth");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [internalCustomRange, setInternalCustomRange] = useState<DateRange | undefined>(undefined);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [internalSearchQuery, setInternalSearchQuery] = useState("");
+  const dateFilter = externalTimeRange ?? internalDateFilter;
+  const customDateRange = externalCustomRange ?? internalCustomRange;
+  const searchQuery = externalSearchQuery ?? internalSearchQuery;
+  const hasExternalFilter = externalTimeRange !== undefined;
   const [statusColors, setStatusColors] = useState<Record<string, string>>({
     BO: "#87CEEB",
     CI: "#90EE90",
@@ -326,7 +333,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
   };
 
   const handleDateFilterChange = (filter: "today" | "yesterday" | "thisMonth" | "lastMonth" | "allTime" | "custom") => {
-    setDateFilter(filter);
+    setInternalDateFilter(filter);
     if (filter === "custom") {
       setPendingDateRange(customDateRange);
       setCalendarOpen(true);
@@ -335,7 +342,7 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
 
   const handleCustomDateConfirm = () => {
     if (pendingDateRange?.from) {
-      setCustomDateRange(pendingDateRange);
+      setInternalCustomRange(pendingDateRange);
       setCalendarOpen(false);
     } else {
       toast.error("Pilih tanggal terlebih dahulu");
@@ -403,8 +410,10 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Date Filter */}
+        {/* Date Filter & Search — hidden when the parent page supplies shared filters */}
         <div className="flex flex-wrap items-center gap-2">
+          {!hasExternalFilter && (
+          <>
           <div className="flex gap-1 flex-wrap">
             <Button
               variant="outline"
@@ -514,10 +523,12 @@ export default function CancelledBookings({ userRole, onEditBooking }: Cancelled
             <Input
               placeholder="Cari nama, telepon, BID..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setInternalSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
+          </>
+          )}
           {isSuperAdmin && (
             <BulkDeleteBatalBar
               selectedCount={selectedIds.size}
