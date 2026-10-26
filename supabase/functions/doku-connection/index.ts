@@ -4,7 +4,7 @@ import { z } from "npm:zod@3";
 import { dokuAdmin, encryptDokuSecret } from "../_shared/doku.ts";
 
 const bodySchema = z.object({
-  store_id: z.string().uuid(), action: z.enum(["status", "save"]).default("status"),
+  store_id: z.string().uuid(), action: z.enum(["status", "save", "delete"]).default("status"),
   environment: z.enum(["sandbox", "live"]).optional(), client_id: z.string().trim().max(128).optional(),
   secret_key: z.string().trim().max(512).optional(), enabled: z.boolean().optional(),
   channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional(),
@@ -27,6 +27,15 @@ Deno.serve(async (req) => {
     const { data: allowed } = await client.rpc("is_store_admin", { _user_id: user.id, _store_id: input.store_id });
     if (!allowed) return reply(403, { error: "Anda tidak memiliki izin. Hubungi admin outlet untuk mengatur DOKU." });
     const admin = dokuAdmin();
+    if (input.action === "delete") {
+      const { data: current } = await client.from("website_payment_settings").select("doku_environment").eq("store_id", input.store_id).maybeSingle();
+      const environment = input.environment || current?.doku_environment || "sandbox";
+      const { error: deleteError } = await admin.from("doku_outlet_credentials").delete().eq("store_id", input.store_id).eq("environment", environment);
+      if (deleteError) throw deleteError;
+      const { error: resetError } = await admin.from("website_payment_settings").update({ doku_enabled: false, doku_client_id: "", doku_channels: [] }).eq("store_id", input.store_id);
+      if (resetError) throw resetError;
+      return reply(200, { deleted: true, configured: false });
+    }
     if (input.action === "save") {
       if (!input.environment || input.enabled === undefined || !input.channels || (input.enabled && (!input.client_id || input.channels.length === 0))) {
         return reply(400, { error: "Lengkapi Client ID dan pilih minimal satu metode pembayaran DOKU." });
