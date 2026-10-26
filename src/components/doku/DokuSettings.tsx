@@ -145,6 +145,23 @@ export default function DokuSettings() {
           <div className="space-y-2"><Label htmlFor="doku-client">Client ID</Label><Input id="doku-client" autoComplete="off" value={draft.clientId} onChange={(e) => setDraft({ ...draft, clientId: e.target.value })} placeholder="Client ID dari akun DOKU" /></div>
           <div className="space-y-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="doku-secret">Secret Key</Label>{hasSavedSecret && !secretKey && <span className="text-xs text-muted-foreground">Sudah tersimpan</span>}</div><div className="relative"><Input id="doku-secret" type="password" autoComplete="new-password" maxLength={512} value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={hasSavedSecret ? "••••••••••••••••" : "Secret Key dari akun DOKU"} aria-describedby="doku-secret-note" className={`pr-10 ${hasSavedSecret ? "placeholder:text-foreground" : ""}`} /><LockKeyhole aria-hidden="true" className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /></div><p id="doku-secret-note" className="text-xs text-muted-foreground">{hasSavedSecret ? "Secret Key sudah tersimpan dan tetap disensor. Isi hanya untuk mengganti; biarkan kosong untuk mempertahankan kunci tersimpan." : "Secret Key disimpan terenkripsi dan tidak ditampilkan kembali."}</p></div>
         </fieldset>
+        {hasSavedSecret && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" size="sm" disabled={saving}><Trash2 className="mr-2 h-4 w-4" />Hapus Client ID & Secret Key</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hapus kredensial DOKU?</AlertDialogTitle>
+                <AlertDialogDescription>Client ID dan Secret Key outlet {currentStore?.name} akan dihapus permanen dan pembayaran DOKU dinonaktifkan. Anda dapat mengisinya kembali kapan saja.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void removeCredentials()}>Ya, hapus</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </TabsContent>
       <TabsContent value="methods" className="mt-6 space-y-5">
         {channelGroups.map((group) => {
