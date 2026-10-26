@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Copy, CreditCard, ExternalLink, Info, Loader2, LockKeyhole, Save } from "lucide-react";
+import { AlertCircle, Copy, CreditCard, ExternalLink, Info, Loader2, LockKeyhole, Save, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 
@@ -94,6 +95,26 @@ export default function DokuSettings() {
     } finally { setSaving(false); }
   };
 
+  const removeCredentials = async () => {
+    if (!currentStore?.id || saving) return;
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("doku-connection", { body: { action: "delete", store_id: currentStore.id, environment: draft.environment } });
+      if (error || data?.error) {
+        toast.error(await functionErrorMessage(error, data, "Kredensial DOKU belum terhapus. Silakan coba lagi."));
+        return;
+      }
+      setSecretKey("");
+      setConfigured(false);
+      const cleared = { ...initial, environment: draft.environment };
+      setDraft(cleared);
+      setSaved(cleared);
+      toast.success("Client ID dan Secret Key DOKU dihapus");
+    } catch (error) {
+      toast.error(userFacingError(error, "Kredensial DOKU belum terhapus. Silakan coba lagi."));
+    } finally { setSaving(false); }
+  };
+
   const toggleChannels = (codes: string[], on: boolean) => setDraft((value) => ({ ...value,
     channels: on ? [...new Set([...value.channels, ...codes])] : value.channels.filter((code) => !codes.includes(code)),
   }));
@@ -124,6 +145,23 @@ export default function DokuSettings() {
           <div className="space-y-2"><Label htmlFor="doku-client">Client ID</Label><Input id="doku-client" autoComplete="off" value={draft.clientId} onChange={(e) => setDraft({ ...draft, clientId: e.target.value })} placeholder="Client ID dari akun DOKU" /></div>
           <div className="space-y-2"><div className="flex items-center justify-between gap-2"><Label htmlFor="doku-secret">Secret Key</Label>{hasSavedSecret && !secretKey && <span className="text-xs text-muted-foreground">Sudah tersimpan</span>}</div><div className="relative"><Input id="doku-secret" type="password" autoComplete="new-password" maxLength={512} value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={hasSavedSecret ? "••••••••••••••••" : "Secret Key dari akun DOKU"} aria-describedby="doku-secret-note" className={`pr-10 ${hasSavedSecret ? "placeholder:text-foreground" : ""}`} /><LockKeyhole aria-hidden="true" className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /></div><p id="doku-secret-note" className="text-xs text-muted-foreground">{hasSavedSecret ? "Secret Key sudah tersimpan dan tetap disensor. Isi hanya untuk mengganti; biarkan kosong untuk mempertahankan kunci tersimpan." : "Secret Key disimpan terenkripsi dan tidak ditampilkan kembali."}</p></div>
         </fieldset>
+        {hasSavedSecret && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" size="sm" disabled={saving}><Trash2 className="mr-2 h-4 w-4" />Hapus Client ID & Secret Key</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hapus kredensial DOKU?</AlertDialogTitle>
+                <AlertDialogDescription>Client ID dan Secret Key outlet {currentStore?.name} akan dihapus permanen dan pembayaran DOKU dinonaktifkan. Anda dapat mengisinya kembali kapan saja.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void removeCredentials()}>Ya, hapus</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </TabsContent>
       <TabsContent value="methods" className="mt-6 space-y-5">
         {channelGroups.map((group) => {
