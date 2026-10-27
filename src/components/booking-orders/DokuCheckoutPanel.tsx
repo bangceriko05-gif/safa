@@ -46,6 +46,14 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkout.orderId, storeId, paid]);
 
+  // QR DOKU kedaluwarsa setelah 60 menit: buat invoice & QR baru otomatis.
+  useEffect(() => {
+    if (!checkout.url || paid) return;
+    const timer = window.setTimeout(() => { setLoaded(false); onRenew(); }, 60 * 60 * 1000 + 5000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkout.url, paid]);
+
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-md border bg-background" aria-label="Halaman pembayaran DOKU">
       {paid ? (
