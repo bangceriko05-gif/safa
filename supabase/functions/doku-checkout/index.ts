@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const client = createClient(url, anon, { global: { headers: { Authorization: authorization } } });
     const { data: { user } } = await client.auth.getUser();
     if (!user) return reply(401, { error: "Sesi Anda sudah berakhir. Silakan masuk kembali." });
-    const parsed = z.object({ order_id: z.string().uuid(), channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional() }).safeParse(await req.json());
+    const parsed = z.object({ order_id: z.string().uuid(), channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional(), renew: z.boolean().optional() }).safeParse(await req.json());
     if (!parsed.success) return reply(400, { error: "Pilih transaksi yang akan dibayar." });
     const { data: order, error: orderError } = await client.from("booking_orders").select("id,store_id,total_amount,amount,amount_2,process_status,payment_status").eq("id", parsed.data.order_id).maybeSingle();
     if (orderError || !order) return reply(403, { error: "Anda tidak memiliki izin. Transaksi tidak ditemukan di outlet ini." });
@@ -29,8 +29,12 @@ Deno.serve(async (req) => {
     const remaining = Number(order.total_amount) - Number(order.amount) - Number(order.amount_2);
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
-    const { data: pending } = await admin.from("doku_payment_attempts").select("id,amount,checkout_url").eq("order_id", order.id).eq("status", "pending").maybeSingle();
-    if (pending) {
+    const { data: pending } = await admin.from("doku_payment_attempts").select("id,amount,checkout_url,created_at").eq("order_id", order.id).eq("status", "pending").maybeSingle();
+    // QR DOKU berlaku 60 menit; tagihan kedaluwarsa (atau diminta baru) diganti invoice & QR baru.
+    const expired = pending && Date.now() - new Date(pending.created_at).getTime() > 55 * 60 * 1000;
+    if (pending && (expired || parsed.data.renew)) {
+      await admin.from("doku_payment_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
+    } else if (pending) {
       if (Number(pending.amount) !== remaining) return reply(409, { error: "Tagihan DOKU sebelumnya masih menunggu pembayaran. Hubungi admin sebelum mengubah nominal." });
       if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url });
       return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
@@ -39,7 +43,7 @@ Deno.serve(async (req) => {
     const { data: attempt, error: insertError } = await admin.from("doku_payment_attempts").insert({ store_id: order.store_id, order_id: order.id, invoice_number: invoice, environment: credentials.environment, client_id: credentials.clientId, amount: remaining }).select("id").single();
     if (insertError || !attempt) return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     const target = "/checkout/v1/payment";
-    const body = JSON.stringify({ order: { amount: remaining, invoice_number: invoice }, payment: { payment_method_types: channels } });
+    const body = JSON.stringify({ order: { amount: remaining, invoice_number: invoice }, payment: { payment_method_types: channels, payment_due_date: 60 } });
     const requestId = crypto.randomUUID();
     const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     const signature = await dokuSignature(credentials.secret, credentials.clientId, requestId, timestamp, target, body);

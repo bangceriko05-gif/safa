@@ -782,13 +782,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return d ? parseInt(d, 10) : 0;
   };
 
-  const openDokuCheckout = async (orderId: string, method: string) => {
+  const openDokuCheckout = async (orderId: string, method: string, renew = false) => {
     const group = dokuGroupForMethod(method);
     if (!group) return;
     setDokuCheckout({ orderId, url: null, error: null });
     try {
       const { data, error } = await supabase.functions.invoke("doku-checkout", {
-        body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels) },
+        body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels), ...(renew ? { renew: true } : {}) },
       });
       if (error || !isVerifiedDokuCheckoutUrl(data?.checkout_url)) {
         setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas.") });
@@ -1707,7 +1707,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               setPaymentMethod(method);
               if (opensDokuOnSelection(method)) void handleSave(null, undefined, method);
             }} saving={saving} dokuChannels={dokuChannels}
-              checkout={dokuCheckout && currentStore ? <DokuCheckoutPanel checkout={dokuCheckout} storeId={currentStore.id} saving={saving} onRetry={() => {
+              checkout={dokuCheckout && currentStore ? <DokuCheckoutPanel checkout={dokuCheckout} storeId={currentStore.id} saving={saving} onRenew={() => {
+                if (!dokuCheckout.orderId || saving) return;
+                setSaving(true);
+                void openDokuCheckout(dokuCheckout.orderId, paymentMethod, true).finally(() => setSaving(false));
+              }} onRetry={() => {
                 if (!dokuCheckout.orderId || saving) return;
                 setSaving(true);
                 void openDokuCheckout(dokuCheckout.orderId, paymentMethod).finally(() => setSaving(false));
