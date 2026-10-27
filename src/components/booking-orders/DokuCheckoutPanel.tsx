@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, QrCode, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,9 +15,10 @@ interface Props {
   storeId: string;
   saving: boolean;
   onRetry: () => void;
+  onRenew: () => void;
 }
 
-export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry }: Props) {
+export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, onRenew }: Props) {
   const [reload, setReload] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -45,6 +46,14 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkout.orderId, storeId, paid]);
 
+  // QR DOKU kedaluwarsa setelah 60 menit: buat invoice & QR baru otomatis.
+  useEffect(() => {
+    if (!checkout.url || paid) return;
+    const timer = window.setTimeout(() => { setLoaded(false); onRenew(); }, 60 * 60 * 1000 + 5000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkout.url, paid]);
+
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-md border bg-background" aria-label="Halaman pembayaran DOKU">
       {paid ? (
@@ -67,6 +76,7 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry }
       )}
       <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t p-2">
         <Button variant="ghost" size="sm" disabled={!checkout.url || saving} onClick={() => { setLoaded(false); setReload((value) => value + 1); }}><RefreshCw className="mr-2 h-4 w-4" />Muat ulang</Button>
+        <Button variant="outline" size="sm" disabled={!checkout.orderId || saving || paid} onClick={() => { setLoaded(false); onRenew(); }}><QrCode className="mr-2 h-4 w-4" />Buat QR baru</Button>
         <Button variant="outline" size="sm" disabled={!checkout.orderId || checking || saving} onClick={() => { void checkPayment(true); }}>{checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cek status pembayaran</Button>
         <Button variant="ghost" size="sm" disabled={!checkout.url} onClick={() => { if (checkout.url) window.open(checkout.url, "_blank", "noopener,noreferrer"); }}><ExternalLink className="mr-2 h-4 w-4" />Buka di tab baru</Button>
       </footer>

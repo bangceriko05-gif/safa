@@ -22,6 +22,7 @@ import DokuCheckoutPanel, { type DokuCheckoutState } from "./DokuCheckoutPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
+import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
 interface Product {
@@ -138,6 +139,29 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txCustomTo, setTxCustomTo] = useState("");
   // Draft yang dibuka langsung di POS untuk dilanjutkan/diedit
   const [draftOrder, setDraftOrder] = useState<any | null>(null);
+
+  const { requestCancellation: requestTxDelete, cancellationDialog: txDeleteDialog } = useTransactionCancellation("pesanan POS");
+  const deleteTx = (e: React.MouseEvent, o: any) => {
+    e.stopPropagation();
+    requestTxDelete(o.bid || undefined, async (reason) => {
+      if (!currentStore) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (isLocalPosDraft(o)) {
+        if (user) removePosOrderDraft(localStorage, currentStore.id, user.id, o.id);
+        if (o.server_order_id) {
+          const { data: cur } = await supabase.from("booking_orders").select("note").eq("id", o.server_order_id).eq("store_id", currentStore.id).maybeSingle();
+          const { error } = await supabase.from("booking_orders").update({ process_status: "batal", note: appendCancellationReason(cur?.note, reason) }).eq("id", o.server_order_id).eq("store_id", currentStore.id);
+          if (error) { toast.error(userFacingError(error, "Pesanan belum dapat dihapus. Silakan coba lagi.")); return; }
+        }
+      } else {
+        const { data: cur } = await supabase.from("booking_orders").select("note").eq("id", o.id).eq("store_id", currentStore.id).maybeSingle();
+        const { error } = await supabase.from("booking_orders").update({ process_status: "batal", note: appendCancellationReason(cur?.note, reason) }).eq("id", o.id).eq("store_id", currentStore.id);
+        if (error) { toast.error(userFacingError(error, "Pesanan belum dapat dihapus. Silakan coba lagi.")); return; }
+      }
+      toast.success(`Pesanan ${o.bid || ""} dihapus`);
+      void fetchTxOrders();
+    });
+  };
 
   const fetchTxOrders = async () => {
     if (!currentStore) return;
@@ -758,13 +782,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     return d ? parseInt(d, 10) : 0;
   };
 
-  const openDokuCheckout = async (orderId: string, method: string) => {
+  const openDokuCheckout = async (orderId: string, method: string, renew = false) => {
     const group = dokuGroupForMethod(method);
     if (!group) return;
     setDokuCheckout({ orderId, url: null, error: null });
     try {
       const { data, error } = await supabase.functions.invoke("doku-checkout", {
-        body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels) },
+        body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels), ...(renew ? { renew: true } : {}) },
       });
       if (error || !isVerifiedDokuCheckoutUrl(data?.checkout_url)) {
         setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas.") });
@@ -1360,6 +1384,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             <span className={`px-2.5 py-1 rounded-md text-sm font-black ${ps === "selesai" ? "bg-emerald-100 text-emerald-700" : ps === "batal" ? "bg-gray-200 text-gray-600" : "bg-amber-100 text-amber-700"}`}>
                               {ps === "selesai" ? "SELESAI" : ps === "batal" ? "BATAL" : "DRAFT"}
                             </span>
+                            {ps !== "batal" && (
+                              <span role="button" tabIndex={0} aria-label={`Hapus ${o.bid || "pesanan"}`} title="Hapus" onClick={(e) => deleteTx(e, o)} onKeyDown={(e) => { if (e.key === "Enter") deleteTx(e as any, o); }} className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive">
+                                <Trash2 className="h-5 w-5" />
+                              </span>
+                            )}
                             {ps !== "selesai" && ps !== "batal" ? (
                               <ClipboardList className="h-5 w-5 text-primary" />
                             ) : (
@@ -1387,6 +1416,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </div>
           </DialogContent>
         </Dialog>
+        {txDeleteDialog}
 
         <div className="flex-1 flex overflow-hidden bg-primary/95">
           {/* LEFT — Nota / Pesanan Baru */}
@@ -1677,7 +1707,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               setPaymentMethod(method);
               if (opensDokuOnSelection(method)) void handleSave(null, undefined, method);
             }} saving={saving} dokuChannels={dokuChannels}
-              checkout={dokuCheckout && currentStore ? <DokuCheckoutPanel checkout={dokuCheckout} storeId={currentStore.id} saving={saving} onRetry={() => {
+              checkout={dokuCheckout && currentStore ? <DokuCheckoutPanel checkout={dokuCheckout} storeId={currentStore.id} saving={saving} onRenew={() => {
+                if (!dokuCheckout.orderId || saving) return;
+                setSaving(true);
+                void openDokuCheckout(dokuCheckout.orderId, paymentMethod, true).finally(() => setSaving(false));
+              }} onRetry={() => {
                 if (!dokuCheckout.orderId || saving) return;
                 setSaving(true);
                 void openDokuCheckout(dokuCheckout.orderId, paymentMethod).finally(() => setSaving(false));
