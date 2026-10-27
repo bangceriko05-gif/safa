@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { DOKU_QR_TTL_MS, dokuBrandingCrop, formatDokuQrCountdown } from "./dokuCheckoutLayout";
 
-describe("Potongan branding halaman DOKU", () {
+describe("Potongan branding halaman DOKU", () => {
   test("panel sempit tetap memotong logo dan nama outlet", () => {
     expect(dokuBrandingCrop(360)).toBe(335);
     expect(dokuBrandingCrop(420)).toBe(335);
