@@ -3,7 +3,8 @@
 - [x] Samakan durasi, tanggal keluar, dan total nota dengan detail booking BO-STR-20261023-032; 5 tes lulus dan nota asli 4 BID teruji, termasuk tarif bulanan, harian, dan varian jam dalam kalender PMS, tanpa mengubah transaksi tersimpan.
 
 - [x] Tampilkan halaman pembayaran QRIS DOKU langsung di panel kanan saat metode dipilih, dengan muat ulang, cek status, dan buka di tab baru; 6 tes lulus, alur akun aktif diuji memakai respons pembayaran simulasi tanpa menulis transaksi sungguhan.
-- [ ] Verifikasi QRIS asli dan izin tampil halaman DOKU dalam panel — memerlukan tagihan DOKU sungguhan; dokumentasi DOKU tidak menjamin izin sematan langsung, tombol Buka di tab baru tersedia sebagai alternatif.
+- [x] Verifikasi QRIS asli dan sematan halaman DOKU dalam panel dengan tagihan sungguhan (FBSTR20261023003): halaman muat, QR dan nominal terbaca, status tetap belum lunas sampai notifikasi DOKU.
+- [x] Sembunyikan header branding DOKU (logo, nama outlet pemilik Client ID, pemilih bahasa) di panel QRIS sehingga kasir langsung melihat QR, dengan hitung mundur QR milik ANKA; 6 tes tata letak lulus dan alur nyata POS teruji pada lebar 873px.
 
 - [x] Perbaiki laporan item POS OAK LAWANG: hapus pembacaan relasi produk yang tidak tersedia, muat HPP terpisah per outlet, dan tampilkan pesan jika gagal; 1.224 rincian item semua waktu dan 7 item hari ini teruji muncul, 10 tes lulus.
 
