@@ -1217,17 +1217,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       <DialogContent className="inset-0 max-w-none w-screen h-screen max-h-none sm:max-w-none rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 shadow-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 [&>button.absolute]:hidden">
         {/* Top blue header bar */}
         <div className="relative h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
-          <div className="font-semibold text-lg truncate">
-            {activeOrder
-              ? `Ubah Order ${activeOrder.bid || ""}`
-              : posMode
-              ? "POS Kasir"
-              : "Tambah Order"}
-            {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
-          </div>
-          {currentStore?.name && (
+          {currentStore?.name ? (
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold text-lg truncate max-w-[40%] pointer-events-none">
               {currentStore.name}
+            </div>
+          ) : (
+            <div className="font-semibold text-lg truncate">
+              {posMode ? "POS Kasir" : "Tambah Order"}
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
