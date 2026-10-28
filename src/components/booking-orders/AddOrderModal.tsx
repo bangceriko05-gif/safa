@@ -1217,25 +1217,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     <Dialog open={open} onOpenChange={(o) => { if (!o) setDraftOrder(null); onOpenChange(o); }}>
       <DialogContent className="inset-0 max-w-none w-screen h-screen max-h-none sm:max-w-none rounded-none p-0 top-0 left-0 translate-x-0 translate-y-0 overflow-hidden flex flex-col border-0 gap-0 shadow-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 [&>button.absolute]:hidden">
         {/* Top blue header bar */}
-        <div ref={posHeaderRef} className="relative h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
-          {/* Pengukur lebar teks nama outlet (tak terlihat) */}
-          <span ref={posHeaderNameMeasureRef} className="absolute invisible whitespace-nowrap text-lg font-semibold pointer-events-none" aria-hidden="true">
-            {currentStore?.name ?? ""}
-          </span>
+        <div className="relative h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           {currentStore?.name ? (
-            <div
-              ref={posHeaderNameRef}
-              className="absolute top-1/2 font-semibold text-lg truncate pointer-events-none will-change-[transform,left]"
-              style={{
-                left: headerNameShifted ? 16 : "50%",
-                maxWidth: headerNameShifted ? "55%" : "40%",
-                transform: `translateY(-50%) translateX(${headerNameShifted ? "0" : "-50%"})`,
-                transition:
-                  "left 550ms cubic-bezier(0.34, 1.3, 0.36, 1), transform 550ms cubic-bezier(0.34, 1.3, 0.36, 1), max-width 250ms ease",
-              }}
-            >
-              {currentStore.name}
-            </div>
+            <PosHeaderName name={currentStore.name} actionsRef={posHeaderActionsRef} />
           ) : (
             <div className="font-semibold text-lg truncate">
               {posMode ? "POS Kasir" : "Tambah Order"}
