@@ -137,6 +137,33 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const posHeaderNameMeasureRef = useRef<HTMLSpanElement>(null);
   const posHeaderActionsRef = useRef<HTMLDivElement>(null);
   const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
+  // Ukur ulang setiap kali header / tombol menu berubah ukuran (Print, Order Baru, dll muncul)
+  useEffect(() => {
+    const header = posHeaderRef.current;
+    const actions = posHeaderActionsRef.current;
+    if (!header || !actions) {
+      setHeaderNameShifted(false);
+      return;
+    }
+    const measure = () => {
+      const cs = getComputedStyle(header);
+      const inner = header.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const nameText = posHeaderNameMeasureRef.current?.offsetWidth ?? 0;
+      if (!nameText) {
+        setHeaderNameShifted(false);
+        return;
+      }
+      const centeredWidth = Math.min(nameText, inner * 0.4);
+      const centeredRightEdge = inner / 2 + centeredWidth / 2;
+      const actionsLeftEdge = inner - actions.offsetWidth;
+      setHeaderNameShifted(centeredRightEdge + 14 > actionsLeftEdge);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(header);
+    ro.observe(actions);
+    return () => ro.disconnect();
+  }, [currentStore?.name, posMode]);
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
