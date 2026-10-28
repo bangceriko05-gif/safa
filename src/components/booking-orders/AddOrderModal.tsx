@@ -129,6 +129,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
   // Daftar transaksi POS (draft / selesai / online)
   const [txListOpen, setTxListOpen] = useState(false);
+  // Nama outlet di header POS: tetap di tengah selama tidak bertabrakan dengan menu kanan,
+  // lalu bergeser halus ke pojok kiri saat ruangnya habis.
+  const [headerNameShifted, setHeaderNameShifted] = useState(false);
+  const posHeaderRef = useRef<HTMLDivElement>(null);
+  const posHeaderNameRef = useRef<HTMLDivElement>(null);
+  const posHeaderNameMeasureRef = useRef<HTMLSpanElement>(null);
+  const posHeaderActionsRef = useRef<HTMLDivElement>(null);
   const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
