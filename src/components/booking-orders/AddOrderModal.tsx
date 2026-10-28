@@ -141,6 +141,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   useEffect(() => {
     const header = posHeaderRef.current;
     const actions = posHeaderActionsRef.current;
+    console.log("[pos-header] effect refs", !!header, !!actions);
     if (!header || !actions) {
       setHeaderNameShifted(false);
       return;
@@ -156,7 +157,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const centeredWidth = Math.min(nameText, inner * 0.4);
       const centeredRightEdge = inner / 2 + centeredWidth / 2;
       const actionsLeftEdge = inner - actions.offsetWidth;
-      setHeaderNameShifted(centeredRightEdge + 14 > actionsLeftEdge);
+      const shifted = centeredRightEdge + 14 > actionsLeftEdge;
+      console.log("[pos-header] measure", { inner, nameText, actsW: actions.offsetWidth, shifted });
+      setHeaderNameShifted(shifted);
     };
     measure();
     const ro = new ResizeObserver(measure);
