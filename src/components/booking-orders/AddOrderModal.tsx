@@ -1218,12 +1218,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         {/* Top blue header bar */}
         <div className="relative h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
           <div className="font-semibold text-lg truncate">
-            {activeOrder
-              ? `Ubah Order ${activeOrder.bid || ""}`
-              : posMode
-              ? "POS Kasir"
-              : "Tambah Order"}
-            {effectiveBooking ? ` — ${effectiveBooking.customer_name}` : ""}
+            {currentStore?.name || (posMode ? "POS Kasir" : "Tambah Order")}
           </div>
           {currentStore?.name && (
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold text-lg truncate max-w-[40%] pointer-events-none">
