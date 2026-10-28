@@ -2298,3 +2298,62 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     </Dialog>
   );
 }
+
+/**
+ * Nama outlet di header POS.
+ * Tetap di tengah selama ada ruang; saat tombol menu di kanan (Kategori, Close, Print,
+ * Order Baru) mulai bertabrakan, bergeser halus ke pojok kiri.
+ */
+function PosHeaderName({ name, actionsRef }: { name: string; actionsRef: React.RefObject<HTMLDivElement | null> }) {
+  const [shifted, setShifted] = useState(false);
+  const nameRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const nameEl = nameRef.current;
+    const header = nameEl?.parentElement;
+    const actions = actionsRef.current;
+    if (!nameEl || !header || !actions) return;
+    const measure = () => {
+      const cs = getComputedStyle(header);
+      const inner = header.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const nameText = measureRef.current?.offsetWidth ?? 0;
+      if (!nameText) {
+        setShifted(false);
+        return;
+      }
+      const centeredWidth = Math.min(nameText, inner * 0.4);
+      const centeredRightEdge = inner / 2 + centeredWidth / 2;
+      const actionsLeftEdge = inner - actions.offsetWidth;
+      setShifted(centeredRightEdge + 14 > actionsLeftEdge);
+    };
+    measure();
+    // Ukur ulang saat header atau tombol menu berubah ukuran (Print / Order Baru muncul, resize, dsb.)
+    const ro = new ResizeObserver(measure);
+    ro.observe(header);
+    ro.observe(actions);
+    return () => ro.disconnect();
+  }, [name, actionsRef]);
+
+  return (
+    <>
+      {/* Pengukur lebar teks nama outlet (tak terlihat) */}
+      <span ref={measureRef} className="absolute invisible whitespace-nowrap text-lg font-semibold pointer-events-none" aria-hidden="true">
+        {name}
+      </span>
+      <div
+        ref={nameRef}
+        className="absolute top-1/2 font-semibold text-lg truncate pointer-events-none will-change-[transform,left]"
+        style={{
+          left: shifted ? 16 : "50%",
+          maxWidth: shifted ? "55%" : "40%",
+          transform: `translateY(-50%) translateX(${shifted ? "0" : "-50%"})`,
+          transition:
+            "left 550ms cubic-bezier(0.34, 1.3, 0.36, 1), transform 550ms cubic-bezier(0.34, 1.3, 0.36, 1), max-width 250ms ease",
+        }}
+      >
+        {name}
+      </div>
+    </>
+  );
+}
