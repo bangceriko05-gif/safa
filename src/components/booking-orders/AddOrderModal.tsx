@@ -163,7 +163,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     ro.observe(header);
     ro.observe(actions);
     return () => ro.disconnect();
-  }, [currentStore?.name, posMode]);
+  }, [currentStore?.name, posMode, open, txListOpen, catManagerOpen]);
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
