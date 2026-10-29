@@ -115,6 +115,20 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
               referrerPolicy="no-referrer"
             />
           </div>
+          {(checkout.invoiceNumber || checkout.amount != null) && (
+            <div className="shrink-0 border-t bg-muted/30 px-4 py-3" aria-label="Ringkasan pesanan">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ringkasan Pesanan</p>
+              {checkout.invoiceNumber && (
+                <p className="mt-1 break-all text-xs text-muted-foreground">Nomor Invoice: <span className="font-medium text-foreground">{checkout.invoiceNumber}</span></p>
+              )}
+              {checkout.amount != null && (
+                <p className="mt-1 text-xs text-muted-foreground">Total Pembayaran</p>
+              )}
+              {checkout.amount != null && (
+                <p className="text-lg font-bold tabular-nums text-foreground">Rp {checkout.amount.toLocaleString("id-ID")}</p>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <div className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-muted-foreground" role="status"><Loader2 className="h-5 w-5 animate-spin" />Menyiapkan tagihan DOKU…</div>
