@@ -29,14 +29,14 @@ Deno.serve(async (req) => {
     const remaining = Number(order.total_amount) - Number(order.amount) - Number(order.amount_2);
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
-    const { data: pending } = await admin.from("doku_payment_attempts").select("id,amount,checkout_url,created_at").eq("order_id", order.id).eq("status", "pending").maybeSingle();
+    const { data: pending } = await admin.from("doku_payment_attempts").select("id,amount,checkout_url,created_at,invoice_number").eq("order_id", order.id).eq("status", "pending").maybeSingle();
     // QR DOKU berlaku 60 menit; tagihan kedaluwarsa (atau diminta baru) diganti invoice & QR baru.
     const expired = pending && Date.now() - new Date(pending.created_at).getTime() > 55 * 60 * 1000;
     if (pending && (expired || parsed.data.renew)) {
       await admin.from("doku_payment_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
     } else if (pending) {
       if (Number(pending.amount) !== remaining) return reply(409, { error: "Tagihan DOKU sebelumnya masih menunggu pembayaran. Hubungi admin sebelum mengubah nominal." });
-      if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url });
+      if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url, invoice_number: pending.invoice_number, amount: Number(pending.amount) });
       return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     }
     const invoice = `ANKA-${crypto.randomUUID()}`;
@@ -59,6 +59,6 @@ Deno.serve(async (req) => {
     if (destination.protocol !== "https:" || !(destination.hostname === "doku.com" || destination.hostname.endsWith(".doku.com"))) return reply(502, { error: "Alamat pembayaran DOKU tidak dapat diverifikasi." });
     const { error: updateError } = await admin.from("doku_payment_attempts").update({ checkout_url: checkoutUrl }).eq("id", attempt.id);
     if (updateError) throw updateError;
-    return reply(200, { checkout_url: checkoutUrl });
+    return reply(200, { checkout_url: checkoutUrl, invoice_number: invoice, amount: remaining });
   } catch { return reply(500, { error: "Tagihan DOKU belum dapat dibuat. Silakan coba lagi atau hubungi admin." }); }
 });
