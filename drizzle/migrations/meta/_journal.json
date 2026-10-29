@@ -78,6 +78,13 @@
       "when": 1792632121230,
       "tag": "0010_harden_doku_settlement",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793248889662,
+      "tag": "0011_pos_doku_payment_timers_rpc",
+      "breakpoints": true
     }
   ]
 }
