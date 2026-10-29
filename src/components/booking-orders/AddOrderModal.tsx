@@ -2374,3 +2374,27 @@ function PosHeaderName({ name, actionsRef }: { name: string; actionsRef: React.R
     </>
   );
 }
+
+// Timer hitung mundur pembayaran QRIS DOKU pada kartu daftar transaksi.
+// Muncul hanya selama QR masih berlaku (60 menit sejak dibuat); hilang setelah kedaluwarsa.
+function PosDokuPaymentTimer({ since }: { since: string }) {
+  const [left, setLeft] = useState(() => DOKU_QR_TTL_MS - (Date.now() - new Date(since).getTime()));
+
+  useEffect(() => {
+    const start = new Date(since).getTime();
+    const tick = () => setLeft(DOKU_QR_TTL_MS - (Date.now() - start));
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [since]);
+
+  if (left <= 0) return null;
+  return (
+    <span className="flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-sm font-bold tabular-nums text-amber-700" role="status">
+      <Timer className="h-4 w-4" />Sisa bayar {formatDokuQrCountdown(left)}
+    </span>
+  );
+}
+    </>
+  );
+}
