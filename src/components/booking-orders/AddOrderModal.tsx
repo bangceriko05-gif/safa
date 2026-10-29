@@ -823,7 +823,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       return;
     }
     setSaving(true);
-    if (selectedDokuGroup) setDokuCheckout({ orderId: "", url: null, error: null });
+    if (selectedDokuGroup) setDokuCheckout({ orderId: "", url: null, error: null, invoiceNumber: null, amount: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const discountNote =
