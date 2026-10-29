@@ -3,12 +3,14 @@ import { CheckCircle2, ExternalLink, Loader2, QrCode, RefreshCw, Timer } from "l
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { DOKU_QR_TTL_MS, dokuBrandingCrop, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
+import { DOKU_IFRAME_MAX_WIDTH, DOKU_QR_TTL_MS, dokuBrandingCrop, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 
 export interface DokuCheckoutState {
   orderId: string;
   url: string | null;
   error: string | null;
+  invoiceNumber: string | null;
+  amount: number | null;
 }
 
 interface Props {
@@ -28,13 +30,15 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
   const [crop, setCrop] = useState(() => dokuBrandingCrop(768));
   const [left, setLeft] = useState(DOKU_QR_TTL_MS);
 
-  // Zona branding DOKU (bar hitung mundur, pemilih bahasa, logo & nama outlet) dipotong
-  // agar kasir langsung melihat QRIS. Tingginya berubah menurut lebar panel.
+  // Zona branding DOKU (bar hitung mundur, pemilih bahasa, logo & nama outlet) dan kartu
+  // Order Summary dipotong agar kasir langsung melihat QRIS; ringkasan pesanan ditampilkan
+  // ANKA sendiri di bawah QR. Tinggi potongan berubah menurut lebar iframe (maks 700px
+  // supaya halaman DOKU selalu memakai tata letak satu kolom).
   useEffect(() => {
     if (!checkout.url) return;
     const box = boxRef.current;
     if (!box) return;
-    const apply = () => setCrop(dokuBrandingCrop(box.clientWidth));
+    const apply = () => setCrop(dokuBrandingCrop(Math.min(box.clientWidth, DOKU_IFRAME_MAX_WIDTH)));
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(box);
@@ -106,13 +110,27 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
               key={reload}
               src={checkout.url}
               title="Pembayaran QRIS DOKU"
-              className="absolute inset-x-0 top-0 w-full border-0 bg-background"
-              style={{ height: `calc(100% + ${crop}px)`, transform: `translateY(-${crop}px)` }}
+              className="absolute inset-x-0 top-0 mx-auto border-0 bg-background"
+              style={{ width: `min(100%, ${DOKU_IFRAME_MAX_WIDTH}px)`, height: `calc(100% + ${crop}px)`, transform: `translateY(-${crop}px)` }}
               onLoad={() => setLoaded(true)}
               allow="payment"
               referrerPolicy="no-referrer"
             />
           </div>
+          {(checkout.invoiceNumber || checkout.amount != null) && (
+            <div className="shrink-0 border-t bg-muted/30 px-4 py-3" aria-label="Ringkasan pesanan">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ringkasan Pesanan</p>
+              {checkout.invoiceNumber && (
+                <p className="mt-1 break-all text-xs text-muted-foreground">Nomor Invoice: <span className="font-medium text-foreground">{checkout.invoiceNumber}</span></p>
+              )}
+              {checkout.amount != null && (
+                <p className="mt-1 text-xs text-muted-foreground">Total Pembayaran</p>
+              )}
+              {checkout.amount != null && (
+                <p className="text-lg font-bold tabular-nums text-foreground">Rp {checkout.amount.toLocaleString("id-ID")}</p>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <div className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-muted-foreground" role="status"><Loader2 className="h-5 w-5 animate-spin" />Menyiapkan tagihan DOKU…</div>

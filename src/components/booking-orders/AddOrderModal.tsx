@@ -786,18 +786,18 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const openDokuCheckout = async (orderId: string, method: string, renew = false) => {
     const group = dokuGroupForMethod(method);
     if (!group) return;
-    setDokuCheckout({ orderId, url: null, error: null });
+    setDokuCheckout({ orderId, url: null, error: null, invoiceNumber: null, amount: null });
     try {
       const { data, error } = await supabase.functions.invoke("doku-checkout", {
         body: { order_id: orderId, channels: enabledDokuCodes(group, dokuChannels), ...(renew ? { renew: true } : {}) },
       });
       if (error || !isVerifiedDokuCheckoutUrl(data?.checkout_url)) {
-        setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas.") });
+        setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas."), invoiceNumber: null, amount: null });
       } else {
-        setDokuCheckout({ orderId, url: data.checkout_url, error: null });
+        setDokuCheckout({ orderId, url: data.checkout_url, error: null, invoiceNumber: typeof data.invoice_number === "string" ? data.invoice_number : null, amount: Number.isFinite(Number(data.amount)) ? Number(data.amount) : null });
       }
     } catch {
-      setDokuCheckout({ orderId, url: null, error: "Halaman pembayaran belum dapat dibuka. Transaksi tersimpan; silakan coba lagi." });
+      setDokuCheckout({ orderId, url: null, error: "Halaman pembayaran belum dapat dibuka. Transaksi tersimpan; silakan coba lagi.", invoiceNumber: null, amount: null });
     }
   };
 
@@ -823,7 +823,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       return;
     }
     setSaving(true);
-    if (selectedDokuGroup) setDokuCheckout({ orderId: "", url: null, error: null });
+    if (selectedDokuGroup) setDokuCheckout({ orderId: "", url: null, error: null, invoiceNumber: null, amount: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const discountNote =
