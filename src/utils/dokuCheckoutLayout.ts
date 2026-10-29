@@ -4,16 +4,21 @@
 // ANKA sendiri di bawah QR — jadi panel POS memotong semuanya dan langsung
 // menampilkan bagian "Scan QR Code to Pay".
 //
+// Lebar iframe dibatasi 700px (DOKU_IFRAME_MAX_WIDTH) agar halaman DOKU selalu
+// memakai tata letak satu kolom; pada tata letak dua kolom kartu Order Summary
+// berdiri di samping QR dan tidak bisa disembunyikan hanya dengan potongan atas.
+//
 // Nilai di bawah diukur langsung dari halaman DOKU (checkout-link-v2 v1.6.112):
 // potongannya adalah tepat titik bagian "Scan QR Code to Pay" mulai, sehingga
 // branding dan Order Summary hilang tanpa memotong QR. Bila DOKU mengubah tata
 // letak halamannya, cukup perbarui angka di sini.
+export const DOKU_IFRAME_MAX_WIDTH = 700;
+
 export function dokuBrandingCrop(width: number): number {
-  if (!Number.isFinite(width) || width <= 0) return 590;
-  if (width <= 420) return 640;
-  if (width <= 768) return 600;
-  if (width <= 992) return 575;
-  return 590;
+  if (!Number.isFinite(width) || width <= 0) return 485;
+  if (width <= 420) return 545;
+  if (width <= 520) return 510;
+  return 485;
 }
 
 // QRIS DOKU berlaku 60 menit (payment_due_date: 60) sebelum tagihan diganti.
