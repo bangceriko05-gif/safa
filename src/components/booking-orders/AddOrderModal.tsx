@@ -2395,6 +2395,3 @@ function PosDokuPaymentTimer({ since }: { since: string }) {
     </span>
   );
 }
-    </>
-  );
-}
