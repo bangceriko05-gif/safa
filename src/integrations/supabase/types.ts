@@ -4011,6 +4011,13 @@ export type Database = {
           email_payment_received: boolean
         }[]
       }
+      get_pos_doku_payment_timers: {
+        Args: { p_order_ids: string[] }
+        Returns: {
+          created_at: string
+          order_id: string
+        }[]
+      }
       get_public_shop_catalog: {
         Args: never
         Returns: {
