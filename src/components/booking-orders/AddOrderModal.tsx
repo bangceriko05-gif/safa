@@ -226,6 +226,19 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       rows = rows.map((o) => (synced.has(o.id) ? { ...o, process_status: "selesai" } : o));
     }
 
+    // Ambil QR DOKU yang masih menunggu pembayaran agar kartu transaksi menampilkan timer.
+    try {
+      const ids = rows.map((row) => row.id);
+      if (ids.length > 0) {
+        const { data: timers } = await supabase.rpc("get_pos_doku_payment_timers", { p_order_ids: ids });
+        setDokuTimers(Object.fromEntries(((timers as any[]) || []).map((t) => [t.order_id, t.created_at])));
+      } else {
+        setDokuTimers({});
+      }
+    } catch {
+      setDokuTimers({});
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const drafts = user ? readPosOrderDrafts(localStorage, currentStore.id, user.id) : [];
