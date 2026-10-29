@@ -9,6 +9,8 @@ export interface DokuCheckoutState {
   orderId: string;
   url: string | null;
   error: string | null;
+  invoiceNumber: string | null;
+  amount: number | null;
 }
 
 interface Props {
