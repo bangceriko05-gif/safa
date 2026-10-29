@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink, Copy, Check, X, Package } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, Search, User, Printer, MessageCircle, GripVertical, Settings2, ClipboardList, Globe, ExternalLink, Copy, Check, X, Package, Timer } from "lucide-react";
 import { toast } from "sonner";
 import PaymentProofUpload from "@/components/PaymentProofUpload";
 import DiscountDialog from "@/components/purchase/DiscountDialog";
@@ -22,6 +22,7 @@ import DokuCheckoutPanel, { type DokuCheckoutState } from "./DokuCheckoutPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
+import { DOKU_QR_TTL_MS, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
@@ -133,6 +134,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txTab, setTxTab] = useState<"draft" | "selesai" | "online">("draft");
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
+  // order_id -> waktu pembuatan QR DOKU yang masih berjalan (untuk timer di kartu transaksi)
+  const [dokuTimers, setDokuTimers] = useState<Record<string, string>>({});
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
   // Filter tanggal daftar transaksi
   const [txDateFilter, setTxDateFilter] = useState<"semua" | "hari_ini" | "kemarin" | "7_hari" | "bulan_ini" | "bulan_lalu" | "custom">("semua");
