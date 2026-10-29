@@ -1415,8 +1415,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                             {its.map((it: any) => `${it.product_name} x${it.quantity}`).join(", ")}
                           </div>
                         )}
-                        <div className="flex justify-between items-center font-black pt-2 border-t text-lg text-black">
+                        <div className="flex justify-between items-center gap-2 font-black pt-2 border-t text-lg text-black">
                           <span>Total</span>
+                          {dokuTimers[o.id] && <PosDokuPaymentTimer since={dokuTimers[o.id]} />}
                           <span>{fmt(Number(o.total_amount) || 0)}</span>
                         </div>
                       </button>
