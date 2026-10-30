@@ -23,6 +23,14 @@ export function enabledDokuCodes(group: DokuMethodGroup, enabled: string[]): str
   return group.codes.filter((code) => enabled.includes(code));
 }
 
+export function bookingPaymentMethods(manualMethods: string[], dokuEnabled: boolean, channels: string[]): string[] {
+  const manual = manualMethods.filter((name) => !dokuGroupForMethod(name));
+  const doku = dokuEnabled
+    ? DOKU_METHOD_GROUPS.filter((group) => enabledDokuCodes(group, channels).length > 0).map((group) => group.name)
+    : [];
+  return [...new Set([...manual, ...doku])];
+}
+
 export function opensDokuOnSelection(method: string): boolean {
   return method === "QRIS DOKU";
 }

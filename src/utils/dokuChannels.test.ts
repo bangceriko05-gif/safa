@@ -1,7 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { DOKU_METHOD_GROUPS, dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "./dokuChannels";
+import { DOKU_METHOD_GROUPS, dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl, bookingPaymentMethods } from "./dokuChannels";
 
 describe("DOKU channel groups", () => {
+  test("booking hanya menawarkan QRIS DOKU jika hanya QRIS diaktifkan", () => {
+    expect(bookingPaymentMethods(["Cash", "Virtual Account DOKU"], true, ["QRIS"]))
+      .toEqual(["Cash", "QRIS DOKU"]);
+  });
+  test("booking menawarkan Virtual Account saat bank diaktifkan bersama QRIS", () => {
+    expect(bookingPaymentMethods(["Cash"], true, ["QRIS", "VIRTUAL_ACCOUNT_BCA"]))
+      .toEqual(["Cash", "Virtual Account DOKU", "QRIS DOKU"]);
+  });
+  test("booking tidak menawarkan DOKU jika koneksi outlet nonaktif", () => {
+    expect(bookingPaymentMethods(["Cash", "QRIS DOKU"], false, ["QRIS"]))
+      .toEqual(["Cash"]);
+  });
+  test("booking tanpa channel aktif tidak menawarkan metode DOKU", () => {
+    expect(bookingPaymentMethods(["Cash"], true, [])) .toEqual(["Cash"]);
+  });
+  test("pilihan booking outlet baru tidak membawa channel outlet sebelumnya", () => {
+    expect(bookingPaymentMethods(["Cash"], true, ["QRIS"])).toContain("QRIS DOKU");
+    expect(bookingPaymentMethods(["Cash"], true, ["VIRTUAL_ACCOUNT_BNI"]))
+      .toEqual(["Cash", "Virtual Account DOKU"]);
+  });
   test("hanya channel yang diaktifkan outlet yang dipakai untuk satu metode", () => {
     const va = dokuGroupForMethod("Virtual Account DOKU");
     if (!va) throw new Error("Missing VA group");

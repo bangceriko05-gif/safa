@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Tambahkan pilihan pembayaran DOKU di Tambah Booking hanya sesuai channel aktif outlet; 11 tes lulus, pilihan utama/kedua diuji dengan akun aktif untuk QRIS saja, QRIS bersama Virtual Account, dan DOKU nonaktif menggunakan simulasi pengaturan tanpa menyimpan booking.
+
 - [x] Samakan durasi, tanggal keluar, dan total nota dengan detail booking BO-STR-20261023-032; 5 tes lulus dan nota asli 4 BID teruji, termasuk tarif bulanan, harian, dan varian jam dalam kalender PMS, tanpa mengubah transaksi tersimpan.
 
 - [x] Tampilkan halaman pembayaran QRIS DOKU langsung di panel kanan saat metode dipilih, dengan muat ulang, cek status, dan buka di tab baru; 6 tes lulus, alur akun aktif diuji memakai respons pembayaran simulasi tanpa menulis transaksi sungguhan.

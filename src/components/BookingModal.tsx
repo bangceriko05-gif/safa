@@ -2,6 +2,8 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchGroupBilling, billingOwner, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { useQuery } from "@tanstack/react-query";
+import { bookingPaymentMethods } from "@/utils/dokuChannels";
 import {
   Dialog,
   DialogContent,
@@ -122,6 +124,23 @@ export default function BookingModal({
   const { currentStore } = useStore();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const { activeMethodNames: paymentMethodOptions } = usePaymentMethods();
+  const { data: dokuSettings, error: dokuSettingsError } = useQuery({
+    queryKey: ["booking-doku-methods", currentStore?.id],
+    enabled: isOpen && Boolean(currentStore?.id),
+    staleTime: 0,
+    queryFn: async () => {
+      if (!currentStore?.id) return null;
+      const { data, error } = await supabase.from("website_payment_settings")
+        .select("doku_enabled,doku_channels").eq("store_id", currentStore.id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  useEffect(() => {
+    if (isOpen && dokuSettingsError) {
+      toast.error("Pilihan pembayaran DOKU belum dapat dimuat. Tutup formulir lalu buka kembali.");
+    }
+  }, [isOpen, dokuSettingsError]);
   const [loading, setLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -344,9 +363,10 @@ export default function BookingModal({
   // saved method is missing from the item list, which silently dirtied the
   // edit form. Keep the saved method selectable and ignore empty selections.
   const paymentMethodSelectOptions = [...new Set([
-    ...paymentMethodOptions,
-    ...(formData.payment_method ? [formData.payment_method] : []),
-    ...(formData.payment_method_2 ? [formData.payment_method_2] : []),
+    ...bookingPaymentMethods(paymentMethodOptions, !dokuSettingsError && dokuSettings?.doku_enabled === true,
+      Array.isArray(dokuSettings?.doku_channels) ? dokuSettings.doku_channels.filter((value): value is string => typeof value === "string") : []),
+    ...(editingBooking && formData.payment_method ? [formData.payment_method] : []),
+    ...(editingBooking && formData.payment_method_2 ? [formData.payment_method_2] : []),
   ])];
 
 
@@ -3355,7 +3375,7 @@ export default function BookingModal({
               }}
               required
             >
-              <SelectTrigger>
+              <SelectTrigger id="payment_method">
                 <SelectValue placeholder="Pilih metode pembayaran" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
@@ -3464,7 +3484,7 @@ export default function BookingModal({
                   }}
                   required={formData.dual_payment}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="payment_method_2">
                     <SelectValue placeholder="Pilih metode pembayaran kedua *" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
