@@ -24,15 +24,18 @@ Deno.serve(async (req) => {
     const parsed = notification.safeParse(JSON.parse(raw));
     if (!parsed.success) return reply(400, "Data notifikasi pembayaran tidak lengkap.");
     const admin = dokuAdmin();
-    const { data: attempt, error } = await admin.from("doku_payment_attempts").select("id,store_id,amount,client_id,environment,status").eq("invoice_number", parsed.data.order.invoice_number).maybeSingle();
+    const { data: orderAttempt, error } = await admin.from("doku_payment_attempts").select("id,store_id,amount,client_id,environment,status").eq("invoice_number", parsed.data.order.invoice_number).maybeSingle();
     if (error) throw error;
+    const { data: bookingAttempt, error: bookingError } = orderAttempt ? { data: null, error: null } : await admin.from("doku_booking_attempts").select("id,store_id,amount,client_id,environment,status").eq("invoice_number", parsed.data.order.invoice_number).maybeSingle();
+    if (bookingError) throw bookingError;
+    const attempt = orderAttempt || bookingAttempt;
     if (!attempt || attempt.client_id !== clientId || Number(attempt.amount) !== parsed.data.order.amount) return reply(400, "Tagihan atau nominal pembayaran tidak sesuai.");
     const credentials = await dokuCredentials(attempt.store_id, attempt.environment);
     if (!credentials || credentials.clientId !== clientId) return reply(401, "Notifikasi pembayaran tidak dapat diverifikasi.");
     const expected = await dokuSignature(credentials.secret, clientId, requestId, timestamp, "/functions/v1/doku-webhook", raw);
     if (!signaturesEqual(expected, signature)) return reply(401, "Notifikasi pembayaran tidak dapat diverifikasi.");
     if (parsed.data.transaction.status === "SUCCESS") {
-      const { error: settleError } = await admin.rpc("settle_doku_order", { p_attempt_id: attempt.id, p_amount: parsed.data.order.amount, p_channel: parsed.data.channel?.id || "Checkout" });
+      const { error: settleError } = await admin.rpc(bookingAttempt ? "settle_doku_booking" : "settle_doku_order", { p_attempt_id: attempt.id, p_amount: parsed.data.order.amount, p_channel: parsed.data.channel?.id || "Checkout" });
       if (settleError) throw settleError;
     }
     // Only SUCCESS changes financial state. Failed channel attempts can be retried on the same invoice.

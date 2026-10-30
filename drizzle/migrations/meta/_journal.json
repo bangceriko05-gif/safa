@@ -85,6 +85,13 @@
       "when": 1793248889662,
       "tag": "0011_pos_doku_payment_timers_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793330811346,
+      "tag": "0012_booking_doku_payments",
+      "breakpoints": true
     }
   ]
 }

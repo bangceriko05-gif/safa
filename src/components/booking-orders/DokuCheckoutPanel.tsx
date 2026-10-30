@@ -19,9 +19,10 @@ interface Props {
   saving: boolean;
   onRetry: () => void;
   onRenew: () => void;
+  booking?: boolean;
 }
 
-export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, onRenew }: Props) {
+export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, onRenew, booking = false }: Props) {
   const [reload, setReload] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -56,7 +57,7 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
 
   const checkPayment = async (notify = false) => {
     setChecking(true);
-    const { data, error } = await supabase.from("booking_orders")
+    const { data, error } = await supabase.from(booking ? "bookings" : "booking_orders")
       .select("payment_status").eq("id", checkout.orderId).eq("store_id", storeId).maybeSingle();
     setChecking(false);
     if (error || !data) {
@@ -74,7 +75,7 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
     const timer = window.setInterval(() => { void checkPayment(); }, 5000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkout.orderId, storeId, paid]);
+  }, [checkout.orderId, storeId, paid, booking]);
 
   // QR DOKU kedaluwarsa setelah 60 menit: buat invoice & QR baru otomatis.
   useEffect(() => {

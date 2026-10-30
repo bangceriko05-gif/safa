@@ -1156,6 +1156,69 @@ export type Database = {
         }
         Relationships: []
       }
+      doku_booking_attempts: {
+        Row: {
+          amount: number
+          booking_id: string
+          channel: string | null
+          checkout_url: string | null
+          client_id: string
+          created_at: string
+          environment: string
+          id: string
+          invoice_number: string
+          paid_at: string | null
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          channel?: string | null
+          checkout_url?: string | null
+          client_id: string
+          created_at?: string
+          environment: string
+          id?: string
+          invoice_number: string
+          paid_at?: string | null
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          channel?: string | null
+          checkout_url?: string | null
+          client_id?: string
+          created_at?: string
+          environment?: string
+          id?: string
+          invoice_number?: string
+          paid_at?: string | null
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doku_booking_attempts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doku_booking_attempts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doku_outlet_credentials: {
         Row: {
           client_id: string
@@ -3959,6 +4022,7 @@ export type Database = {
             Args: { p_request_id: string; p_status?: string; p_user_id: string }
             Returns: string
           }
+      doku_booking_balance: { Args: { p_booking_id: string }; Returns: number }
       extract_factor_from_name: { Args: { p_name: string }; Returns: number }
       generate_asset_bid: { Args: { p_store_id: string }; Returns: string }
       generate_booking_bid:
@@ -4095,6 +4159,10 @@ export type Database = {
           p_store_id: string
         }
         Returns: undefined
+      }
+      settle_doku_booking: {
+        Args: { p_amount: number; p_attempt_id: string; p_channel: string }
+        Returns: boolean
       }
       settle_doku_order: {
         Args: { p_amount: number; p_attempt_id: string; p_channel: string }
