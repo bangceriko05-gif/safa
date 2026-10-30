@@ -5,6 +5,7 @@ import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useQuery } from "@tanstack/react-query";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
 import BookingDokuDialog from "@/components/booking/BookingDokuDialog";
+import { unpaidBookingQris } from "@/utils/bookingDokuPayment";
 import { userFacingError } from "@/utils/userFacingError";
 import {
   Dialog,
@@ -1372,8 +1373,10 @@ export default function BookingModal({
   // Ensure duration is at least 1 for valid bookings
   const finalDuration = duration > 0 ? duration : 1;
 
-  const handleSubmit = async (e: Pick<React.FormEvent, "preventDefault">) => {
+  const bookingFormData = formData;
+  const handleSubmit = async (e: Pick<React.FormEvent, "preventDefault">, selectedPaymentMethod?: string) => {
     e.preventDefault();
+    const formData = selectedPaymentMethod ? { ...bookingFormData, payment_method: selectedPaymentMethod } : bookingFormData;
     if (loading || qrisSaveRef.current || qrisBookingId) return;
     const automaticQris = !editingBooking && formData.payment_method === "QRIS DOKU";
     if (automaticQris && formData.dual_payment) {
@@ -1663,12 +1666,7 @@ export default function BookingModal({
       };
 
       if (automaticQris) {
-        bookingData.price = 0;
-        bookingData.price_2 = null;
-        bookingData.payment_status = "belum_lunas";
-        bookingData.payment_proof_url = null;
-        // OTA room charges must not disappear when received payment is zero.
-        if (formData.booking_type === "ota") bookingData.variant_price_override = calculateRoomSubtotal() / finalDuration;
+        Object.assign(bookingData, unpaidBookingQris(calculateRoomSubtotal(), finalDuration, formData.booking_type === "ota"));
       }
 
       // Only set created_by for NEW bookings, never update it for existing bookings
@@ -3407,7 +3405,12 @@ export default function BookingModal({
               onValueChange={(value) => {
                 if (!value) return;
                 setFormData({ ...formData, payment_method: value });
-                if (value === "QRIS DOKU" && !editingBooking) setBookingQrisOpen(true);
+                if (value === "QRIS DOKU" && !editingBooking) {
+                  setBookingQrisOpen(true);
+                  if (formData.customer_name.trim() && formData.room_id && (formData.variant_id || formData.booking_type === "ota")) {
+                    void handleSubmit({ preventDefault: () => {} }, value);
+                  }
+                }
               }}
               required
             >
