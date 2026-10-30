@@ -4,6 +4,8 @@ import { fetchGroupBilling, billingOwner, billingRoomTotal, type BillingRoom } f
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useQuery } from "@tanstack/react-query";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
+import BookingDokuDialog from "@/components/booking/BookingDokuDialog";
+import { userFacingError } from "@/utils/userFacingError";
 import {
   Dialog,
   DialogContent,
@@ -142,6 +144,12 @@ export default function BookingModal({
     }
   }, [isOpen, dokuSettingsError]);
   const [loading, setLoading] = useState(false);
+  const [bookingQrisOpen, setBookingQrisOpen] = useState(false);
+  const [qrisBookingId, setQrisBookingId] = useState<string | null>(null);
+  const qrisSaveRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) { setBookingQrisOpen(false); setQrisBookingId(null); }
+  }, [isOpen]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [historyLogs, setHistoryLogs] = useState<Array<{ id: string; action_type: string; user_name: string; user_role: string; description: string; created_at: string }>>([]);
@@ -1364,8 +1372,15 @@ export default function BookingModal({
   // Ensure duration is at least 1 for valid bookings
   const finalDuration = duration > 0 ? duration : 1;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: Pick<React.FormEvent, "preventDefault">) => {
     e.preventDefault();
+    if (loading || qrisSaveRef.current || qrisBookingId) return;
+    const automaticQris = !editingBooking && formData.payment_method === "QRIS DOKU";
+    if (automaticQris && formData.dual_payment) {
+      toast.error("Untuk QRIS otomatis, nonaktifkan Dual Payment terlebih dahulu.");
+      return;
+    }
+    qrisSaveRef.current = true;
     setLoading(true);
 
     try {
@@ -1439,7 +1454,7 @@ export default function BookingModal({
       }
 
       // Validate payment proof is uploaded
-      if (!paymentProofUrl) {
+      if (!automaticQris && !paymentProofUrl) {
         toast.error("Bukti bayar wajib diupload");
         setLoading(false);
         return;
@@ -1646,6 +1661,15 @@ export default function BookingModal({
           return totalPaid >= grandTotal && grandTotal > 0 ? "lunas" : "belum_lunas";
         })(),
       };
+
+      if (automaticQris) {
+        bookingData.price = 0;
+        bookingData.price_2 = null;
+        bookingData.payment_status = "belum_lunas";
+        bookingData.payment_proof_url = null;
+        // OTA room charges must not disappear when received payment is zero.
+        if (formData.booking_type === "ota") bookingData.variant_price_override = calculateRoomSubtotal() / finalDuration;
+      }
 
       // Only set created_by for NEW bookings, never update it for existing bookings
       if (!editingBooking) {
@@ -1986,7 +2010,7 @@ export default function BookingModal({
               variant_id: formData.booking_type === "walk_in" ? room.variant_id : null,
               // OTA totals are distributed across all rooms. Walk-in payments
               // remain stored once on the primary row.
-              price: formData.booking_type === "ota"
+              price: automaticQris ? 0 : formData.booking_type === "ota"
                 ? numericPrice(room.price)
                 : (index === 0 ? parseFloat(parsePrice(formData.price)) : 0),
               price_2: index === 0 && formData.dual_payment && formData.price_2
@@ -2002,7 +2026,7 @@ export default function BookingModal({
               discount_type: index === 0 && formData.has_discount ? formData.discount_type : null,
               discount_value: index === 0 && formData.has_discount && formData.discount_value ? parseFloat(formData.discount_value) : 0,
               discount_applies_to: index === 0 && formData.has_discount ? formData.discount_applies_to : null,
-              variant_price_override: formData.booking_type === "walk_in"
+              variant_price_override: automaticQris && formData.booking_type === "ota" ? numericPrice(room.price) / finalDuration : formData.booking_type === "walk_in"
                 ? numericPrice(room.price)
                 : null,
               payment_status: bookingData.payment_status,
@@ -2016,6 +2040,11 @@ export default function BookingModal({
         if (error) throw error;
         const newBooking = createdBookings?.[0];
         if (!newBooking) throw new Error("Booking gagal dibuat");
+        if (automaticQris) {
+          // Lock retries to this saved booking even if follow-on work fails.
+          savedBookingGroupRef.current = bookingGroupId;
+          setQrisBookingId(newBooking.id);
+        }
 
         // Insert products
         if (selectedProducts.length > 0) {
@@ -2108,6 +2137,11 @@ export default function BookingModal({
         }
 
         savedBookingGroupRef.current = bookingGroupId;
+        if (automaticQris) {
+          setBookingQrisOpen(true);
+          window.dispatchEvent(new CustomEvent("booking-changed"));
+          return;
+        }
         toast.success(
           isMultiRoom
             ? `${createdBookings?.length || 0} kamar berhasil dibooking dalam BID ${bookingBid}`
@@ -2160,10 +2194,11 @@ export default function BookingModal({
       // Trigger refresh by dispatching a custom event
       window.dispatchEvent(new CustomEvent("booking-changed"));
     } catch (error: any) {
-      toast.error(error.message || "Terjadi kesalahan");
+      toast.error(userFacingError(error, "Booking belum dapat disimpan. Periksa data lalu coba lagi."));
       console.error(error);
     } finally {
       setLoading(false);
+      qrisSaveRef.current = false;
     }
   };
 
@@ -3372,6 +3407,7 @@ export default function BookingModal({
               onValueChange={(value) => {
                 if (!value) return;
                 setFormData({ ...formData, payment_method: value });
+                if (value === "QRIS DOKU" && !editingBooking) setBookingQrisOpen(true);
               }}
               required
             >
@@ -3387,13 +3423,14 @@ export default function BookingModal({
           </div>
 
           {/* Payment Proof Upload */}
-          <PaymentProofUpload
+          {!(!editingBooking && formData.payment_method === "QRIS DOKU") && <PaymentProofUpload
             value={paymentProofUrl}
             onChange={setPaymentProofUrl}
             required
             disabled={loading}
             label={formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}
-          />
+          />}
+          {!editingBooking && formData.payment_method === "QRIS DOKU" && <Button type="button" variant="outline" onClick={() => setBookingQrisOpen(true)}>Tampilkan pembayaran QRIS</Button>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -3717,7 +3754,7 @@ export default function BookingModal({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={deleting}>
               Batal
             </Button>
-            <Button type="submit" disabled={loading || deleting || (editingBooking && (!editDataLoaded || !isDirty))} className="flex-1">
+            <Button type="submit" disabled={loading || deleting || Boolean(qrisBookingId) || (editingBooking && (!editDataLoaded || !isDirty))} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingBooking ? "Simpan" : "Tambah"}
             </Button>
@@ -3819,6 +3856,15 @@ export default function BookingModal({
           </AlertDialogContent>
         </AlertDialog>
 
+        {currentStore && <BookingDokuDialog open={bookingQrisOpen} storeId={currentStore.id} bookingId={qrisBookingId} preparing={loading}
+          onPrepare={async () => {
+            setBookingQrisOpen(false);
+            await handleSubmit({ preventDefault: () => {} });
+          }}
+          onClose={() => {
+            setBookingQrisOpen(false);
+            if (qrisBookingId) { window.dispatchEvent(new CustomEvent("booking-changed")); onClose(); }
+          }} />}
         <CustomerTypeManager
           open={typeManagerOpen}
           onOpenChange={setTypeManagerOpen}
