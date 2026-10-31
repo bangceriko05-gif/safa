@@ -58,6 +58,25 @@ interface BookingProduct {
   quantity: number;
   product_price: number;
   subtotal: number;
+  product_id?: string | null;
+  free_ppn?: boolean;
+}
+
+/** Tandai item pesanan yang produknya tidak kena PPN, hanya bila PPN pesanan aktif. */
+async function markFreePpn(items: BookingProduct[], taxActive: boolean): Promise<BookingProduct[]> {
+  const ids = Array.from(new Set(items.map((i) => i.product_id).filter(Boolean))) as string[];
+  if (!taxActive || ids.length === 0) return items;
+  const { data: prods } = await supabase.from("products").select("id, tax_enabled").in("id", ids);
+  const { data: vars } = await supabase.from("product_variants").select("id, product_id").in("id", ids);
+  const taxed = new Map<string, boolean>();
+  (prods || []).forEach((p: any) => taxed.set(p.id, !!p.tax_enabled));
+  const missingParents = (vars || []).map((v: any) => v.product_id).filter((id: string) => !taxed.has(id));
+  if (missingParents.length) {
+    const { data: parents } = await supabase.from("products").select("id, tax_enabled").in("id", missingParents);
+    (parents || []).forEach((p: any) => taxed.set(p.id, !!p.tax_enabled));
+  }
+  (vars || []).forEach((v: any) => { if (taxed.has(v.product_id)) taxed.set(v.id, taxed.get(v.product_id)!); });
+  return items.map((i) => (i.product_id && taxed.has(i.product_id) ? { ...i, free_ppn: !taxed.get(i.product_id) } : i));
 }
 
 export default function BookingReceipt() {
@@ -147,14 +166,15 @@ export default function BookingReceipt() {
 
       const { data: oItems } = await supabase
         .from("booking_order_items")
-        .select("product_name, quantity, unit_price, subtotal")
+        .select("product_id, product_name, quantity, unit_price, subtotal")
         .eq("booking_order_id", orderId);
-      setProducts((oItems || []).map((it: any) => ({
+      setProducts(await markFreePpn((oItems || []).map((it: any) => ({
+        product_id: it.product_id,
         product_name: it.product_name,
         quantity: Number(it.quantity),
         product_price: Number(it.unit_price),
         subtotal: Number(it.subtotal),
-      })));
+      })), Number((ord as any).tax_rate || 0) > 0));
 
       setOrderOnlyMode(true);
       if (ord.bid) setOverrideBid(ord.bid);
@@ -289,6 +309,7 @@ export default function BookingReceipt() {
       setSharedBilling(shared);
       let mergedProducts = (shared?.products || productsData || []) as BookingProduct[];
 
+      let orderTaxActive = false;
       if (orderId) {
         // Order-only receipt: replace products with this order's items
         const { data: ord } = await supabase
@@ -298,9 +319,11 @@ export default function BookingReceipt() {
           .maybeSingle();
         const { data: oItems } = await supabase
           .from("booking_order_items")
-          .select("product_name, quantity, unit_price, subtotal")
+          .select("product_id, product_name, quantity, unit_price, subtotal")
           .eq("booking_order_id", orderId);
+        orderTaxActive = Number((ord as any)?.tax_rate || 0) > 0;
         mergedProducts = (oItems || []).map((it: any) => ({
+          product_id: it.product_id,
           product_name: it.product_name,
           quantity: Number(it.quantity),
           product_price: Number(it.unit_price),
@@ -332,12 +355,13 @@ export default function BookingReceipt() {
         if (ordIds.length > 0) {
           const { data: oItems } = await supabase
             .from("booking_order_items")
-            .select("product_name, quantity, unit_price, subtotal")
+            .select("product_id, product_name, quantity, unit_price, subtotal")
             .in("booking_order_id", ordIds);
           combinedItemsSub = (oItems || []).reduce((s: number, it: any) => s + Number(it.subtotal || 0), 0);
           mergedProducts = [
             ...mergedProducts,
             ...(oItems || []).map((it: any) => ({
+              product_id: it.product_id,
               product_name: it.product_name,
               quantity: Number(it.quantity),
               product_price: Number(it.unit_price),
@@ -345,6 +369,7 @@ export default function BookingReceipt() {
             })),
           ];
         }
+        orderTaxActive = (ords || []).some((o: any) => Number(o.tax_rate || 0) > 0);
         const extraTotal = (ords || []).reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
         const extraPaid = (ords || []).reduce(
           (s: number, o: any) => s + Number(o.amount || 0) + (o.dual_payment ? Number(o.amount_2 || 0) : 0),
@@ -361,7 +386,7 @@ export default function BookingReceipt() {
         setOrderOther(b.other);
       }
 
-      setProducts(mergedProducts);
+      setProducts(await markFreePpn(mergedProducts, orderTaxActive));
 
       // Fetch active deposit for the room
       if (bookingData.room_id) {
@@ -686,7 +711,12 @@ export default function BookingReceipt() {
             <>
               {products.map((product, index) => (
                 <div key={index} className="flex justify-between">
-                  <span>{product.product_name} x{product.quantity}</span>
+                  <span>
+                    {product.product_name} x{product.quantity}
+                    {product.free_ppn && (
+                      <span className="block text-[10px] leading-tight text-gray-500">(free ppn)</span>
+                    )}
+                  </span>
                   <span>{formatCurrency(product.subtotal)}</span>
                 </div>
               ))}
