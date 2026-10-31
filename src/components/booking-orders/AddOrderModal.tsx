@@ -692,6 +692,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     };
   }, [items, products, variants, storeTax, txDiscountAmount]);
 
+  // Produk tanpa PPN diberi label kecil "(free ppn)" selama PPN outlet aktif.
+  const isFreePpnItem = (productId: string | null | undefined) => {
+    if (!storeTax.enabled || !storeTax.rate || !productId) return false;
+    let prod = products.find((p) => p.id === productId);
+    if (!prod) {
+      const v = variants.find((x) => x.id === productId);
+      if (v) prod = products.find((p) => p.id === v.product_id);
+    }
+    return !!prod && !prod.tax_enabled;
+  };
+
   const serviceChargeAmount = useMemo(
     () =>
       computeServiceCharge(netAfterDiscount, {
@@ -1530,6 +1541,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                       <div key={ix} className="grid grid-cols-[1fr_88px_90px] gap-2 px-3 py-2 text-xs items-center">
                         <div className="min-w-0">
                           <div className="font-medium truncate leading-tight">{it.product_name}</div>
+                          {isFreePpnItem(it.product_id) && (
+                            <div className="text-[10px] text-muted-foreground leading-tight">(free ppn)</div>
+                          )}
                           {it.notes && (
                             <div className="text-[10px] text-muted-foreground italic truncate mt-0.5" title={it.notes}>
                               “{it.notes}”
@@ -2221,6 +2235,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                     return (
                       <div key={i}>
                         <div className="truncate">{it.product_name}</div>
+                        {isFreePpnItem(it.product_id) && (
+                          <div className="text-[10px] text-muted-foreground leading-tight">(free ppn)</div>
+                        )}
                         <div className="flex justify-between">
                           <span>{it.quantity} x {fmt(it.unit_price)}</span>
                           <span>{fmt(sub)}</span>
