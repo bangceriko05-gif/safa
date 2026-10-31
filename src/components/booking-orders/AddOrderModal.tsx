@@ -20,6 +20,7 @@ import CustomerNameInput from "@/components/customers/CustomerNameInput";
 import PosPaymentPanel from "./PosPaymentPanel";
 import DokuCheckoutPanel, { type DokuCheckoutState } from "./DokuCheckoutPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
+import { computeServiceCharge, posOrderTotal, stripAutoOrderNotes } from "@/utils/posOrderCharges";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
 import { DOKU_QR_TTL_MS, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
@@ -594,7 +595,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setAmount(Number(activeOrder.amount) || 0);
       setAmount2(Number(activeOrder.amount_2) || 0);
       setProofUrl(activeOrder.payment_proof_urls?.[0] || null);
-      setNote(activeOrder.note || "");
+      setNote(stripAutoOrderNotes(activeOrder.note));
       if (activeOrder.customer_name) setManualCustomerName(activeOrder.customer_name);
       if (isLocalPosDraft(activeOrder)) {
         setItems(activeOrder.items || []);
@@ -691,15 +692,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     };
   }, [items, products, variants, storeTax, txDiscountAmount]);
 
-  const serviceChargeAmount = useMemo(() => {
-    if (!posSettings.service_charge_enabled || !applyServiceCharge) return 0;
-    if (posSettings.service_charge_type === "percent") {
-      const base = netAfterDiscount + taxSummary.excludeTax;
-      return Math.round((base * posSettings.service_charge_value) / 100);
-    }
-    return Math.max(0, posSettings.service_charge_value);
-  }, [posSettings, netAfterDiscount, applyServiceCharge, taxSummary.excludeTax]);
-  const total = netAfterDiscount + taxSummary.excludeTax + serviceChargeAmount;
+  const serviceChargeAmount = useMemo(
+    () =>
+      computeServiceCharge(netAfterDiscount, {
+        enabled: posSettings.service_charge_enabled,
+        apply: applyServiceCharge,
+        type: posSettings.service_charge_type,
+        value: posSettings.service_charge_value,
+      }),
+    [posSettings, netAfterDiscount, applyServiceCharge],
+  );
+  const total = posOrderTotal(netAfterDiscount, taxSummary.excludeTax, serviceChargeAmount);
   const totalPaid = amount + (dualPayment ? amount2 : 0);
   const paymentStatus = totalPaid >= total && total > 0 ? "lunas" : "belum_lunas";
   // Metode DOKU aktif hanya di POS; pembayaran diselesaikan lewat halaman DOKU.
@@ -1185,9 +1188,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 </label>
                 <span className={`font-semibold ${applyServiceCharge ? "" : "text-muted-foreground line-through"}`}>
                   + {fmt(
-                    posSettings.service_charge_type === "percent"
-                      ? Math.round((netAfterDiscount * posSettings.service_charge_value) / 100)
-                      : Math.max(0, posSettings.service_charge_value)
+                    computeServiceCharge(netAfterDiscount, {
+                      enabled: true,
+                      apply: true,
+                      type: posSettings.service_charge_type,
+                      value: posSettings.service_charge_value,
+                    })
                   )}
                 </span>
               </div>
