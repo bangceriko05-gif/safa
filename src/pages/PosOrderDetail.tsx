@@ -346,12 +346,21 @@ export default function PosOrderDetail() {
   const recomputeOrderTotal = async (nextItems: OrderItem[], overrides: Record<string, number> = {}) => {
     const sub = nextItems.reduce((s, it) => s + Number(it.subtotal || 0), 0);
     const tax = Number(overrides.tax_amount ?? order?.tax_amount ?? 0);
-    const svc = Number(overrides.service_charge ?? order?.service_charge ?? 0);
+    let svc = Number(overrides.service_charge ?? order?.service_charge ?? 0);
+    // Service charge persen mengikuti subtotal terbaru saat item berubah.
+    const svcPct = (order as any)?.service_charge_type === "percent" ? Number((order as any)?.service_charge_value || 0) : 0;
+    const svcRecomputed = overrides.service_charge === undefined && svc > 0 && svcPct > 0;
+    if (svcRecomputed) {
+      svc = computeServiceCharge(sub, { enabled: true, apply: true, type: "percent", value: svcPct });
+    }
     const ship = Number(overrides.shipping_amount ?? (order as any)?.shipping_amount ?? 0);
     const admin = Number(overrides.admin_fee ?? (order as any)?.admin_fee ?? 0);
     const round = Number(overrides.rounding ?? (order as any)?.rounding ?? 0);
     const total = sub + tax + svc + ship + admin + round;
-    await supabase.from("booking_orders").update({ total_amount: total } as any).eq("id", id!);
+    await supabase
+      .from("booking_orders")
+      .update({ total_amount: total, ...(svcRecomputed ? { service_charge: svc } : {}) } as any)
+      .eq("id", id!);
   };
 
   const saveItemEdit = async (patch: { quantity: number; unit_price: number; discount: number; discount_mode: "rp" | "pct"; discount_value: number }) => {
