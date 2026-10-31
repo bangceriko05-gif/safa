@@ -1,4 +1,5 @@
 import { fetchGroupBilling, billingRoomTotal } from "@/utils/groupBookingBilling";
+import { receiptOrderBreakdown, stripAutoOrderNotes } from "@/utils/posOrderCharges";
 import { bookingReceiptStay } from "@/utils/bookingReceiptStay";
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -78,6 +79,8 @@ export default function BookingReceipt() {
   const [orderExtraPaid, setOrderExtraPaid] = useState(0);
   const [orderServiceCharge, setOrderServiceCharge] = useState(0);
   const [orderServiceChargeInfo, setOrderServiceChargeInfo] = useState<{ type: string | null; value: number | null } | null>(null);
+  const [orderTax, setOrderTax] = useState<{ amount: number; rate: number | null }>({ amount: 0, rate: null });
+  const [orderOther, setOrderOther] = useState(0);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -162,6 +165,12 @@ export default function BookingReceipt() {
         type: (ord as any).service_charge_type || null,
         value: (ord as any).service_charge_value ?? null,
       });
+      {
+        const itemsSub = (oItems || []).reduce((s: number, it: any) => s + Number(it.subtotal || 0), 0);
+        const b = receiptOrderBreakdown([ord as any], itemsSub);
+        setOrderTax({ amount: b.tax, rate: (ord as any).tax_rate ?? null });
+        setOrderOther(b.other);
+      }
 
       // Synthesize a minimal booking object so the render path works
       setBooking({
@@ -180,7 +189,7 @@ export default function BookingReceipt() {
         reference_no_2: undefined,
         dual_payment: false,
         price_2: ord.dual_payment ? Number(ord.amount_2 || 0) : 0,
-        note: ord.note || undefined,
+        note: stripAutoOrderNotes(ord.note) || undefined,
         status: undefined,
         payment_status: ord.payment_status || undefined,
         created_at: ord.created_at as any,
@@ -284,7 +293,7 @@ export default function BookingReceipt() {
         // Order-only receipt: replace products with this order's items
         const { data: ord } = await supabase
           .from("booking_orders")
-          .select("id, bid, total_amount, amount, amount_2, dual_payment, service_charge, service_charge_type, service_charge_value")
+          .select("id, bid, total_amount, amount, amount_2, dual_payment, service_charge, service_charge_type, service_charge_value, tax_amount, tax_rate")
           .eq("id", orderId)
           .maybeSingle();
         const { data: oItems } = await supabase
@@ -306,18 +315,26 @@ export default function BookingReceipt() {
           type: (ord as any)?.service_charge_type || null,
           value: (ord as any)?.service_charge_value ?? null,
         });
+        {
+          const itemsSub = (oItems || []).reduce((s: number, it: any) => s + Number(it.subtotal || 0), 0);
+          const b = receiptOrderBreakdown(ord ? [ord as any] : [], itemsSub);
+          setOrderTax({ amount: b.tax, rate: (ord as any)?.tax_rate ?? null });
+          setOrderOther(b.other);
+        }
       } else if (combined) {
         // Combined: include all orders' items
         const { data: ords } = await supabase
           .from("booking_orders")
-          .select("id, total_amount, amount, amount_2, dual_payment, service_charge")
+          .select("id, total_amount, amount, amount_2, dual_payment, service_charge, tax_amount, tax_rate")
           .eq("booking_id", bookingId);
         const ordIds = (ords || []).map((o: any) => o.id);
+        let combinedItemsSub = 0;
         if (ordIds.length > 0) {
           const { data: oItems } = await supabase
             .from("booking_order_items")
             .select("product_name, quantity, unit_price, subtotal")
             .in("booking_order_id", ordIds);
+          combinedItemsSub = (oItems || []).reduce((s: number, it: any) => s + Number(it.subtotal || 0), 0);
           mergedProducts = [
             ...mergedProducts,
             ...(oItems || []).map((it: any) => ({
@@ -338,6 +355,10 @@ export default function BookingReceipt() {
         setOrderServiceCharge(
           (ords || []).reduce((s: number, o: any) => s + Number(o.service_charge || 0), 0)
         );
+        const b = receiptOrderBreakdown((ords || []) as any[], combinedItemsSub);
+        const rates = Array.from(new Set((ords || []).filter((o: any) => Number(o.tax_amount || 0) > 0).map((o: any) => Number(o.tax_rate || 0))));
+        setOrderTax({ amount: b.tax, rate: rates.length === 1 ? rates[0] : null });
+        setOrderOther(b.other);
       }
 
       setProducts(mergedProducts);
@@ -423,8 +444,9 @@ export default function BookingReceipt() {
     const roomSubtotal = getRoomSubtotal();
     const productsTotal = products.reduce((sum, p) => sum + p.subtotal, 0);
     const discount = calculateDiscount();
-    if (orderOnlyMode) return productsTotal;
-    return roomSubtotal + productsTotal - discount;
+    const orderCharges = orderServiceCharge + orderTax.amount + orderOther;
+    if (orderOnlyMode) return productsTotal + orderCharges;
+    return roomSubtotal + productsTotal - discount + orderCharges;
   };
 
   const getStatusLabel = (status: string | null | undefined) => {
@@ -702,6 +724,22 @@ export default function BookingReceipt() {
                   : ""}
               </span>
               <span>{formatCurrency(orderServiceCharge)}</span>
+            </div>
+          )}
+
+          {/* PPN (POS) */}
+          {orderTax.amount > 0 && (
+            <div className="flex justify-between">
+              <span>PPN{orderTax.rate ? ` (${orderTax.rate}%)` : ""}</span>
+              <span>{formatCurrency(orderTax.amount)}</span>
+            </div>
+          )}
+
+          {/* Diskon transaksi / biaya lain pesanan */}
+          {orderOther !== 0 && (
+            <div className={`flex justify-between ${orderOther < 0 ? "text-gray-600" : ""}`}>
+              <span>{orderOther < 0 ? "Diskon Transaksi" : "Biaya Lain"}</span>
+              <span>{orderOther < 0 ? `-${formatCurrency(-orderOther)}` : formatCurrency(orderOther)}</span>
             </div>
           )}
         </div>

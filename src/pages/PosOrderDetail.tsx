@@ -27,6 +27,7 @@ import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/Paymen
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { logActivity } from "@/utils/activityLogger";
+import { computeServiceCharge } from "@/utils/posOrderCharges";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 const money = (n: any) => `Rp ${new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0))}`;
@@ -346,12 +347,21 @@ export default function PosOrderDetail() {
   const recomputeOrderTotal = async (nextItems: OrderItem[], overrides: Record<string, number> = {}) => {
     const sub = nextItems.reduce((s, it) => s + Number(it.subtotal || 0), 0);
     const tax = Number(overrides.tax_amount ?? order?.tax_amount ?? 0);
-    const svc = Number(overrides.service_charge ?? order?.service_charge ?? 0);
+    let svc = Number(overrides.service_charge ?? order?.service_charge ?? 0);
+    // Service charge persen mengikuti subtotal terbaru saat item berubah.
+    const svcPct = (order as any)?.service_charge_type === "percent" ? Number((order as any)?.service_charge_value || 0) : 0;
+    const svcRecomputed = overrides.service_charge === undefined && svc > 0 && svcPct > 0;
+    if (svcRecomputed) {
+      svc = computeServiceCharge(sub, { enabled: true, apply: true, type: "percent", value: svcPct });
+    }
     const ship = Number(overrides.shipping_amount ?? (order as any)?.shipping_amount ?? 0);
     const admin = Number(overrides.admin_fee ?? (order as any)?.admin_fee ?? 0);
     const round = Number(overrides.rounding ?? (order as any)?.rounding ?? 0);
     const total = sub + tax + svc + ship + admin + round;
-    await supabase.from("booking_orders").update({ total_amount: total } as any).eq("id", id!);
+    await supabase
+      .from("booking_orders")
+      .update({ total_amount: total, ...(svcRecomputed ? { service_charge: svc } : {}) } as any)
+      .eq("id", id!);
   };
 
   const saveItemEdit = async (patch: { quantity: number; unit_price: number; discount: number; discount_mode: "rp" | "pct"; discount_value: number }) => {
@@ -755,6 +765,7 @@ export default function PosOrderDetail() {
   const toggleServiceCharge = async () => {
     const currentlyOn = Number(order?.service_charge || 0) > 0;
     let newAmount = 0;
+    let svcMeta: Record<string, any> = { service_charge_type: null, service_charge_value: null };
     if (!currentlyOn) {
       const type = posSettings?.service_charge_type || "percent";
       const val = Number(posSettings?.service_charge_value || 0);
@@ -763,12 +774,13 @@ export default function PosOrderDetail() {
         return;
       }
       const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
-      newAmount = type === "percent" ? Math.round((sub * val) / 100) : Math.round(val);
+      newAmount = computeServiceCharge(sub, { enabled: true, apply: true, type: type === "percent" ? "percent" : "nominal", value: val });
+      svcMeta = { service_charge_type: type, service_charge_value: val };
     }
     const patch = { service_charge: newAmount };
     logPatchDiff(patch);
-    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
-    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    setOrder((prev: any) => (prev ? { ...prev, ...patch, ...svcMeta } : prev));
+    await supabase.from("booking_orders").update({ ...patch, ...svcMeta } as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
     toast.success(newAmount > 0 ? "Service Charge diaktifkan" : "Service Charge dinonaktifkan");
     load({ silent: true });
