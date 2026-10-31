@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+/// <reference types="bun" />
+import { describe, expect, it } from "bun:test";
 import { computeServiceCharge, posOrderTotal, receiptOrderBreakdown, stripAutoOrderNotes } from "./posOrderCharges";
 
 const pct10 = { enabled: true, apply: true, type: "percent" as const, value: 10 };
