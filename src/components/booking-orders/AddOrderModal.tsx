@@ -692,6 +692,17 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     };
   }, [items, products, variants, storeTax, txDiscountAmount]);
 
+  // Produk tanpa PPN diberi label kecil "(free ppn)" selama PPN outlet aktif.
+  const isFreePpnItem = (productId: string | null | undefined) => {
+    if (!storeTax.enabled || !storeTax.rate || !productId) return false;
+    let prod = products.find((p) => p.id === productId);
+    if (!prod) {
+      const v = variants.find((x) => x.id === productId);
+      if (v) prod = products.find((p) => p.id === v.product_id);
+    }
+    return !!prod && !prod.tax_enabled;
+  };
+
   const serviceChargeAmount = useMemo(
     () =>
       computeServiceCharge(netAfterDiscount, {
