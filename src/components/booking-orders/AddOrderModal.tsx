@@ -862,7 +862,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const customerDisplayName = effectiveBooking?.customer_name || manualCustomerName || null;
       const customerNote =
         customerDisplayName && !effectiveBooking ? `(Pelanggan: ${customerDisplayName})` : "";
-      const finalNote = [discountNote, svcNote, customerNote, note].filter(Boolean).join(" ").trim();
+      const finalNote = [discountNote, svcNote, customerNote, stripAutoOrderNotes(note)].filter(Boolean).join(" ").trim();
       const payload: any = {
         booking_id: effectiveBooking ? effectiveBooking.id : activeOrder?.booking_id ?? null,
         room_id: (effectiveBooking as any)?.room_id ?? presetRoomId ?? activeOrder?.room_id ?? null,
