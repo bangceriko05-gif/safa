@@ -27,6 +27,7 @@ import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/Paymen
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { logActivity } from "@/utils/activityLogger";
+import { computeServiceCharge } from "@/utils/posOrderCharges";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
 const money = (n: any) => `Rp ${new Intl.NumberFormat("id-ID").format(Math.round(Number(n) || 0))}`;
@@ -764,6 +765,7 @@ export default function PosOrderDetail() {
   const toggleServiceCharge = async () => {
     const currentlyOn = Number(order?.service_charge || 0) > 0;
     let newAmount = 0;
+    let svcMeta: Record<string, any> = { service_charge_type: null, service_charge_value: null };
     if (!currentlyOn) {
       const type = posSettings?.service_charge_type || "percent";
       const val = Number(posSettings?.service_charge_value || 0);
@@ -772,12 +774,13 @@ export default function PosOrderDetail() {
         return;
       }
       const sub = items.reduce((s, it) => s + Number(it.subtotal || 0), 0);
-      newAmount = type === "percent" ? Math.round((sub * val) / 100) : Math.round(val);
+      newAmount = computeServiceCharge(sub, { enabled: true, apply: true, type: type === "percent" ? "percent" : "nominal", value: val });
+      svcMeta = { service_charge_type: type, service_charge_value: val };
     }
     const patch = { service_charge: newAmount };
     logPatchDiff(patch);
-    setOrder((prev: any) => (prev ? { ...prev, ...patch } : prev));
-    await supabase.from("booking_orders").update(patch as any).eq("id", id!);
+    setOrder((prev: any) => (prev ? { ...prev, ...patch, ...svcMeta } : prev));
+    await supabase.from("booking_orders").update({ ...patch, ...svcMeta } as any).eq("id", id!);
     await recomputeOrderTotal(items, patch);
     toast.success(newAmount > 0 ? "Service Charge diaktifkan" : "Service Charge dinonaktifkan");
     load({ silent: true });
