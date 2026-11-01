@@ -499,7 +499,7 @@ export default function StockMovementList() {
 
   if (selectedProductId) {
     return (
-      <div className="w-full min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="w-full min-w-0 rounded-xl border bg-card shadow-sm">
         <Suspense fallback={<AnkaLoader />}>
           <ProductEditorModal
             productId={selectedProductId}
