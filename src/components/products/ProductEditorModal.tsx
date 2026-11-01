@@ -438,12 +438,12 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
 
   return (
     <div className="w-full">
-      <div className="border-b bg-card sticky top-0 z-10">
-        <div className="flex items-center gap-3 px-6 py-4">
+      <div className="border-b bg-card rounded-t-xl">
+        <div className="flex min-w-0 items-center gap-3 px-4 py-4 sm:px-6">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h2 className="text-xl font-semibold">
+          <h2 className="min-w-0 truncate text-lg font-semibold sm:text-xl">
             {copyMode
               ? `Katalog Produk / Product Copy`
               : savedId
@@ -453,7 +453,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
         </div>
       </div>
 
-      <div className="px-6 py-6">
+      <div className="px-4 py-6 sm:px-6">
           {copyMode && (
             <div className="mb-4 flex items-center gap-3 p-3 border rounded-md bg-muted/30">
               <div className="flex-1">
@@ -470,7 +470,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
             </div>
           )}
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-5 bg-muted">
+            <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto bg-muted p-1 [&>button]:min-w-fit [&>button]:flex-1 [&>button]:px-3">
               <TabsTrigger value="edit">Profil</TabsTrigger>
               <TabsTrigger value="variants">Varian</TabsTrigger>
               <TabsTrigger value="recipe">Bahan/Resep</TabsTrigger>
@@ -821,7 +821,7 @@ export default function ProductEditorModal({ productId, copyMode = false, onClos
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <div>
                     <p className="font-medium text-sm">Harga Dinamis</p>
