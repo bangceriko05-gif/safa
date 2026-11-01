@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import BodyPortal from "@/components/BodyPortal";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { DateRange } from "react-day-picker";
@@ -500,8 +499,7 @@ export default function StockMovementList() {
 
   if (selectedProductId) {
     return (
-      <BodyPortal>
-      <div className="fixed inset-0 z-50 bg-background overflow-auto">
+      <div className="w-full min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm">
         <Suspense fallback={<AnkaLoader />}>
           <ProductEditorModal
             productId={selectedProductId}
@@ -510,7 +508,6 @@ export default function StockMovementList() {
           />
         </Suspense>
       </div>
-      </BodyPortal>
     );
   }
 
