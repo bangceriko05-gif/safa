@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import BodyPortal from "@/components/BodyPortal";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -414,6 +415,7 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
   const periodLabel = `${format(startDate, "dd MMM yyyy", { locale: localeId })} - ${format(endDate, "dd MMM yyyy", { locale: localeId })}`;
 
   return (
+    <BodyPortal>
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b">
@@ -517,5 +519,6 @@ export default function CashFlowDetailView({ detailType, storeId, startDate, end
         </div>
       )}
     </div>
+    </BodyPortal>
   );
 }

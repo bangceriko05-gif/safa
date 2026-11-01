@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import BodyPortal from "@/components/BodyPortal";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -826,6 +827,7 @@ export default function ProductManagement() {
 
   if (editorOpen) {
     return (
+      <BodyPortal>
       <div className="fixed inset-0 z-50 bg-background overflow-auto">
         <Suspense fallback={<AnkaLoader />}>
           <ProductEditorModal
@@ -836,6 +838,7 @@ export default function ProductManagement() {
           />
         </Suspense>
       </div>
+      </BodyPortal>
     );
   }
 

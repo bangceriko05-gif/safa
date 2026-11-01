@@ -41,3 +41,5 @@
 - Booking receipts use the detail booking's shared billing aggregator for single and multi-room totals; stay duration and checkout follow calendar mode and saved stay duration, never the variant's billing period, preventing monthly rates from becoming months of stay.
 - Booking payment dialogs add to received payments without rewriting room rates or operational statuses; settlement feedback follows a successful persisted billing read, preventing false paid animations and duplicate room revenue.
 - POS service charge, PPN and order totals come from one shared pure calculator used by the cashier, order detail and receipts; percentage service charge is based on the discounted subtotal before PPN, and receipts total stored order charges so printed totals match saved payments.
+
+- Full-screen overlays rendered from dashboard content mount through the shared body portal; the sidebar stacking context would otherwise cover and clip them.
