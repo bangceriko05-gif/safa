@@ -1,4 +1,5 @@
 import AnkaLoader from "@/components/AnkaLoader";
+import BodyPortal from "@/components/BodyPortal";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createAutoHutang, handleHutangOnEdit } from "@/utils/autoHutang";
@@ -1575,6 +1576,7 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
 
 function IncomeNoteDialog({ income, onClose }: { income: Income; onClose: () => void }) {
   return (
+    <BodyPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div className="bg-background rounded-lg shadow-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-4">Detail Pemasukan</h3>
@@ -1607,5 +1609,6 @@ function IncomeNoteDialog({ income, onClose }: { income: Income; onClose: () => 
         </div>
       </div>
     </div>
+    </BodyPortal>
   );
 }
