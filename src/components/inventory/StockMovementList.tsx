@@ -62,6 +62,20 @@ const parseFactorFromName = (productName: string): number => {
   return Number.isFinite(num) && num > 0 ? num : 1;
 };
 
+// PostgREST returns at most 1000 rows per request; page through so older
+// history never pushes recent transactions out of the movement list.
+const fetchAllRows = async (make: () => any): Promise<{ data: any[]; error: any }> => {
+  const size = 1000;
+  const rows: any[] = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await make().range(from, from + size - 1);
+    if (error) return { data: rows, error };
+    rows.push(...((data as any[]) || []));
+    if (!data || data.length < size) break;
+  }
+  return { data: rows, error: null };
+};
+
 export default function StockMovementList() {
   const { currentStore } = useStore();
   const [loading, setLoading] = useState(true);
@@ -124,11 +138,9 @@ export default function StockMovementList() {
     }
     try {
       // 1. All products + base unit lookup
-      const { data: productsData } = await supabase
-        .from("products")
-        .select("id, name")
-        .eq("store_id", storeId)
-        .order("name");
+      const { data: productsData } = await fetchAllRows(() =>
+        supabase.from("products").select("id, name").eq("store_id", storeId).order("name").order("id"),
+      );
       type ProdInfo = { id: string; name: string; unit: string };
       const productMap = new Map<string, ProdInfo>();
       ((productsData as any[]) || []).forEach((p) =>
@@ -179,22 +191,41 @@ export default function StockMovementList() {
         // Only fetch booking_products that belong to this store's non-BATAL
         // bookings up to the end date. Using an inner join keeps the payload
         // small instead of loading every booking ever made for the store.
-        supabase
-          .from("booking_products")
-          .select("booking_id, product_id, quantity, product_name, bookings!inner(id, bid, date, created_at, status, customer_name, store_id)")
-          .eq("bookings.store_id", storeId)
-          .neq("bookings.status", "BATAL")
-          .lte("bookings.date", toStr),
+        fetchAllRows(() =>
+          supabase
+            .from("booking_products")
+            .select("id, booking_id, product_id, quantity, product_name, bookings!inner(id, bid, date, created_at, status, customer_name, store_id)")
+            .eq("bookings.store_id", storeId)
+            .neq("bookings.status", "BATAL")
+            .lte("bookings.date", toStr)
+            .order("id"),
+        ),
         // POS sales (non-cancelled orders) also reduce stock.
-        supabase
-          .from("booking_order_items")
-          .select("product_id, quantity, product_name, booking_orders!inner(id, bid, date, created_at, process_status, customer_name, store_id)")
-          .eq("booking_orders.store_id", storeId)
-          .neq("booking_orders.process_status", "batal")
-          .lte("booking_orders.date", toStr),
-        productIds.length > 0
-          ? supabase.from("product_variants").select("id, product_id").in("product_id", productIds)
-          : Promise.resolve({ data: [] as any[] } as any),
+        fetchAllRows(() =>
+          supabase
+            .from("booking_order_items")
+            .select("id, product_id, quantity, product_name, booking_orders!inner(id, bid, date, created_at, process_status, customer_name, store_id)")
+            .eq("booking_orders.store_id", storeId)
+            .neq("booking_orders.process_status", "batal")
+            .lte("booking_orders.date", toStr)
+            .order("id"),
+        ),
+        // Variants have no direct link to products for joins; look them up in
+        // small batches of this outlet's product ids to keep URLs short.
+        (async () => {
+          const rows: any[] = [];
+          for (let i = 0; i < productIds.length; i += 150) {
+            const { data } = await fetchAllRows(() =>
+              supabase
+                .from("product_variants")
+                .select("id, product_id")
+                .in("product_id", productIds.slice(i, i + 150))
+                .order("id"),
+            );
+            rows.push(...data);
+          }
+          return { data: rows, error: null };
+        })(),
       ]);
       // Variant sales count against their parent product.
       const variantParent = new Map<string, string>(
