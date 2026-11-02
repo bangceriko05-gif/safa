@@ -22,6 +22,7 @@ export default function SelectStore() {
   const [stores, setStores] = useState<StoreData[]>([]);
   const [inactiveStores, setInactiveStores] = useState<StoreData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
   const [copied, setCopied] = useState(false);
   const { setCurrentStore } = useStore();
   const navigate = useNavigate();
@@ -82,6 +83,7 @@ export default function SelectStore() {
       ]);
 
       const isSuperAdmin = Boolean(superAdminResult.data);
+      setIsSuperAdminUser(isSuperAdmin);
 
       let activeStores: StoreData[] = [];
       let inactiveStoresList: StoreData[] = [];
@@ -90,7 +92,6 @@ export default function SelectStore() {
         const { data, error } = await supabase
           .from("stores")
           .select("*")
-          .eq("is_active", true)
           .order("name");
 
         if (error) throw error;
@@ -112,7 +113,7 @@ export default function SelectStore() {
 
       // Auto-select if only one active store and no inactive
       if (activeStores.length === 1 && inactiveStoresList.length === 0) {
-        handleSelectStore(activeStores[0]);
+        handleSelectStore(activeStores[0], isSuperAdmin);
       } else if (activeStores.length === 0 && inactiveStoresList.length === 0) {
         toast.error("Anda tidak memiliki akses ke cabang manapun");
         await supabase.auth.signOut();
@@ -127,8 +128,8 @@ export default function SelectStore() {
     }
   };
 
-  const handleSelectStore = async (store: StoreData) => {
-    if (!store.is_active) {
+  const handleSelectStore = async (store: StoreData, superAdmin = isSuperAdminUser) => {
+    if (!superAdmin && !store.is_active) {
       toast.error("Outlet ini sedang dinonaktifkan karena jatuh tempo pembayaran");
       return;
     }

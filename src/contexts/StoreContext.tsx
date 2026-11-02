@@ -80,6 +80,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isStoreInactive, setIsStoreInactive] = useState(false);
   const [inactiveStoreName, setInactiveStoreName] = useState<string | null>(null);
+  // Super Admin tetap bisa membuka outlet yang dinonaktifkan/jatuh tempo.
+  const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -154,7 +156,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         supabase
           .from("stores")
           .select("*")
-          .eq("is_active", true)
           .order("name"),
       ]);
 
@@ -162,11 +163,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUserRole(role);
 
       const isSuperAdmin = Boolean(superAdminResult.data);
+      setIsSuperAdminUser(isSuperAdmin);
 
       let stores: Store[] = [];
 
       if (isSuperAdmin) {
-        // Super admin can access all active stores
+        // Super admin can access every store, including inactive/expired ones
         if (allActiveStoresResult.error) throw allActiveStoresResult.error;
         stores = allActiveStoresResult.data || [];
       } else {
@@ -237,7 +239,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const setCurrentStore = (store: Store) => {
     // Check if store is active and not expired
-    if (!store.is_active || isSubscriptionExpired(store)) {
+    if (!isSuperAdminUser && (!store.is_active || isSubscriptionExpired(store))) {
       setIsStoreInactive(true);
       setInactiveStoreName(store.name);
       return;
