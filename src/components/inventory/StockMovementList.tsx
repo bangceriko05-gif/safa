@@ -210,13 +210,22 @@ export default function StockMovementList() {
             .lte("booking_orders.date", toStr)
             .order("id"),
         ),
-        fetchAllRows(() =>
-          supabase
-            .from("product_variants")
-            .select("id, product_id, products!inner(store_id)")
-            .eq("products.store_id", storeId)
-            .order("id"),
-        ),
+        // Variants have no direct link to products for joins; look them up in
+        // small batches of this outlet's product ids to keep URLs short.
+        (async () => {
+          const rows: any[] = [];
+          for (let i = 0; i < productIds.length; i += 150) {
+            const { data } = await fetchAllRows(() =>
+              supabase
+                .from("product_variants")
+                .select("id, product_id")
+                .in("product_id", productIds.slice(i, i + 150))
+                .order("id"),
+            );
+            rows.push(...data);
+          }
+          return { data: rows, error: null };
+        })(),
       ]);
       // Variant sales count against their parent product.
       const variantParent = new Map<string, string>(
