@@ -21,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import AnkaLoader from "@/components/AnkaLoader";
 import { toast } from "sonner";
+import { Copy as CopyIcon } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/PaymentDialog";
@@ -961,7 +962,23 @@ export default function PosOrderDetail() {
           </Button>
           <div className="flex items-center gap-3 flex-1">
             <div className="min-w-0">
-              <div className="font-mono text-lg font-semibold truncate">{order.bid || order.id.slice(0, 12)}</div>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <div className="font-mono text-lg font-semibold truncate">{order.bid || order.id.slice(0, 12)}</div>
+                {order.bid && (
+                  <button
+                    type="button"
+                    title="Salin BID"
+                    aria-label="Salin BID"
+                    onClick={async () => {
+                      try { await navigator.clipboard.writeText(order.bid); toast.success("BID disalin"); }
+                      catch { toast.error("BID tidak dapat disalin, silakan salin manual"); }
+                    }}
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <CopyIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground truncate">Penjualan Oleh {creatorName}</div>
             </div>
           </div>
