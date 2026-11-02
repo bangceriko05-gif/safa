@@ -3990,6 +3990,15 @@ export type Database = {
     }
     Functions: {
       accessible_store_ids: { Args: { _user_id: string }; Returns: string[] }
+      adjust_sale_stock: {
+        Args: {
+          p_item_product: string
+          p_name: string
+          p_qty: number
+          p_sign: number
+        }
+        Returns: undefined
+      }
       check_and_expire_booking_request: {
         Args: { p_request_id: string }
         Returns: boolean
@@ -4145,6 +4154,7 @@ export type Database = {
         Args: { p_product_id: string }
         Returns: undefined
       }
+      resolve_stock_product_id: { Args: { p_id: string }; Returns: string }
       safe_promote_first_admin: {
         Args: { p_user_id: string }
         Returns: boolean

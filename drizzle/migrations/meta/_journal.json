@@ -92,6 +92,13 @@
       "when": 1793330811346,
       "tag": "0012_booking_doku_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793605747115,
+      "tag": "0013_deduct_stock_from_sales",
+      "breakpoints": true
     }
   ]
 }
