@@ -441,8 +441,13 @@ export default function StockMovementList() {
     toast.success(`Berhasil mengekspor ${data.length} baris`);
   };
 
-  const handleBidClick = (m: Movement) =>
+  const handleBidClick = (m: Movement) => {
+    if ((m.refType as string) === "pos_order") {
+      window.open(`/pos-order/${m.refId}`, "_blank", "noopener");
+      return;
+    }
     setPreview({ type: m.refType, refId: m.refId, bid: m.bid });
+  };
 
   const handlePreviewEdit = () => {
     if (!preview) return;
