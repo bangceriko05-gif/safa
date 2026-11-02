@@ -22,6 +22,7 @@ export default function SelectStore() {
   const [stores, setStores] = useState<StoreData[]>([]);
   const [inactiveStores, setInactiveStores] = useState<StoreData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
   const [copied, setCopied] = useState(false);
   const { setCurrentStore } = useStore();
   const navigate = useNavigate();
