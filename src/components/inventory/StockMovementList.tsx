@@ -157,7 +157,7 @@ export default function StockMovementList() {
 
       // Pull all posted movements up to selected end date, then calculate stock
       // chronologically from zero so each row reflects the real before/after flow.
-      const [siRes, soRes, opRes, bpRes] = await Promise.all([
+      const [siRes, soRes, opRes, bpRes, posRes, varRes] = await Promise.all([
         supabase
           .from("stock_in" as any)
           .select("id, bid, date, posted_at, status, notes")
@@ -185,7 +185,22 @@ export default function StockMovementList() {
           .eq("bookings.store_id", storeId)
           .neq("bookings.status", "BATAL")
           .lte("bookings.date", toStr),
+        // POS sales (non-cancelled orders) also reduce stock.
+        supabase
+          .from("booking_order_items")
+          .select("product_id, quantity, product_name, booking_orders!inner(id, bid, date, created_at, process_status, customer_name, store_id)")
+          .eq("booking_orders.store_id", storeId)
+          .neq("booking_orders.process_status", "batal")
+          .lte("booking_orders.date", toStr),
+        productIds.length > 0
+          ? supabase.from("product_variants").select("id, product_id").in("product_id", productIds)
+          : Promise.resolve({ data: [] as any[] } as any),
       ]);
+      // Variant sales count against their parent product.
+      const variantParent = new Map<string, string>(
+        (((varRes as any).data as any[]) || []).map((v: any) => [v.id, v.product_id]),
+      );
+      const resolveProduct = (id: string) => productMap.get(id) || productMap.get(variantParent.get(id) || "");
 
       const siHeaders = (siRes.data as any[]) || [];
       const soHeaders = (soRes.data as any[]) || [];
@@ -287,10 +302,33 @@ export default function StockMovementList() {
         });
       });
 
+      (((posRes as any).data as any[]) || []).forEach((it: any) => {
+        const h = it.booking_orders;
+        if (!h) return;
+        const p = resolveProduct(it.product_id);
+        if (!p) return;
+        const factor = parseFactorFromName(it.product_name || "");
+        const qty = Number(it.quantity || 0) * factor;
+        if (!qty) return;
+        raw.push({
+          ts: h.created_at || h.date,
+          productId: p.id,
+          productName: p.name,
+          unit: p.unit,
+          direction: "out",
+          qty,
+          delta: -qty,
+          bid: h.bid || "-",
+          refType: "pos_order" as any,
+          refId: h.id,
+          note: `Penjualan POS${h.customer_name ? ` ke ${h.customer_name}` : ""}`,
+        });
+      });
+
       bpJoined.forEach((it: any) => {
         const h = it.bookings;
         if (!h) return;
-        const p = productMap.get(it.product_id);
+        const p = resolveProduct(it.product_id);
         if (!p) return;
         const factor = parseFactorFromName(it.product_name || "");
         const qty = Number(it.quantity || 0) * factor;
