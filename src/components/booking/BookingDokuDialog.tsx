@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DokuCheckoutPanel, { type DokuCheckoutState } from "@/components/booking-orders/DokuCheckoutPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,15 +7,14 @@ import { functionErrorMessage } from "@/utils/userFacingError";
 import { isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
   storeId: string;
   bookingId: string | null;
   onPrepare: () => Promise<void>;
   preparing: boolean;
 }
 
-export default function BookingDokuDialog({ open, onClose, storeId, bookingId, onPrepare, preparing }: Props) {
+/** QRIS DOKU booking tampil langsung di formulir (menggantikan Bukti Bayar), bukan popup. */
+export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing }: Props) {
   const [checkout, setCheckout] = useState<DokuCheckoutState | null>(null);
   const [saving, setSaving] = useState(false);
   const load = async (renew = false) => {
@@ -32,18 +31,20 @@ export default function BookingDokuDialog({ open, onClose, storeId, bookingId, o
     } finally { setSaving(false); }
   };
   useEffect(() => {
-    if (open && bookingId) void load();
-    if (!open) setCheckout(null);
+    if (bookingId) void load();
+    else setCheckout(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, bookingId]);
-  return <Dialog open={open} onOpenChange={(value) => { if (!value && !preparing && !saving) onClose(); }}>
-    <DialogContent className="w-[95vw] max-w-3xl h-[90dvh] flex flex-col overflow-hidden">
-      <DialogHeader><DialogTitle>Pembayaran QRIS DOKU</DialogTitle></DialogHeader>
-      {checkout ? <DokuCheckoutPanel checkout={checkout} storeId={storeId} saving={saving} booking onRetry={() => void load()} onRenew={() => void load(true)} /> :
-        <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <p className="text-sm text-center text-muted-foreground">{bookingId ? "Menyiapkan QRIS…" : "Lengkapi data booking, lalu buat QRIS untuk membayar tagihan."}</p>
-          {!bookingId && <Button disabled={preparing} onClick={() => void onPrepare()}>{preparing ? "Menyiapkan booking…" : "Simpan booking & tampilkan QRIS"}</Button>}
+  }, [bookingId]);
+  return <div className="space-y-2">
+    <p className="text-sm font-medium leading-none">Pembayaran QRIS DOKU</p>
+    <div className="flex h-[560px] flex-col">
+      {checkout ? <DokuCheckoutPanel checkout={checkout} storeId={storeId} saving={saving} booking qrOnly onRetry={() => void load()} onRenew={() => void load(true)} /> :
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-md border border-dashed p-6">
+          {bookingId || preparing ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Menyiapkan QRIS…</p> : <>
+            <p className="text-sm text-center text-muted-foreground">Lengkapi data booking, lalu buat QRIS untuk membayar tagihan.</p>
+            <Button type="button" disabled={preparing} onClick={() => void onPrepare()}>Simpan booking & tampilkan QRIS</Button>
+          </>}
         </div>}
-    </DialogContent>
-  </Dialog>;
+    </div>
+  </div>;
 }
