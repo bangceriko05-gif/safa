@@ -20,9 +20,11 @@ interface Props {
   onRetry: () => void;
   onRenew: () => void;
   booking?: boolean;
+  /** Tampilkan QR saja: tanpa ringkasan pesanan dan tombol tambahan. */
+  qrOnly?: boolean;
 }
 
-export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, onRenew, booking = false }: Props) {
+export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, onRenew, booking = false, qrOnly = false }: Props) {
   const [reload, setReload] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -95,7 +97,7 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
       ) : checkout.error ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
           <p className="text-sm text-center" role="alert">{checkout.error}</p>
-          <Button onClick={onRetry} disabled={saving}><RefreshCw className="mr-2 h-4 w-4" />Coba lagi</Button>
+          <Button type="button" onClick={onRetry} disabled={saving}><RefreshCw className="mr-2 h-4 w-4" />Coba lagi</Button>
         </div>
       ) : checkout.url ? (
         <>
@@ -118,7 +120,7 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
               referrerPolicy="no-referrer"
             />
           </div>
-          {(checkout.invoiceNumber || checkout.amount != null) && (
+          {!qrOnly && (checkout.invoiceNumber || checkout.amount != null) && (
             <div className="shrink-0 border-t bg-muted/30 px-4 py-3" aria-label="Ringkasan pesanan">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ringkasan Pesanan</p>
               {checkout.invoiceNumber && (
@@ -137,10 +139,10 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
         <div className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-muted-foreground" role="status"><Loader2 className="h-5 w-5 animate-spin" />Menyiapkan tagihan DOKU…</div>
       )}
       <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t p-2">
-        <Button variant="ghost" size="sm" disabled={!checkout.url || saving} onClick={() => { setLoaded(false); setReload((value) => value + 1); }}><RefreshCw className="mr-2 h-4 w-4" />Muat ulang</Button>
-        <Button variant="outline" size="sm" disabled={!checkout.orderId || saving || paid} onClick={() => { setLoaded(false); onRenew(); }}><QrCode className="mr-2 h-4 w-4" />Buat QR baru</Button>
-        <Button variant="outline" size="sm" disabled={!checkout.orderId || checking || saving} onClick={() => { void checkPayment(true); }}>{checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cek status pembayaran</Button>
-        <Button variant="ghost" size="sm" disabled={!checkout.url} onClick={() => { if (checkout.url) window.open(checkout.url, "_blank", "noopener,noreferrer"); }}><ExternalLink className="mr-2 h-4 w-4" />Buka di tab baru</Button>
+        {!qrOnly && <Button variant="ghost" size="sm" disabled={!checkout.url || saving} onClick={() => { setLoaded(false); setReload((value) => value + 1); }}><RefreshCw className="mr-2 h-4 w-4" />Muat ulang</Button>}
+        <Button type="button" variant="outline" size="sm" disabled={!checkout.orderId || saving || paid} onClick={() => { setLoaded(false); onRenew(); }}><QrCode className="mr-2 h-4 w-4" />Buat QR baru</Button>
+        <Button type="button" variant="outline" size="sm" disabled={!checkout.orderId || checking || saving} onClick={() => { void checkPayment(true); }}>{checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cek status pembayaran</Button>
+        {!qrOnly && <Button variant="ghost" size="sm" disabled={!checkout.url} onClick={() => { if (checkout.url) window.open(checkout.url, "_blank", "noopener,noreferrer"); }}><ExternalLink className="mr-2 h-4 w-4" />Buka di tab baru</Button>}
       </footer>
     </div>
   );

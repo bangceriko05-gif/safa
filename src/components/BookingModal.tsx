@@ -4,7 +4,7 @@ import { fetchGroupBilling, billingOwner, billingRoomTotal, type BillingRoom } f
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useQuery } from "@tanstack/react-query";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
-import BookingDokuDialog from "@/components/booking/BookingDokuDialog";
+import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 import { unpaidBookingQris } from "@/utils/bookingDokuPayment";
 import { userFacingError } from "@/utils/userFacingError";
 import {
@@ -2042,6 +2042,7 @@ export default function BookingModal({
           // Lock retries to this saved booking even if follow-on work fails.
           savedBookingGroupRef.current = bookingGroupId;
           setQrisBookingId(newBooking.id);
+          window.dispatchEvent(new CustomEvent("booking-changed"));
         }
 
         // Insert products
@@ -3406,7 +3407,6 @@ export default function BookingModal({
                 if (!value) return;
                 setFormData({ ...formData, payment_method: value });
                 if (value === "QRIS DOKU" && !editingBooking) {
-                  setBookingQrisOpen(true);
                   if (formData.customer_name.trim() && formData.room_id && (formData.variant_id || formData.booking_type === "ota")) {
                     void handleSubmit({ preventDefault: () => {} }, value);
                   }
@@ -3433,7 +3433,8 @@ export default function BookingModal({
             disabled={loading}
             label={formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}
           />}
-          {!editingBooking && formData.payment_method === "QRIS DOKU" && <Button type="button" variant="outline" onClick={() => setBookingQrisOpen(true)}>Tampilkan pembayaran QRIS</Button>}
+          {!editingBooking && formData.payment_method === "QRIS DOKU" && currentStore && <BookingDokuInline storeId={currentStore.id} bookingId={qrisBookingId} preparing={loading}
+            onPrepare={async () => { await handleSubmit({ preventDefault: () => {} }); }} />}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -3859,15 +3860,6 @@ export default function BookingModal({
           </AlertDialogContent>
         </AlertDialog>
 
-        {currentStore && <BookingDokuDialog open={bookingQrisOpen} storeId={currentStore.id} bookingId={qrisBookingId} preparing={loading}
-          onPrepare={async () => {
-            setBookingQrisOpen(false);
-            await handleSubmit({ preventDefault: () => {} });
-          }}
-          onClose={() => {
-            setBookingQrisOpen(false);
-            if (qrisBookingId) { window.dispatchEvent(new CustomEvent("booking-changed")); onClose(); }
-          }} />}
         <CustomerTypeManager
           open={typeManagerOpen}
           onOpenChange={setTypeManagerOpen}
