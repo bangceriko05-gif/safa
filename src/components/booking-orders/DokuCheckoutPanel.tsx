@@ -117,6 +117,7 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
               style={{ width: `min(100%, ${DOKU_IFRAME_MAX_WIDTH}px)`, height: `calc(100% + ${crop}px)`, transform: `translateY(-${crop}px)` }}
               onLoad={() => setLoaded(true)}
               allow="payment"
+              scrolling={qrOnly ? "no" : undefined}
               referrerPolicy="no-referrer"
             />
           </div>
