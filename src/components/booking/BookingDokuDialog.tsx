@@ -37,7 +37,7 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
   }, [bookingId]);
   return <div className="space-y-2">
     <p className="text-sm font-medium leading-none">Pembayaran QRIS DOKU</p>
-    <div className="flex h-[560px] flex-col">
+    <div className={`flex flex-col ${checkout ? "h-[560px]" : "min-h-[160px]"}`}>
       {checkout ? <DokuCheckoutPanel checkout={checkout} storeId={storeId} saving={saving} booking qrOnly onRetry={() => void load()} onRenew={() => void load(true)} /> :
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-md border border-dashed p-6">
           {bookingId || preparing ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Menyiapkan QRIS…</p> : <>
