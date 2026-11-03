@@ -145,11 +145,10 @@ export default function BookingModal({
     }
   }, [isOpen, dokuSettingsError]);
   const [loading, setLoading] = useState(false);
-  const [bookingQrisOpen, setBookingQrisOpen] = useState(false);
   const [qrisBookingId, setQrisBookingId] = useState<string | null>(null);
   const qrisSaveRef = useRef(false);
   useEffect(() => {
-    if (!isOpen) { setBookingQrisOpen(false); setQrisBookingId(null); }
+    if (!isOpen) setQrisBookingId(null);
   }, [isOpen]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -2042,7 +2041,6 @@ export default function BookingModal({
           // Lock retries to this saved booking even if follow-on work fails.
           savedBookingGroupRef.current = bookingGroupId;
           setQrisBookingId(newBooking.id);
-          window.dispatchEvent(new CustomEvent("booking-changed"));
         }
 
         // Insert products
@@ -2137,7 +2135,7 @@ export default function BookingModal({
 
         savedBookingGroupRef.current = bookingGroupId;
         if (automaticQris) {
-          setBookingQrisOpen(true);
+          toast.success(`Booking ${bookingBid} tersimpan. Silakan scan QRIS di formulir.`);
           window.dispatchEvent(new CustomEvent("booking-changed"));
           return;
         }
