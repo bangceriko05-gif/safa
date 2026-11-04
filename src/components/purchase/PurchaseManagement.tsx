@@ -28,6 +28,7 @@ import { Plus, Search, CalendarIcon, Copy, FileText, Trash2 } from "lucide-react
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
+import { type ReportTimeRange, getDateRange as getSharedDateRange } from "@/components/reports/ReportDateFilter";
 import { toast } from "sonner";
 import PurchaseNoteDialog from "./PurchaseNoteDialog";
 import PurchaseForm from "./PurchaseForm";
@@ -66,7 +67,14 @@ const TIME_RANGES = [
   { key: "custom", label: "Custom" },
 ];
 
-export default function PurchaseManagement() {
+interface PurchaseManagementProps {
+  timeRange?: ReportTimeRange;
+  customDateRange?: DateRange;
+  searchQuery?: string;
+}
+
+export default function PurchaseManagement({ timeRange: externalRange, customDateRange: externalCustom, searchQuery: externalSearch }: PurchaseManagementProps = {}) {
+  const sharedFilter = externalRange !== undefined;
   const { currentStore } = useStore();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const { requestCancellation, cancellationDialog } = useTransactionCancellation("Pembelian");
@@ -101,6 +109,10 @@ export default function PurchaseManagement() {
   }, [processTab, currentStore?.id]);
 
   const getDateRange = () => {
+    if (sharedFilter) {
+      const { startDate, endDate } = getSharedDateRange(externalRange!, externalCustom);
+      return { start: startDate, end: endDate };
+    }
     const now = new Date();
     if (timeRange === "today") {
       return { start: now, end: now };
@@ -151,7 +163,7 @@ export default function PurchaseManagement() {
 
   useEffect(() => {
     fetchPurchases();
-  }, [currentStore, processTab, timeRange, customDateRange]);
+  }, [currentStore, processTab, timeRange, customDateRange, externalRange, externalCustom]);
 
   useEffect(() => {
     if (!currentStore) return;
@@ -356,6 +368,7 @@ export default function PurchaseManagement() {
               />
             </div>
             <span className="text-sm font-semibold whitespace-nowrap">{formatCurrency(total)}</span>
+            {!sharedFilter && <>
             <Select value={timeRange} onValueChange={setTimeRange}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue />
@@ -393,6 +406,7 @@ export default function PurchaseManagement() {
                 {dateRangeLabel}
               </div>
             )}
+            </>}
           </div>
 
           {/* Secondary filters */}
