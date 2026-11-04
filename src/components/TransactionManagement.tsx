@@ -221,7 +221,7 @@ export default function TransactionManagement({ userRole, onEditBooking, onAddBo
         <TabsContent value="purchases" className="mt-4">
           {isFeatureEnabled("pos") ? (
             <Suspense fallback={<AnkaLoader />}>
-              <PurchaseManagement />
+              <PurchaseManagement timeRange={timeRange} customDateRange={customDateRange} />
             </Suspense>
           ) : (
             <FeatureInactiveNotice
