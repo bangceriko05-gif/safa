@@ -4076,6 +4076,13 @@ export type Database = {
         Args: { p_date: string; p_store_id: string }
         Returns: string
       }
+      get_booking_doku_payment_timers: {
+        Args: { p_booking_ids: string[] }
+        Returns: {
+          booking_id: string
+          created_at: string
+        }[]
+      }
       get_notification_preferences: {
         Args: { _user_id: string }
         Returns: {
