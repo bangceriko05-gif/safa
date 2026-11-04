@@ -1,6 +1,7 @@
 import AnkaLoader from "@/components/AnkaLoader";
 import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
 import BookingWhatsAppPhone from "@/components/booking/BookingWhatsAppPhone";
+import BookingDokuTimer, { useBookingDokuTimers } from "@/components/booking/BookingDokuTimer";
 import { useEffect, useState, useMemo } from "react";
 import BookingPopoverContent from "@/components/BookingPopoverContent";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
@@ -99,6 +100,7 @@ export default function PMSCalendar({
   const { currentStore } = useStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<BookingWithAdmin[]>([]);
+  const dokuTimers = useBookingDokuTimers(bookings.filter((b: any) => b.payment_status !== "lunas" && b.status !== "BATAL").map((b) => b.id));
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1346,6 +1348,7 @@ export default function PMSCalendar({
                                           >
                                             <Copy className="h-3 w-3" />
                                           </Button>
+                                          <BookingDokuTimer since={dokuTimers[booking.id]} />
                                         </div>
                                       )}
                                       <div className="text-[11px] font-medium break-words">
