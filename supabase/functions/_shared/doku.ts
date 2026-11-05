@@ -44,3 +44,9 @@ export function signaturesEqual(expected: string, actual: string) {
   for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ (actual.charCodeAt(i) || 0);
   return mismatch === 0;
 }
+/** Batas waktu bayar (menit) yang diatur pengguna per metode; tagihan memakai batas terpendek dari metode yang ditawarkan. */
+export function dokuDueMinutes(timeouts: unknown, channels: string[]): number {
+  const map = timeouts && typeof timeouts === "object" ? timeouts as Record<string, unknown> : {};
+  const values = channels.map((code) => Math.round(Number(map[code]))).filter((n) => Number.isFinite(n) && n >= 1 && n <= 1440);
+  return values.length ? Math.min(...values) : 60;
+}
