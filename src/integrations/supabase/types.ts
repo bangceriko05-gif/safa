@@ -1164,6 +1164,7 @@ export type Database = {
           checkout_url: string | null
           client_id: string
           created_at: string
+          due_minutes: number
           environment: string
           id: string
           invoice_number: string
@@ -1179,6 +1180,7 @@ export type Database = {
           checkout_url?: string | null
           client_id: string
           created_at?: string
+          due_minutes?: number
           environment: string
           id?: string
           invoice_number: string
@@ -1194,6 +1196,7 @@ export type Database = {
           checkout_url?: string | null
           client_id?: string
           created_at?: string
+          due_minutes?: number
           environment?: string
           id?: string
           invoice_number?: string
@@ -1258,6 +1261,7 @@ export type Database = {
           checkout_url: string | null
           client_id: string
           created_at: string
+          due_minutes: number
           environment: string
           id: string
           invoice_number: string
@@ -1273,6 +1277,7 @@ export type Database = {
           checkout_url?: string | null
           client_id: string
           created_at?: string
+          due_minutes?: number
           environment: string
           id?: string
           invoice_number: string
@@ -1288,6 +1293,7 @@ export type Database = {
           checkout_url?: string | null
           client_id?: string
           created_at?: string
+          due_minutes?: number
           environment?: string
           id?: string
           invoice_number?: string
@@ -3916,6 +3922,7 @@ export type Database = {
       website_payment_settings: {
         Row: {
           created_at: string
+          doku_channel_timeouts: Json
           doku_channels: Json
           doku_client_id: string | null
           doku_enabled: boolean
@@ -3928,6 +3935,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          doku_channel_timeouts?: Json
           doku_channels?: Json
           doku_client_id?: string | null
           doku_enabled?: boolean
@@ -3940,6 +3948,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          doku_channel_timeouts?: Json
           doku_channels?: Json
           doku_client_id?: string | null
           doku_enabled?: boolean
@@ -4081,6 +4090,7 @@ export type Database = {
         Returns: {
           booking_id: string
           created_at: string
+          due_minutes: number
         }[]
       }
       get_notification_preferences: {
@@ -4095,6 +4105,7 @@ export type Database = {
         Args: { p_order_ids: string[] }
         Returns: {
           created_at: string
+          due_minutes: number
           order_id: string
         }[]
       }

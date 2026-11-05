@@ -43,3 +43,5 @@
 - POS service charge, PPN and order totals come from one shared pure calculator used by the cashier, order detail and receipts; percentage service charge is based on the discounted subtotal before PPN, and receipts total stored order charges so printed totals match saved payments.
 
 - Dashboard editors such as the product editor render inline in the main content beside the sidebar; remaining full-screen overlays mount through the shared body portal because the sidebar stacking context would otherwise cover and clip them.
+
+- DOKU payment time limits are stored per enabled channel in outlet settings; each invoice snapshots the shortest limit of its offered channels on the attempt so countdowns and renewals stay correct after settings change.

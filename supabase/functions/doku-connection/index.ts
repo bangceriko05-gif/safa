@@ -8,6 +8,7 @@ const bodySchema = z.object({
   environment: z.enum(["sandbox", "live"]).optional(), client_id: z.string().trim().max(128).optional(),
   secret_key: z.string().trim().max(512).optional(), enabled: z.boolean().optional(),
   channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional(),
+  timeouts: z.record(z.string().regex(/^[A-Z0-9_]+$/), z.number().int().min(1).max(1440)).optional(),
 });
 
 const reply = (status: number, data: object) => new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
       const environment = input.environment || current?.doku_environment || "sandbox";
       const { error: deleteError } = await admin.from("doku_outlet_credentials").delete().eq("store_id", input.store_id).eq("environment", environment);
       if (deleteError) throw deleteError;
-      const { error: resetError } = await admin.from("website_payment_settings").update({ doku_enabled: false, doku_client_id: "", doku_channels: [] }).eq("store_id", input.store_id);
+      const { error: resetError } = await admin.from("website_payment_settings").update({ doku_enabled: false, doku_client_id: "", doku_channels: [], doku_channel_timeouts: {} }).eq("store_id", input.store_id);
       if (resetError) throw resetError;
       return reply(200, { deleted: true, configured: false });
     }
@@ -40,6 +41,8 @@ Deno.serve(async (req) => {
       if (!input.environment || input.enabled === undefined || !input.channels || (input.enabled && (!input.client_id || input.channels.length === 0))) {
         return reply(400, { error: "Lengkapi Client ID dan pilih minimal satu metode pembayaran DOKU." });
       }
+      const timeouts = Object.fromEntries(input.channels.map((code) => [code, input.timeouts?.[code]]));
+      if (Object.values(timeouts).some((value) => !value)) return reply(400, { error: "Atur batas waktu pembayaran untuk setiap metode yang diaktifkan." });
       const { data: existing, error: existingError } = await admin.from("doku_outlet_credentials").select("client_id").eq("store_id", input.store_id).eq("environment", input.environment).maybeSingle();
       if (existingError) throw existingError;
       if (input.enabled && !input.secret_key && existing?.client_id !== input.client_id) return reply(400, { error: "Masukkan Secret Key DOKU untuk Client ID dan mode yang dipilih." });
@@ -50,6 +53,8 @@ Deno.serve(async (req) => {
         p_ciphertext: ciphertext, p_enabled: input.enabled, p_channels: input.channels,
       });
       if (saveError) throw saveError;
+      const { error: timeoutError } = await admin.from("website_payment_settings").update({ doku_channel_timeouts: timeouts }).eq("store_id", input.store_id);
+      if (timeoutError) throw timeoutError;
       return reply(200, { saved: true, configured: !!ciphertext || existing?.client_id === input.client_id });
     }
     const { data: settings, error: readError } = await client.from("website_payment_settings").select("doku_client_id,doku_environment").eq("store_id", parsed.data.store_id).maybeSingle();

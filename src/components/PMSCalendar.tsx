@@ -1327,7 +1327,7 @@ export default function PMSCalendar({
                                           <div className="absolute inset-0 rounded-md pointer-events-none" style={{ boxShadow: `4px 4px 0 -1px ${statusColor}55, 8px 8px 0 -2px ${statusColor}33` }} />
                                         </>
                                       )}
-                                      <div className={cn("flex min-w-0 items-center gap-1 pr-8 text-xs font-semibold", hasActiveDeposit && "pl-6")}><span className="truncate">{booking.customer_name}</span><BookingDokuTimer since={dokuTimers[booking.id]} /></div>
+                                      <div className={cn("flex min-w-0 items-center gap-1 pr-8 text-xs font-semibold", hasActiveDeposit && "pl-6")}><span className="truncate">{booking.customer_name}</span><BookingDokuTimer timer={dokuTimers[booking.id]} /></div>
                                       {booking.bid && (
                                         <div className="flex min-w-0 items-center gap-1 pr-8">
                                           <span className="truncate font-mono text-[10px] font-semibold text-primary" title={booking.bid}>

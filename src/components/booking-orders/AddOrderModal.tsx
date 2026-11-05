@@ -23,7 +23,7 @@ import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { computeServiceCharge, posOrderTotal, stripAutoOrderNotes } from "@/utils/posOrderCharges";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
-import { DOKU_QR_TTL_MS, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
+import { formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 
@@ -136,7 +136,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [txOrders, setTxOrders] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   // order_id -> waktu pembuatan QR DOKU yang masih berjalan (untuk timer di kartu transaksi)
-  const [dokuTimers, setDokuTimers] = useState<Record<string, string>>({});
+  const [dokuTimers, setDokuTimers] = useState<Record<string, { since: string; minutes: number }>>({});
   const [copiedBidId, setCopiedBidId] = useState<string | null>(null);
   // Filter tanggal daftar transaksi
   const [txDateFilter, setTxDateFilter] = useState<"semua" | "hari_ini" | "kemarin" | "7_hari" | "bulan_ini" | "bulan_lalu" | "custom">("semua");
@@ -232,7 +232,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const ids = rows.map((row) => row.id);
       if (ids.length > 0) {
         const { data: timers } = await supabase.rpc("get_pos_doku_payment_timers", { p_order_ids: ids });
-        setDokuTimers(Object.fromEntries(((timers as any[]) || []).map((t) => [t.order_id, t.created_at])));
+        setDokuTimers(Object.fromEntries(((timers as any[]) || []).map((t) => [t.order_id, { since: t.created_at, minutes: Number(t.due_minutes) || 60 }])));
       } else {
         setDokuTimers({});
       }
@@ -824,7 +824,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       if (error || !isVerifiedDokuCheckoutUrl(data?.checkout_url)) {
         setDokuCheckout({ orderId, url: null, error: await functionErrorMessage(error, data, "Tagihan DOKU belum dapat dibuat. Transaksi tersimpan dengan status belum lunas."), invoiceNumber: null, amount: null });
       } else {
-        setDokuCheckout({ orderId, url: data.checkout_url, error: null, invoiceNumber: typeof data.invoice_number === "string" ? data.invoice_number : null, amount: Number.isFinite(Number(data.amount)) ? Number(data.amount) : null });
+        setDokuCheckout({ orderId, url: data.checkout_url, error: null, invoiceNumber: typeof data.invoice_number === "string" ? data.invoice_number : null, amount: Number.isFinite(Number(data.amount)) ? Number(data.amount) : null, dueMinutes: Number(data.due_minutes) || null, createdAt: typeof data.created_at === "string" ? data.created_at : null });
       }
     } catch {
       setDokuCheckout({ orderId, url: null, error: "Halaman pembayaran belum dapat dibuka. Transaksi tersimpan; silakan coba lagi.", invoiceNumber: null, amount: null });
@@ -1434,7 +1434,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                         )}
                         <div className="flex justify-between items-center gap-2 font-black pt-2 border-t text-lg text-black">
                           <span>Total</span>
-                          {dokuTimers[o.id] && <PosDokuPaymentTimer since={dokuTimers[o.id]} />}
+                          {dokuTimers[o.id] && <PosDokuPaymentTimer since={dokuTimers[o.id].since} minutes={dokuTimers[o.id].minutes} />}
                           <span>{fmt(Number(o.total_amount) || 0)}</span>
                         </div>
                       </button>
@@ -2400,16 +2400,17 @@ function PosHeaderName({ name, actionsRef }: { name: string; actionsRef: React.R
 
 // Timer hitung mundur pembayaran QRIS DOKU pada kartu daftar transaksi.
 // Muncul hanya selama QR masih berlaku (60 menit sejak dibuat); hilang setelah kedaluwarsa.
-function PosDokuPaymentTimer({ since }: { since: string }) {
-  const [left, setLeft] = useState(() => DOKU_QR_TTL_MS - (Date.now() - new Date(since).getTime()));
+function PosDokuPaymentTimer({ since, minutes }: { since: string; minutes: number }) {
+  const ttl = minutes * 60 * 1000;
+  const [left, setLeft] = useState(() => ttl - (Date.now() - new Date(since).getTime()));
 
   useEffect(() => {
     const start = new Date(since).getTime();
-    const tick = () => setLeft(DOKU_QR_TTL_MS - (Date.now() - start));
+    const tick = () => setLeft(ttl - (Date.now() - start));
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [since]);
+  }, [since, ttl]);
 
   if (left <= 0) return null;
   return (

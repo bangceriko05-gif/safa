@@ -11,6 +11,9 @@ export interface DokuCheckoutState {
   error: string | null;
   invoiceNumber: string | null;
   amount: number | null;
+  /** Batas waktu bayar (menit) sesuai pengaturan metode pembayaran outlet. */
+  dueMinutes?: number | null;
+  createdAt?: string | null;
 }
 
 interface Props {
@@ -31,7 +34,8 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
   const [checking, setChecking] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [crop, setCrop] = useState(() => dokuBrandingCrop(768));
-  const [left, setLeft] = useState(DOKU_QR_TTL_MS);
+  const ttl = (checkout.dueMinutes && checkout.dueMinutes > 0 ? checkout.dueMinutes * 60 * 1000 : DOKU_QR_TTL_MS);
+  const [left, setLeft] = useState(ttl);
 
   // Zona branding DOKU (bar hitung mundur, pemilih bahasa, logo & nama outlet) dan kartu
   // Order Summary dipotong agar kasir langsung melihat QRIS; ringkasan pesanan ditampilkan
@@ -51,11 +55,12 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
   // Hitung mundur QR diganti milik ANKA karena bar DOKU ikut terpotong.
   useEffect(() => {
     if (!checkout.url || paid) return;
-    const start = Date.now();
-    setLeft(DOKU_QR_TTL_MS);
-    const timer = window.setInterval(() => setLeft(DOKU_QR_TTL_MS - (Date.now() - start)), 1000);
+    const start = checkout.createdAt ? new Date(checkout.createdAt).getTime() : Date.now();
+    const tick = () => setLeft(ttl - (Date.now() - start));
+    tick();
+    const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [checkout.url, paid]);
+  }, [checkout.url, checkout.createdAt, ttl, paid]);
 
   const checkPayment = async (notify = false) => {
     setChecking(true);
@@ -82,10 +87,11 @@ export default function DokuCheckoutPanel({ checkout, storeId, saving, onRetry, 
   // QR DOKU kedaluwarsa setelah 60 menit: buat invoice & QR baru otomatis.
   useEffect(() => {
     if (!checkout.url || paid) return;
-    const timer = window.setTimeout(() => { setLoaded(false); onRenew(); }, DOKU_QR_TTL_MS + 5000);
+    const start = checkout.createdAt ? new Date(checkout.createdAt).getTime() : Date.now();
+    const timer = window.setTimeout(() => { setLoaded(false); onRenew(); }, Math.max(5000, ttl - (Date.now() - start) + 5000));
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkout.url, paid]);
+  }, [checkout.url, checkout.createdAt, ttl, paid]);
 
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-md border bg-background" aria-label="Pembayaran QRIS DOKU">
