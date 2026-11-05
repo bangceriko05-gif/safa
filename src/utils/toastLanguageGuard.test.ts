@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+/// <reference types="bun" />
+import { describe, expect, it } from "bun:test";
 import { plainIndonesian } from "./toastLanguageGuard";
 
 describe("plainIndonesian", () => {
