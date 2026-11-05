@@ -25,7 +25,7 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
       const { data, error } = await supabase.functions.invoke("doku-booking-checkout", { body: { booking_id: bookingId, renew } });
       if (error || data?.error) throw new Error(await functionErrorMessage(error, data, "QRIS belum dapat dibuat. Silakan coba lagi."));
       if (!isVerifiedDokuCheckoutUrl(data?.checkout_url)) throw new Error("Halaman pembayaran DOKU belum tersedia. Silakan coba lagi.");
-      setCheckout({ orderId: bookingId, url: data.checkout_url, error: null, invoiceNumber: data.invoice_number || null, amount: Number(data.amount) });
+      setCheckout({ orderId: bookingId, url: data.checkout_url, error: null, invoiceNumber: data.invoice_number || null, amount: Number(data.amount), dueMinutes: Number(data.due_minutes) || null, createdAt: typeof data.created_at === "string" ? data.created_at : null });
     } catch (error) {
       setCheckout({ orderId: bookingId, url: null, error: error instanceof Error ? error.message : "QRIS belum dapat dibuat. Silakan coba lagi.", invoiceNumber: null, amount: null });
     } finally { setSaving(false); }
