@@ -23,7 +23,7 @@ import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { computeServiceCharge, posOrderTotal, stripAutoOrderNotes } from "@/utils/posOrderCharges";
 import { functionErrorMessage, userFacingError } from "@/utils/userFacingError";
 import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
-import { DOKU_QR_TTL_MS, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
+import { formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 

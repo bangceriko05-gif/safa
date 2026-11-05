@@ -27,8 +27,9 @@ const channelGroups = [
   { name: "Paylater", channels: [["PEER_TO_PEER_AKULAKU", "Akulaku"], ["PEER_TO_PEER_KREDIVO", "Kredivo"], ["PEER_TO_PEER_INDODANA", "Indodana"]] },
 ];
 
-type Settings = { enabled: boolean; environment: string; clientId: string; channels: string[] };
-const initial: Settings = { enabled: false, environment: "sandbox", clientId: "", channels: [] };
+type Settings = { enabled: boolean; environment: string; clientId: string; channels: string[]; timeouts: Record<string, number> };
+const initial: Settings = { enabled: false, environment: "sandbox", clientId: "", channels: [], timeouts: {} };
+const DEFAULT_TIMEOUT_MINUTES = 60;
 
 export default function DokuSettings() {
   const { currentStore } = useStore();
@@ -51,7 +52,7 @@ export default function DokuSettings() {
     void (async () => {
       // Explicit projection: stored secrets must never be read into this page.
       const { data, error } = await supabase.from("website_payment_settings")
-        .select("doku_enabled,doku_environment,doku_client_id,doku_channels")
+        .select("doku_enabled,doku_environment,doku_client_id,doku_channels,doku_channel_timeouts")
         .eq("store_id", currentStore.id).maybeSingle();
       if (!active) return;
       if (error) {
@@ -61,6 +62,8 @@ export default function DokuSettings() {
         const value: Settings = data ? {
           enabled: data.doku_enabled, environment: data.doku_environment === "live" ? "live" : "sandbox",
           clientId: data.doku_client_id || "", channels: Array.isArray(data.doku_channels) ? data.doku_channels.filter((v): v is string => typeof v === "string") : [],
+          timeouts: data.doku_channel_timeouts && typeof data.doku_channel_timeouts === "object" && !Array.isArray(data.doku_channel_timeouts)
+            ? Object.fromEntries(Object.entries(data.doku_channel_timeouts as Record<string, unknown>).map(([code, value]) => [code, Number(value)]).filter(([, value]) => Number.isFinite(value as number))) : {},
         } : initial;
         setDraft(value);
         setSaved(value);
@@ -74,11 +77,17 @@ export default function DokuSettings() {
 
   const save = async () => {
     if (!currentStore?.id || saving || loadFailed) return;
+    const missing = draft.channels.filter((code) => !Number.isInteger(draft.timeouts[code]) || draft.timeouts[code] < 1 || draft.timeouts[code] > 1440);
+    if (missing.length) {
+      toast.error("Atur batas waktu pembayaran (1–1440 menit) untuk setiap metode yang diaktifkan.");
+      return;
+    }
     setSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke("doku-connection", { body: {
         action: "save", store_id: currentStore.id, enabled: draft.enabled, environment: draft.environment,
         client_id: draft.clientId.trim(), secret_key: secretKey.trim(), channels: draft.channels,
+        timeouts: Object.fromEntries(draft.channels.map((code) => [code, draft.timeouts[code]])),
       } });
       if (error || data?.error) {
         toast.error(await functionErrorMessage(error, data, "Pengaturan DOKU belum tersimpan. Periksa isian lalu coba lagi."));
@@ -117,6 +126,10 @@ export default function DokuSettings() {
 
   const toggleChannels = (codes: string[], on: boolean) => setDraft((value) => ({ ...value,
     channels: on ? [...new Set([...value.channels, ...codes])] : value.channels.filter((code) => !codes.includes(code)),
+    timeouts: on ? { ...Object.fromEntries(codes.map((code) => [code, DEFAULT_TIMEOUT_MINUTES])), ...value.timeouts } : value.timeouts,
+  }));
+  const setTimeoutMinutes = (code: string, raw: string) => setDraft((value) => ({ ...value,
+    timeouts: { ...value.timeouts, [code]: raw === "" ? NaN : Math.round(Number(raw.replace(/\D/g, ""))) },
   }));
 
   // Fixed display mask only: never fetch or submit the stored secret as an input value.
@@ -167,7 +180,14 @@ export default function DokuSettings() {
         {channelGroups.map((group) => {
           const codes = group.channels.map(([code]) => code);
           const allOn = codes.every((code) => draft.channels.includes(code));
-          return <section key={group.name} className="border-b pb-4 last:border-0"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{group.name}</h3><Button variant="outline" size="sm" disabled={saving} onClick={() => toggleChannels(codes, !allOn)}>{allOn ? "Nonaktifkan semua" : "Aktifkan semua"}</Button></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{group.channels.map(([code, name]) => <div key={code} className="flex items-center justify-between gap-3 py-2"><Label htmlFor={`doku-${code}`} className="text-sm">{name}</Label><Switch id={`doku-${code}`} disabled={saving} checked={draft.channels.includes(code)} onCheckedChange={(on) => toggleChannels([code], on)} /></div>)}</div></section>;
+          return <section key={group.name} className="border-b pb-4 last:border-0"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{group.name}</h3><Button variant="outline" size="sm" disabled={saving} onClick={() => toggleChannels(codes, !allOn)}>{allOn ? "Nonaktifkan semua" : "Aktifkan semua"}</Button></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{group.channels.map(([code, name]) => <div key={code} className="py-2"><div className="flex items-center justify-between gap-3"><Label htmlFor={`doku-${code}`} className="text-sm">{name}</Label><Switch id={`doku-${code}`} disabled={saving} checked={draft.channels.includes(code)} onCheckedChange={(on) => toggleChannels([code], on)} /></div>
+                {draft.channels.includes(code) && <div className="mt-2 flex items-center gap-2">
+                  <Label htmlFor={`doku-timeout-${code}`} className="text-xs text-muted-foreground whitespace-nowrap">Batas waktu bayar *</Label>
+                  <Input id={`doku-timeout-${code}`} inputMode="numeric" disabled={saving} className={`h-8 w-20 text-right tabular-nums ${!(draft.timeouts[code] >= 1 && draft.timeouts[code] <= 1440) ? "border-destructive" : ""}`}
+                    value={Number.isFinite(draft.timeouts[code]) ? String(draft.timeouts[code]) : ""} onChange={(event) => setTimeoutMinutes(code, event.target.value)} aria-describedby={`doku-timeout-hint-${code}`} />
+                  <span id={`doku-timeout-hint-${code}`} className="text-xs text-muted-foreground">menit</span>
+                </div>}
+              </div>)}</div></section>;
         })}
       </TabsContent>
       <TabsContent value="connection" className="mt-6">
