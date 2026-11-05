@@ -3,7 +3,7 @@ import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
 import BookingWhatsAppPhone from "@/components/booking/BookingWhatsAppPhone";
 import BookingDokuTimer, { useBookingDokuTimers } from "@/components/booking/BookingDokuTimer";
 import { useEffect, useState, useMemo } from "react";
-import BookingPopoverContent from "@/components/BookingPopoverContent";
+import BookingPopoverContent, { loadBookingPaymentDetails } from "@/components/BookingPopoverContent";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -1279,6 +1279,7 @@ export default function PMSCalendar({
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Card
+                                      onPointerEnter={() => { void loadBookingPaymentDetails(booking).catch(() => {}); }}
                                       className="p-2 h-full cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg relative min-h-[60px]"
                                       style={{
                                         backgroundColor: bgColor,
