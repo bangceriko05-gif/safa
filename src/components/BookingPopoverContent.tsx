@@ -48,6 +48,39 @@ interface BookingProduct {
   subtotal: number;
 }
 
+type PaymentDetails = {
+  shared: Awaited<ReturnType<typeof fetchGroupBilling>> | null;
+  products: BookingProduct[];
+  variant: { price: number; booking_duration_type: string | null; booking_duration_value: number | null } | null;
+};
+
+// Detail pembayaran disimpan sementara dan bisa dimuat lebih dulu (saat kursor di atas kartu)
+// supaya muncul bersamaan dengan popup; data terbaru tetap dimuat ulang di belakang layar.
+const paymentDetailsCache = new Map<string, { value?: PaymentDetails; promise?: Promise<PaymentDetails>; at: number }>();
+
+export function loadBookingPaymentDetails(booking: any, force = false): Promise<PaymentDetails> {
+  const entry = paymentDetailsCache.get(booking.id);
+  if (entry?.promise && (!force || Date.now() - entry.at < 3000)) return entry.promise;
+  const promise = Promise.all([
+    fetchGroupBilling(booking),
+    supabase.from("booking_products").select("id, product_name, quantity, product_price, subtotal").eq("booking_id", booking.id),
+    booking.variant_id
+      ? supabase.from("room_variants").select("price, booking_duration_type, booking_duration_value").eq("id", booking.variant_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]).then(([shared, productsResult, variantResult]) => {
+    const value: PaymentDetails = {
+      shared,
+      products: (shared?.products as BookingProduct[]) || (productsResult.data as BookingProduct[]) || [],
+      variant: (variantResult as any).data || null,
+    };
+    paymentDetailsCache.set(booking.id, { value, promise, at: Date.now() });
+    return value;
+  });
+  promise.catch(() => paymentDetailsCache.delete(booking.id));
+  paymentDetailsCache.set(booking.id, { value: entry?.value, promise, at: Date.now() });
+  return promise;
+}
+
 export default function BookingPopoverContent({
   booking,
   nights,
@@ -69,7 +102,7 @@ export default function BookingPopoverContent({
   const [variantPrice, setVariantPrice] = useState<number | null>(null);
   const [variantDurationType, setVariantDurationType] = useState<string | null>(null);
   const [variantDurationValue, setVariantDurationValue] = useState<number | null>(null);
-  const [loadingDetails, setLoadingDetails] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(() => !paymentDetailsCache.get(booking.id)?.value);
   const [orderBids, setOrderBids] = useState<{ id: string; bid: string | null }[]>([]);
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(booking.store_id);
   const [showPosNotice, setShowPosNotice] = useState(false);
@@ -130,33 +163,23 @@ export default function BookingPopoverContent({
     })();
   }, [booking.id]);
 
-  const fetchPaymentDetails = async () => {
-    setLoadingDetails(true);
-    try {
-      const shared = await fetchGroupBilling(booking);
-      setSharedBilling(shared);
-      // Fetch products and variant price in parallel
-      const [productsResult, variantResult] = await Promise.all([
-        supabase
-          .from("booking_products")
-          .select("id, product_name, quantity, product_price, subtotal")
-          .eq("booking_id", booking.id),
-        booking.variant_id
-          ? supabase
-              .from("room_variants")
-              .select("price, booking_duration_type, booking_duration_value")
-              .eq("id", booking.variant_id)
-              .single()
-          : Promise.resolve({ data: null }),
-      ]);
+  const applyDetails = (details: PaymentDetails) => {
+    setSharedBilling(details.shared);
+    setProducts(details.products);
+    if (details.variant) {
+      const override = (booking as any).variant_price_override;
+      setVariantPrice(override != null ? Number(override) : details.variant.price);
+      setVariantDurationType(details.variant.booking_duration_type || "hours");
+      setVariantDurationValue(details.variant.booking_duration_value || 1);
+    }
+  };
 
-      setProducts(shared?.products || productsResult.data || []);
-      if (variantResult.data && "price" in variantResult.data) {
-        const override = (booking as any).variant_price_override;
-        setVariantPrice(override != null ? Number(override) : (variantResult.data as any).price);
-        setVariantDurationType((variantResult.data as any).booking_duration_type || "hours");
-        setVariantDurationValue((variantResult.data as any).booking_duration_value || 1);
-      }
+  const fetchPaymentDetails = async () => {
+    const cached = paymentDetailsCache.get(booking.id)?.value;
+    if (cached) applyDetails(cached);
+    setLoadingDetails(!cached);
+    try {
+      applyDetails(await loadBookingPaymentDetails(booking, true));
     } catch (error) {
       console.error("Error fetching payment details:", error);
     } finally {
