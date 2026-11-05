@@ -1,0 +1,2 @@
+alter table public.doku_booking_attempts drop constraint if exists doku_booking_attempts_booking_id_fkey;
+alter table public.doku_booking_attempts add constraint doku_booking_attempts_booking_id_fkey foreign key (booking_id) references public.bookings(id) on delete cascade;
