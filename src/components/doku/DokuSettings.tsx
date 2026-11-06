@@ -79,7 +79,7 @@ export default function DokuSettings() {
     if (!currentStore?.id || saving || loadFailed) return;
     const missing = draft.channels.filter((code) => !Number.isInteger(draft.timeouts[code]) || draft.timeouts[code] < 1 || draft.timeouts[code] > 1440);
     if (missing.length) {
-      toast.error("Atur batas waktu pembayaran (1–1440 menit) untuk setiap metode yang diaktifkan.");
+      toast.error("Atur batas waktu pembayaran (maksimal 1 hari / 24 jam / 1440 menit) untuk setiap metode yang diaktifkan.");
       return;
     }
     setSaving(true);
@@ -128,9 +128,16 @@ export default function DokuSettings() {
     channels: on ? [...new Set([...value.channels, ...codes])] : value.channels.filter((code) => !codes.includes(code)),
     timeouts: on ? { ...Object.fromEntries(codes.map((code) => [code, DEFAULT_TIMEOUT_MINUTES])), ...value.timeouts } : value.timeouts,
   }));
-  const setTimeoutMinutes = (code: string, raw: string) => setDraft((value) => ({ ...value,
-    timeouts: { ...value.timeouts, [code]: raw === "" ? NaN : Math.round(Number(raw.replace(/\D/g, ""))) },
+  const [units, setUnits] = useState<Record<string, number>>({});
+  const unitOf = (code: string) => units[code] ?? (draft.timeouts[code] % 1440 === 0 ? 1440 : draft.timeouts[code] % 60 === 0 ? 60 : 1);
+  const setTimeoutMinutes = (code: string, raw: string, factor = unitOf(code)) => setDraft((value) => ({ ...value,
+    timeouts: { ...value.timeouts, [code]: raw === "" ? NaN : Math.round(Number(raw.replace(/\D/g, "")) * factor) },
   }));
+  const changeUnit = (code: string, factor: number) => {
+    const shown = Number.isFinite(draft.timeouts[code]) ? String(Math.max(1, Math.round(draft.timeouts[code] / unitOf(code)))) : "";
+    setUnits((u) => ({ ...u, [code]: factor }));
+    setTimeoutMinutes(code, shown, factor);
+  };
 
   // Fixed display mask only: never fetch or submit the stored secret as an input value.
   const hasSavedSecret = configured && draft.environment === saved.environment && draft.clientId.trim() === saved.clientId;
@@ -184,8 +191,8 @@ export default function DokuSettings() {
                 {draft.channels.includes(code) && <div className="mt-2 flex items-center gap-2">
                   <Label htmlFor={`doku-timeout-${code}`} className="text-xs text-muted-foreground whitespace-nowrap">Batas waktu bayar *</Label>
                   <Input id={`doku-timeout-${code}`} inputMode="numeric" disabled={saving} className={`h-8 w-20 text-right tabular-nums ${!(draft.timeouts[code] >= 1 && draft.timeouts[code] <= 1440) ? "border-destructive" : ""}`}
-                    value={Number.isFinite(draft.timeouts[code]) ? String(draft.timeouts[code]) : ""} onChange={(event) => setTimeoutMinutes(code, event.target.value)} aria-describedby={`doku-timeout-hint-${code}`} />
-                  <span id={`doku-timeout-hint-${code}`} className="text-xs text-muted-foreground">menit</span>
+                    value={Number.isFinite(draft.timeouts[code]) ? String(Math.round(draft.timeouts[code] / unitOf(code) * 100) / 100) : ""} onChange={(event) => setTimeoutMinutes(code, event.target.value)} aria-describedby={`doku-timeout-hint-${code}`} />
+                  <select id={`doku-timeout-hint-${code}`} aria-label="Satuan batas waktu" disabled={saving} value={unitOf(code)} onChange={(event) => changeUnit(code, Number(event.target.value))} className="h-8 rounded-md border border-input bg-background px-2 text-xs"><option value={1}>menit</option><option value={60}>jam</option><option value={1440}>hari</option></select>
                 </div>}
               </div>)}</div></section>;
         })}
