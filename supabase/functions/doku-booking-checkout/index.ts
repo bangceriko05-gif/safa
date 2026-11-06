@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         // Total bayar berubah: tagihan lama dinonaktifkan, dibuat QR & invoice baru.
         await admin.from("doku_booking_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
       } else if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url, invoice_number: pending.invoice_number, amount: Number(pending.amount), due_minutes: Number(pending.due_minutes || 60), created_at: pending.created_at });
-      return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
+      else return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     }
     const invoice = `ANKA-${crypto.randomUUID()}`;
     const { data: attempt, error: insertError } = await admin.from("doku_booking_attempts").insert({ store_id: order.store_id, booking_id: order.id, invoice_number: invoice, environment: credentials.environment, client_id: credentials.clientId, amount: remaining, due_minutes: dueMinutes }).select("id,created_at").single();

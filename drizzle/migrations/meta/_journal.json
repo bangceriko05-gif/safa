@@ -127,6 +127,13 @@
       "when": 1793926308678,
       "tag": "0017_grant_doku_channel_timeouts_select",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793927203865,
+      "tag": "0018_settle_doku_booking_partial",
+      "breakpoints": true
     }
   ]
 }
