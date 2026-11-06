@@ -3042,6 +3042,7 @@ export default function BookingModal({
                   placeholder="1"
                   min="1"
                 />
+              </div>
               <div className="w-32">
                 <Label htmlFor="product_price" className="text-xs">Harga</Label>
                 <Input
@@ -3057,11 +3058,9 @@ export default function BookingModal({
                   placeholder="25000"
                 />
               </div>
-              </div>
-              <div className="flex items-end">
-                <Button type="button" onClick={handleAddProduct} className="w-full">
-                  Tambah
-                </Button>
+              <Button type="button" onClick={handleAddProduct}>
+                Tambah
+              </Button>
             </div>
 
             {selectedProducts.length > 0 && (
