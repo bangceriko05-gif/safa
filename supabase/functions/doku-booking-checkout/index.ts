@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const client = createClient(url, anon, { global: { headers: { Authorization: authorization } } });
     const { data: { user } } = await client.auth.getUser();
     if (!user) return reply(401, { error: "Sesi Anda sudah berakhir. Silakan masuk kembali." });
-    const parsed = z.object({ booking_id: z.string().uuid(), channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional(), renew: z.boolean().optional() }).safeParse(await req.json());
+    const parsed = z.object({ booking_id: z.string().uuid(), channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional(), renew: z.boolean().optional(), amount: z.number().int().positive().optional() }).safeParse(await req.json());
     if (!parsed.success) return reply(400, { error: "Pilih transaksi yang akan dibayar." });
     const { data: order, error: orderError } = await client.from("bookings").select("id,store_id,status,payment_status,price,price_2").eq("id", parsed.data.booking_id).maybeSingle();
     if (orderError || !order) return reply(403, { error: "Anda tidak memiliki izin. Transaksi tidak ditemukan di outlet ini." });
@@ -28,7 +28,10 @@ Deno.serve(async (req) => {
     if (channels.some((code) => !enabledChannels.includes(code))) return reply(400, { error: "Metode pembayaran DOKU yang dipilih tidak aktif untuk outlet ini." });
     const { data: balance, error: balanceError } = await client.rpc("doku_booking_balance", { p_booking_id: order.id });
     if (balanceError) return reply(400, { error: "Tagihan booking belum dapat dibaca. Silakan buka kembali booking." });
-    const remaining = Number(balance);
+    const balanceDue = Number(balance);
+    // Nominal QR mengikuti Total Bayar di formulir (boleh sebagian), maksimal sisa tagihan.
+    const remaining = parsed.data.amount ?? balanceDue;
+    if (Number.isSafeInteger(balanceDue) && remaining > balanceDue) return reply(400, { error: "Nominal QRIS melebihi sisa tagihan booking." });
     if (Number(order.price) > 0 || Number(order.price_2) > 0) return reply(400, { error: "Booking sudah memiliki pembayaran. Gunakan metode pembayaran manual untuk sisa tagihan." });
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
@@ -39,8 +42,10 @@ Deno.serve(async (req) => {
     if (pending && (expired || parsed.data.renew)) {
       await admin.from("doku_booking_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
     } else if (pending) {
-      if (Number(pending.amount) !== remaining) return reply(409, { error: "Tagihan DOKU sebelumnya masih menunggu pembayaran. Hubungi admin sebelum mengubah nominal." });
-      if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url, invoice_number: pending.invoice_number, amount: Number(pending.amount), due_minutes: Number(pending.due_minutes || 60), created_at: pending.created_at });
+      if (Number(pending.amount) !== remaining) {
+        // Total bayar berubah: tagihan lama dinonaktifkan, dibuat QR & invoice baru.
+        await admin.from("doku_booking_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
+      } else if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url, invoice_number: pending.invoice_number, amount: Number(pending.amount), due_minutes: Number(pending.due_minutes || 60), created_at: pending.created_at });
       return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     }
     const invoice = `ANKA-${crypto.randomUUID()}`;
