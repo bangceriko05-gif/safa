@@ -120,6 +120,13 @@
       "when": 1793839922729,
       "tag": "0016_doku_channel_payment_timeouts",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793926308678,
+      "tag": "0017_grant_doku_channel_timeouts_select",
+      "breakpoints": true
     }
   ]
 }
