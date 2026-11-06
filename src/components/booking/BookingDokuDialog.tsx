@@ -11,10 +11,11 @@ interface Props {
   bookingId: string | null;
   onPrepare: () => Promise<void>;
   preparing: boolean;
+  amount?: number;
 }
 
 /** QRIS DOKU booking tampil langsung di formulir (menggantikan Bukti Bayar), bukan popup. */
-export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing }: Props) {
+export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing, amount }: Props) {
   const [checkout, setCheckout] = useState<DokuCheckoutState | null>(null);
   const [saving, setSaving] = useState(false);
   const load = async (renew = false) => {
@@ -22,7 +23,7 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
     setSaving(true);
     setCheckout({ orderId: bookingId, url: null, error: null, invoiceNumber: null, amount: null });
     try {
-      const { data, error } = await supabase.functions.invoke("doku-booking-checkout", { body: { booking_id: bookingId, renew } });
+      const { data, error } = await supabase.functions.invoke("doku-booking-checkout", { body: { booking_id: bookingId, renew, ...(amount && amount > 0 ? { amount: Math.round(amount) } : {}) } });
       if (error || data?.error) throw new Error(await functionErrorMessage(error, data, "QRIS belum dapat dibuat. Silakan coba lagi."));
       if (!isVerifiedDokuCheckoutUrl(data?.checkout_url)) throw new Error("Halaman pembayaran DOKU belum tersedia. Silakan coba lagi.");
       setCheckout({ orderId: bookingId, url: data.checkout_url, error: null, invoiceNumber: data.invoice_number || null, amount: Number(data.amount), dueMinutes: Number(data.due_minutes) || null, createdAt: typeof data.created_at === "string" ? data.created_at : null });
@@ -35,6 +36,13 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
     else setCheckout(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
+  // Total Bayar berubah → buat QR & invoice baru dengan nominal baru (ditunda agar tidak tiap ketikan).
+  useEffect(() => {
+    if (!bookingId || !amount || amount <= 0 || checkout?.amount == null || checkout.amount === Math.round(amount)) return;
+    const t = setTimeout(() => void load(), 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount, bookingId, checkout?.amount]);
   return <div className="space-y-2">
     <p className="text-sm font-medium leading-none">Pembayaran QRIS DOKU</p>
     <div className={`flex flex-col ${checkout ? "h-[540px]" : "min-h-[160px]"}`}>
@@ -46,5 +54,9 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
           </>}
         </div>}
     </div>
+    {checkout?.url && checkout.amount != null && <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+      <span className="text-sm text-muted-foreground">Nominal QRIS DOKU</span>
+      <span className="text-lg font-bold tabular-nums">Rp {checkout.amount.toLocaleString("id-ID")}</span>
+    </div>}
   </div>;
 }

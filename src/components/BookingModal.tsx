@@ -3430,7 +3430,7 @@ export default function BookingModal({
             label={formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}
           />}
           {formData.payment_method === "QRIS DOKU" && currentStore && <BookingDokuInline storeId={currentStore.id}
-            bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
+            amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
             onPrepare={async () => { await handleSubmit({ preventDefault: () => {} }); }} />}
 
           <div className="grid grid-cols-2 gap-4">
