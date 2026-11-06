@@ -2994,8 +2994,8 @@ export default function BookingModal({
           {/* Product Selection */}
           <div className="space-y-2">
             <Label>Tambah Produk (Opsional)</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="relative">
+            <div className="flex items-end gap-2">
+              <div className="relative flex-1 min-w-0">
                 <Label htmlFor="product_name" className="text-xs">Nama Produk</Label>
                 <Input
                   id="product_name"
@@ -3026,24 +3026,7 @@ export default function BookingModal({
                   </div>
                 )}
               </div>
-              <div>
-                <Label htmlFor="product_price" className="text-xs">Harga</Label>
-                <Input
-                  id="product_price"
-                  value={productPrice}
-                  onChange={(e) => setProductPrice(formatPrice(e.target.value))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddProduct();
-                    }
-                  }}
-                  placeholder="25000"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
+              <div className="w-20">
                 <Label htmlFor="product_qty" className="text-xs">Qty</Label>
                 <Input
                   id="product_qty"
@@ -3060,11 +3043,24 @@ export default function BookingModal({
                   min="1"
                 />
               </div>
-              <div className="flex items-end">
-                <Button type="button" onClick={handleAddProduct} className="w-full">
-                  Tambah
-                </Button>
+              <div className="w-32">
+                <Label htmlFor="product_price" className="text-xs">Harga</Label>
+                <Input
+                  id="product_price"
+                  value={productPrice}
+                  onChange={(e) => setProductPrice(formatPrice(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddProduct();
+                    }
+                  }}
+                  placeholder="25000"
+                />
               </div>
+              <Button type="button" onClick={handleAddProduct}>
+                Tambah
+              </Button>
             </div>
 
             {selectedProducts.length > 0 && (
