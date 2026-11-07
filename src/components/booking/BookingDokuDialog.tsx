@@ -54,9 +54,5 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
           </>}
         </div>}
     </div>
-    {checkout?.url && checkout.amount != null && <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
-      <span className="text-sm text-muted-foreground">Nominal QRIS DOKU</span>
-      <span className="text-lg font-bold tabular-nums">Rp {checkout.amount.toLocaleString("id-ID")}</span>
-    </div>}
   </div>;
 }
