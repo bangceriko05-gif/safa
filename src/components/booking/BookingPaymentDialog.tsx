@@ -20,10 +20,12 @@ import cashDrawer from "@/assets/cash-drawer.mp3.asset.json";
 type Billing = Awaited<ReturnType<typeof fetchGroupBilling>>;
 const currency = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
 
-export default function BookingPaymentDialog({ open, onOpenChange, bookingId, onPaid }: {
+export default function BookingPaymentDialog({ open, onOpenChange, bookingId, initialBilling = null, onPaid }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingId: string;
+  /** Tagihan yang sudah tampil di detail booking dipakai langsung agar formulir tidak menunggu. */
+  initialBilling?: Billing | null;
   onPaid: () => void | Promise<void>;
 }) {
   const { currentStore } = useStore();
@@ -41,18 +43,22 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, on
   const submitting = useRef(false);
   const audioContext = useRef<AudioContext | null>(null);
   const audioBuffer = useRef<AudioBuffer | null>(null);
+  const initialBillingRef = useRef(initialBilling);
+  initialBillingRef.current = initialBilling;
 
   useEffect(() => {
     if (!open || !currentStore) return;
     let cancelled = false;
-    setBilling(null);
-    setLoading(true);
+    const cached = initialBillingRef.current?.rooms.length ? initialBillingRef.current : null;
+    setBilling(cached);
+    setLoading(!cached);
     setSettled(false);
     setLoadError("");
     setProof(null);
-    setMethod("");
+    setMethod(cached?.totals.paid2 ? cached.totals.owner?.payment_method_2 || "" : "");
     setReference("");
-    fetchGroupBilling({ id: bookingId, store_id: currentStore.id }).then(async initial => {
+    setAmount(cached ? Math.max(0, cached.totals.remaining) : 0);
+    if (!cached) fetchGroupBilling({ id: bookingId, store_id: currentStore.id }).then(async initial => {
       const room = initial.rooms[0];
       if (!room) throw new Error("Booking tidak ditemukan");
       const data = room.booking_group_id ? await fetchGroupBilling(room) : initial;

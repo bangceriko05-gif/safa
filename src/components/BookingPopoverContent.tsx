@@ -585,7 +585,7 @@ export default function BookingPopoverContent({
         )}
       </div>
 
-      <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} onPaid={fetchPaymentDetails} />
+      <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} initialBilling={sharedBilling} onPaid={fetchPaymentDetails} />
       <Separator />
 
       {/* Booking Orders */}
