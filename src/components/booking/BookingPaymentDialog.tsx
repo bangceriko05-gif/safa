@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, CreditCard, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,6 +17,8 @@ import { fetchGroupBilling } from "@/utils/groupBookingBilling";
 import { handleHutangOnEdit } from "@/utils/autoHutang";
 import { logActivity } from "@/utils/activityLogger";
 import cashDrawer from "@/assets/cash-drawer.mp3.asset.json";
+import { bookingPaymentMethods } from "@/utils/dokuChannels";
+import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 
 type Billing = Awaited<ReturnType<typeof fetchGroupBilling>>;
 const currency = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
@@ -31,6 +34,17 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions(open);
   const { activeMethodNames, loading: methodsLoading } = usePaymentMethods();
+  const { data: dokuSettings, error: dokuSettingsError } = useQuery({
+    queryKey: ["booking-doku-methods", currentStore?.id],
+    enabled: open && Boolean(currentStore?.id),
+    queryFn: async () => {
+      if (!currentStore?.id) return null;
+      const { data, error } = await supabase.from("website_payment_settings")
+        .select("doku_enabled,doku_channels").eq("store_id", currentStore.id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
   const [billing, setBilling] = useState<Billing | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,6 +59,16 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
   const audioBuffer = useRef<AudioBuffer | null>(null);
   const initialBillingRef = useRef(initialBilling);
   initialBillingRef.current = initialBilling;
+  const methodOptions = bookingPaymentMethods(
+    [...activeMethodNames, ...(method ? [method] : [])],
+    !dokuSettingsError && dokuSettings?.doku_enabled === true,
+    Array.isArray(dokuSettings?.doku_channels) ? dokuSettings.doku_channels.filter((value): value is string => typeof value === "string") : [],
+  );
+  const qrisDoku = method === "QRIS DOKU";
+
+  useEffect(() => {
+    if (open && dokuSettingsError) toast.error("Pilihan pembayaran DOKU belum dapat dimuat. Silakan coba lagi.");
+  }, [open, dokuSettingsError]);
 
   useEffect(() => {
     if (!open || !currentStore) return;
@@ -87,7 +111,7 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
   }, [open, bookingId, currentStore?.id]);
 
   const pay = async () => {
-    if (submitting.current || !billing || !currentStore || !proof || !method || amount <= 0 || !hasPermission("edit_bookings")) return;
+    if (qrisDoku || submitting.current || !billing || !currentStore || !proof || !method || amount <= 0 || !hasPermission("edit_bookings")) return;
     submitting.current = true;
     setSaving(true);
     void audioContext.current?.resume().catch(() => {});
@@ -164,7 +188,7 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
   };
 
   return <Dialog open={open} onOpenChange={value => { if (!saving) onOpenChange(value); }}>
-    <DialogContent className="booking-payment-dialog max-w-md w-[calc(100%-2rem)]" onClick={event => event.stopPropagation()}>
+    <DialogContent className="booking-payment-dialog max-h-[calc(100vh-2rem)] max-w-md w-[calc(100%-2rem)] overflow-y-auto" onClick={event => event.stopPropagation()}>
       <Button type="button" variant="ghost" size="icon" aria-label="Tutup pembayaran" className="absolute right-2 top-2 h-8 w-8" disabled={saving} onClick={() => onOpenChange(false)}><X className="h-4 w-4" /></Button>
       <DialogHeader className="pr-8">
         <DialogTitle>{settled ? "Pembayaran Berhasil" : "Pembayaran"}</DialogTitle>
@@ -180,14 +204,22 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
         <div className="space-y-2"><Label htmlFor="booking-payment-method">Metode Pembayaran *</Label>
           <Select value={method} onValueChange={setMethod} disabled={saving || methodsLoading || billing.totals.paid2 > 0}>
             <SelectTrigger id="booking-payment-method"><SelectValue placeholder="Pilih metode pembayaran" /></SelectTrigger>
-            <SelectContent className="booking-payment-methods">{[...new Set([...activeMethodNames, ...(method ? [method] : [])])].map(name => <SelectItem value={name} key={name}>{name}</SelectItem>)}</SelectContent>
+            <SelectContent className="booking-payment-methods">{methodOptions.map(name => <SelectItem value={name} key={name}>{name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <PaymentProofUpload value={proof} onChange={setProof} required disabled={saving} compact />
-        <div className="space-y-2"><Label htmlFor="booking-payment-reference">No. Reff</Label><Input id="booking-payment-reference" value={reference} onChange={event => setReference(event.target.value)} disabled={saving} placeholder="Nomor referensi (opsional)" /></div>
-        <Button type="submit" className="w-full gap-2" disabled={saving || !proof || !method || amount <= 0 || amount > billing.totals.remaining || !hasPermission("edit_bookings") || billing.rooms.some(room => room.status === "BATAL")}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}Bayar
-        </Button>
+        {qrisDoku && currentStore ? <BookingDokuInline
+          storeId={currentStore.id}
+          bookingId={billing.totals.owner?.id || bookingId}
+          amount={amount}
+          preparing={false}
+          onPrepare={async () => {}}
+        /> : <PaymentProofUpload value={proof} onChange={setProof} required disabled={saving} compact />}
+        {!qrisDoku && <>
+          <div className="space-y-2"><Label htmlFor="booking-payment-reference">No. Reff</Label><Input id="booking-payment-reference" value={reference} onChange={event => setReference(event.target.value)} disabled={saving} placeholder="Nomor referensi (opsional)" /></div>
+          <Button type="submit" className="w-full gap-2" disabled={saving || !proof || !method || amount <= 0 || amount > billing.totals.remaining || !hasPermission("edit_bookings") || billing.rooms.some(room => room.status === "BATAL")}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}Bayar
+          </Button>
+        </>}
       </form>}
     </DialogContent>
   </Dialog>;
