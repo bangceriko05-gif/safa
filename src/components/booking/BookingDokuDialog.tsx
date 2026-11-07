@@ -12,10 +12,12 @@ interface Props {
   onPrepare: () => Promise<void>;
   preparing: boolean;
   amount?: number;
+  /** Buka kembali tagihan aktif tanpa mengganti nominal atau invoice. */
+  resumeActive?: boolean;
 }
 
 /** QRIS DOKU booking tampil langsung di formulir (menggantikan Bukti Bayar), bukan popup. */
-export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing, amount }: Props) {
+export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing, amount, resumeActive = false }: Props) {
   const [checkout, setCheckout] = useState<DokuCheckoutState | null>(null);
   const [saving, setSaving] = useState(false);
   const load = async (renew = false) => {
@@ -23,7 +25,9 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
     setSaving(true);
     setCheckout({ orderId: bookingId, url: null, error: null, invoiceNumber: null, amount: null });
     try {
-      const { data, error } = await supabase.functions.invoke("doku-booking-checkout", { body: { booking_id: bookingId, renew, ...(amount && amount > 0 ? { amount: Math.round(amount) } : {}) } });
+      const requestedAmount = renew ? checkout?.amount ?? amount : amount;
+      const resuming = resumeActive && !renew;
+      const { data, error } = await supabase.functions.invoke("doku-booking-checkout", { body: { booking_id: bookingId, renew, ...(resuming ? { resume: true } : requestedAmount && requestedAmount > 0 ? { amount: Math.round(requestedAmount) } : {}) } });
       if (error || data?.error) throw new Error(await functionErrorMessage(error, data, "QRIS belum dapat dibuat. Silakan coba lagi."));
       if (!isVerifiedDokuCheckoutUrl(data?.checkout_url)) throw new Error("Halaman pembayaran DOKU belum tersedia. Silakan coba lagi.");
       setCheckout({ orderId: bookingId, url: data.checkout_url, error: null, invoiceNumber: data.invoice_number || null, amount: Number(data.amount), dueMinutes: Number(data.due_minutes) || null, createdAt: typeof data.created_at === "string" ? data.created_at : null });
@@ -38,7 +42,7 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
   }, [bookingId]);
   // Total Bayar berubah → buat QR & invoice baru dengan nominal baru (ditunda agar tidak tiap ketikan).
   useEffect(() => {
-    if (!bookingId || !amount || amount <= 0 || checkout?.amount == null || checkout.amount === Math.round(amount)) return;
+    if (resumeActive || !bookingId || !amount || amount <= 0 || checkout?.amount == null || checkout.amount === Math.round(amount)) return;
     const t = setTimeout(() => void load(), 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

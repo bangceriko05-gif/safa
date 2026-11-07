@@ -18,6 +18,7 @@ import { handleHutangOnEdit } from "@/utils/autoHutang";
 import { logActivity } from "@/utils/activityLogger";
 import cashDrawer from "@/assets/cash-drawer.mp3.asset.json";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
+import { activeBookingDokuTimer } from "@/utils/activeBookingDokuPayment";
 import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 
 type Billing = Awaited<ReturnType<typeof fetchGroupBilling>>;
@@ -45,6 +46,16 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
       return data;
     },
   });
+  const { data: activeDokuTimer, isLoading: activeDokuLoading } = useQuery({
+    queryKey: ["booking-active-doku-payment", bookingId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_booking_doku_payment_timers", { p_booking_ids: [bookingId] });
+      if (error) throw error;
+      return activeBookingDokuTimer(data, Date.now());
+    },
+    refetchInterval: 30_000,
+  });
   const [billing, setBilling] = useState<Billing | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,7 +75,8 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
     !dokuSettingsError && dokuSettings?.doku_enabled === true,
     Array.isArray(dokuSettings?.doku_channels) ? dokuSettings.doku_channels.filter((value): value is string => typeof value === "string") : [],
   );
-  const qrisDoku = method === "QRIS DOKU";
+  const resumingDoku = Boolean(activeDokuTimer);
+  const qrisDoku = resumingDoku || method === "QRIS DOKU";
 
   useEffect(() => {
     if (open && dokuSettingsError) toast.error("Pilihan pembayaran DOKU belum dapat dimuat. Silakan coba lagi.");
@@ -191,26 +203,29 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
     <DialogContent className="booking-payment-dialog max-h-[calc(100vh-2rem)] max-w-md w-[calc(100%-2rem)] overflow-y-auto" onClick={event => event.stopPropagation()}>
       <Button type="button" variant="ghost" size="icon" aria-label="Tutup pembayaran" className="absolute right-2 top-2 h-8 w-8" disabled={saving} onClick={() => onOpenChange(false)}><X className="h-4 w-4" /></Button>
       <DialogHeader className="pr-8">
-        <DialogTitle>{settled ? "Pembayaran Berhasil" : "Pembayaran"}</DialogTitle>
-        <DialogDescription>{settled ? "Tagihan booking telah lunas." : "Pembayaran booking"}</DialogDescription>
+        <DialogTitle>{settled ? "Pembayaran Berhasil" : resumingDoku ? "Pembayaran QRIS DOKU" : "Pembayaran"}</DialogTitle>
+        <DialogDescription>{settled ? "Tagihan booking telah lunas." : resumingDoku ? "Lanjutkan QR yang sedang menunggu pembayaran." : "Pembayaran booking"}</DialogDescription>
       </DialogHeader>
       {settled ? <div role="status" className="booking-settled flex flex-col items-center gap-4 py-10 text-success">
         <CheckCircle2 className="h-20 w-20" strokeWidth={1.5} />
         <span className="text-4xl font-bold">LUNAS</span>
         <span className="text-sm font-semibold">{currency(billing?.totals.total || 0)}</span>
-      </div> : loading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : loadError ? <p role="alert" className="text-destructive">{loadError}</p> : billing && <form className="space-y-4" onSubmit={event => { event.preventDefault(); void pay(); }}>
+      </div> : loading || activeDokuLoading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : loadError ? <p role="alert" className="text-destructive">{loadError}</p> : billing && <form className="space-y-4" onSubmit={event => { event.preventDefault(); void pay(); }}>
         <div className="flex justify-between border-b pb-3 text-sm"><span>Sisa Pembayaran</span><span className="font-semibold tabular-nums">{currency(Math.max(0, billing.totals.remaining))}</span></div>
-        <div className="space-y-2"><Label htmlFor="booking-payment-amount">Jumlah Bayar *</Label><MoneyInput id="booking-payment-amount" value={amount} onChange={setAmount} className="font-semibold" disabled={saving} /></div>
-        <div className="space-y-2"><Label htmlFor="booking-payment-method">Metode Pembayaran *</Label>
-          <Select value={method} onValueChange={setMethod} disabled={saving || methodsLoading || billing.totals.paid2 > 0}>
-            <SelectTrigger id="booking-payment-method"><SelectValue placeholder="Pilih metode pembayaran" /></SelectTrigger>
-            <SelectContent className="booking-payment-methods">{methodOptions.map(name => <SelectItem value={name} key={name}>{name}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
+        {!resumingDoku && <>
+          <div className="space-y-2"><Label htmlFor="booking-payment-amount">Jumlah Bayar *</Label><MoneyInput id="booking-payment-amount" value={amount} onChange={setAmount} className="font-semibold" disabled={saving} /></div>
+          <div className="space-y-2"><Label htmlFor="booking-payment-method">Metode Pembayaran *</Label>
+            <Select value={method} onValueChange={setMethod} disabled={saving || methodsLoading || billing.totals.paid2 > 0}>
+              <SelectTrigger id="booking-payment-method"><SelectValue placeholder="Pilih metode pembayaran" /></SelectTrigger>
+              <SelectContent className="booking-payment-methods">{methodOptions.map(name => <SelectItem value={name} key={name}>{name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </>}
         {qrisDoku && currentStore ? <BookingDokuInline
           storeId={currentStore.id}
           bookingId={billing.totals.owner?.id || bookingId}
-          amount={amount}
+          amount={resumingDoku ? undefined : amount}
+          resumeActive={resumingDoku}
           preparing={false}
           onPrepare={async () => {}}
         /> : <PaymentProofUpload value={proof} onChange={setProof} required disabled={saving} compact />}
