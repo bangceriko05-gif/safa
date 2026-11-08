@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     }
     const invoice = `ANKA-${crypto.randomUUID()}`;
-    const { data: attempt, error: insertError } = await admin.from("doku_payment_attempts").insert({ store_id: order.store_id, order_id: order.id, invoice_number: invoice, environment: credentials.environment, client_id: credentials.clientId, amount: remaining, due_minutes: dueMinutes }).select("id,created_at").single();
+    const { data: attempt, error: insertError } = await admin.from("doku_payment_attempts").insert({ store_id: order.store_id, order_id: order.id, invoice_number: invoice, environment: credentials.environment, client_id: credentials.clientId, amount: remaining, channel: channels.join(","), due_minutes: dueMinutes }).select("id,created_at").single();
     if (insertError || !attempt) return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     const target = "/checkout/v1/payment";
     const body = JSON.stringify({ order: { amount: remaining, invoice_number: invoice }, payment: { payment_method_types: channels, payment_due_date: dueMinutes } });

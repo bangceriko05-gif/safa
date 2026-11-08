@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Tampilkan transaksi DOKU POS dan booking dengan outlet, BID, invoice, waktu GMT+7, metode, nominal, dan status; 3 tes lulus, data asli, pencarian BID, dan export CSV terverifikasi.
+
 - [x] Tombol Pembayaran booking langsung membuka QRIS DOKU aktif dengan nominal dan invoice yang sama, tanpa pilihan metode ulang; 3 tes aturan lulus dan buka-tutup popup diuji dua kali dengan respons DOKU simulasi.
 
 - [x] Tampilkan QRIS DOKU inline saat dipilih di booking sesuai arahan terbaru; simpan tagihan belum lunas dan gunakan konfirmasi DOKU untuk pembayaran tanpa pembayaran ganda.
