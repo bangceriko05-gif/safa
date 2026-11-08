@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Tombol Pembayaran booking langsung membuka QRIS DOKU aktif dengan nominal dan invoice yang sama, tanpa pilihan metode ulang.
+- [x] Tombol Pembayaran booking langsung membuka QRIS DOKU aktif dengan nominal dan invoice yang sama, tanpa pilihan metode ulang; 3 tes aturan lulus dan buka-tutup popup diuji dua kali dengan respons DOKU simulasi.
 
-- [ ] Tampilkan popup QRIS DOKU saat dipilih di booking; simpan tagihan belum lunas, gunakan konfirmasi DOKU untuk pembayaran, dan uji popup serta keamanan tanpa pembayaran ganda.
+- [x] Tampilkan QRIS DOKU inline saat dipilih di booking sesuai arahan terbaru; simpan tagihan belum lunas dan gunakan konfirmasi DOKU untuk pembayaran tanpa pembayaran ganda.
 
 - [x] Tambahkan pilihan pembayaran DOKU di Tambah Booking hanya sesuai channel aktif outlet; 11 tes lulus, pilihan utama/kedua diuji dengan akun aktif untuk QRIS saja, QRIS bersama Virtual Account, dan DOKU nonaktif menggunakan simulasi pengaturan tanpa menyimpan booking.
 
