@@ -39,6 +39,12 @@ export async function dokuSignature(secret: string, clientId: string, requestId:
   return `HMACSHA256=${base64(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(components)))}`;
 }
 
+export async function dokuGetSignature(secret: string, clientId: string, requestId: string, timestamp: string, target: string) {
+  const components = `Client-Id:${clientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${target}`;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return `HMACSHA256=${base64(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(components)))}`;
+}
+
 export function signaturesEqual(expected: string, actual: string) {
   let mismatch = expected.length ^ actual.length;
   for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ (actual.charCodeAt(i) || 0);

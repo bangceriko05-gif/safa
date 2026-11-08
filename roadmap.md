@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Sinkronkan status pembayaran DOKU yang sukses tetapi notifikasinya terlewat; invoice ANKA-e851551c-c778-4e72-9520-e524132d6892 harus menjadi Success tanpa melunaskan sisa booking secara palsu.
+
 - [x] Tampilkan transaksi DOKU POS dan booking dengan outlet, BID, invoice, waktu GMT+7, metode, nominal, dan status; 3 tes lulus, data asli, pencarian BID, dan export CSV terverifikasi.
 
 - [x] Tombol Pembayaran booking langsung membuka QRIS DOKU aktif dengan nominal dan invoice yang sama, tanpa pilihan metode ulang; 3 tes aturan lulus dan buka-tutup popup diuji dua kali dengan respons DOKU simulasi.
