@@ -22,6 +22,7 @@ import { Loader2, User, Clock, LogIn, LogOut, CheckCircle, AlertCircle, Edit, Tr
 import { toast } from "@/hooks/use-toast";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
+import { formatDokuPaidAt } from "@/utils/dokuTransactions";
 import CheckInDepositPopup from "@/components/deposit/CheckInDepositPopup";
 import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
@@ -92,6 +93,7 @@ interface TrackingEntry {
   timestamp: string;
   description: string;
   icon: React.ReactNode;
+  isPayment?: boolean;
 }
 
 export default function BookingDetailPopup({
@@ -110,6 +112,7 @@ export default function BookingDetailPopup({
   const [sharedBilling, setSharedBilling] = useState<Awaited<ReturnType<typeof fetchGroupBilling>> | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
+  const [dokuPayments, setDokuPayments] = useState<Array<{ id: string; invoice_number: string; amount: number; channel: string | null; paid_at: string }>>([]);
   const [roomDeposits, setRoomDeposits] = useState<Set<string>>(new Set());
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -199,15 +202,24 @@ export default function BookingDetailPopup({
       setSharedBilling(shared);
       setProducts(shared?.products || productsData || []);
 
-      // Fetch activity logs for this booking
-      const { data: logsData } = await supabase
-        .from("activity_logs")
-        .select("*")
-        .eq("entity_type", "Booking")
-        .eq("entity_id", bookingId)
-        .order("created_at", { ascending: true });
+      // Fetch activity and DOKU receipt history for this booking or its billing group.
+      const bookingIds = shared?.rooms.length ? shared.rooms.map(room => room.id) : [bookingId];
+      const [logsResult, paymentsResult] = await Promise.all([
+        supabase.from("activity_logs")
+          .select("*")
+          .eq("entity_type", "Booking")
+          .eq("entity_id", bookingId)
+          .order("created_at", { ascending: true }),
+        supabase.from("doku_booking_attempts")
+          .select("id, invoice_number, amount, channel, paid_at")
+          .in("booking_id", bookingIds)
+          .eq("status", "success")
+          .not("paid_at", "is", null)
+          .order("paid_at", { ascending: true }),
+      ]);
 
-      setActivityLogs(logsData || []);
+      setActivityLogs(logsResult.data || []);
+      setDokuPayments((paymentsResult.data || []).filter(payment => payment.paid_at) as Array<{ id: string; invoice_number: string; amount: number; channel: string | null; paid_at: string }>);
 
       // Fetch variant name and price if variant_id exists
       let variantName = undefined;
@@ -439,8 +451,7 @@ export default function BookingDetailPopup({
   };
 
   const getTrackingHistory = (): TrackingEntry[] => {
-    // Use activity logs as the primary source
-    return activityLogs.map((log) => ({
+    const activities = activityLogs.map((log) => ({
       action: log.action_type === "created" ? "Dibuat" : 
               log.action_type === "updated" ? "Diubah" : 
               log.action_type === "deleted" ? "Dihapus" :
@@ -452,6 +463,15 @@ export default function BookingDetailPopup({
       description: log.description,
       icon: getActionIcon(log.action_type, log.description),
     }));
+    const receipts: TrackingEntry[] = dokuPayments.map(payment => ({
+      action: "Uang Diterima",
+      user_name: "DOKU",
+      timestamp: payment.paid_at,
+      description: `${payment.channel || "QRIS"} • Rp ${new Intl.NumberFormat("id-ID").format(Number(payment.amount))} • ${payment.invoice_number}`,
+      icon: <CheckCircle className="h-4 w-4 text-success" />,
+      isPayment: true,
+    }));
+    return [...activities, ...receipts].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   };
 
   const formatCurrency = (amount: number) => {
@@ -789,7 +809,7 @@ export default function BookingDetailPopup({
                           {entry.description}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          oleh <span className="font-medium">{entry.user_name}</span> • {formatDateTime(entry.timestamp)}
+                          oleh <span className="font-medium">{entry.user_name}</span> • {entry.isPayment ? formatDokuPaidAt(entry.timestamp) : formatDateTime(entry.timestamp)}
                         </div>
                       </div>
                     </div>

@@ -7,6 +7,7 @@ import { bookingPaymentMethods } from "@/utils/dokuChannels";
 import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 import { unpaidBookingQris } from "@/utils/bookingDokuPayment";
 import { userFacingError } from "@/utils/userFacingError";
+import { formatDokuPaidAt } from "@/utils/dokuTransactions";
 import {
   Dialog,
   DialogContent,
@@ -153,6 +154,7 @@ export default function BookingModal({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [historyLogs, setHistoryLogs] = useState<Array<{ id: string; action_type: string; user_name: string; user_role: string; description: string; created_at: string }>>([]);
+  const [dokuPayments, setDokuPayments] = useState<Array<{ id: string; invoice_number: string; amount: number; channel: string | null; paid_at: string }>>([]);
   const [creatorName, setCreatorName] = useState<string>("");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -518,30 +520,43 @@ export default function BookingModal({
   useEffect(() => {
     if (!isOpen || !editingBooking?.id) {
       setHistoryLogs([]);
+      setDokuPayments([]);
       setCreatorName("");
       return;
     }
     let cancelled = false;
     (async () => {
-      const { data: logs } = await supabase
-        .from('activity_logs')
-        .select('id, action_type, user_name, user_role, description, created_at')
-        .in('entity_type', ['booking', 'Booking'])
-        .eq('entity_id', editingBooking.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (!cancelled) setHistoryLogs(logs || []);
-      if (editingBooking.created_by) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', editingBooking.created_by)
-          .maybeSingle();
-        if (!cancelled) setCreatorName(prof?.name || '');
+      let bookingIds = [editingBooking.id];
+      if (editingBooking.booking_group_id) {
+        let groupQuery = supabase.from("bookings").select("id").eq("booking_group_id", editingBooking.booking_group_id);
+        if (editingBooking.store_id) groupQuery = groupQuery.eq("store_id", editingBooking.store_id);
+        const { data: groupBookings } = await groupQuery;
+        if (groupBookings?.length) bookingIds = groupBookings.map(booking => booking.id);
       }
+      const [logsResult, paymentsResult, profileResult] = await Promise.all([
+        supabase.from('activity_logs')
+          .select('id, action_type, user_name, user_role, description, created_at')
+          .in('entity_type', ['booking', 'Booking'])
+          .eq('entity_id', editingBooking.id)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        supabase.from('doku_booking_attempts')
+          .select('id, invoice_number, amount, channel, paid_at')
+          .in('booking_id', bookingIds)
+          .eq('status', 'success')
+          .not('paid_at', 'is', null)
+          .order('paid_at', { ascending: false }),
+        editingBooking.created_by
+          ? supabase.from('profiles').select('name').eq('id', editingBooking.created_by).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (cancelled) return;
+      setHistoryLogs(logsResult.data || []);
+      setDokuPayments((paymentsResult.data || []).filter(payment => payment.paid_at) as Array<{ id: string; invoice_number: string; amount: number; channel: string | null; paid_at: string }>);
+      setCreatorName(profileResult.data?.name || '');
     })();
     return () => { cancelled = true; };
-  }, [isOpen, editingBooking?.id]);
+  }, [isOpen, editingBooking?.id, editingBooking?.booking_group_id, editingBooking?.store_id, editingBooking?.created_by]);
 
   // Initialize form when modal opens or data changes
   useEffect(() => {
@@ -3768,6 +3783,16 @@ export default function BookingModal({
                 <span className="text-sm font-semibold">Riwayat Aktivitas</span>
               </div>
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {dokuPayments.map((payment) => (
+                  <div key={payment.id} className="text-xs flex items-start gap-2 border-b pb-1.5">
+                    <span className="inline-block min-w-[64px] px-1.5 py-0.5 rounded bg-secondary text-success text-[10px] font-bold text-center">DITERIMA</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium">DOKU <span className="text-muted-foreground font-normal">({payment.channel || "QRIS"})</span></div>
+                      <div className="text-muted-foreground text-[11px] break-words">Uang masuk Rp {new Intl.NumberFormat("id-ID").format(Number(payment.amount))} • {payment.invoice_number}</div>
+                      <div className="text-muted-foreground text-[10px]">{formatDokuPaidAt(payment.paid_at)}</div>
+                    </div>
+                  </div>
+                ))}
                 {creatorName && (
                   <div className="text-xs flex items-start gap-2 border-b pb-1.5">
                     <span className="inline-block min-w-[64px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold text-center">DIBUAT</span>
@@ -3781,7 +3806,7 @@ export default function BookingModal({
                     </div>
                   </div>
                 )}
-                {historyLogs.length === 0 && !creatorName && (
+                {historyLogs.length === 0 && dokuPayments.length === 0 && !creatorName && (
                   <div className="text-xs text-muted-foreground italic">Belum ada riwayat tercatat.</div>
                 )}
                 {historyLogs.map((log) => {

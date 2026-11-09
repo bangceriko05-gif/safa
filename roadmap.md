@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Tampilkan tanggal dan pukul uang DOKU diterima berdasarkan `paid_at`, pada Riwayat Aktivitas booking dan transaksi DOKU dalam WIB.
+
 - [x] Sinkronkan status pembayaran DOKU yang sukses tetapi notifikasinya terlewat melalui Check Status resmi dengan verifikasi invoice dan nominal; invoice ANKA-e851551c-c778-4e72-9520-e524132d6892 terverifikasi Success dan booking lunas sesuai total Rp1 setelah diskon.
 
 - [x] Tampilkan transaksi DOKU POS dan booking dengan outlet, BID, invoice, waktu GMT+7, metode, nominal, dan status; 3 tes lulus, data asli, pencarian BID, dan export CSV terverifikasi.

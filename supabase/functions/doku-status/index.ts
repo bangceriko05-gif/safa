@@ -21,9 +21,9 @@ Deno.serve(async (req) => {
     if (!parsed.success) return reply(400, { error: "Nomor invoice pembayaran tidak valid." });
 
     const admin = dokuAdmin();
-    const { data: orderAttempt, error: orderLookupError } = await admin.from("doku_payment_attempts").select("id,order_id,store_id,amount,status,client_id,environment,invoice_number").eq("invoice_number", parsed.data.invoice_number).maybeSingle();
+    const { data: orderAttempt, error: orderLookupError } = await admin.from("doku_payment_attempts").select("id,order_id,store_id,amount,status,client_id,environment,invoice_number,paid_at").eq("invoice_number", parsed.data.invoice_number).maybeSingle();
     if (orderLookupError) throw orderLookupError;
-    const { data: bookingAttempt, error: bookingLookupError } = orderAttempt ? { data: null, error: null } : await admin.from("doku_booking_attempts").select("id,booking_id,store_id,amount,status,client_id,environment,invoice_number").eq("invoice_number", parsed.data.invoice_number).maybeSingle();
+    const { data: bookingAttempt, error: bookingLookupError } = orderAttempt ? { data: null, error: null } : await admin.from("doku_booking_attempts").select("id,booking_id,store_id,amount,status,client_id,environment,invoice_number,paid_at").eq("invoice_number", parsed.data.invoice_number).maybeSingle();
     if (bookingLookupError) throw bookingLookupError;
     const attempt = orderAttempt || bookingAttempt;
     if (!attempt) return reply(404, { error: "Transaksi DOKU tidak ditemukan." });
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const { data: transaction, error: accessError } = await client.from(table).select("id,payment_status").eq("id", transactionId).eq("store_id", attempt.store_id).maybeSingle();
     if (accessError || !transaction) return reply(403, { error: "Anda tidak memiliki izin untuk transaksi di outlet ini." });
 
-    if (attempt.status !== "pending") return reply(200, { status: attempt.status, payment_status: transaction.payment_status, channel: null });
+    if (attempt.status !== "pending") return reply(200, { status: attempt.status, payment_status: transaction.payment_status, channel: null, paid_at: attempt.paid_at });
     const credentials = await dokuCredentials(attempt.store_id, attempt.environment);
     if (!credentials || credentials.clientId !== attempt.client_id) return reply(400, { error: "Kredensial DOKU outlet belum sesuai. Periksa Pengaturan DOKU." });
 
@@ -54,7 +54,8 @@ Deno.serve(async (req) => {
       const { error: settleError } = await admin.rpc(source === "booking" ? "settle_doku_booking" : "settle_doku_order", { p_attempt_id: attempt.id, p_amount: payment.amount, p_channel: payment.channel || "QRIS" });
       if (settleError) return reply(409, { error: "Pembayaran sudah diterima DOKU, tetapi status transaksi belum dapat diperbarui. Silakan coba lagi." });
       const { data: fresh } = await client.from(table).select("payment_status").eq("id", transactionId).eq("store_id", attempt.store_id).maybeSingle();
-      return reply(200, { status: "success", payment_status: fresh?.payment_status || transaction.payment_status, channel: payment.channel });
+      const { data: settledAttempt } = await admin.from(source === "booking" ? "doku_booking_attempts" : "doku_payment_attempts").select("paid_at").eq("id", attempt.id).single();
+      return reply(200, { status: "success", payment_status: fresh?.payment_status || transaction.payment_status, channel: payment.channel, paid_at: settledAttempt?.paid_at || null });
     }
 
     if (payment.status === "FAILED" || payment.status === "EXPIRED") {

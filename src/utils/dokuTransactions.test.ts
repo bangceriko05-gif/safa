@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { dokuTransactionMethod, formatDokuTransactionTime, matchesDokuTransactionSearch } from "./dokuTransactions";
+import { dokuTransactionMethod, formatDokuPaidAt, formatDokuTransactionTime, matchesDokuTransactionSearch } from "./dokuTransactions";
 
 const row = { outlet: "SAFA Kost and Guest House", bid: "FBSTR20261108001", invoice_number: "ANKA-123" };
 
@@ -18,5 +18,10 @@ describe("daftar transaksi DOKU", () => {
 
   it("menampilkan waktu GMT+7 secara konsisten", () => {
     expect(formatDokuTransactionTime("2026-11-08T06:24:00.000Z")).toBe("08 Nov 2026 13:24");
+  });
+
+  it("memakai waktu uang diterima, bukan waktu invoice dibuat", () => {
+    expect(formatDokuPaidAt("2026-11-09T01:36:00.841374+00")).toBe("09 Nov 2026 08:36 WIB");
+    expect(formatDokuPaidAt(null)).toBe("-");
   });
 });

@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import DokuLogo from "./DokuLogo";
 import DokuSettings from "./DokuSettings";
 import { userFacingError } from "@/utils/userFacingError";
-import { dokuTransactionMethod, formatDokuTransactionTime, matchesDokuTransactionSearch, type DokuTransaction } from "@/utils/dokuTransactions";
+import { dokuTransactionMethod, formatDokuPaidAt, formatDokuTransactionTime, matchesDokuTransactionSearch, type DokuTransaction } from "@/utils/dokuTransactions";
 
 type AttemptBase = Omit<DokuTransaction, "source" | "outlet" | "bid">;
 type BidRelation = { bid: string | null } | { bid: string | null }[] | null;
@@ -30,7 +30,7 @@ const methodFilters: { value: string; label: string; prefix: string }[] = [
   { value: "paylater", label: "Paylater", prefix: "PEER_TO_PEER" },
 ];
 
-const columns = ["Outlet", "BID", "Invoice Number", "Waktu (GMT+7)", "Metode", "Amount", "Status"];
+const columns = ["Outlet", "BID", "Invoice Number", "Waktu (GMT+7)", "Uang Masuk (GMT+7)", "Metode", "Amount", "Status"];
 const idr = (value: number) => `Rp ${new Intl.NumberFormat("id-ID").format(value)}`;
 
 export default function DokuDashboard() {
@@ -94,6 +94,7 @@ export default function DokuDashboard() {
             ...item,
             status: typeof data.status === "string" ? data.status : item.status,
             channel: typeof data.channel === "string" ? data.channel : item.channel,
+            paid_at: typeof data.paid_at === "string" ? data.paid_at : item.paid_at,
           } : item));
         }));
       }
@@ -113,6 +114,7 @@ export default function DokuDashboard() {
       key === "Amount" ? Number(row.amount) :
       key === "Invoice Number" ? row.invoice_number :
       key === "Metode" ? dokuTransactionMethod(row) :
+      key === "Uang Masuk (GMT+7)" ? row.paid_at || "" :
       key === "Outlet" ? row.outlet :
       key === "BID" ? row.bid :
       key === "Status" ? row.status : row.created_at;
@@ -131,7 +133,7 @@ export default function DokuDashboard() {
   const exportCsv = () => {
     const header = columns.join(",");
     const lines = filtered.map((row) => [
-      row.outlet, row.bid, row.invoice_number, formatDokuTransactionTime(row.created_at), dokuTransactionMethod(row), Number(row.amount), row.status,
+      row.outlet, row.bid, row.invoice_number, formatDokuTransactionTime(row.created_at), formatDokuPaidAt(row.paid_at), dokuTransactionMethod(row), Number(row.amount), row.status,
     ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","));
     const blob = new Blob([`﻿${header}\n${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -158,7 +160,7 @@ export default function DokuDashboard() {
           </div>
           {invalidDate && <p role="alert" className="px-4 pt-3 text-sm text-destructive">Tanggal akhir harus sama atau setelah tanggal mulai.</p>}
           <div className="overflow-x-auto">
-            <Table className="min-w-[960px]"><TableHeader className="bg-muted/40"><TableRow>{columns.map((column) => <TableHead key={column} aria-sort={sort.column === column ? sort.ascending ? "ascending" : "descending" : "none"}><Button variant="ghost" size="sm" className="-ml-3 gap-2 whitespace-nowrap text-foreground" onClick={() => setSort({ column, ascending: sort.column === column ? !sort.ascending : true })}>{column}<ArrowUpDown className="h-3 w-3 text-muted-foreground" /></Button></TableHead>)}</TableRow></TableHeader><TableBody>
+            <Table className="min-w-[1120px]"><TableHeader className="bg-muted/40"><TableRow>{columns.map((column) => <TableHead key={column} aria-sort={sort.column === column ? sort.ascending ? "ascending" : "descending" : "none"}><Button variant="ghost" size="sm" className="-ml-3 gap-2 whitespace-nowrap text-foreground" onClick={() => setSort({ column, ascending: sort.column === column ? !sort.ascending : true })}>{column}<ArrowUpDown className="h-3 w-3 text-muted-foreground" /></Button></TableHead>)}</TableRow></TableHeader><TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={columns.length} className="h-64 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
@@ -169,6 +171,7 @@ export default function DokuDashboard() {
                   <TableCell className="whitespace-nowrap font-mono text-xs">{row.bid}</TableCell>
                   <TableCell className="font-mono text-xs">{row.invoice_number}</TableCell>
                   <TableCell className="whitespace-nowrap">{formatDokuTransactionTime(row.created_at)}</TableCell>
+                  <TableCell className="whitespace-nowrap">{formatDokuPaidAt(row.paid_at)}</TableCell>
                   <TableCell><span className="whitespace-nowrap">{dokuTransactionMethod(row)}</span>{row.environment === "sandbox" ? <span className="ml-1 text-xs text-muted-foreground">(sandbox)</span> : null}</TableCell>
                   <TableCell className="whitespace-nowrap font-semibold">{idr(Number(row.amount))}</TableCell>
                   <TableCell><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${row.status === "success" ? "bg-secondary text-success" : row.status === "failed" ? "bg-destructive/10 text-destructive" : row.status === "expired" ? "bg-muted text-muted-foreground" : "bg-accent text-accent-foreground"}`}>{row.status.toUpperCase()}</span></TableCell>
