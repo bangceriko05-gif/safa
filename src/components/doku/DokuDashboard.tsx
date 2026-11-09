@@ -83,7 +83,19 @@ export default function DokuDashboard() {
         const bookingRows = ((bookingResult.data || []) as unknown as (AttemptBase & { bookings: BidRelation })[]).map(row => ({
           ...row, source: "Booking" as const, outlet, bid: relationBid(row.bookings),
         }));
-        setRows([...posRows, ...bookingRows]);
+        const combined = [...posRows, ...bookingRows];
+        setRows(combined);
+        // Notifikasi DOKU bisa terlewat; cocokkan maksimal 20 tagihan menunggu terbaru langsung ke DOKU.
+        const pending = combined.filter(row => row.status === "pending").slice(0, 20);
+        void Promise.all(pending.map(async row => {
+          const { data, error } = await supabase.functions.invoke("doku-status", { body: { invoice_number: row.invoice_number } });
+          if (!active || error || !data?.status) return;
+          setRows(current => current.map(item => item.source === row.source && item.id === row.id ? {
+            ...item,
+            status: typeof data.status === "string" ? data.status : item.status,
+            channel: typeof data.channel === "string" ? data.channel : item.channel,
+          } : item));
+        }));
       }
       setLoading(false);
     })();

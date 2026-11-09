@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     const client = createClient(url, anon, { global: { headers: { Authorization: authorization } } });
     const { data: { user } } = await client.auth.getUser();
     if (!user) return reply(401, { error: "Sesi Anda sudah berakhir. Silakan masuk kembali." });
-    const parsed = z.object({ invoice_number: z.string().min(5).max(128).regex(/^[A-Z0-9-]+$/) }).safeParse(await req.json().catch(() => null));
+    const parsed = z.object({ invoice_number: z.string().min(5).max(128).regex(/^[A-Za-z0-9-]+$/) }).safeParse(await req.json().catch(() => null));
     if (!parsed.success) return reply(400, { error: "Nomor invoice pembayaran tidak valid." });
 
     const admin = dokuAdmin();
