@@ -4,47 +4,53 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUpDown, Download, Filter, Loader2, Receipt, Search, Settings } from "lucide-react";
+import { Download, Loader2, Receipt, Search, Settings } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import DokuLogo from "./DokuLogo";
 import DokuSettings from "./DokuSettings";
 import { userFacingError } from "@/utils/userFacingError";
 import { dokuTransactionMethod, formatDokuPaidAt, formatDokuTransactionTime, matchesDokuTransactionSearch, type DokuTransaction } from "@/utils/dokuTransactions";
+import ReportColumnFilter from "@/components/reports/ReportColumnFilter";
+import { applyColumnFilters, type ColumnSelections } from "@/utils/tableColumnFilters";
 
 type AttemptBase = Omit<DokuTransaction, "source" | "outlet" | "bid">;
 type BidRelation = { bid: string | null } | { bid: string | null }[] | null;
 
 const relationBid = (relation: BidRelation) => (Array.isArray(relation) ? relation[0]?.bid : relation?.bid) || "-";
 
-const methodFilters: { value: string; label: string; prefix: string }[] = [
-  { value: "qris", label: "QRIS", prefix: "QRIS" },
-  { value: "va", label: "Virtual Account", prefix: "VIRTUAL_ACCOUNT" },
-  { value: "wallet", label: "E-Wallet", prefix: "EMONEY" },
-  { value: "card", label: "Kartu Kredit / Debit", prefix: "CREDIT_CARD" },
-  { value: "retail", label: "Retail", prefix: "ONLINE_TO_OFFLINE" },
-  { value: "paylater", label: "Paylater", prefix: "PEER_TO_PEER" },
-];
-
 const columns = ["Outlet", "BID", "Invoice Number", "Waktu (GMT+7)", "Uang Masuk (GMT+7)", "Metode", "Amount", "Status"];
 const idr = (value: number) => `Rp ${new Intl.NumberFormat("id-ID").format(value)}`;
+const columnValue = (row: DokuTransaction, column: string) =>
+  column === "Amount" ? Number(row.amount) :
+  column === "Invoice Number" ? row.invoice_number :
+  column === "Metode" ? dokuTransactionMethod(row) :
+  column === "Uang Masuk (GMT+7)" ? (row.paid_at ? new Date(row.paid_at).getTime() : "-") :
+  column === "Outlet" ? row.outlet :
+  column === "BID" ? row.bid :
+  column === "Status" ? row.status.toUpperCase() : new Date(row.created_at).getTime();
+const columnLabel = (row: DokuTransaction, column: string) =>
+  column === "Amount" ? idr(Number(row.amount)) :
+  column === "Waktu (GMT+7)" ? formatDokuTransactionTime(row.created_at) :
+  column === "Uang Masuk (GMT+7)" ? formatDokuPaidAt(row.paid_at) : String(columnValue(row, column));
 
 export default function DokuDashboard() {
   const { currentStore } = useStore();
   const [tab, setTab] = useState("transactions");
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
-  const [method, setMethod] = useState("all");
+  const [selections, setSelections] = useState<ColumnSelections>({});
   const [from, setFrom] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [to, setTo] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [sort, setSort] = useState<{ column: string; ascending: boolean }>({ column: "Waktu (GMT+7)", ascending: false });
+  const [sort, setSort] = useState<{ column: string; ascending: boolean } | null>({ column: "Waktu (GMT+7)", ascending: false });
   const [rows, setRows] = useState<DokuTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const invalidDate = !!from && !!to && from > to;
+
+  useEffect(() => {
+    setSelections({});
+    setSort({ column: "Waktu (GMT+7)", ascending: false });
+  }, [currentStore?.id]);
 
   useEffect(() => {
     if (!currentStore?.id || invalidDate) return;
@@ -103,27 +109,14 @@ export default function DokuDashboard() {
     return () => { active = false; };
   }, [currentStore?.id, currentStore?.name, from, to, invalidDate]);
 
-  const filtered = useMemo(() => {
-    const prefix = methodFilters.find((filter) => filter.value === method)?.prefix;
-    const list = rows.filter((row) =>
-      (status === "all" || row.status === status) &&
-      (!prefix || dokuTransactionMethod(row).startsWith(prefix)) &&
-      matchesDokuTransactionSearch(row, query));
-    const key = sort.column;
-    const value = (row: DokuTransaction) =>
-      key === "Amount" ? Number(row.amount) :
-      key === "Invoice Number" ? row.invoice_number :
-      key === "Metode" ? dokuTransactionMethod(row) :
-      key === "Uang Masuk (GMT+7)" ? row.paid_at || "" :
-      key === "Outlet" ? row.outlet :
-      key === "BID" ? row.bid :
-      key === "Status" ? row.status : row.created_at;
-    return [...list].sort((a, b) => {
-      const av = value(a); const bv = value(b);
-      const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
-      return sort.ascending ? cmp : -cmp;
-    });
-  }, [rows, status, method, query, sort]);
+  const searched = useMemo(() => rows.filter(row => matchesDokuTransactionSearch(row, query)), [rows, query]);
+  const filterOptions = useMemo(() => Object.fromEntries(columns.map(column => {
+    const options = new Map(searched.map(row => [String(columnValue(row, column)), columnLabel(row, column)]));
+    return [column, Array.from(options, ([value, label]) => ({ value, label }))];
+  })), [searched]);
+  const filtered = useMemo(() => applyColumnFilters(searched, selections,
+    sort ? { key: sort.column, direction: sort.ascending ? "asc" : "desc" } : null, columnValue),
+  [searched, selections, sort]);
 
   const totals = useMemo(() => {
     const sum = (name: string) => filtered.filter((row) => row.status === name).reduce((total, row) => total + Number(row.amount), 0);
@@ -150,17 +143,16 @@ export default function DokuDashboard() {
       <TabsList className="mb-6"><TabsTrigger value="transactions" className="gap-2"><Receipt className="h-4 w-4" />Transaksi</TabsTrigger><TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4" />Pengaturan</TabsTrigger></TabsList>
       <TabsContent value="transactions" className="space-y-5">
         <h2 className="text-xl font-semibold">Transaksi</h2>
-        <section className="max-w-xl rounded-lg border bg-card p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-semibold">Rincian</h3><Button variant="ghost" size="sm" onClick={() => { setStatus("all"); setMethod("all"); setQuery(""); setFrom(""); setTo(""); }}>Lihat semua</Button></div><div className="grid grid-cols-3 gap-3">{[{ name: "SUCCESS", value: totals.success, style: "doku-summary-success" }, { name: "FAILED", value: totals.failed, style: "doku-summary-failed" }, { name: "PENDING", value: totals.pending, style: "doku-summary-pending" }].map(({ name, value, style }) => <div key={name} className={`${style} border-l-[3px] pl-3`}><p className="text-xs font-bold">{name}</p><p className="mt-1 text-base font-semibold text-foreground">{idr(value)}</p></div>)}</div></section>
+        <section className="max-w-xl rounded-lg border bg-card p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-semibold">Rincian</h3><Button variant="ghost" size="sm" onClick={() => { setSelections({}); setQuery(""); setFrom(""); setTo(""); }}>Lihat semua</Button></div><div className="grid grid-cols-3 gap-3">{[{ name: "SUCCESS", value: totals.success, style: "doku-summary-success" }, { name: "FAILED", value: totals.failed, style: "doku-summary-failed" }, { name: "PENDING", value: totals.pending, style: "doku-summary-pending" }].map(({ name, value, style }) => <div key={name} className={`${style} border-l-[3px] pl-3`}><p className="text-xs font-bold">{name}</p><p className="mt-1 text-base font-semibold text-foreground">{idr(value)}</p></div>)}</div></section>
         <section className="overflow-hidden rounded-lg border bg-card">
           <div className="flex flex-wrap items-center gap-3 border-b p-4">
-            <Popover><PopoverTrigger asChild><Button variant="outline"><Filter className="mr-2 h-4 w-4" />Filter{status !== "all" || method !== "all" ? " •" : ""}</Button></PopoverTrigger><PopoverContent align="start" className="space-y-4"><div className="space-y-2"><Label>Status</Label><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Filter status DOKU"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua status</SelectItem><SelectItem value="success">Success</SelectItem><SelectItem value="failed">Failed</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="expired">Expired</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Metode pembayaran</Label><Select value={method} onValueChange={setMethod}><SelectTrigger aria-label="Filter metode DOKU"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua metode</SelectItem>{methodFilters.map((filter) => <SelectItem key={filter.value} value={filter.value}>{filter.label}</SelectItem>)}</SelectContent></Select></div><Button variant="ghost" onClick={() => { setStatus("all"); setMethod("all"); }}>Reset filter</Button></PopoverContent></Popover>
             <div className="relative w-full sm:w-72"><Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Cari transaksi DOKU" placeholder="Cari BID, invoice, atau outlet…" value={query} onChange={(event) => setQuery(event.target.value)} className="pr-10" /></div>
             <div className="flex flex-wrap items-center gap-2"><Input type="date" aria-label="Tanggal mulai DOKU" value={from} onChange={(event) => setFrom(event.target.value)} className="w-40" /><span className="text-muted-foreground">–</span><Input type="date" aria-label="Tanggal akhir DOKU" value={to} onChange={(event) => setTo(event.target.value)} className="w-40" /></div>
             <Button variant="outline" disabled={filtered.length === 0} onClick={exportCsv} className="sm:ml-auto"><Download className="mr-2 h-4 w-4" />Export</Button>
           </div>
           {invalidDate && <p role="alert" className="px-4 pt-3 text-sm text-destructive">Tanggal akhir harus sama atau setelah tanggal mulai.</p>}
           <div className="overflow-x-auto">
-            <Table className="min-w-[1120px]"><TableHeader className="bg-muted/40"><TableRow>{columns.map((column) => <TableHead key={column} aria-sort={sort.column === column ? sort.ascending ? "ascending" : "descending" : "none"}><Button variant="ghost" size="sm" className="-ml-3 gap-2 whitespace-nowrap text-foreground" onClick={() => setSort({ column, ascending: sort.column === column ? !sort.ascending : true })}>{column}<ArrowUpDown className="h-3 w-3 text-muted-foreground" /></Button></TableHead>)}</TableRow></TableHeader><TableBody>
+            <Table className="min-w-[1120px]"><TableHeader className="bg-muted/40"><TableRow>{columns.map((column) => <TableHead key={column} aria-sort={sort?.column === column ? sort.ascending ? "ascending" : "descending" : "none"}><div className="flex items-center gap-1 whitespace-nowrap"><span>{column}</span><ReportColumnFilter label={column} options={filterOptions[column] || []} selected={selections[column]} direction={sort?.column === column ? sort.ascending ? "asc" : "desc" : undefined} numeric={column === "Amount"} date={column === "Waktu (GMT+7)" || column === "Uang Masuk (GMT+7)"} onApply={(selected, direction) => { setSelections(previous => ({ ...previous, [column]: selected })); setSort(previous => direction ? { column, ascending: direction === "asc" } : previous?.column === column ? null : previous); }} /></div></TableHead>)}</TableRow></TableHeader><TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={columns.length} className="h-64 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (

@@ -45,3 +45,4 @@
 - Dashboard editors such as the product editor render inline in the main content beside the sidebar; remaining full-screen overlays mount through the shared body portal because the sidebar stacking context would otherwise cover and clip them.
 
 - DOKU payment time limits are stored per enabled channel in outlet settings; each invoice snapshots the shortest limit of its offered channels on the attempt so countdowns and renewals stay correct after settings change.
+- DOKU transaction headers reuse the shared confirmed column-filter control and pure filtering pipeline, so table rows, summary amounts, and CSV exports follow the same selections without changing payment data.
