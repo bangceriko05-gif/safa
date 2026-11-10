@@ -24,13 +24,14 @@ import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 type Billing = Awaited<ReturnType<typeof fetchGroupBilling>>;
 const currency = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
 
-export default function BookingPaymentDialog({ open, onOpenChange, bookingId, initialBilling = null, onPaid }: {
+export default function BookingPaymentDialog({ open, onOpenChange, bookingId, initialBilling = null, onPaid, onComplete }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingId: string;
   /** Tagihan yang sudah tampil di detail booking dipakai langsung agar formulir tidak menunggu. */
   initialBilling?: Billing | null;
   onPaid: () => void | Promise<void>;
+  onComplete?: () => void;
 }) {
   const { currentStore } = useStore();
   const { hasPermission } = usePermissions(open);
@@ -228,7 +229,10 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
           resumeActive={resumingDoku}
           preparing={false}
           onPrepare={async () => {}}
+          onReceived={({ invoiceNumber }) => { setReference(invoiceNumber); void onPaid(); }}
+          onComplete={() => { onOpenChange(false); onComplete?.(); }}
         /> : <PaymentProofUpload value={proof} onChange={setProof} required disabled={saving} compact />}
+        {qrisDoku && reference && <div className="space-y-2"><Label htmlFor="booking-doku-reference">No. Reff</Label><Input id="booking-doku-reference" value={reference} readOnly /></div>}
         {!qrisDoku && <>
           <div className="space-y-2"><Label htmlFor="booking-payment-reference">No. Reff</Label><Input id="booking-payment-reference" value={reference} onChange={event => setReference(event.target.value)} disabled={saving} placeholder="Nomor referensi (opsional)" /></div>
           <Button type="submit" className="w-full gap-2" disabled={saving || !proof || !method || amount <= 0 || amount > billing.totals.remaining || !hasPermission("edit_bookings") || billing.rooms.some(room => room.status === "BATAL")}>

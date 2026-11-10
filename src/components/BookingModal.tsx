@@ -3446,6 +3446,8 @@ export default function BookingModal({
           />}
           {formData.payment_method === "QRIS DOKU" && currentStore && <BookingDokuInline storeId={currentStore.id}
             amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
+            onReceived={({ invoiceNumber }) => setFormData(previous => ({ ...previous, reference_no: invoiceNumber }))}
+            onComplete={() => { window.dispatchEvent(new CustomEvent("booking-changed")); onClose(); }}
             onPrepare={async () => { await handleSubmit({ preventDefault: () => {} }); }} />}
 
           <div className="grid grid-cols-2 gap-4">
@@ -3481,6 +3483,7 @@ export default function BookingModal({
               <Input
                 id="reference_no"
                 value={formData.reference_no}
+                readOnly={formData.payment_method === "QRIS DOKU"}
                 onChange={(e) =>
                   setFormData({ ...formData, reference_no: e.target.value })
                 }

@@ -25,14 +25,17 @@ interface Props {
   booking?: boolean;
   /** Tampilkan QR saja: tanpa ringkasan pesanan dan tombol tambahan. */
   qrOnly?: boolean;
+  onReceived?: (receipt: { invoiceNumber: string; amount: number; fullyPaid: boolean }) => Promise<void>;
 }
 
-export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, qrOnly = false }: Props) {
+export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, qrOnly = false, onReceived }: Props) {
   const [reload, setReload] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [paid, setPaid] = useState(false);
   const [fullyPaid, setFullyPaid] = useState(false);
   const [checking, setChecking] = useState(false);
+  const checkingRef = useRef(false);
+  const receivedInvoice = useRef<string | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [crop, setCrop] = useState(() => dokuBrandingCrop(768));
   const ttl = (checkout.dueMinutes && checkout.dueMinutes > 0 ? checkout.dueMinutes * 60 * 1000 : DOKU_QR_TTL_MS);
@@ -64,13 +67,18 @@ export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, 
   }, [checkout.url, checkout.createdAt, ttl, paid]);
 
   const checkPayment = async (notify = false) => {
-    if (!checkout.invoiceNumber) return;
+    if (!checkout.invoiceNumber || checkingRef.current) return;
+    checkingRef.current = true;
     setChecking(true);
     try {
       const { data, error } = await supabase.functions.invoke("doku-status", { body: { invoice_number: checkout.invoiceNumber } });
       if (error || data?.error) throw error || new Error(data.error);
       const received = data?.status === "success";
       const settled = received && data?.payment_status === "lunas";
+      if (received && onReceived && receivedInvoice.current !== checkout.invoiceNumber) {
+        await onReceived({ invoiceNumber: checkout.invoiceNumber, amount: Number(checkout.amount), fullyPaid: settled });
+        receivedInvoice.current = checkout.invoiceNumber;
+      }
       setPaid(received);
       setFullyPaid(settled);
       if (notify) {
@@ -82,6 +90,7 @@ export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, 
     } catch {
       if (notify) toast.error("Status pembayaran belum dapat diperiksa. Silakan coba lagi.");
     } finally {
+      checkingRef.current = false;
       setChecking(false);
     }
   };
@@ -106,7 +115,7 @@ export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, 
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-md border bg-background" aria-label="Pembayaran QRIS DOKU">
       {paid ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-primary" role="status">
+        <div className={`${fullyPaid ? "booking-settled" : ""} flex flex-1 flex-col items-center justify-center gap-3 p-6 text-primary`} role="status">
           <CheckCircle2 className="h-12 w-12" /><p className="text-2xl font-bold">{fullyPaid ? "LUNAS" : "PEMBAYARAN DITERIMA"}</p>
           <p className="text-sm text-foreground">{fullyPaid ? "Pembayaran sudah diterima." : "Pembayaran sebagian sudah diterima; sisa tagihan belum lunas."}</p>
         </div>

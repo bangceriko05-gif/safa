@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] QRIS booking: verifikasi invoice, BID/outlet dan nominal tersimpan; isi No. Reff, bunyikan suara hanya saat lunas, lalu tutup formulir otomatis ke kalender. 11 tes lulus; akun aktif membaca pelunasan asli BO-STR-20261110-004 dengan halaman QR simulasi, referensi cocok, pemutaran suara satu kali dan semua popup tertutup; tidak melakukan pembayaran baru.
+
 - [x] Tampilkan tanggal dan pukul uang DOKU diterima berdasarkan `paid_at`, pada Riwayat Aktivitas booking dan transaksi DOKU dalam WIB; 4 tes lulus dan invoice ANKA-e851551c-c778-4e72-9520-e524132d6892 terverifikasi 9 Nov 2026 08:36 WIB.
 
 - [x] Sinkronkan status pembayaran DOKU yang sukses tetapi notifikasinya terlewat melalui Check Status resmi dengan verifikasi invoice dan nominal; invoice ANKA-e851551c-c778-4e72-9520-e524132d6892 terverifikasi Success dan booking lunas sesuai total Rp1 setelah diskon.

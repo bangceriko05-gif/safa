@@ -1,5 +1,5 @@
 import { fetchGroupBilling, billingRoomTotal, type BillingRoom } from "@/utils/groupBookingBilling";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,7 +15,7 @@ import { Edit, Trash2, User, Phone, ChevronDown, Copy, Undo, Loader2, Shield, Pr
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import BookingOrdersSection from "./booking-orders/BookingOrdersSection";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "@/components/FeatureInactiveNotice";
 import { IdCard } from "lucide-react";
@@ -98,6 +98,15 @@ export default function BookingPopoverContent({
   addDays,
 }: BookingPopoverContentProps) {
   const [sharedBilling, setSharedBilling] = useState<Awaited<ReturnType<typeof fetchGroupBilling>> | null>(null);
+  const closeDetailRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const closeAfterPayment = (event: Event) => {
+      const detail = (event as CustomEvent<{ bookingId: string; storeId: string }>).detail;
+      if (detail?.storeId === booking.store_id) closeDetailRef.current?.click();
+    };
+    window.addEventListener("booking-payment-completed", closeAfterPayment);
+    return () => window.removeEventListener("booking-payment-completed", closeAfterPayment);
+  }, [booking.store_id]);
   const [products, setProducts] = useState<BookingProduct[]>([]);
   const [variantPrice, setVariantPrice] = useState<number | null>(null);
   const [variantDurationType, setVariantDurationType] = useState<string | null>(null);
@@ -585,7 +594,8 @@ export default function BookingPopoverContent({
         )}
       </div>
 
-      <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} initialBilling={sharedBilling} onPaid={fetchPaymentDetails} />
+      <DialogClose ref={closeDetailRef} className="hidden" aria-hidden="true" tabIndex={-1} />
+      <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} initialBilling={sharedBilling} onPaid={fetchPaymentDetails} onComplete={() => closeDetailRef.current?.click()} />
       <Separator />
 
       {/* Booking Orders */}

@@ -826,7 +826,7 @@ export default function BookingDetailPopup({
       </DialogContent>
 
       {/* Check-In Deposit Popup */}
-      {booking && <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} onPaid={async () => { await fetchBookingDetail(); onStatusChange?.(); }} />}
+      {booking && <BookingPaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} bookingId={booking.id} onPaid={async () => { await fetchBookingDetail(); onStatusChange?.(); }} onComplete={onClose} />}
       <CancelBookingDialog
         open={cancelDialogOpen}
         bookingName={booking?.customer_name}
