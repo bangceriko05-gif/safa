@@ -41,6 +41,7 @@
 - Booking receipts use the detail booking's shared billing aggregator for single and multi-room totals; stay duration and checkout follow calendar mode and saved stay duration, never the variant's billing period, preventing monthly rates from becoming months of stay.
 - Booking payment dialogs add to received payments without rewriting room rates or operational statuses; settlement feedback follows a successful persisted billing read, preventing false paid animations and duplicate room revenue.
 - Booking QRIS completion verifies the persisted attempt and billing owner's outlet, booking ID, invoice reference and amount before feedback; full settlement plays the shared cash-drawer sound once and closes the booking view without resubmitting or duplicating the saved BID.
+- Sequential DOKU booking payments credit the first empty payment slot, then add to the QRIS second slot atomically; each slot keeps its verified invoice reference and editing never credits an unconfirmed QR amount, preventing lost first payments or duplicate settlement.
 - POS service charge, PPN and order totals come from one shared pure calculator used by the cashier, order detail and receipts; percentage service charge is based on the discounted subtotal before PPN, and receipts total stored order charges so printed totals match saved payments.
 
 - Dashboard editors such as the product editor render inline in the main content beside the sidebar; remaining full-screen overlays mount through the shared body portal because the sidebar stacking context would otherwise cover and clip them.

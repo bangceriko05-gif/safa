@@ -5,6 +5,14 @@ const expected = { bookingId: "booking-012", storeId: "safa", invoiceNumber: "AN
 const attempt = { booking_id: expected.bookingId, store_id: expected.storeId, invoice_number: expected.invoiceNumber, amount: 1, status: "success" };
 const owner = { id: expected.bookingId, store_id: expected.storeId, reference_no: expected.invoiceNumber, price: 1 };
 describe("pelunasan QRIS booking", () => {
+  it("menerima QRIS kedua Rp139.999 tanpa mengganti pembayaran pertama", () => {
+    const secondExpected = { ...expected, invoiceNumber: "ANKA-kedua", amount: 139999 };
+    const secondAttempt = { ...attempt, invoice_number: "ANKA-kedua", amount: 139999 };
+    const secondOwner = { ...owner, price: 100000, dual_payment: true, price_2: 139999, reference_no_2: "ANKA-kedua" };
+    expect(matchesBookingDokuSettlement(secondExpected, secondAttempt, secondOwner)).toBe(true);
+    expect(matchesBookingDokuSettlement(secondExpected, secondAttempt, { ...secondOwner, reference_no_2: "salah" })).toBe(false);
+    expect(matchesBookingDokuSettlement(secondExpected, secondAttempt, { ...secondOwner, price_2: 139998 })).toBe(false);
+  });
   it("menggunakan invoice DOKU yang tersimpan sebagai No. Reff", () => {
     expect(matchesBookingDokuSettlement(expected, attempt, owner)).toBe(true);
     expect(matchesBookingDokuSettlement(expected, attempt, { ...owner, reference_no: "acak" })).toBe(false);

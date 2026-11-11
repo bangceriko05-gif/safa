@@ -1393,10 +1393,6 @@ export default function BookingModal({
     const formData = selectedPaymentMethod ? { ...bookingFormData, payment_method: selectedPaymentMethod } : bookingFormData;
     if (loading || qrisSaveRef.current || qrisBookingId) return;
     const automaticQris = !editingBooking && formData.payment_method === "QRIS DOKU";
-    if (automaticQris && formData.dual_payment) {
-      toast.error("Untuk QRIS otomatis, nonaktifkan Dual Payment terlebih dahulu.");
-      return;
-    }
     qrisSaveRef.current = true;
     setLoading(true);
 
@@ -1492,7 +1488,7 @@ export default function BookingModal({
           setLoading(false);
           return;
         }
-        if (!paymentProofUrl2) {
+        if (formData.payment_method_2 !== "QRIS DOKU" && !paymentProofUrl2) {
           toast.error("Bukti Bayar Kedua wajib diupload saat Dual Payment aktif");
           setLoading(false);
           return;
@@ -1683,6 +1679,23 @@ export default function BookingModal({
 
       if (automaticQris) {
         Object.assign(bookingData, unpaidBookingQris(calculateRoomSubtotal(), finalDuration, formData.booking_type === "ota"));
+      }
+      // A QR amount is an invoice request, never received money. Keep the
+      // confirmed slots from the billing owner when saving other edits.
+      if (editingBooking && (formData.payment_method === "QRIS DOKU" || formData.payment_method_2 === "QRIS DOKU")) {
+        const fresh = await fetchGroupBilling({ id: editingBooking.id, store_id: currentStore.id, booking_group_id: editingBooking.booking_group_id });
+        const owner = fresh.totals.owner;
+        if (!owner) throw new Error("Pembayaran booking belum dapat dibaca. Silakan coba lagi.");
+        if (formData.payment_method === "QRIS DOKU") {
+          bookingData.price = owner.price;
+          bookingData.reference_no = owner.reference_no;
+        }
+        if (formData.payment_method_2 === "QRIS DOKU") {
+          bookingData.price_2 = owner.price_2 || null;
+          bookingData.reference_no_2 = owner.reference_no_2 || null;
+          bookingData.dual_payment = Boolean(owner.dual_payment);
+        }
+        bookingData.payment_status = Number(bookingData.price || 0) + (bookingData.dual_payment ? Number(bookingData.price_2 || 0) : 0) >= calculateGrandTotal() ? "lunas" : "belum_lunas";
       }
 
       // Only set created_by for NEW bookings, never update it for existing bookings
@@ -3444,9 +3457,11 @@ export default function BookingModal({
             disabled={loading}
             label={formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}
           />}
-          {formData.payment_method === "QRIS DOKU" && currentStore && <BookingDokuInline storeId={currentStore.id}
+          {formData.payment_method === "QRIS DOKU" && !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no : editingBooking.reference_no)?.startsWith("ANKA-")) && currentStore && <BookingDokuInline storeId={currentStore.id}
             amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
-            onReceived={({ invoiceNumber }) => setFormData(previous => ({ ...previous, reference_no: invoiceNumber }))}
+            onReceived={async ({ invoiceNumber, amount }) => {
+              setFormData(previous => ({ ...previous, reference_no: invoiceNumber, price: formatPrice(String(amount)) }));
+            }}
             onComplete={() => { window.dispatchEvent(new CustomEvent("booking-changed")); onClose(); }}
             onPrepare={async () => { await handleSubmit({ preventDefault: () => {} }); }} />}
 
@@ -3579,6 +3594,7 @@ export default function BookingModal({
                   <Input
                     id="reference_no_2"
                     value={formData.reference_no_2}
+                    readOnly={formData.payment_method_2 === "QRIS DOKU"}
                     onChange={(e) =>
                       setFormData({ ...formData, reference_no_2: e.target.value })
                     }
@@ -3588,7 +3604,19 @@ export default function BookingModal({
               </div>
 
               {/* Payment Proof Upload for second payment */}
-              <div>
+              {formData.payment_method_2 === "QRIS DOKU" && currentStore ? <BookingDokuInline
+                storeId={currentStore.id}
+                bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : formData.reference_no?.startsWith("ANKA-") ? qrisBookingId : null}
+                amount={numericPrice(formData.price_2)} preparing={loading}
+                onPrepare={async () => { toast.info("Selesaikan pembayaran pertama sebelum membuat QRIS kedua."); }}
+                onReceived={async ({ invoiceNumber }) => {
+                  const bookingId = (isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking?.id || qrisBookingId;
+                  if (!bookingId) return;
+                  const fresh = await fetchGroupBilling({ id: bookingId, store_id: currentStore.id, booking_group_id: editingBooking?.booking_group_id || savedBookingGroupRef.current });
+                  setFormData(previous => ({ ...previous, dual_payment: true, price: formatPrice(String(fresh.totals.paid1)), price_2: formatPrice(String(fresh.totals.paid2)), reference_no_2: invoiceNumber }));
+                }}
+                onComplete={() => { window.dispatchEvent(new CustomEvent("booking-changed")); onClose(); }}
+              /> : <div>
                 <PaymentProofUpload
                   value={paymentProofUrl2}
                   onChange={setPaymentProofUrl2}
@@ -3596,7 +3624,7 @@ export default function BookingModal({
                   disabled={loading}
                   label="Bukti Bayar Kedua"
                 />
-              </div>
+              </div>}
             </>
           )}
 

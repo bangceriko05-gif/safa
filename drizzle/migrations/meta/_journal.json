@@ -134,6 +134,13 @@
       "when": 1793927203865,
       "tag": "0018_settle_doku_booking_partial",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794374700601,
+      "tag": "0019_booking_doku_second_payment",
+      "breakpoints": true
     }
   ]
 }

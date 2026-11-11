@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     if (!user) return reply(401, { error: "Sesi Anda sudah berakhir. Silakan masuk kembali." });
     const parsed = z.object({ booking_id: z.string().uuid(), channels: z.array(z.string().regex(/^[A-Z0-9_]+$/).max(100)).max(50).optional(), renew: z.boolean().optional(), resume: z.boolean().optional(), amount: z.number().int().positive().optional() }).safeParse(await req.json());
     if (!parsed.success) return reply(400, { error: "Pilih transaksi yang akan dibayar." });
-    const { data: order, error: orderError } = await client.from("bookings").select("id,store_id,status,payment_status,price,price_2").eq("id", parsed.data.booking_id).maybeSingle();
+    const { data: order, error: orderError } = await client.from("bookings").select("id,store_id,status,payment_status,price,price_2,payment_method_2").eq("id", parsed.data.booking_id).maybeSingle();
     if (orderError || !order) return reply(403, { error: "Anda tidak memiliki izin. Transaksi tidak ditemukan di outlet ini." });
     if (order.status === "BATAL" || order.payment_status === "lunas") return reply(400, { error: "Transaksi sudah lunas atau dibatalkan." });
     const { data: settings } = await client.from("website_payment_settings").select("doku_enabled,doku_environment,doku_client_id,doku_channels,doku_channel_timeouts").eq("store_id", order.store_id).maybeSingle();
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     // Nominal QR mengikuti Total Bayar di formulir (boleh sebagian), maksimal sisa tagihan.
     const remaining = parsed.data.amount ?? balanceDue;
     if (Number.isSafeInteger(balanceDue) && remaining > balanceDue) return reply(400, { error: "Nominal QRIS melebihi sisa tagihan booking." });
-    if (Number(order.price) > 0 || Number(order.price_2) > 0) return reply(400, { error: "Booking sudah memiliki pembayaran. Gunakan metode pembayaran manual untuk sisa tagihan." });
+    if (Number(order.price_2) > 0 && order.payment_method_2 !== "QRIS DOKU") return reply(400, { error: "Pembayaran kedua sudah menggunakan metode lain. Periksa pembayaran melalui Ubah Booking." });
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
     const { data: pending } = await admin.from("doku_booking_attempts").select("id,amount,checkout_url,created_at,invoice_number,due_minutes").eq("booking_id", order.id).eq("status", "pending").maybeSingle();
