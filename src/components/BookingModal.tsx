@@ -2040,7 +2040,7 @@ export default function BookingModal({
               price: automaticQris ? 0 : formData.booking_type === "ota"
                 ? numericPrice(room.price)
                 : (index === 0 ? parseFloat(parsePrice(formData.price)) : 0),
-              price_2: index === 0 && formData.dual_payment && formData.price_2
+              price_2: !automaticQris && formData.payment_method_2 !== "QRIS DOKU" && index === 0 && formData.dual_payment && formData.price_2
                 ? parseFloat(parsePrice(formData.price_2))
                 : null,
               dual_payment: index === 0 ? formData.dual_payment : false,
@@ -3604,9 +3604,9 @@ export default function BookingModal({
               </div>
 
               {/* Payment Proof Upload for second payment */}
-              {formData.payment_method_2 === "QRIS DOKU" && currentStore ? <BookingDokuInline
+              {formData.payment_method_2 === "QRIS DOKU" && currentStore ? !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no_2 : editingBooking.reference_no_2)?.startsWith("ANKA-")) && <BookingDokuInline
                 storeId={currentStore.id}
-                bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : formData.reference_no?.startsWith("ANKA-") ? qrisBookingId : null}
+                bookingId={editingBooking?.id ? Number((isGroupEdit ? billingOwner(groupRooms)?.price : editingBooking.price) || 0) > 0 ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : null : formData.reference_no?.startsWith("ANKA-") ? qrisBookingId : null}
                 amount={numericPrice(formData.price_2)} preparing={loading}
                 onPrepare={async () => { toast.info("Selesaikan pembayaran pertama sebelum membuat QRIS kedua."); }}
                 onReceived={async ({ invoiceNumber }) => {
