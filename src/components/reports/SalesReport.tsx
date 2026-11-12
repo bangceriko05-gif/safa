@@ -418,7 +418,7 @@ export default function SalesReport() {
       }));
 
       // Filter active bookings (not cancelled)
-      const activeBookings = mappedBookings.filter(b => b.status !== "BATAL");
+      const activeBookings = mappedBookings.filter(b => b.status !== "BATAL" && b.status !== "Cancelled");
       const cancelledBookings = mappedBookings.filter(b => b.status === "BATAL");
       
       // Walk-in vs OTA (OTA = no variant_id)
@@ -559,7 +559,7 @@ export default function SalesReport() {
   };
 
 
-  const activeBookings = bookings.filter(b => b.status !== "BATAL");
+  const activeBookings = bookings.filter(b => b.status !== "BATAL" && b.status !== "Cancelled");
   const cancelledBookings = bookings.filter(b => b.status === "BATAL");
   const walkInBookings = activeBookings.filter(b => b.variant_id !== null);
   const otaBookings = activeBookings.filter(b => b.variant_id === null);

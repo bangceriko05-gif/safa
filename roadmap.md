@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Samakan penjualan Keseluruhan dan Jumlah Bayar Penjualan SAFA Oktober: pemotongan ulang Rp160.000 dihapus; kedua tampilan akun aktif terverifikasi Rp41.715.558 untuk 229 transaksi, dengan 13 tes lulus.
+
 - [x] Perbaiki QRIS DOKU pembayaran pertama/kedua: QR lanjutan dan pencatatan otomatis dengan invoice masing-masing; QR nyata Rp139.999 pada BO-STR-20261110-029 berhasil dibuat dan dibuka ulang tanpa mengganti pembayaran pertama Rp1; pembayaran baru tidak dilakukan.
 
 - [x] QRIS booking: verifikasi invoice, BID/outlet dan nominal tersimpan; isi No. Reff, bunyikan suara hanya saat lunas, lalu tutup formulir otomatis ke kalender. 11 tes lulus; akun aktif membaca pelunasan asli BO-STR-20261110-004 dengan halaman QR simulasi, referensi cocok, pemutaran suara satu kali dan semua popup tertutup; tidak melakukan pembayaran baru.

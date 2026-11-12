@@ -11,8 +11,14 @@ interface SalesBooking {
   discount_applies_to: string | null;
 }
 
-export function salesBookingTotals(booking: SalesBooking, productTotal = 0) {
+export function salesBookingPayments(booking: Pick<SalesBooking, "price" | "price_2" | "dual_payment">, productTotal = 0) {
   const paid = (Number(booking.price) || 0) + (booking.dual_payment ? Number(booking.price_2) || 0 : 0);
+  const productPaid = Math.min(Math.max(0, productTotal), Math.max(0, paid));
+  return { paid, productPaid, roomPaid: paid - productPaid };
+}
+
+export function salesBookingTotals(booking: SalesBooking, productTotal = 0) {
+  const { paid } = salesBookingPayments(booking, productTotal);
   const rate = booking.variant_price_override;
   const value = Math.max(0, Number(booking.discount_value) || 0);
   const percent = booking.discount_type === "percent" || booking.discount_type === "percentage";

@@ -88,6 +88,7 @@ const TaxReport = (props: any) => (
 import FeatureInactiveNotice from "./FeatureInactiveNotice";
 import RetainedReportPanel from "./reports/RetainedReportPanel";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
+import { salesBookingPayments } from "@/utils/salesBookingTotals";
 import { lazyWithRetry } from "@/utils/lazyWithRetry";
 const ProfitLossLazy = lazyWithRetry(() => import("./reports/accounting/ProfitLoss"));
 const ProfitLoss = (props: any) => (
@@ -118,7 +119,6 @@ interface ReportStats {
   totalBookingRevenue: number;
   totalRoomSales: number;
   totalProductSales: number;
-  totalSalesDiscount: number;
   productSalesCount: number;
   totalPurchase: number;
   purchaseTransactionCount: number;
@@ -224,7 +224,6 @@ export default function Reports() {
     totalBookingRevenue: 0,
     totalRoomSales: 0,
     totalProductSales: 0,
-    totalSalesDiscount: 0,
     productSalesCount: 0,
     totalPurchase: 0,
     purchaseTransactionCount: 0,
@@ -413,7 +412,7 @@ export default function Reports() {
     if (!currentStore) return;
     
     const range = getDateRangeInternal(timeRange);
-    const cacheKey = `overview:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}`;
+    const cacheKey = `overview-paid-v2:${currentStore.id}:${format(range.startDate, "yyyy-MM-dd")}:${format(range.endDate, "yyyy-MM-dd")}`;
     const cached = getReportCache<{ stats: ReportStats; expenses: Expense[]; incomes: AdditionalIncome[]; payments: BookingPaymentDetail[] }>(cacheKey);
     if (cached) {
       setStats(cached.stats); setExpenses(cached.expenses); setAdditionalIncomes(cached.incomes); setBookingPayments(cached.payments);
@@ -429,7 +428,7 @@ export default function Reports() {
       const [bookingsResult, customersResult, expensesResult, incomesResult, incomeProductsResult, purchasesResult] = await Promise.all([
         supabase
           .from("bookings")
-          .select("id, customer_name, duration, price, price_2, payment_method, payment_method_2, date, created_at, status, discount_type, discount_value, discount_applies_to")
+          .select("id, customer_name, duration, price, price_2, dual_payment, payment_method, payment_method_2, date, created_at, status")
           .eq("store_id", currentStore.id)
           .gte("date", startDateStr)
           .lte("date", endDateStr),
@@ -518,7 +517,7 @@ export default function Reports() {
       const paymentTotals: { [key: string]: number } = {};
       const bookingPaymentDetails: BookingPaymentDetail[] = [];
       
-      bookings.forEach((booking) => {
+      activeBookings.forEach((booking) => {
         if (booking.payment_method) {
           const method = booking.payment_method;
           const price = Number(booking.price) || 0;
@@ -548,7 +547,7 @@ export default function Reports() {
           });
         }
         
-        if (booking.payment_method_2) {
+        if (booking.dual_payment && booking.payment_method_2) {
           const method = booking.payment_method_2;
           const price = Number(booking.price_2) || 0;
           paymentTotals[method] = (paymentTotals[method] || 0) + price;
@@ -562,7 +561,7 @@ export default function Reports() {
             payment_method: method,
             type: 'booking_2',
           });
-        } else if (Number(booking.price_2) > 0) {
+        } else if (booking.dual_payment && Number(booking.price_2) > 0) {
           const price = Number(booking.price_2) || 0;
           paymentTotals["Belum Diisi"] = (paymentTotals["Belum Diisi"] || 0) + price;
           
@@ -578,17 +577,18 @@ export default function Reports() {
         }
       });
 
-      const totalBookingRevenue = activeBookings.reduce((sum, b) => sum + (Number(b.price) || 0) + (Number(b.price_2) || 0), 0);
+      const totalBookingRevenue = activeBookings.reduce((sum, b) => sum + salesBookingPayments(b).paid, 0);
 
       // Fetch booking_products for active bookings in range → split room vs product sales
       const activeBookingIds = activeBookings.map((b: any) => b.id);
       const productTotalsByBooking = new Map<string, number>();
       let productSalesCount = 0;
       if (activeBookingIds.length > 0) {
-        const { data: bpData } = await supabase
+        const { data: bpData, error: bpError } = await supabase
           .from("booking_products")
           .select("subtotal, booking_id")
           .in("booking_id", activeBookingIds);
+        if (bpError) throw bpError;
         const bps = (bpData || []) as any[];
         bps.forEach((row) => {
           productTotalsByBooking.set(
@@ -599,30 +599,13 @@ export default function Reports() {
         productSalesCount = new Set(bps.map((r) => r.booking_id)).size;
       }
 
-      // Kamar, produk, dan total pada kartu Penjualan menampilkan nilai yang benar-benar
-      // dibayar. Diskon dikurangkan dari targetnya (kamar/variant atau produk).
+      // Received amounts are already after discount; splitting must preserve their total.
       let totalRoomSales = 0;
       let totalProductSales = 0;
-      let totalSalesDiscount = 0;
-      activeBookings.forEach((booking: any) => {
-        const transactionTotal = (Number(booking.price) || 0) + (Number(booking.price_2) || 0);
-        const productTotal = Math.min(productTotalsByBooking.get(booking.id) || 0, transactionTotal);
-        const roomTotal = Math.max(0, transactionTotal - productTotal);
-        const discountTarget = booking.discount_applies_to === "product" ? productTotal : roomTotal;
-        const discountValue = Number(booking.discount_value) || 0;
-        const discountAmount = discountValue <= 0 || discountTarget <= 0
-          ? 0
-          : booking.discount_type === "percent" || booking.discount_type === "percentage"
-            ? Math.round((discountTarget * discountValue) / 100)
-            : Math.min(discountValue, discountTarget);
-
-        totalSalesDiscount += discountAmount;
-        totalProductSales += booking.discount_applies_to === "product"
-          ? Math.max(0, productTotal - discountAmount)
-          : productTotal;
-        totalRoomSales += booking.discount_applies_to === "product"
-          ? roomTotal
-          : Math.max(0, roomTotal - discountAmount);
+      activeBookings.forEach((booking) => {
+        const payments = salesBookingPayments(booking, productTotalsByBooking.get(booking.id) || 0);
+        totalProductSales += payments.productPaid;
+        totalRoomSales += payments.roomPaid;
       });
 
       const paymentMethodTotals = Object.entries(paymentTotals).map(([method, total]) => ({
@@ -662,7 +645,6 @@ export default function Reports() {
         totalBookingRevenue,
         totalRoomSales,
         totalProductSales,
-        totalSalesDiscount,
         productSalesCount,
         totalPurchase,
         purchaseTransactionCount,
@@ -1165,7 +1147,7 @@ export default function Reports() {
                 </div>
                 <div className="flex items-baseline justify-between gap-2 pt-1 border-t mt-1">
                   <span className="text-xs font-semibold">Total:</span>
-                  <span className="text-sm font-bold">{formatCurrency(stats.totalRoomSales + stats.totalProductSales)}</span>
+                  <span className="text-sm font-bold">{formatCurrency(stats.totalBookingRevenue)}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{stats.totalTransactions} transaksi</p>
@@ -1217,8 +1199,8 @@ export default function Reports() {
 
           {/* Total Pendapatan */}
           {(() => {
-            // Penjualan diambil dari jumlah bayar (harga asli dikurangi diskon)
-            const totalPenjualan = stats.totalBookingRevenue - stats.totalSalesDiscount;
+            // Use the same received payments as Jumlah Bayar in the sales detail report.
+            const totalPenjualan = stats.totalBookingRevenue;
             const total = totalPenjualan + stats.totalAdditionalIncome - stats.totalExpenses - stats.totalPurchase;
             const totalColor = total >= 0 ? "text-foreground" : "text-red-600";
             return (
