@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DokuCheckoutPanel, { type DokuCheckoutState } from "@/components/booking-orders/DokuCheckoutPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ interface Props {
 export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing, amount, resumeActive = false, onReceived, onComplete }: Props) {
   const [checkout, setCheckout] = useState<DokuCheckoutState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [received, setReceived] = useState<BookingDokuReceipt | null>(null);
   const playCashDrawer = useCashDrawerSound();
   const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completedInvoice = useRef<string | null>(null);
@@ -47,6 +48,7 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
     if (receipt.fullyPaid && !fullyPaid) throw new Error("Tagihan belum terkonfirmasi lunas.");
     completedInvoice.current = receipt.invoiceNumber;
     onReceived?.({ ...receipt, fullyPaid });
+    setReceived({ ...receipt, fullyPaid });
     window.dispatchEvent(new CustomEvent("booking-changed"));
     if (fullyPaid) {
       playCashDrawer();
@@ -78,11 +80,16 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
   }, [bookingId]);
   // Total Bayar berubah → buat QR & invoice baru dengan nominal baru (ditunda agar tidak tiap ketikan).
   useEffect(() => {
-    if (resumeActive || !bookingId || !amount || amount <= 0 || checkout?.amount == null || checkout.amount === Math.round(amount)) return;
+    if (received || resumeActive || !bookingId || !amount || amount <= 0 || checkout?.amount == null || checkout.amount === Math.round(amount)) return;
     const t = setTimeout(() => void load(), 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount, bookingId, checkout?.amount]);
+  }, [amount, bookingId, checkout?.amount, received]);
+  if (received) {
+    return received.fullyPaid ? <div className="booking-settled flex items-center gap-2 text-primary" role="status">
+      <CheckCircle2 className="h-5 w-5" /><span className="font-semibold">LUNAS</span>
+    </div> : null;
+  }
   return <div className="space-y-2">
     <p className="text-sm font-medium leading-none">Pembayaran QRIS DOKU</p>
     <div className={`flex flex-col ${checkout ? "h-[540px]" : "min-h-[160px]"}`}>
