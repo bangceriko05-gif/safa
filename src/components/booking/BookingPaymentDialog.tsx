@@ -19,6 +19,7 @@ import { logActivity } from "@/utils/activityLogger";
 import cashDrawer from "@/assets/cash-drawer.mp3.asset.json";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
 import { activeBookingDokuTimer } from "@/utils/activeBookingDokuPayment";
+import { bookingPaymentProofMissing, bookingPaymentProofRequired } from "@/utils/bookingDokuPayment";
 import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 
 type Billing = Awaited<ReturnType<typeof fetchGroupBilling>>;
@@ -124,7 +125,7 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
   }, [open, bookingId, currentStore?.id]);
 
   const pay = async () => {
-    if (qrisDoku || submitting.current || !billing || !currentStore || !proof || !method || amount <= 0 || !hasPermission("edit_bookings")) return;
+    if (qrisDoku || submitting.current || !billing || !currentStore || bookingPaymentProofMissing(method, proof) || !method || amount <= 0 || !hasPermission("edit_bookings")) return;
     submitting.current = true;
     setSaving(true);
     void audioContext.current?.resume().catch(() => {});
@@ -231,11 +232,11 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
           onPrepare={async () => {}}
           onReceived={({ invoiceNumber }) => { setReference(invoiceNumber); void onPaid(); }}
           onComplete={() => { onOpenChange(false); onComplete?.(); }}
-        /> : <PaymentProofUpload value={proof} onChange={setProof} required disabled={saving} compact />}
+        /> : <PaymentProofUpload value={proof} onChange={setProof} required={bookingPaymentProofRequired(method)} label={bookingPaymentProofRequired(method) ? "Bukti Bayar" : "Bukti Bayar (Opsional)"} disabled={saving} compact />}
         {qrisDoku && reference && <div className="space-y-2"><Label htmlFor="booking-doku-reference">No. Reff</Label><Input id="booking-doku-reference" value={reference} readOnly /></div>}
         {!qrisDoku && <>
           <div className="space-y-2"><Label htmlFor="booking-payment-reference">No. Reff</Label><Input id="booking-payment-reference" value={reference} onChange={event => setReference(event.target.value)} disabled={saving} placeholder="Nomor referensi (opsional)" /></div>
-          <Button type="submit" className="w-full gap-2" disabled={saving || !proof || !method || amount <= 0 || amount > billing.totals.remaining || !hasPermission("edit_bookings") || billing.rooms.some(room => room.status === "BATAL")}>
+          <Button type="submit" className="w-full gap-2" disabled={saving || bookingPaymentProofMissing(method, proof) || !method || amount <= 0 || amount > billing.totals.remaining || !hasPermission("edit_bookings") || billing.rooms.some(room => room.status === "BATAL")}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}Bayar
           </Button>
         </>}

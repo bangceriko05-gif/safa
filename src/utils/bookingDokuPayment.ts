@@ -1,3 +1,13 @@
+import { dokuGroupForMethod } from "./dokuChannels";
+
+export function bookingPaymentProofRequired(method: string | null | undefined): boolean {
+  return !dokuGroupForMethod(method || "");
+}
+
+export function bookingPaymentProofMissing(method: string | null | undefined, proof: string | null | undefined): boolean {
+  return bookingPaymentProofRequired(method) && !proof;
+}
+
 export function unpaidBookingQris(roomTotal: number, duration: number, ota: boolean) {
   return {
     price: 0,
