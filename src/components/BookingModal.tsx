@@ -1466,8 +1466,8 @@ export default function BookingModal({
         return;
       }
 
-      // Semua kanal DOKU dapat menyimpan BID tanpa unggahan; bukti manual tetap wajib.
-      if (bookingPaymentProofMissing(formData.payment_method, paymentProofUrl)) {
+      // Bukti hanya wajib untuk pembayaran manual yang sudah memiliki nominal.
+      if (bookingPaymentProofMissing(formData.payment_method, paymentProofUrl, numericPrice(formData.price))) {
         toast.error("Bukti bayar wajib diupload");
         setLoading(false);
         return;
@@ -1475,18 +1475,12 @@ export default function BookingModal({
 
       // Validate dual payment
       if (formData.dual_payment) {
-        const price2Value = parseFloat(formData.price_2.replace(/\./g, '')) || 0;
-        if (price2Value === 0) {
-          toast.error("Total Bayar Kedua tidak boleh 0");
-          setLoading(false);
-          return;
-        }
         if (!formData.payment_method_2) {
           toast.error("Metode Pembayaran Kedua wajib diisi saat Dual Payment aktif");
           setLoading(false);
           return;
         }
-        if (bookingPaymentProofMissing(formData.payment_method_2, paymentProofUrl2)) {
+        if (bookingPaymentProofMissing(formData.payment_method_2, paymentProofUrl2, numericPrice(formData.price_2))) {
           toast.error("Bukti Bayar Kedua wajib diupload saat Dual Payment aktif");
           setLoading(false);
           return;
@@ -3451,9 +3445,9 @@ export default function BookingModal({
           {formData.payment_method !== "QRIS DOKU" && <PaymentProofUpload
             value={paymentProofUrl}
             onChange={setPaymentProofUrl}
-            required={bookingPaymentProofRequired(formData.payment_method)}
+            required={bookingPaymentProofRequired(formData.payment_method, numericPrice(formData.price))}
             disabled={loading}
-            label={`${formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}${bookingPaymentProofRequired(formData.payment_method) ? "" : " (Opsional)"}`}
+            label={`${formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}${bookingPaymentProofRequired(formData.payment_method, numericPrice(formData.price)) ? "" : " (Opsional)"}`}
           />}
           {formData.payment_method === "QRIS DOKU" && !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no : editingBooking.reference_no)?.startsWith("ANKA-")) && currentStore && <BookingDokuInline storeId={currentStore.id}
             amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
@@ -3573,10 +3567,6 @@ export default function BookingModal({
                     value={formData.price_2}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const numValue = parseFloat(value.replace(/\./g, '')) || 0;
-                      if (numValue === 0 && value !== "") {
-                        toast.error("Total Bayar Kedua tidak boleh 0");
-                      }
                       handlePrice2Change(value);
                     }}
                     placeholder="Masukkan nilai pembayaran kedua"
@@ -3618,9 +3608,9 @@ export default function BookingModal({
                 <PaymentProofUpload
                   value={paymentProofUrl2}
                   onChange={setPaymentProofUrl2}
-                  required={bookingPaymentProofRequired(formData.payment_method_2)}
+                  required={bookingPaymentProofRequired(formData.payment_method_2, numericPrice(formData.price_2))}
                   disabled={loading}
-                  label={`Bukti Bayar Kedua${bookingPaymentProofRequired(formData.payment_method_2) ? "" : " (Opsional)"}`}
+                  label={`Bukti Bayar Kedua${bookingPaymentProofRequired(formData.payment_method_2, numericPrice(formData.price_2)) ? "" : " (Opsional)"}`}
                 />
               </div>}
             </>

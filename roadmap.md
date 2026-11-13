@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Izinkan simpan booking dengan Total Bayar 0 tanpa bukti; kewajiban bukti manual mengikuti nominal tiap slot dan DOKU tetap opsional. 14 tes lulus; simulasi akun aktif menolak Transfer Bank Rp60.000 tanpa bukti lalu berhasil menyimpan Rp0 tanpa bukti dan kembali ke kalender, tanpa menulis booking nyata.
+
 - [x] Semua pembayaran DOKU pada Tambah/Ubah Booking dan popup Pembayaran dapat menyimpan BID tanpa bukti bayar; metode manual tetap wajib unggah. 17 tes lulus dan simulasi Virtual Account menyimpan BID dengan bukti kosong tanpa menulis transaksi nyata.
 
 - [x] Samakan penjualan Keseluruhan dan Jumlah Bayar Penjualan SAFA Oktober: pemotongan ulang Rp160.000 dihapus; kedua tampilan akun aktif terverifikasi Rp41.715.558 untuk 229 transaksi, dengan 13 tes lulus.

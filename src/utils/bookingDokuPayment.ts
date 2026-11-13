@@ -1,11 +1,11 @@
 import { dokuGroupForMethod } from "./dokuChannels";
 
-export function bookingPaymentProofRequired(method: string | null | undefined): boolean {
-  return !dokuGroupForMethod(method || "");
+export function bookingPaymentProofRequired(method: string | null | undefined, amount: number): boolean {
+  return amount > 0 && !dokuGroupForMethod(method || "");
 }
 
-export function bookingPaymentProofMissing(method: string | null | undefined, proof: string | null | undefined): boolean {
-  return bookingPaymentProofRequired(method) && !proof;
+export function bookingPaymentProofMissing(method: string | null | undefined, proof: string | null | undefined, amount: number): boolean {
+  return bookingPaymentProofRequired(method, amount) && !proof;
 }
 
 export function unpaidBookingQris(roomTotal: number, duration: number, ota: boolean) {
