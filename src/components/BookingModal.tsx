@@ -107,6 +107,7 @@ interface SelectedProduct {
   price: number;
   quantity: number;
   subtotal: number;
+  unit_cost?: number | null;
 }
 
 interface AdditionalRoomBooking {
@@ -669,7 +670,7 @@ export default function BookingModal({
             loadedProof2 = owner.payment_proof_url_2 || null;
             setPaymentProofUrl(loadedProof1); setPaymentProofUrl2(loadedProof2);
             setFormData({ ...loadedFormData } as typeof formData);
-            products = shared.products.map(p => ({ product_id: p.product_id || p.id, name: p.product_name, price: p.product_price, quantity: p.quantity, subtotal: p.subtotal }));
+            products = shared.products.map(p => ({ product_id: p.product_id || p.id, name: p.product_name, price: p.product_price, quantity: p.quantity, subtotal: p.subtotal, unit_cost: p.unit_cost == null ? null : Number(p.unit_cost) }));
             setSelectedProducts(products); setOriginalProducts(products);
           }
         }
@@ -877,6 +878,7 @@ export default function BookingModal({
         price: item.product_price,
         quantity: item.quantity,
         subtotal: item.subtotal,
+        unit_cost: item.unit_cost == null ? null : Number(item.unit_cost),
       }));
 
       setSelectedProducts(bookingProducts);
@@ -1777,7 +1779,7 @@ export default function BookingModal({
             p_booking_id: editingBooking.id,
             p_payment: bookingData,
             p_room_rates: currentGroupRooms().filter(room => room.status !== "BATAL").map(room => ({ id: room.id, rate: room.variant_price_override ?? (room.ota_source || room.ota_booking_id ? billingRoomTotal(room) / Math.max(1, room.duration) : room.room_variants?.price ?? 0) })),
-            p_products: selectedProducts.map(p => ({ product_id: p.product_id, product_name: p.name, product_price: p.price, quantity: p.quantity, subtotal: p.subtotal })),
+            p_products: selectedProducts.map(p => ({ product_id: p.product_id, product_name: p.name, product_price: p.price, quantity: p.quantity, subtotal: p.subtotal, unit_cost: p.unit_cost ?? null })),
           });
           if (sharedError) throw sharedError;
           // Persist sibling room/variant changes (payment fields stay on the owner via the RPC).
@@ -1835,6 +1837,7 @@ export default function BookingModal({
             product_price: p.price,
             quantity: p.quantity,
             subtotal: p.subtotal,
+            unit_cost: p.unit_cost ?? null,
           }));
 
           const { error: productsError } = await supabase
@@ -2074,6 +2077,7 @@ export default function BookingModal({
             product_price: p.price,
             quantity: p.quantity,
             subtotal: p.subtotal,
+            unit_cost: p.unit_cost ?? null,
           }));
 
           const { error: productsError } = await supabase

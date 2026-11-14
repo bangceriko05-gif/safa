@@ -141,6 +141,34 @@
       "when": 1794374700601,
       "tag": "0019_booking_doku_second_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794627651933,
+      "tag": "0020_transaction_value_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794627823452,
+      "tag": "0021_complete_transaction_snapshot_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794627866873,
+      "tag": "0022_allow_initial_cost_snapshot_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794627901772,
+      "tag": "0023_resolve_orphan_variant_cost_snapshots",
+      "breakpoints": true
     }
   ]
 }

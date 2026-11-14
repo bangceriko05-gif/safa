@@ -20,7 +20,7 @@
 - Active navigation is styled through shared semantic navigation tokens and state selectors; custom period buttons expose data-navigation and aria-pressed so selections stay consistent without recoloring form inputs.
 
 - Sales report costs and discounts use room price snapshots plus line-item subtotals; received payments stay separate and are never discounted again, including exports.
-- POS item reports read saved order items without an item-to-product embedded relationship; resolve product costs separately within the outlet so absent product links cannot hide historical sales, and expose load failures instead of treating them as empty results.
+- POS and booking product lines snapshot `unit_cost` at insertion and preserve it through ordinary edits; reports, exports, and accounting read that snapshot rather than current product/variant HPP, so catalog cost changes cannot rewrite historical profit.
 
 - Booking WhatsApp links use a shared status-aware formatter and outlet-keyed message settings query; links open prefilled chats without sending messages or using connector credentials.
 
@@ -35,7 +35,7 @@
 
 - Multi-room bookings remain separate `bookings` rows linked by `booking_group_id`; the group owns the shared BID so room calendars and per-room pricing stay independent.
 - Walk-in multi-room payment amounts and evidence live only on the primary row; new OTA multi-room totals are split exactly across room rows while evidence remains on the primary row.
-- Every room booking snapshots its selected variant's unit price in `variant_price_override`; financial displays must prefer this snapshot over the current variant price so later rate changes cannot alter historical totals.
+- Every room booking snapshots its selected variant's unit price and billing duration terms; financial displays prefer those snapshots over current variant data so later rate or billing-period changes cannot alter historical totals.
 - Booking payment inputs share a caret-preserving, formatted editing draft and commit billing calculations on blur; fixed-height booking dialogs and stable billing rows prevent content updates from moving the form.
 - Grouped booking billing uses a shared outlet-scoped aggregator and an RLS-respecting atomic billing RPC; payments/products remain on one owner while operational status and times update only the selected room, preventing duplicate revenue.
 - Booking receipts use the detail booking's shared billing aggregator for single and multi-room totals; stay duration and checkout follow calendar mode and saved stay duration, never the variant's billing period, preventing monthly rates from becoming months of stay.

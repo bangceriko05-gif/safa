@@ -113,7 +113,7 @@ export default function ProfitLoss() {
           .lte("date", endStr),
         supabase
           .from("booking_products")
-          .select("product_id, quantity, subtotal, bookings!inner(store_id, date, status)")
+          .select("product_id, quantity, subtotal, unit_cost, bookings!inner(store_id, date, status)")
           .eq("bookings.store_id", currentStore.id)
           .gte("bookings.date", startStr)
           .lte("bookings.date", endStr)
@@ -146,20 +146,9 @@ export default function ProfitLoss() {
       const pelunasanKredit = incomeCat(["pelunasan", "kredit", "piutang"]);
       const pengirimanIncome = incomeCat(["pengiriman", "delivery", "ongkir"]);
 
-      // HPP — sum(quantity * purchase_price) from booking_products
-      const productIds = Array.from(
-        new Set(((bookingProductsRes.data as any[]) || []).map((r) => r.product_id).filter(Boolean))
-      );
-      let costMap = new Map<string, number>();
-      if (productIds.length) {
-        const { data: prodRows } = await supabase
-          .from("products")
-          .select("id, purchase_price")
-          .in("id", productIds);
-        (prodRows || []).forEach((p: any) => costMap.set(p.id, Number(p.purchase_price) || 0));
-      }
+      // HPP historis berasal dari snapshot item, bukan HPP produk saat laporan dibuka.
       const hppPenjualan = ((bookingProductsRes.data as any[]) || []).reduce(
-        (s, r) => s + (Number(r.quantity) || 0) * (costMap.get(r.product_id) || 0), 0
+        (s, r) => s + (Number(r.quantity) || 0) * (Number(r.unit_cost) || 0), 0
       );
 
       // Expenses grouped

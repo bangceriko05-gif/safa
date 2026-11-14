@@ -7,6 +7,8 @@ export interface BillingRoom {
   room_id: string;
   variant_id?: string | null;
   variant_price_override?: number | null;
+  booking_duration_type?: string | null;
+  booking_duration_value?: number | null;
   duration: number;
   price: number;
   price_2?: number | null;
@@ -37,8 +39,9 @@ export function billingOwner(rooms: BillingRoom[]) {
 export function billingRoomTotal(room: BillingRoom) {
   if (room.ota_source || room.ota_booking_id) return room.variant_price_override != null ? Number(room.variant_price_override) * room.duration : Number(room.price) || 0;
   const rate = room.variant_price_override ?? room.room_variants?.price;
-  const unit = room.room_variants?.booking_duration_type;
-  const multiplier = unit === "months" || unit === "weeks" ? room.room_variants?.booking_duration_value || 1 : room.duration;
+  const unit = room.booking_duration_type ?? room.room_variants?.booking_duration_type;
+  const durationValue = room.booking_duration_value ?? room.room_variants?.booking_duration_value;
+  const multiplier = unit === "months" || unit === "weeks" ? durationValue || 1 : room.duration;
   return rate == null ? Number(room.price) || 0 : Number(rate) * multiplier;
 }
 

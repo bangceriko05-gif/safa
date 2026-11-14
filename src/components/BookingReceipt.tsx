@@ -253,9 +253,10 @@ export default function BookingReceipt() {
         variantName = variantData?.variant_name;
         variantPrice = variantData?.price;
         // Dynamic price override locks the price at booking time
-        if ((bookingData as any).variant_price_override != null) {
-          variantPrice = Number((bookingData as any).variant_price_override);
-        }
+        // Nilai transaksi selalu mengutamakan snapshot booking, bukan tarif varian terbaru.
+        variantPrice = (bookingData as any).variant_price_override != null
+          ? Number((bookingData as any).variant_price_override)
+          : variantData?.price;
       }
 
       const storeId = bookingData.store_id || bookingData.rooms?.store_id;

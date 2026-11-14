@@ -237,8 +237,8 @@ export default function BookingDetailPopup({
         if ((bookingData as any).variant_price_override != null) {
           variantPrice = Number((bookingData as any).variant_price_override);
         }
-        variantDurationType = variantData?.booking_duration_type || "hours";
-        variantDurationValue = variantData?.booking_duration_value || 1;
+        variantDurationType = (bookingData as any).booking_duration_type || variantData?.booking_duration_type || "hours";
+        variantDurationValue = Number((bookingData as any).booking_duration_value ?? variantData?.booking_duration_value ?? 1);
       }
 
       setBooking({

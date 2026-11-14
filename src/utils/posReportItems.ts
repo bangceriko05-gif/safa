@@ -12,11 +12,12 @@ export interface PosReportOrder {
     product_name: string;
     quantity: number;
     subtotal: number;
+    unit_cost: number | null;
   }[];
 }
 
-/** Item history does not require a live product or an item-to-product foreign key. */
-export function mapPosReportItems(orders: PosReportOrder[], costs: ReadonlyMap<string, number>) {
+/** Historical reports use the selling amount and HPP captured on each saved line. */
+export function mapPosReportItems(orders: PosReportOrder[]) {
   return orders
     .filter(order => (order.process_status || "").toLowerCase() !== "batal")
     .flatMap(order => {
@@ -32,7 +33,7 @@ export function mapPosReportItems(orders: PosReportOrder[], costs: ReadonlyMap<s
         product_name: item.product_name,
         quantity: Number(item.quantity) || 0,
         subtotal: Number(item.subtotal) || 0,
-        purchase_price: item.product_id ? costs.get(item.product_id) || 0 : 0,
+        purchase_price: item.unit_cost == null ? 0 : Number(item.unit_cost),
       }));
     });
 }

@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Kunci harga jual, HPP/laba produk, dan tarif kamar pada transaksi; perubahan master hanya berlaku untuk transaksi berikutnya, dengan backfill dan pengujian transaksi lama/baru.
+- [x] Kunci harga jual, HPP/laba produk, dan tarif kamar pada transaksi; perubahan master hanya berlaku untuk transaksi berikutnya. Snapshot database lulus skenario Rp15.000/HPP Rp12.944/laba Rp2.056, lalu harga Rp16.000/laba Rp3.056 tanpa mengubah transaksi lama, HPP baru hanya untuk item berikutnya, dan kamar lama tetap Rp250.000 saat master menjadi Rp280.000; 22 item POS dengan referensi produk/varian yang sudah terhapus tetap tanpa HPP yang dapat dipulihkan.
 
 - [x] Izinkan simpan booking dengan Total Bayar 0 tanpa bukti; kewajiban bukti manual mengikuti nominal tiap slot dan DOKU tetap opsional. 14 tes lulus; simulasi akun aktif menolak Transfer Bank Rp60.000 tanpa bukti lalu berhasil menyimpan Rp0 tanpa bukti dan kembali ke kalender, tanpa menulis booking nyata.
 

@@ -436,6 +436,7 @@ export type Database = {
           product_name: string
           quantity: number
           subtotal: number
+          unit_cost: number | null
           unit_price: number
         }
         Insert: {
@@ -450,6 +451,7 @@ export type Database = {
           product_name: string
           quantity?: number
           subtotal?: number
+          unit_cost?: number | null
           unit_price?: number
         }
         Update: {
@@ -464,6 +466,7 @@ export type Database = {
           product_name?: string
           quantity?: number
           subtotal?: number
+          unit_cost?: number | null
           unit_price?: number
         }
         Relationships: [
@@ -639,6 +642,7 @@ export type Database = {
           tax_enabled: boolean
           tax_mode: string
           tax_rate: number
+          unit_cost: number | null
         }
         Insert: {
           booking_id: string
@@ -654,6 +658,7 @@ export type Database = {
           tax_enabled?: boolean
           tax_mode?: string
           tax_rate?: number
+          unit_cost?: number | null
         }
         Update: {
           booking_id?: string
@@ -669,6 +674,7 @@ export type Database = {
           tax_enabled?: boolean
           tax_mode?: string
           tax_rate?: number
+          unit_cost?: number | null
         }
         Relationships: [
           {
@@ -809,6 +815,8 @@ export type Database = {
       bookings: {
         Row: {
           bid: string | null
+          booking_duration_type: string | null
+          booking_duration_value: number | null
           booking_group_id: string | null
           checked_in_at: string | null
           checked_in_by: string | null
@@ -855,6 +863,8 @@ export type Database = {
         }
         Insert: {
           bid?: string | null
+          booking_duration_type?: string | null
+          booking_duration_value?: number | null
           booking_group_id?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
@@ -901,6 +911,8 @@ export type Database = {
         }
         Update: {
           bid?: string | null
+          booking_duration_type?: string | null
+          booking_duration_value?: number | null
           booking_group_id?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
@@ -4200,6 +4212,7 @@ export type Database = {
         Args: { p_minutes?: number; p_request_id: string }
         Returns: string
       }
+      transaction_product_cost: { Args: { p_id: string }; Returns: number }
       update_booking_status_from_request: {
         Args: { p_new_status: string; p_request_id: string; p_user_id: string }
         Returns: undefined

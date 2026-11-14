@@ -51,6 +51,7 @@ interface OrderItem {
   product_name: string;
   quantity: number;
   unit_price: number;
+  unit_cost?: number | null;
   discount?: number;
   discount_mode?: "rp" | "pct";
   discount_value?: number;
@@ -616,6 +617,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               product_name: d.product_name,
               quantity: Number(d.quantity),
               unit_price: Number(d.unit_price),
+              unit_cost: d.unit_cost == null ? null : Number(d.unit_cost),
               discount: Number(d.discount) || 0,
               discount_mode: (d.discount_mode as "rp" | "pct") || "rp",
               discount_value: Number(d.discount_value) || 0,
@@ -782,10 +784,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     const note = cfgNotes.trim() ? { notes: cfgNotes.trim() } : {};
     setItems((prev) => {
       const ix = prev.findIndex((i) => i.product_id === productId);
-      // Gabungkan hanya jika baris lama belum punya diskon/catatan sendiri
-      if (ix >= 0 && !(prev[ix].discount || 0) && !prev[ix].notes) {
+      // Baris tersimpan tidak digabung dengan penjualan baru: harga/HPP baru
+      // harus membentuk snapshot sendiri dan tidak mengubah kuantitas lama.
+      if (ix >= 0 && prev[ix].unit_cost == null && Number(prev[ix].unit_price) === price && !(prev[ix].discount || 0) && !prev[ix].notes) {
         const next = [...prev];
-        next[ix] = { ...next[ix], quantity: next[ix].quantity + qty, unit_price: price, ...disc, ...note };
+        next[ix] = { ...next[ix], quantity: next[ix].quantity + qty, ...disc, ...note };
         return next;
       }
       return [...prev, { product_id: productId, product_name: name, quantity: qty, unit_price: price, ...disc, ...note }];
@@ -952,6 +955,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         product_name: it.product_name,
         quantity: it.quantity,
         unit_price: it.unit_price,
+        unit_cost: it.unit_cost ?? null,
         discount: it.discount || 0,
         discount_mode: it.discount_mode || "rp",
         discount_value: it.discount_value || 0,

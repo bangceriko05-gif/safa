@@ -31,7 +31,7 @@ import SalesChannelReport from "./SalesChannelReport";
 import { Receipt } from "lucide-react";
 import { getReportCache, setReportCache } from "@/utils/reportCache";
 import { salesBookingTotals } from "@/utils/salesBookingTotals";
-import { mapPosReportItems } from "@/utils/posReportItems";
+import { mapPosReportItems, type PosReportOrder } from "@/utils/posReportItems";
 import { userFacingError } from "@/utils/userFacingError";
 import useReportColumnFilters, { ReportFilterColumn } from "./useReportColumnFilters";
 
@@ -186,7 +186,7 @@ export default function SalesReport() {
   const salesCacheKey = (() => {
     if (!currentStore) return "";
     const { startDate, endDate } = getDateRange(timeRange, customDateRange);
-    return `sales-v3:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
+    return `sales-v4:${currentStore.id}:${format(startDate, "yyyy-MM-dd")}:${format(endDate, "yyyy-MM-dd")}`;
   })();
 
   useEffect(() => {
@@ -229,7 +229,7 @@ export default function SalesReport() {
         .select(`
           id, bid, customer_name, phone, duration, price, price_2, 
           payment_method, payment_method_2, date, start_time, end_time,
-          status, variant_id, variant_price_override,
+          status, variant_id, variant_price_override, booking_duration_type, booking_duration_value,
           checked_in_at, checked_in_by, checked_out_at, checked_out_by,
           discount_type, discount_value, discount_applies_to,
           payment_proof_url, payment_proof_url_2, room_id, note,
@@ -244,7 +244,7 @@ export default function SalesReport() {
         .from("booking_orders")
         .select(`
           id, bid, date, customer_name, payment_method, payment_proof_urls, process_status,
-          booking_order_items ( id, product_name, quantity, subtotal, product_id )
+          booking_order_items ( id, product_name, quantity, subtotal, product_id, unit_cost )
         `)
         .eq("store_id", currentStore.id)
         .gte("date", startDateStr)
@@ -262,25 +262,6 @@ export default function SalesReport() {
 
       if (bookingsError) throw bookingsError;
       if (ordersError) throw ordersError;
-
-      // Item product_id is a historical reference, not an embedded API relationship.
-      // Load costs separately and restrict them to the same outlet as the orders.
-      const productIds = [...new Set((ordersData || []).flatMap(order =>
-        (order.booking_order_items || []).flatMap(item => item.product_id ? [item.product_id] : [])
-      ))];
-      const productCosts = new Map<string, number>();
-      const fetchPosCosts = async () => {
-        const chunks: string[][] = [];
-        for (let offset = 0; offset < productIds.length; offset += 200) {
-          chunks.push(productIds.slice(offset, offset + 200));
-        }
-        await Promise.all(chunks.map(async ids => {
-          const { data, error } = await supabase.from("products")
-            .select("id, purchase_price").eq("store_id", currentStore.id).in("id", ids);
-          if (error) throw error;
-          for (const product of data || []) productCosts.set(product.id, Number(product.purchase_price) || 0);
-        }));
-      };
 
       // Fetch variant data separately for bookings with variant_id
       const variantIds = (bookingsData || [])
@@ -339,7 +320,7 @@ export default function SalesReport() {
       if (bookingIds.length > 0) {
         const { data: products, error: productsError } = await supabase
           .from("booking_products")
-          .select("id, product_name, quantity, subtotal, booking_id, product_id, products(purchase_price)")
+          .select("id, product_name, quantity, subtotal, booking_id, product_id, unit_cost")
           .in("booking_id", bookingIds);
         
         if (!productsError) {
@@ -348,9 +329,9 @@ export default function SalesReport() {
       }
 
       };
-      await Promise.all([fetchVariants(), fetchProfiles(), fetchProducts(), fetchPosCosts()]);
+      await Promise.all([fetchVariants(), fetchProfiles(), fetchProducts()]);
 
-      const mappedPosItems: PosItemData[] = mapPosReportItems(ordersData || [], productCosts);
+      const mappedPosItems: PosItemData[] = mapPosReportItems((ordersData || []) as PosReportOrder[]);
 
       if (expensesError) throw expensesError;
 
@@ -384,8 +365,8 @@ export default function SalesReport() {
           discount_applies_to: b.discount_applies_to,
           checked_in_by_name: b.checked_in_by ? userNameMap[b.checked_in_by] || "-" : "-",
           checked_out_by_name: b.checked_out_by ? userNameMap[b.checked_out_by] || "-" : "-",
-          booking_duration_type: variantData?.booking_duration_type || "hours",
-          booking_duration_value: variantData?.booking_duration_value || b.duration,
+          booking_duration_type: b.booking_duration_type || variantData?.booking_duration_type || (b.variant_id ? "hours" : "days"),
+          booking_duration_value: Number(b.booking_duration_value ?? variantData?.booking_duration_value ?? b.duration),
           payment_proof_url: b.payment_proof_url || null,
           payment_proof_url_2: b.payment_proof_url_2 || null,
           room_id: b.room_id,
@@ -406,7 +387,7 @@ export default function SalesReport() {
         quantity: p.quantity,
         subtotal: Number(p.subtotal) || 0,
         booking_id: p.booking_id,
-        purchase_price: Number(p.products?.purchase_price) || 0,
+        purchase_price: Number(p.unit_cost) || 0,
       }));
 
       const mappedExpenses: ExpenseData[] = (expensesData || []).map((e: any) => ({
