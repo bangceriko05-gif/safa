@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Kunci harga jual, HPP/laba produk, dan tarif kamar pada transaksi; perubahan master hanya berlaku untuk transaksi berikutnya, dengan backfill dan pengujian transaksi lama/baru.
+
 - [x] Izinkan simpan booking dengan Total Bayar 0 tanpa bukti; kewajiban bukti manual mengikuti nominal tiap slot dan DOKU tetap opsional. 14 tes lulus; simulasi akun aktif menolak Transfer Bank Rp60.000 tanpa bukti lalu berhasil menyimpan Rp0 tanpa bukti dan kembali ke kalender, tanpa menulis booking nyata.
 
 - [x] Semua pembayaran DOKU pada Tambah/Ubah Booking dan popup Pembayaran dapat menyimpan BID tanpa bukti bayar; metode manual tetap wajib unggah. 17 tes lulus dan simulasi Virtual Account menyimpan BID dengan bukti kosong tanpa menulis transaksi nyata.
