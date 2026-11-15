@@ -5,7 +5,8 @@ import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useQuery } from "@tanstack/react-query";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
 import BookingDokuInline from "@/components/booking/BookingDokuDialog";
-import { bookingPaymentProofMissing, bookingPaymentProofRequired, unpaidBookingQris } from "@/utils/bookingDokuPayment";
+import { bookingPaymentProofMissing, bookingPaymentProofRequired, unpaidBookingQris, canFinishPreparedQris } from "@/utils/bookingDokuPayment";
+import { matchesBookingDokuSettlement, type BookingDokuReceipt } from "@/utils/bookingDokuSettlement";
 import { userFacingError } from "@/utils/userFacingError";
 import { formatDokuPaidAt } from "@/utils/dokuTransactions";
 import {
@@ -148,9 +149,13 @@ export default function BookingModal({
   }, [isOpen, dokuSettingsError]);
   const [loading, setLoading] = useState(false);
   const [qrisBookingId, setQrisBookingId] = useState<string | null>(null);
+  const [confirmedQrisReceipt, setConfirmedQrisReceipt] = useState<BookingDokuReceipt | null>(null);
   const qrisSaveRef = useRef(false);
   useEffect(() => {
-    if (!isOpen) setQrisBookingId(null);
+    if (!isOpen) {
+      setQrisBookingId(null);
+      setConfirmedQrisReceipt(null);
+    }
   }, [isOpen]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -1393,7 +1398,33 @@ export default function BookingModal({
   const handleSubmit = async (e: Pick<React.FormEvent, "preventDefault">, selectedPaymentMethod?: string) => {
     e.preventDefault();
     const formData = selectedPaymentMethod ? { ...bookingFormData, payment_method: selectedPaymentMethod } : bookingFormData;
-    if (loading || qrisSaveRef.current || qrisBookingId) return;
+    if (loading || qrisSaveRef.current) return;
+    if (qrisBookingId) {
+      if (!currentStore || !confirmedQrisReceipt || !canFinishPreparedQris(qrisBookingId, confirmedQrisReceipt)) return;
+      setLoading(true);
+      qrisSaveRef.current = true;
+      try {
+        const [fresh, attempt] = await Promise.all([
+          fetchGroupBilling({ id: qrisBookingId, store_id: currentStore.id, booking_group_id: savedBookingGroupRef.current }),
+          supabase.from("doku_booking_attempts").select("booking_id,store_id,invoice_number,amount,status")
+            .eq("booking_id", qrisBookingId).eq("store_id", currentStore.id)
+            .eq("invoice_number", confirmedQrisReceipt.invoiceNumber).single(),
+        ]);
+        if (attempt.error || !matchesBookingDokuSettlement({ bookingId: qrisBookingId, storeId: currentStore.id, invoiceNumber: confirmedQrisReceipt.invoiceNumber, amount: confirmedQrisReceipt.amount }, attempt.data, fresh.totals.owner)) {
+          throw new Error("Pembayaran pertama belum terkonfirmasi. Silakan cek status pembayaran kembali.");
+        }
+        // The QR preparation already created this BID; never insert or credit it again.
+        toast.success(fresh.totals.remaining > 0 ? "Booking tersimpan dengan status BELUM LUNAS." : "Booking berhasil tersimpan.");
+        window.dispatchEvent(new CustomEvent("booking-changed"));
+        onClose();
+      } catch (error) {
+        toast.error(userFacingError(error, "Booking belum dapat dikonfirmasi. Silakan coba lagi."));
+      } finally {
+        setLoading(false);
+        qrisSaveRef.current = false;
+      }
+      return;
+    }
     const automaticQris = !editingBooking && formData.payment_method === "QRIS DOKU";
     qrisSaveRef.current = true;
     setLoading(true);
@@ -3455,7 +3486,9 @@ export default function BookingModal({
           />}
           {formData.payment_method === "QRIS DOKU" && !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no : editingBooking.reference_no)?.startsWith("ANKA-")) && currentStore && <BookingDokuInline storeId={currentStore.id}
             amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
-            onReceived={async ({ invoiceNumber, amount }) => {
+            onReceived={async (receipt) => {
+              const { invoiceNumber, amount } = receipt;
+              setConfirmedQrisReceipt(receipt);
               setFormData(previous => ({ ...previous, reference_no: invoiceNumber, price: formatPrice(String(amount)) }));
             }}
             onComplete={() => { window.dispatchEvent(new CustomEvent("booking-changed")); onClose(); }}
@@ -3793,7 +3826,7 @@ export default function BookingModal({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={deleting}>
               Batal
             </Button>
-            <Button type="submit" disabled={loading || deleting || Boolean(qrisBookingId) || (editingBooking && (!editDataLoaded || !isDirty))} className="flex-1">
+            <Button type="submit" disabled={loading || deleting || (Boolean(qrisBookingId) && !canFinishPreparedQris(qrisBookingId, confirmedQrisReceipt)) || (editingBooking && (!editDataLoaded || !isDirty))} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingBooking ? "Simpan" : "Tambah"}
             </Button>

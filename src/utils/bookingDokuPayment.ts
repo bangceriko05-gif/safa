@@ -1,4 +1,10 @@
 import { dokuGroupForMethod } from "./dokuChannels";
+import type { BookingDokuReceipt } from "./bookingDokuSettlement";
+
+/** Only the verified receipt callback can unlock an already-persisted QRIS booking. */
+export function canFinishPreparedQris(bookingId: string | null, receipt: BookingDokuReceipt | null): boolean {
+  return Boolean(bookingId && receipt?.invoiceNumber && receipt.amount > 0);
+}
 
 export function bookingPaymentProofRequired(method: string | null | undefined, amount: number): boolean {
   return amount > 0 && !dokuGroupForMethod(method || "");

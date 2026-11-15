@@ -1,6 +1,21 @@
 import { expect, test } from "bun:test";
 import { DOKU_METHOD_GROUPS } from "./dokuChannels";
-import { bookingPaymentProofMissing, bookingPaymentProofRequired, unpaidBookingQris } from "./bookingDokuPayment";
+import { bookingPaymentProofMissing, bookingPaymentProofRequired, unpaidBookingQris, canFinishPreparedQris } from "./bookingDokuPayment";
+import { groupBillingTotals } from "./groupBookingBilling";
+
+test("pembayaran pertama Rp1 terkonfirmasi mengaktifkan Tambah walau total Rp2 belum lunas", () => {
+  expect(canFinishPreparedQris("booking-1", { invoiceNumber: "ANKA-first", amount: 1, fullyPaid: false })).toBe(true);
+  const totals = groupBillingTotals([{ id: "booking-1", store_id: "outlet-1", room_id: "room-1", duration: 1, variant_price_override: 2, price: 1, reference_no: "ANKA-first" }]);
+  expect(totals.paid).toBe(1);
+  expect(totals.total).toBe(2);
+  expect(totals.remaining).toBe(1);
+});
+
+test("invoice tanpa konfirmasi pembayaran tidak mengaktifkan penyelesaian QRIS", () => {
+  expect(canFinishPreparedQris("booking-1", null)).toBe(false);
+  expect(canFinishPreparedQris(null, { invoiceNumber: "ANKA-first", amount: 1, fullyPaid: false })).toBe(false);
+  expect(canFinishPreparedQris("booking-1", { invoiceNumber: "ANKA-first", amount: 0, fullyPaid: false })).toBe(false);
+});
 
 test("semua metode DOKU dapat menyimpan BID tanpa bukti bayar", () => {
   for (const group of DOKU_METHOD_GROUPS) {
