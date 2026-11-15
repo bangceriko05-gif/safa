@@ -225,6 +225,7 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
         </>}
         {qrisDoku && currentStore ? <BookingDokuInline
           storeId={currentStore.id}
+          whatsappCustomer={{ phone: billing.totals.owner?.phone, name: billing.totals.owner?.customer_name, bid: billing.totals.owner?.bid || undefined }}
           bookingId={billing.totals.owner?.id || bookingId}
           amount={resumingDoku ? undefined : amount}
           resumeActive={resumingDoku}

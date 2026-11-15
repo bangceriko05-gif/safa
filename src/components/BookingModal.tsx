@@ -3485,6 +3485,7 @@ export default function BookingModal({
             label={`${formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}${bookingPaymentProofRequired(formData.payment_method, numericPrice(formData.price)) ? "" : " (Opsional)"}`}
           />}
           {formData.payment_method === "QRIS DOKU" && !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no : editingBooking.reference_no)?.startsWith("ANKA-")) && currentStore && <BookingDokuInline storeId={currentStore.id}
+            whatsappCustomer={{ phone: formData.phone, name: formData.customer_name, bid: displayedBid }}
             amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
             onReceived={async (receipt) => {
               const { invoiceNumber, amount } = receipt;
@@ -3631,6 +3632,7 @@ export default function BookingModal({
               {/* Payment Proof Upload for second payment */}
               {formData.payment_method_2 === "QRIS DOKU" && currentStore ? !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no_2 : editingBooking.reference_no_2)?.startsWith("ANKA-")) && <BookingDokuInline
                 storeId={currentStore.id}
+                whatsappCustomer={{ phone: formData.phone, name: formData.customer_name, bid: displayedBid }}
                 bookingId={editingBooking?.id ? Number((isGroupEdit ? billingOwner(groupRooms)?.price : editingBooking.price) || 0) > 0 ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : null : formData.reference_no?.startsWith("ANKA-") ? qrisBookingId : null}
                 amount={numericPrice(formData.price_2)} preparing={loading}
                 onPrepare={async () => { toast.info("Selesaikan pembayaran pertama sebelum membuat QRIS kedua."); }}

@@ -2,6 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface BillingRoom {
   id: string;
+  phone?: string;
+  customer_name?: string;
+  bid?: string | null;
   store_id: string | null;
   booking_group_id?: string | null;
   room_id: string;

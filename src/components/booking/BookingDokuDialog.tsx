@@ -8,9 +8,11 @@ import { isVerifiedDokuCheckoutUrl } from "@/utils/dokuChannels";
 import { fetchGroupBilling } from "@/utils/groupBookingBilling";
 import { matchesBookingDokuSettlement, type BookingDokuReceipt } from "@/utils/bookingDokuSettlement";
 import { useCashDrawerSound } from "@/hooks/useCashDrawerSound";
+import type { PaymentWhatsAppCustomer } from "@/utils/paymentWhatsApp";
 
 interface Props {
   storeId: string;
+  whatsappCustomer?: PaymentWhatsAppCustomer;
   bookingId: string | null;
   onPrepare: () => Promise<void>;
   preparing: boolean;
@@ -22,7 +24,7 @@ interface Props {
 }
 
 /** QRIS DOKU booking tampil langsung di formulir (menggantikan Bukti Bayar), bukan popup. */
-export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing, amount, resumeActive = false, onReceived, onComplete }: Props) {
+export default function BookingDokuInline({ storeId, bookingId, onPrepare, preparing, amount, resumeActive = false, onReceived, onComplete, whatsappCustomer }: Props) {
   const [checkout, setCheckout] = useState<DokuCheckoutState | null>(null);
   const [saving, setSaving] = useState(false);
   const [received, setReceived] = useState<BookingDokuReceipt | null>(null);
@@ -93,7 +95,7 @@ export default function BookingDokuInline({ storeId, bookingId, onPrepare, prepa
   return <div className="space-y-2">
     <p className="text-sm font-medium leading-none">Pembayaran QRIS DOKU</p>
     <div className={`flex flex-col ${checkout ? "h-[540px]" : "min-h-[160px]"}`}>
-      {checkout ? <DokuCheckoutPanel key={checkout.invoiceNumber || "preparing"} checkout={checkout} storeId={storeId} saving={saving} booking qrOnly onReceived={confirmReceipt} onRetry={() => void load()} onRenew={() => void load(true)} /> :
+      {checkout ? <DokuCheckoutPanel key={checkout.invoiceNumber || "preparing"} checkout={checkout} storeId={storeId} saving={saving} whatsappCustomer={whatsappCustomer} booking qrOnly onReceived={confirmReceipt} onRetry={() => void load()} onRenew={() => void load(true)} /> :
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-md border border-dashed p-6">
           {bookingId || preparing ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Menyiapkan QRIS…</p> : <>
             <p className="text-sm text-center text-muted-foreground">Lengkapi data booking, lalu buat QRIS untuk membayar tagihan.</p>
