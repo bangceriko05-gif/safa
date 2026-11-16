@@ -7,6 +7,9 @@ export interface BillingRoom {
   bid?: string | null;
   store_id: string | null;
   booking_group_id?: string | null;
+  date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   room_id: string;
   variant_id?: string | null;
   variant_price_override?: number | null;

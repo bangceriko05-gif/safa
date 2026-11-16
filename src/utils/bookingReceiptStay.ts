@@ -6,6 +6,7 @@ export function bookingReceiptStay(booking: { date: string; duration: number; st
   const start = new Date(`${booking.date.slice(0, 10)}T${booking.start_time || "00:00:00"}`);
   return {
     unit: daily ? "hari" : "jam",
+    checkIn: start,
     checkout: daily ? addDays(start, booking.duration) : addHours(start, booking.duration),
   };
 }

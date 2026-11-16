@@ -1394,6 +1394,15 @@ export default function BookingModal({
   // Ensure duration is at least 1 for valid bookings
   const finalDuration = duration > 0 ? duration : 1;
 
+  // Nama outlet serta tanggal menginap ikut dikirim ke pelanggan lewat WhatsApp.
+  const whatsappStay = isPMSMode
+    ? { checkIn: checkInDate ?? null, checkOut: checkOutDate ?? null, withTime: false }
+    : (() => {
+        const start = new Date(`${format(selectedDate, "yyyy-MM-dd")}T${formData.start_time || "00:00"}`);
+        const hours = calculateDuration(formData.start_time, formData.end_time) || 1;
+        return { checkIn: start, checkOut: new Date(start.getTime() + hours * 3600000), withTime: true };
+      })();
+
   const bookingFormData = formData;
   const handleSubmit = async (e: Pick<React.FormEvent, "preventDefault">, selectedPaymentMethod?: string) => {
     e.preventDefault();
@@ -3485,7 +3494,7 @@ export default function BookingModal({
             label={`${formData.dual_payment ? "Bukti Bayar Pertama" : "Bukti Bayar"}${bookingPaymentProofRequired(formData.payment_method, numericPrice(formData.price)) ? "" : " (Opsional)"}`}
           />}
           {formData.payment_method === "QRIS DOKU" && !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no : editingBooking.reference_no)?.startsWith("ANKA-")) && currentStore && <BookingDokuInline storeId={currentStore.id}
-            whatsappCustomer={{ phone: formData.phone, name: formData.customer_name, bid: displayedBid }}
+            whatsappCustomer={{ phone: formData.phone, name: formData.customer_name, bid: displayedBid, storeName: currentStore.name, checkIn: whatsappStay.checkIn, checkOut: whatsappStay.checkOut, withTime: whatsappStay.withTime }}
             amount={numericPrice(formData.price)} bookingId={editingBooking?.id ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : qrisBookingId} preparing={loading}
             onReceived={async (receipt) => {
               const { invoiceNumber, amount } = receipt;
@@ -3632,7 +3641,7 @@ export default function BookingModal({
               {/* Payment Proof Upload for second payment */}
               {formData.payment_method_2 === "QRIS DOKU" && currentStore ? !(editingBooking && (isGroupEdit ? billingOwner(groupRooms)?.reference_no_2 : editingBooking.reference_no_2)?.startsWith("ANKA-")) && <BookingDokuInline
                 storeId={currentStore.id}
-                whatsappCustomer={{ phone: formData.phone, name: formData.customer_name, bid: displayedBid }}
+                whatsappCustomer={{ phone: formData.phone, name: formData.customer_name, bid: displayedBid, storeName: currentStore.name, checkIn: whatsappStay.checkIn, checkOut: whatsappStay.checkOut, withTime: whatsappStay.withTime }}
                 bookingId={editingBooking?.id ? Number((isGroupEdit ? billingOwner(groupRooms)?.price : editingBooking.price) || 0) > 0 ? ((isGroupEdit ? billingOwner(groupRooms)?.id : null) || editingBooking.id) : null : formData.reference_no?.startsWith("ANKA-") ? qrisBookingId : null}
                 amount={numericPrice(formData.price_2)} preparing={loading}
                 onPrepare={async () => { toast.info("Selesaikan pembayaran pertama sebelum membuat QRIS kedua."); }}

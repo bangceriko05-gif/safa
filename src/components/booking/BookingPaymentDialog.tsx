@@ -20,6 +20,7 @@ import cashDrawer from "@/assets/cash-drawer.mp3.asset.json";
 import { bookingPaymentMethods } from "@/utils/dokuChannels";
 import { activeBookingDokuTimer } from "@/utils/activeBookingDokuPayment";
 import { bookingPaymentProofMissing, bookingPaymentProofRequired } from "@/utils/bookingDokuPayment";
+import { bookingReceiptStay } from "@/utils/bookingReceiptStay";
 import BookingDokuInline from "@/components/booking/BookingDokuDialog";
 
 type Billing = Awaited<ReturnType<typeof fetchGroupBilling>>;
@@ -79,6 +80,19 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
   );
   const resumingDoku = Boolean(activeDokuTimer);
   const qrisDoku = resumingDoku || method === "QRIS DOKU";
+
+  // Nama outlet serta tanggal menginap ikut dikirim ke pelanggan lewat WhatsApp.
+  const owner = billing?.totals.owner;
+  const stay = owner?.date
+    ? bookingReceiptStay({
+        date: owner.date,
+        duration: owner.duration,
+        start_time: owner.start_time || "00:00:00",
+        end_time: owner.end_time || "00:00:00",
+        ota_source: owner.ota_source,
+        ota_booking_id: owner.ota_booking_id,
+      }, currentStore?.calendar_type)
+    : null;
 
   useEffect(() => {
     if (open && dokuSettingsError) toast.error("Pilihan pembayaran DOKU belum dapat dimuat. Silakan coba lagi.");
@@ -225,7 +239,7 @@ export default function BookingPaymentDialog({ open, onOpenChange, bookingId, in
         </>}
         {qrisDoku && currentStore ? <BookingDokuInline
           storeId={currentStore.id}
-          whatsappCustomer={{ phone: billing.totals.owner?.phone, name: billing.totals.owner?.customer_name, bid: billing.totals.owner?.bid || undefined }}
+          whatsappCustomer={{ phone: owner?.phone, name: owner?.customer_name, bid: owner?.bid || undefined, storeName: currentStore?.name, checkIn: stay?.checkIn ?? null, checkOut: stay?.checkout ?? null, withTime: stay?.unit === "jam" }}
           bookingId={billing.totals.owner?.id || bookingId}
           amount={resumingDoku ? undefined : amount}
           resumeActive={resumingDoku}
