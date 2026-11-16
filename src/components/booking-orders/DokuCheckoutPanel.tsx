@@ -3,7 +3,7 @@ import { CheckCircle2, ExternalLink, Loader2, QrCode, RefreshCw, Timer } from "l
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { WhatsAppIcon } from "@/components/booking/BookingWhatsAppPhone";
+import { WhatsAppBrandIcon } from "@/components/WhatsAppBrandIcon";
 import { paymentWhatsAppLink, type PaymentWhatsAppCustomer } from "@/utils/paymentWhatsApp";
 import { DOKU_IFRAME_MAX_WIDTH, DOKU_QR_TTL_MS, dokuBrandingCrop, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 
@@ -174,7 +174,7 @@ export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, 
           const href = paymentWhatsAppLink(whatsappCustomer, checkout.url, checkout.amount);
           if (!href) { toast.error("Nomor WhatsApp pelanggan belum valid. Periksa nomor pelanggan terlebih dahulu."); return; }
           window.open(href, "_blank", "noopener,noreferrer");
-        }}><WhatsAppIcon className="h-5 w-5" /></Button>}
+        }}><WhatsAppBrandIcon className="h-5 w-5 shrink-0" /></Button>}
         <Button type="button" variant="outline" size="sm" disabled={!checkout.orderId || checking || saving} onClick={() => { void checkPayment(true); }}>{checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cek status pembayaran</Button>
         {!qrOnly && <Button variant="ghost" size="sm" disabled={!checkout.url} onClick={() => { if (checkout.url) window.open(checkout.url, "_blank", "noopener,noreferrer"); }}><ExternalLink className="mr-2 h-4 w-4" />Buka di tab baru</Button>}
       </footer>
