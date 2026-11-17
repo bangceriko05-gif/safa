@@ -36,6 +36,9 @@ All colors MUST be HSL.
     --input: 200 20% 88%;
     --ring: 220 90% 56%;
     --success: 142 72% 37%;
+    --occupancy-medium: 48 96% 53%;
+    --occupancy-low: 25 95% 53%;
+    --occupancy-empty: 0 0% 80%;
     --doku-success: 180 100% 34%;
     --doku-failed: 0 85% 45%;
     --doku-pending: 26 100% 58%;

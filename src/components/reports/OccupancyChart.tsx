@@ -184,10 +184,10 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
   }, [data]);
 
   const getBarColor = (percentage: number) => {
-    if (percentage >= 80) return "hsl(142, 76%, 36%)";
-    if (percentage >= 50) return "hsl(48, 96%, 53%)";
-    if (percentage > 0) return "hsl(25, 95%, 53%)";
-    return "hsl(0, 0%, 80%)";
+    if (percentage >= 80) return "hsl(var(--success))";
+    if (percentage >= 50) return "hsl(var(--occupancy-medium))";
+    if (percentage > 0) return "hsl(var(--occupancy-low))";
+    return "hsl(var(--occupancy-empty))";
   };
 
   const getStatusBadge = (status: string | null) => {
@@ -218,7 +218,7 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="min-w-0">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Grafik Okupansi Kamar</CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -247,25 +247,26 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
             <div className="text-center p-2 rounded-lg bg-muted/50">
               <div className="text-lg font-bold text-primary">{averageOccupancy}%</div>
               <div className="text-[10px] text-muted-foreground">Rata-rata</div>
             </div>
             <div className="text-center p-2 rounded-lg bg-muted/50">
-              <div className="text-lg font-bold text-green-600">{maxOccupancy}%</div>
+              <div className="text-lg font-bold text-success">{maxOccupancy}%</div>
               <div className="text-[10px] text-muted-foreground">Tertinggi</div>
             </div>
             <div className="text-center p-2 rounded-lg bg-muted/50">
-              <div className="text-lg font-bold text-orange-500">{minOccupancy}%</div>
+              <div className="text-lg font-bold text-[hsl(var(--occupancy-low))]">{minOccupancy}%</div>
               <div className="text-[10px] text-muted-foreground">Terendah</div>
             </div>
           </div>
 
-          <ChartContainer config={chartConfig} className="h-[250px] w-full">
+          <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-0 aspect-auto">
             <BarChart
               data={data}
-              margin={{ top: 20, right: 10, left: -10, bottom: 5 }}
+              margin={{ top: 24, right: 12, left: 0, bottom: 8 }}
+              barCategoryGap="20%"
               onClick={(e) => {
                 if (e?.activePayload?.[0]?.payload) {
                   handleBarClick(e.activePayload[0].payload as DailyOccupancy);
@@ -274,8 +275,8 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
               style={{ cursor: "pointer" }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} tickMargin={10} interval="preserveStartEnd" height={36} />
+              <YAxis width={54} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickMargin={8} tickFormatter={(value) => `${value}%`} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
@@ -298,7 +299,11 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
               />
               <ReferenceLine y={averageOccupancy} stroke="hsl(var(--primary))" strokeDasharray="4 4" strokeWidth={1.5} />
               <Bar dataKey="percentage" radius={[4, 4, 0, 0]} maxBarSize={isSingleDay ? 80 : 50}>
-                <LabelList dataKey="percentage" position="top" formatter={(value: number) => `${value}%`} style={{ fontSize: 10, fontWeight: 600, fill: "hsl(var(--foreground))" }} />
+                <LabelList dataKey="percentage" content={({ x, y, width, value }) => {
+                  // Dense periods keep exact values in the tooltip instead of overlapping labels.
+                  if (typeof x !== "number" || typeof y !== "number" || typeof width !== "number" || width < 32 || Number(value) <= 0) return <g />;
+                  return <text x={x + width / 2} y={y - 8} textAnchor="middle" className="fill-foreground text-[11px] font-semibold">{value}%</text>;
+                }} />
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={getBarColor(entry.percentage)} />
                 ))}
@@ -308,23 +313,23 @@ export default function OccupancyChart({ startDate, endDate }: OccupancyChartPro
 
           <div className="flex flex-wrap gap-3 justify-center mt-3 text-[10px] text-muted-foreground">
             <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "hsl(142, 76%, 36%)" }} />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(var(--success))]" />
               <span>≥ 80%</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "hsl(48, 96%, 53%)" }} />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(var(--occupancy-medium))]" />
               <span>50-79%</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "hsl(25, 95%, 53%)" }} />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(var(--occupancy-low))]" />
               <span>1-49%</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "hsl(0, 0%, 80%)" }} />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(var(--occupancy-empty))]" />
               <span>0%</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-0 border-t-2 border-dashed" style={{ borderColor: "hsl(var(--primary))" }} />
+              <div className="w-3 h-0 border-t-2 border-dashed border-primary" />
               <span>Rata-rata</span>
             </div>
           </div>
