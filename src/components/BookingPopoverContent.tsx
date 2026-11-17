@@ -19,7 +19,8 @@ import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import FeatureInactiveNotice from "@/components/FeatureInactiveNotice";
 import { IdCard } from "lucide-react";
-import BookingWhatsAppPhone, { WhatsAppIcon } from "./booking/BookingWhatsAppPhone";
+import BookingWhatsAppPhone from "./booking/BookingWhatsAppPhone";
+import BookingPaymentWhatsAppIcon from "./booking/BookingPaymentWhatsAppIcon";
 import BookingPaymentDialog from "./booking/BookingPaymentDialog";
 import { CreditCard } from "lucide-react";
 
@@ -422,7 +423,7 @@ export default function BookingPopoverContent({
         </div>
 
         <div className="flex items-start gap-2">
-          <WhatsAppIcon className="w-4 h-4 mt-0.5 text-primary" />
+          <BookingPaymentWhatsAppIcon booking={booking} disabled={loadingDetails || remaining <= 0 || status === "BATAL"} />
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">No. Telepon</p>
             <BookingWhatsAppPhone booking={booking} icon={false} className="text-sm" />

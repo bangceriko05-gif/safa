@@ -1,5 +1,16 @@
 import { expect, test } from "bun:test";
-import { paymentWhatsAppLink } from "./paymentWhatsApp";
+import { canShareBookingPayment, paymentWhatsAppLink } from "./paymentWhatsApp";
+
+test("booking belum lunas Rp160.000 dapat membagikan link pembayaran", () => {
+  expect(canShareBookingPayment(160000, ["BO"])).toBe(true);
+  expect(canShareBookingPayment(80000, ["BO", "CI"])).toBe(true);
+});
+test("booking lunas dan BATAL tidak meminta link pembayaran baru", () => {
+  expect(canShareBookingPayment(0, ["BO"])).toBe(false);
+  expect(canShareBookingPayment(-1000, ["CI"])).toBe(false);
+  expect(canShareBookingPayment(160000, ["BATAL"])).toBe(false);
+  expect(canShareBookingPayment(160000, ["BO", "BATAL"])).toBe(false);
+});
 
 test("tautan pembayaran menuju nomor pelanggan tanpa koneksi WhatsApp Business", () => {
   const url = paymentWhatsAppLink({ phone: "0812-3456-7890", name: "Bisma", bid: "BO-001" }, "https://checkout.doku.com/pay/current-invoice", 140000);

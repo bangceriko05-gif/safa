@@ -13,6 +13,11 @@ export interface PaymentWhatsAppCustomer {
   withTime?: boolean;
 }
 
+/** Recheck the shared outstanding balance before requesting a payment link. */
+export function canShareBookingPayment(remaining: number, statuses: Array<string | null>) {
+  return Number.isFinite(remaining) && remaining > 0 && statuses.length > 0 && !statuses.includes("BATAL");
+}
+
 function stayText(value: Date | string | null | undefined, withTime: boolean) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);

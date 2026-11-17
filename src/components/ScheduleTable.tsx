@@ -1,6 +1,7 @@
 import AnkaLoader from "@/components/AnkaLoader";
 import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
-import BookingWhatsAppPhone, { WhatsAppIcon } from "@/components/booking/BookingWhatsAppPhone";
+import BookingWhatsAppPhone from "@/components/booking/BookingWhatsAppPhone";
+import BookingPaymentWhatsAppIcon from "@/components/booking/BookingPaymentWhatsAppIcon";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -1417,7 +1418,7 @@ export default function ScheduleTable({
                                       </div>
 
                                       <div className="flex items-start gap-2">
-                                        <WhatsAppIcon className="w-4 h-4 mt-0.5 text-primary" />
+                                        <BookingPaymentWhatsAppIcon booking={booking} disabled={status === "BATAL"} />
                                         <div className="flex-1">
                                           <p className="text-xs text-muted-foreground">No. Telepon</p>
                                           <BookingWhatsAppPhone booking={booking} icon={false} className="text-sm" />
