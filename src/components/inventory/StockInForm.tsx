@@ -965,7 +965,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                   <th className="text-left px-3 py-2 font-medium">Qty</th>
                   <th className="text-left px-3 py-2 font-medium">Rata-rata Harga Beli</th>
                   <th className="text-left px-3 py-2 font-medium">Total</th>
-                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-32 no-print">Aksi</th>}
+                  {!isReadOnly && <th className="text-left px-3 py-2 font-medium w-12 no-print"><span className="sr-only">Hapus</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -1012,6 +1012,8 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                         {isEditing ? (
                           <Input
                             type="text"
+                            inputMode="numeric"
+                            aria-label={`Harga beli ${it.product_name}`}
                             value={`Rp. ${editPrice.toLocaleString("id-ID")}`}
                             onChange={(e) => {
                               const num = parseInt(e.target.value.replace(/\D/g, ""), 10) || 0;
@@ -1027,6 +1029,7 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                         {isEditing ? (
                           <Input
                             type="number"
+                            aria-label={`Qty ${it.product_name}`}
                             min={1}
                             value={editQty}
                             onChange={(e) => setEditQty(parseInt(e.target.value) || 1)}
@@ -1037,23 +1040,17 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                         )}
                       </td>
                       <td className="px-3 py-3 text-primary">{formatCurrency(avgPrice)}</td>
-                      <td className="px-3 py-3">{formatCurrency(isEditing ? editPrice * editQty : it.subtotal)}</td>
-                      {!isReadOnly && (
-                        <td className="px-3 py-3 no-print">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => removeItem(i)}
-                            >
-                              <Trash2 className="h-4 w-4 text-blue-500" />
-                            </Button>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+                          <span className="tabular-nums">{formatCurrency(isEditing ? editPrice * editQty : it.subtotal)}</span>
+                          {!isReadOnly && <div className="flex items-center gap-1 no-print">
                             {isEditing ? (
                               <>
                                 <Button
                                   size="icon"
-                                  className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white"
+                                  className="h-9 w-9 shrink-0"
+                                  aria-label={`Simpan perubahan ${it.product_name}`}
+                                  title="Simpan perubahan"
                                   onClick={() => {
                                     const next = [...items];
                                     next[i] = {
@@ -1071,7 +1068,9 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                                 <Button
                                   size="icon"
                                   variant="outline"
-                                  className="h-8 w-8"
+                                  className="h-9 w-9 shrink-0"
+                                  aria-label={`Batal edit ${it.product_name}`}
+                                  title="Batal edit"
                                   onClick={() => setEditingIndex(null)}
                                 >
                                   <X className="h-4 w-4" />
@@ -1080,7 +1079,10 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                             ) : (
                               <Button
                                 size="icon"
-                                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white"
+                                variant="ghost"
+                                className="h-9 w-9 shrink-0 text-primary"
+                                aria-label={`Edit harga beli dan qty ${it.product_name}`}
+                                title="Edit harga beli dan qty"
                                 onClick={() => {
                                   setEditingIndex(i);
                                   setEditPrice(it.unit_price);
@@ -1090,7 +1092,21 @@ export default function StockInForm({ stockInId, onBack }: Props) {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
-                          </div>
+                          </div>}
+                        </div>
+                      </td>
+                      {!isReadOnly && (
+                        <td className="px-3 py-3 no-print">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            aria-label={`Hapus ${it.product_name}`}
+                            title="Hapus barang"
+                            onClick={() => removeItem(i)}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
                         </td>
                       )}
                     </tr>
