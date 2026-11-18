@@ -27,6 +27,7 @@ import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedD
 import { formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
+import { isDuplicateBidError, posOrderTitleBid } from "@/utils/posOrderTitle";
 
 interface Product {
   id: string;
@@ -69,6 +70,17 @@ interface AddOrderModalProps {
   presetRoomId?: string | null;
 }
 
+// Nomor BID diminta ke backend begitu item pertama masuk, supaya nomor yang
+// tampil di layar sama dengan nomor yang tersimpan saat checkout.
+async function fetchNextOrderBid(storeId: string, orderDate: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("generate_booking_order_bid", {
+    p_date: orderDate,
+    p_store_id: storeId,
+  });
+  if (error || typeof data !== "string" || !data.trim()) return null;
+  return data.trim();
+}
+
 export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false, presetRoomId = null }: AddOrderModalProps) {
   const { currentStore } = useStore();
   const { methods } = usePaymentMethods();
@@ -105,6 +117,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [cfgNotes, setCfgNotes] = useState<string>("");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
+  // Nomor BID yang sudah dipesan untuk pesanan yang belum disimpan.
+  const [pendingBid, setPendingBid] = useState<string | null>(null);
+  const pendingBidKeyRef = useRef<string | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [referenceNo, setReferenceNo] = useState("");
@@ -644,6 +659,33 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     }
   }, [open, activeOrder]);
 
+  // Nomor BID langsung tampil begitu kasir memasukkan item, meski pesanan belum
+  // disimpan. Nomor baru diminta lagi bila tanggal pesanan diganti.
+  useEffect(() => {
+    const key = currentStore?.id && date ? `${currentStore.id}|${date}` : null;
+    if (!open || !posMode || !key || items.length === 0 || activeOrder?.bid || effectiveBooking?.bid) {
+      pendingBidKeyRef.current = null;
+      setPendingBid(null);
+      return;
+    }
+    if (pendingBidKeyRef.current === key && pendingBid) return;
+    pendingBidKeyRef.current = key;
+    const storeId = currentStore!.id;
+    let active = true;
+    void (async () => {
+      const bid = await fetchNextOrderBid(storeId, date);
+      if (!active) return;
+      if (!bid) {
+        pendingBidKeyRef.current = null;
+        return;
+      }
+      setPendingBid(bid);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [open, posMode, currentStore?.id, date, items.length, activeOrder?.bid, effectiveBooking?.bid, pendingBid]);
+
   const itemsSubtotal = useMemo(
     () => items.reduce((s, it) => s + Math.max(0, it.quantity * it.unit_price - (it.discount || 0)), 0),
     [items]
@@ -941,13 +983,22 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
         if (deleteError) throw deleteError;
       } else {
         payload.created_by = user?.id;
-        const { data, error } = await supabase
-          .from("booking_orders")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (error) throw error;
-        orderId = data.id;
+        // Nomor BID yang sudah tampil di layar ikut disimpan agar tidak berubah
+        // setelah checkout. Bila nomor itu keburu dipakai kasir lain, minta
+        // nomor baru sekali lalu simpan dengan nomor tersebut.
+        const claimedBid = activeOrder?.bid || pendingBid || null;
+        if (claimedBid) payload.bid = claimedBid;
+        let inserted = await supabase.from("booking_orders").insert(payload).select("id").single();
+        if (inserted.error && isDuplicateBidError(inserted.error)) {
+          const freshBid = await fetchNextOrderBid(currentStore.id, date);
+          if (freshBid) {
+            payload.bid = freshBid;
+            setPendingBid(freshBid);
+            inserted = await supabase.from("booking_orders").insert(payload).select("id").single();
+          }
+        }
+        if (inserted.error || !inserted.data) throw inserted.error || new Error("Pesanan belum tersimpan");
+        orderId = inserted.data.id;
       }
 
       if (selectedDokuGroup) savedDokuOrderId.current = orderId;
@@ -1042,6 +1093,9 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
           ...activeOrder,
           id: draftId,
           server_order_id: activeOrder?.server_order_id || (isLocalPosDraft(activeOrder) ? null : activeOrder?.id) || null,
+          // Nomor BID yang sudah tampil di layar ikut tersimpan di draft,
+          // supaya draft yang dibuka lagi memakai nomor yang sama.
+          bid: activeOrder?.bid || pendingBid || null,
           store_id: currentStore.id,
           created_at: activeOrder?.created_at || new Date().toISOString(),
           date,
@@ -1073,6 +1127,8 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setDraftOrder(null);
       setMatchedBooking(null);
       setItems([]);
+      setPendingBid(null);
+      pendingBidKeyRef.current = null;
       setItemConfig(null);
       setCustomItemOpen(false);
       setVariantPickerFor(null);
@@ -1480,7 +1536,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                 className="min-w-0 flex-1 px-2 text-center font-semibold text-sm break-words"
                 data-pos-order-title
               >
-                {items.length > 0 ? activeOrder?.bid || effectiveBooking?.bid || "Pesanan Baru" : "Pesanan Baru"}
+                {posOrderTitleBid({
+                  itemCount: items.length,
+                  orderBid: activeOrder?.bid,
+                  bookingBid: effectiveBooking?.bid,
+                  pendingBid,
+                }) || "Pesanan Baru"}
               </div>
               {posMode ? (
                 <div className="flex items-center gap-1.5">
