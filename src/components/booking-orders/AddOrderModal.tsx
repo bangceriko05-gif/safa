@@ -18,6 +18,7 @@ import ProductCategoryManager from "@/components/products/ProductCategoryManager
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import CustomerNameInput from "@/components/customers/CustomerNameInput";
 import PosPaymentPanel from "./PosPaymentPanel";
+import PosCustomItemPanel from "./PosCustomItemPanel";
 import DokuCheckoutPanel, { type DokuCheckoutState } from "./DokuCheckoutPanel";
 import { canConfirmPosService } from "@/utils/posServiceConfirmation";
 import { computeServiceCharge, posOrderTotal, stripAutoOrderNotes } from "@/utils/posOrderCharges";
@@ -96,6 +97,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
   const [variantPickerFor, setVariantPickerFor] = useState<Product | null>(null);
   // Panel "Atur Item Pesanan" — muncul menggantikan katalog saat produk dipilih
   const [itemConfig, setItemConfig] = useState<{ product: Product; variant: ProductVariant | null } | null>(null);
+  const [customItemOpen, setCustomItemOpen] = useState(false);
   const [cfgQty, setCfgQty] = useState<number>(1);
   const [cfgPrice, setCfgPrice] = useState<number>(0);
   const [cfgDiscMode, setCfgDiscMode] = useState<"rp" | "pct">("rp");
@@ -413,6 +415,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     setPaymentView(false);
     setServiceConfirmOpen(false);
     setItemConfig(null);
+    setCustomItemOpen(false);
     setAttendantName((draftOrder || order)?.attendant_name || "");
     setStaffOptions([]);
     if (!open || !posMode || !currentStore) return;
@@ -1071,6 +1074,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       setMatchedBooking(null);
       setItems([]);
       setItemConfig(null);
+      setCustomItemOpen(false);
       setVariantPickerFor(null);
       setPosCustomerName("");
       setManualCustomerName("");
@@ -1759,6 +1763,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
               }}>
               {paymentFields}
             </PosPaymentPanel>
+          ) : customItemOpen ? (
+            <PosCustomItemPanel disabled={saving || !!dokuCheckout} onCancel={() => setCustomItemOpen(false)} onAdd={(item) => {
+              if (saving || dokuCheckout) return;
+              setItems((previous) => [...previous, item]);
+              setCustomItemOpen(false);
+            }} />
           ) : itemConfig ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <div className="bg-primary text-primary-foreground px-4 py-3 shrink-0">
@@ -1884,6 +1894,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             </div>
           ) : (<>
             <div className="p-3 shrink-0">
+              {posMode && (
+                <div className="flex justify-end mb-3">
+                  <Button variant="secondary" disabled={saving || !!dokuCheckout} onClick={() => setCustomItemOpen(true)} className="h-10">
+                    <Plus className="h-4 w-4 mr-2" />Custom
+                  </Button>
+                </div>
+              )}
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
