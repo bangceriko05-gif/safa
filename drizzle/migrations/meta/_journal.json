@@ -169,6 +169,20 @@
       "when": 1794627901772,
       "tag": "0023_resolve_orphan_variant_cost_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795051853277,
+      "tag": "0024_doku_authoritative_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795051983448,
+      "tag": "0025_doku_separate_qr_renewal_state",
+      "breakpoints": true
     }
   ]
 }

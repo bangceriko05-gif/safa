@@ -35,12 +35,12 @@ Deno.serve(async (req) => {
     if (Number(order.price_2) > 0 && order.payment_method_2 !== "QRIS DOKU") return reply(400, { error: "Pembayaran kedua sudah menggunakan metode lain. Periksa pembayaran melalui Ubah Booking." });
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
-    const { data: pending } = await admin.from("doku_booking_attempts").select("id,amount,checkout_url,created_at,invoice_number,due_minutes").eq("booking_id", order.id).eq("status", "pending").maybeSingle();
+    const { data: pending } = await admin.from("doku_booking_attempts").select("id,amount,checkout_url,created_at,invoice_number,due_minutes").eq("booking_id", order.id).eq("status", "pending").is("superseded_at", null).maybeSingle();
     // Batas waktu bayar mengikuti pengaturan metode; tagihan kedaluwarsa (atau diminta baru) diganti invoice & QR baru.
     const dueMinutes = dokuDueMinutes(settings.doku_channel_timeouts, channels);
     const expired = pending && Date.now() - new Date(pending.created_at).getTime() > Math.max(0.5, Number(pending.due_minutes || 60) - 1) * 60 * 1000;
     if (pending && (expired || parsed.data.renew)) {
-      await admin.from("doku_booking_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
+      await admin.from("doku_booking_attempts").update({ superseded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
     } else if (pending) {
       if (parsed.data.resume) {
         // Membuka kembali pembayaran tidak boleh mengganti nominal atau invoice yang sedang berjalan.
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       }
       if (Number(pending.amount) !== remaining) {
         // Total bayar berubah: tagihan lama dinonaktifkan, dibuat QR & invoice baru.
-        await admin.from("doku_booking_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
+        await admin.from("doku_booking_attempts").update({ superseded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
       } else if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url, invoice_number: pending.invoice_number, amount: Number(pending.amount), due_minutes: Number(pending.due_minutes || 60), created_at: pending.created_at });
       else return reply(409, { error: "Tagihan DOKU sedang dibuat. Tunggu sebentar sebelum mencoba kembali." });
     }

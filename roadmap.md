@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Cocokkan status dan waktu transaksi DOKU dengan data resmi, termasuk invoice ANKA-b024166d-6f97-4de0-b0c9-f1e38cb5a0a7; DOKU asli dan tabel akun aktif terverifikasi SUCCESS Rp200.000 pada 18 Nov 2026 21:06:37 WIB, sinkronisasi berulang tidak menambah pembayaran; 16 tes lulus. Status QR diganti dipisahkan dari status resmi, tombol Sinkronkan memeriksa seluruh transaksi terpilih.
+
 - [x] Tambahkan tombol Custom di katalog POS dan formulir nama/nominal; 11 tes lulus, dua item Rp25.000/Rp10.000 tampil dengan total Rp35.000 dan berhasil dibuka kembali dari draft menggunakan akun aktif, tanpa transaksi pembayaran.
 
 - [x] Kunci harga jual, HPP/laba produk, dan tarif kamar pada transaksi; perubahan master hanya berlaku untuk transaksi berikutnya. Snapshot database lulus skenario Rp15.000/HPP Rp12.944/laba Rp2.056, lalu harga Rp16.000/laba Rp3.056 tanpa mengubah transaksi lama, HPP baru hanya untuk item berikutnya, dan kamar lama tetap Rp250.000 saat master menjadi Rp280.000; 22 item POS dengan referensi produk/varian yang sudah terhapus tetap tanpa HPP yang dapat dipulihkan.

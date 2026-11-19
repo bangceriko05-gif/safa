@@ -1183,6 +1183,8 @@ export type Database = {
           paid_at: string | null
           status: string
           store_id: string
+          superseded_at: string | null
+          transaction_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1199,6 +1201,8 @@ export type Database = {
           paid_at?: string | null
           status?: string
           store_id: string
+          superseded_at?: string | null
+          transaction_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1215,6 +1219,8 @@ export type Database = {
           paid_at?: string | null
           status?: string
           store_id?: string
+          superseded_at?: string | null
+          transaction_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1281,6 +1287,8 @@ export type Database = {
           paid_at: string | null
           status: string
           store_id: string
+          superseded_at: string | null
+          transaction_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1297,6 +1305,8 @@ export type Database = {
           paid_at?: string | null
           status?: string
           store_id: string
+          superseded_at?: string | null
+          transaction_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1313,6 +1323,8 @@ export type Database = {
           paid_at?: string | null
           status?: string
           store_id?: string
+          superseded_at?: string | null
+          transaction_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4183,6 +4195,16 @@ export type Database = {
       recompute_product_avg_cost: {
         Args: { p_product_id: string }
         Returns: undefined
+      }
+      reconcile_doku_payment: {
+        Args: {
+          p_amount: number
+          p_attempt_id: string
+          p_channel: string
+          p_source: string
+          p_transaction_at: string
+        }
+        Returns: boolean
       }
       resolve_stock_product_id: { Args: { p_id: string }; Returns: string }
       safe_promote_first_admin: {

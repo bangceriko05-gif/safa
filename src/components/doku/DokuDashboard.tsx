@@ -5,13 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2, Receipt, Search, Settings } from "lucide-react";
+import { Download, Loader2, Receipt, RefreshCw, Search, Settings } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import DokuLogo from "./DokuLogo";
 import DokuSettings from "./DokuSettings";
 import { userFacingError } from "@/utils/userFacingError";
-import { dokuTransactionMethod, formatDokuPaidAt, formatDokuTransactionTime, matchesDokuTransactionSearch, type DokuTransaction } from "@/utils/dokuTransactions";
+import { dokuDashboardTime, needsDokuReconciliation, dokuTransactionMethod, formatDokuPaidAt, formatDokuTransactionTime, matchesDokuTransactionSearch, type DokuTransaction } from "@/utils/dokuTransactions";
 import ReportColumnFilter from "@/components/reports/ReportColumnFilter";
 import { applyColumnFilters, type ColumnSelections } from "@/utils/tableColumnFilters";
 
@@ -29,10 +29,10 @@ const columnValue = (row: DokuTransaction, column: string) =>
   column === "Uang Masuk (GMT+7)" ? (row.paid_at ? new Date(row.paid_at).getTime() : "-") :
   column === "Outlet" ? row.outlet :
   column === "BID" ? row.bid :
-  column === "Status" ? row.status.toUpperCase() : new Date(row.created_at).getTime();
+  column === "Status" ? row.status.toUpperCase() : new Date(dokuDashboardTime(row)).getTime();
 const columnLabel = (row: DokuTransaction, column: string) =>
   column === "Amount" ? idr(Number(row.amount)) :
-  column === "Waktu (GMT+7)" ? formatDokuTransactionTime(row.created_at) :
+  column === "Waktu (GMT+7)" ? formatDokuTransactionTime(dokuDashboardTime(row)) :
   column === "Uang Masuk (GMT+7)" ? formatDokuPaidAt(row.paid_at) : String(columnValue(row, column));
 
 export default function DokuDashboard() {
@@ -45,6 +45,8 @@ export default function DokuDashboard() {
   const [sort, setSort] = useState<{ column: string; ascending: boolean } | null>({ column: "Waktu (GMT+7)", ascending: false });
   const [rows, setRows] = useState<DokuTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const invalidDate = !!from && !!to && from > to;
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function DokuDashboard() {
     let active = true;
     setLoading(true);
     void (async () => {
-      const selection = "id,invoice_number,amount,status,channel,environment,created_at,paid_at";
+      const selection = "id,invoice_number,amount,status,channel,environment,created_at,paid_at,transaction_at";
       let posRequest = supabase.from("doku_payment_attempts")
         .select(`${selection},booking_orders(bid)`)
         .eq("store_id", currentStore.id)
@@ -91,23 +93,35 @@ export default function DokuDashboard() {
         }));
         const combined = [...posRows, ...bookingRows];
         setRows(combined);
-        // Notifikasi DOKU bisa terlewat; cocokkan maksimal 20 tagihan menunggu terbaru langsung ke DOKU.
-        const pending = combined.filter(row => row.status === "pending").slice(0, 20);
-        void Promise.all(pending.map(async row => {
-          const { data, error } = await supabase.functions.invoke("doku-status", { body: { invoice_number: row.invoice_number } });
-          if (!active || error || !data?.status) return;
-          setRows(current => current.map(item => item.source === row.source && item.id === row.id ? {
-            ...item,
-            status: typeof data.status === "string" ? data.status : item.status,
-            channel: typeof data.channel === "string" ? data.channel : item.channel,
-            paid_at: typeof data.paid_at === "string" ? data.paid_at : item.paid_at,
-          } : item));
-        }));
+        // Reconcile expired/failed invoices too: local QR renewal is not a provider payment status.
+        const candidates = combined.filter(row => refresh > 0 || needsDokuReconciliation(row));
+        setSyncing(true);
+        void (async () => {
+          let failures = 0;
+          for (let offset = 0; active && offset < candidates.length; offset += 4) {
+            await Promise.all(candidates.slice(offset, offset + 4).map(async row => {
+              const { data, error } = await supabase.functions.invoke("doku-status", { body: { invoice_number: row.invoice_number } });
+              if (!active) return;
+              if (error || !data?.status) { failures++; return; }
+              setRows(current => current.map(item => item.source === row.source && item.id === row.id ? {
+                ...item,
+                status: typeof data.status === "string" ? data.status : item.status,
+                channel: typeof data.channel === "string" ? data.channel : item.channel,
+                paid_at: typeof data.paid_at === "string" ? data.paid_at : item.paid_at,
+                transaction_at: typeof data.transaction_at === "string" ? data.transaction_at : item.transaction_at,
+              } : item));
+            }));
+          }
+          if (active) {
+            setSyncing(false);
+            if (failures) toast.error(`${failures} transaksi belum berhasil dicocokkan dengan DOKU. Silakan coba Sinkronkan lagi.`);
+          }
+        })();
       }
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [currentStore?.id, currentStore?.name, from, to, invalidDate]);
+  }, [currentStore?.id, currentStore?.name, from, to, invalidDate, refresh]);
 
   const searched = useMemo(() => rows.filter(row => matchesDokuTransactionSearch(row, query)), [rows, query]);
   const filterOptions = useMemo(() => Object.fromEntries(columns.map(column => {
@@ -126,7 +140,7 @@ export default function DokuDashboard() {
   const exportCsv = () => {
     const header = columns.join(",");
     const lines = filtered.map((row) => [
-      row.outlet, row.bid, row.invoice_number, formatDokuTransactionTime(row.created_at), formatDokuPaidAt(row.paid_at), dokuTransactionMethod(row), Number(row.amount), row.status,
+      row.outlet, row.bid, row.invoice_number, formatDokuTransactionTime(dokuDashboardTime(row)), formatDokuPaidAt(row.paid_at), dokuTransactionMethod(row), Number(row.amount), row.status,
     ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","));
     const blob = new Blob([`﻿${header}\n${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -148,7 +162,8 @@ export default function DokuDashboard() {
           <div className="flex flex-wrap items-center gap-3 border-b p-4">
             <div className="relative w-full sm:w-72"><Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Cari transaksi DOKU" placeholder="Cari BID, invoice, atau outlet…" value={query} onChange={(event) => setQuery(event.target.value)} className="pr-10" /></div>
             <div className="flex flex-wrap items-center gap-2"><Input type="date" aria-label="Tanggal mulai DOKU" value={from} onChange={(event) => setFrom(event.target.value)} className="w-40" /><span className="text-muted-foreground">–</span><Input type="date" aria-label="Tanggal akhir DOKU" value={to} onChange={(event) => setTo(event.target.value)} className="w-40" /></div>
-            <Button variant="outline" disabled={filtered.length === 0} onClick={exportCsv} className="sm:ml-auto"><Download className="mr-2 h-4 w-4" />Export</Button>
+            <Button variant="outline" disabled={loading || syncing} onClick={() => setRefresh(value => value + 1)} className="sm:ml-auto"><RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />{syncing ? "Mencocokkan…" : "Sinkronkan"}</Button>
+            <Button variant="outline" disabled={filtered.length === 0 || syncing} onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
           </div>
           {invalidDate && <p role="alert" className="px-4 pt-3 text-sm text-destructive">Tanggal akhir harus sama atau setelah tanggal mulai.</p>}
           <div className="overflow-x-auto">
@@ -162,7 +177,7 @@ export default function DokuDashboard() {
                   <TableCell className="font-medium">{row.outlet}</TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-xs">{row.bid}</TableCell>
                   <TableCell className="font-mono text-xs">{row.invoice_number}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatDokuTransactionTime(row.created_at)}</TableCell>
+                  <TableCell className="whitespace-nowrap">{formatDokuTransactionTime(dokuDashboardTime(row))}</TableCell>
                   <TableCell className="whitespace-nowrap">{formatDokuPaidAt(row.paid_at)}</TableCell>
                   <TableCell><span className="whitespace-nowrap">{dokuTransactionMethod(row)}</span>{row.environment === "sandbox" ? <span className="ml-1 text-xs text-muted-foreground">(sandbox)</span> : null}</TableCell>
                   <TableCell className="whitespace-nowrap font-semibold">{idr(Number(row.amount))}</TableCell>

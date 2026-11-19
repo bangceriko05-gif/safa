@@ -10,6 +10,15 @@ export interface DokuTransaction {
   environment: string;
   created_at: string;
   paid_at: string | null;
+  transaction_at?: string | null;
+}
+
+export function dokuDashboardTime(row: Pick<DokuTransaction, "transaction_at" | "paid_at" | "created_at">) {
+  return row.transaction_at || row.paid_at || row.created_at;
+}
+
+export function needsDokuReconciliation(row: Pick<DokuTransaction, "status" | "transaction_at">) {
+  return row.status !== "success" || !row.transaction_at;
 }
 
 export function dokuTransactionMethod(row: Pick<DokuTransaction, "channel">) {
@@ -38,8 +47,9 @@ export function formatDokuTransactionTime(value: string) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   }).formatToParts(new Date(normalized));
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value || "";
-  return `${part("day")} ${part("month")} ${part("year")} ${part("hour")}:${part("minute")}`;
+  return `${part("day")} ${part("month")} ${part("year")} ${part("hour")}:${part("minute")}:${part("second")}`;
 }

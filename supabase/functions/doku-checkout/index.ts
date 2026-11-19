@@ -29,12 +29,12 @@ Deno.serve(async (req) => {
     const remaining = Number(order.total_amount) - Number(order.amount) - Number(order.amount_2);
     if (!Number.isSafeInteger(remaining) || remaining <= 0) return reply(400, { error: "Nominal pembayaran tidak sesuai. Periksa tagihan transaksi." });
     const admin = dokuAdmin();
-    const { data: pending } = await admin.from("doku_payment_attempts").select("id,amount,checkout_url,created_at,invoice_number,due_minutes").eq("order_id", order.id).eq("status", "pending").maybeSingle();
+    const { data: pending } = await admin.from("doku_payment_attempts").select("id,amount,checkout_url,created_at,invoice_number,due_minutes").eq("order_id", order.id).eq("status", "pending").is("superseded_at", null).maybeSingle();
     // Batas waktu bayar mengikuti pengaturan metode; tagihan kedaluwarsa (atau diminta baru) diganti invoice & QR baru.
     const dueMinutes = dokuDueMinutes(settings.doku_channel_timeouts, channels);
     const expired = pending && Date.now() - new Date(pending.created_at).getTime() > Math.max(0.5, Number(pending.due_minutes || 60) - 1) * 60 * 1000;
     if (pending && (expired || parsed.data.renew)) {
-      await admin.from("doku_payment_attempts").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
+      await admin.from("doku_payment_attempts").update({ superseded_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", pending.id).eq("status", "pending");
     } else if (pending) {
       if (Number(pending.amount) !== remaining) return reply(409, { error: "Tagihan DOKU sebelumnya masih menunggu pembayaran. Hubungi admin sebelum mengubah nominal." });
       if (pending.checkout_url) return reply(200, { checkout_url: pending.checkout_url, invoice_number: pending.invoice_number, amount: Number(pending.amount), due_minutes: Number(pending.due_minutes || 60), created_at: pending.created_at });

@@ -1,10 +1,11 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
 import { dokuAdmin, dokuCredentials, dokuSignature, signaturesEqual } from "../_shared/doku.ts";
+import { parseDokuTransactionDate } from "../_shared/dokuStatus.ts";
 
 const notification = z.object({
   order: z.object({ invoice_number: z.string().min(1).max(128), amount: z.coerce.number().int().positive() }),
-  transaction: z.object({ status: z.string().max(40) }),
+  transaction: z.object({ status: z.string().max(40), date: z.string().max(64).optional() }),
   channel: z.object({ id: z.string().max(100) }).optional(),
 });
 const reply = (status: number, message: string) => new Response(JSON.stringify({ message }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -35,12 +36,13 @@ Deno.serve(async (req) => {
     const expected = await dokuSignature(credentials.secret, clientId, requestId, timestamp, "/functions/v1/doku-webhook", raw);
     if (!signaturesEqual(expected, signature)) return reply(401, "Notifikasi pembayaran tidak dapat diverifikasi.");
     if (parsed.data.transaction.status === "SUCCESS") {
-      const { error: settleError } = await admin.rpc(bookingAttempt ? "settle_doku_booking" : "settle_doku_order", { p_attempt_id: attempt.id, p_amount: parsed.data.order.amount, p_channel: parsed.data.channel?.id || "Checkout" });
+      const { error: settleError } = await admin.rpc("reconcile_doku_payment", { p_source: bookingAttempt ? "booking" : "order", p_attempt_id: attempt.id, p_amount: parsed.data.order.amount, p_channel: parsed.data.channel?.id || "Checkout", p_transaction_at: parseDokuTransactionDate(parsed.data.transaction.date) });
       if (settleError) throw settleError;
     }
     // Only SUCCESS changes financial state. Failed channel attempts can be retried on the same invoice.
     return reply(200, "Notifikasi diterima.");
-  } catch {
+  } catch (error) {
+    console.error("DOKU notification failed", error instanceof Error ? error.message : "Unknown error");
     return reply(500, "Notifikasi belum berhasil diproses. Silakan kirim ulang.");
   }
 });
