@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { canShareBookingPayment, paymentWhatsAppLink } from "./paymentWhatsApp";
+import { canShareBookingPayment, paymentWhatsAppCustomerLabel, paymentWhatsAppLink } from "./paymentWhatsApp";
 
 test("booking belum lunas Rp160.000 dapat membagikan link pembayaran", () => {
   expect(canShareBookingPayment(160000, ["BO"])).toBe(true);
@@ -46,6 +46,17 @@ test("menginap per jam mencantumkan jam check-in dan check-out", () => {
   expect(message).toContain("Hotel: FunFury Rageroom");
   expect(message).toContain("Check-in: 15 Nov 2026 23:00");
   expect(message).toContain("Check-out: 16 Nov 2026 01:00");
+});
+test("label samping ikon WhatsApp menampilkan nama dan nomor pelanggan", () => {
+  expect(paymentWhatsAppCustomerLabel({ phone: "0812-3456-7890", name: "ADAM PRIYO" })).toEqual({
+    name: "ADAM PRIYO", phone: "0812-3456-7890",
+  });
+});
+test("label samping ikon WhatsApp tetap terbaca saat nama atau nomor kosong", () => {
+  expect(paymentWhatsAppCustomerLabel({ phone: "081234567890" })).toEqual({ name: "Tanpa nama", phone: "081234567890" });
+  expect(paymentWhatsAppCustomerLabel({ name: "ADAM PRIYO" })).toEqual({ name: "ADAM PRIYO", phone: "Nomor belum diisi" });
+  expect(paymentWhatsAppCustomerLabel({ phone: "   ", name: "  " })).toBeNull();
+  expect(paymentWhatsAppCustomerLabel({})).toBeNull();
 });
 test("nama hotel dan tanggal yang tidak ada tidak membuat pesan rusak", () => {
   const message = decodeURIComponent(paymentWhatsAppLink({ phone: "081234567890", storeName: null, checkIn: null, checkOut: "bukan-tanggal" }, "https://checkout.doku.com/pay/renewed", 1) || "");

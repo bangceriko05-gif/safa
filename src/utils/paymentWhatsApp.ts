@@ -13,6 +13,14 @@ export interface PaymentWhatsAppCustomer {
   withTime?: boolean;
 }
 
+/** Nama & nomor yang ditampilkan di samping ikon WhatsApp agar kasir tahu tujuannya. */
+export function paymentWhatsAppCustomerLabel(customer: PaymentWhatsAppCustomer): { name: string; phone: string } | null {
+  const name = customer.name?.trim() || "";
+  const phone = customer.phone?.trim() || "";
+  if (!name && !phone) return null;
+  return { name: name || "Tanpa nama", phone: phone || "Nomor belum diisi" };
+}
+
 /** Recheck the shared outstanding balance before requesting a payment link. */
 export function canShareBookingPayment(remaining: number, statuses: Array<string | null>) {
   return Number.isFinite(remaining) && remaining > 0 && statuses.length > 0 && !statuses.includes("BATAL");

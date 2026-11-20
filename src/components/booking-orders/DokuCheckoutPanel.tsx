@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { WhatsAppBrandIcon } from "@/components/WhatsAppBrandIcon";
-import { paymentWhatsAppLink, type PaymentWhatsAppCustomer } from "@/utils/paymentWhatsApp";
+import { paymentWhatsAppCustomerLabel, paymentWhatsAppLink, type PaymentWhatsAppCustomer } from "@/utils/paymentWhatsApp";
 import { DOKU_IFRAME_MAX_WIDTH, DOKU_QR_TTL_MS, dokuBrandingCrop, formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 
 export interface DokuCheckoutState {
@@ -43,6 +43,7 @@ export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, 
   const [crop, setCrop] = useState(() => dokuBrandingCrop(768));
   const ttl = (checkout.dueMinutes && checkout.dueMinutes > 0 ? checkout.dueMinutes * 60 * 1000 : DOKU_QR_TTL_MS);
   const [left, setLeft] = useState(ttl);
+  const whatsappLabel = whatsappCustomer ? paymentWhatsAppCustomerLabel(whatsappCustomer) : null;
 
   // Zona branding DOKU (bar hitung mundur, pemilih bahasa, logo & nama outlet) dan kartu
   // Order Summary dipotong agar kasir langsung melihat QRIS; ringkasan pesanan ditampilkan
@@ -170,11 +171,17 @@ export default function DokuCheckoutPanel({ checkout, saving, onRetry, onRenew, 
       <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t p-2">
         {!qrOnly && <Button variant="ghost" size="sm" disabled={!checkout.url || saving} onClick={() => { setLoaded(false); setReload((value) => value + 1); }}><RefreshCw className="mr-2 h-4 w-4" />Muat ulang</Button>}
         <Button type="button" variant="outline" size="sm" disabled={!checkout.orderId || saving || paid} onClick={() => { setLoaded(false); onRenew(); }}><QrCode className="mr-2 h-4 w-4" />Buat QR baru</Button>
-        {whatsappCustomer && <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0 [&_svg]:size-8" aria-label="Kirim link pembayaran via WhatsApp" title="Kirim link pembayaran via WhatsApp" disabled={!checkout.url || saving || paid} onClick={() => {
-          const href = paymentWhatsAppLink(whatsappCustomer, checkout.url, checkout.amount);
-          if (!href) { toast.error("Nomor WhatsApp pelanggan belum valid. Periksa nomor pelanggan terlebih dahulu."); return; }
-          window.open(href, "_blank", "noopener,noreferrer");
-        }}><WhatsAppBrandIcon className="shrink-0" /></Button>}
+        {whatsappCustomer && <div className="flex min-w-0 items-center gap-2">
+          <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0 [&_svg]:size-8" aria-label="Kirim link pembayaran via WhatsApp" title="Kirim link pembayaran via WhatsApp" disabled={!checkout.url || saving || paid} onClick={() => {
+            const href = paymentWhatsAppLink(whatsappCustomer, checkout.url, checkout.amount);
+            if (!href) { toast.error("Nomor WhatsApp pelanggan belum valid. Periksa nomor pelanggan terlebih dahulu."); return; }
+            window.open(href, "_blank", "noopener,noreferrer");
+          }}><WhatsAppBrandIcon className="shrink-0" /></Button>
+          {whatsappLabel && <div className="min-w-0 text-left leading-tight" aria-label="Tujuan pesan WhatsApp">
+            <p className="max-w-[190px] truncate text-xs font-semibold text-foreground" title={whatsappLabel.name}>{whatsappLabel.name}</p>
+            <p className="max-w-[190px] truncate text-xs tabular-nums text-muted-foreground" title={whatsappLabel.phone}>{whatsappLabel.phone}</p>
+          </div>}
+        </div>}
         <Button type="button" variant="outline" size="sm" disabled={!checkout.orderId || checking || saving} onClick={() => { void checkPayment(true); }}>{checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Cek status pembayaran</Button>
         {!qrOnly && <Button variant="ghost" size="sm" disabled={!checkout.url} onClick={() => { if (checkout.url) window.open(checkout.url, "_blank", "noopener,noreferrer"); }}><ExternalLink className="mr-2 h-4 w-4" />Buka di tab baru</Button>}
       </footer>
