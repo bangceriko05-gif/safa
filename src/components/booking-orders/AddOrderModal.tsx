@@ -27,6 +27,7 @@ import { dokuGroupForMethod, enabledDokuCodes, opensDokuOnSelection, isVerifiedD
 import { formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
+import { creatorDisplayName } from "@/utils/orderCreator";
 import { isDuplicateBidError, posOrderTitleBid } from "@/utils/posOrderTitle";
 
 interface Product {
@@ -79,6 +80,18 @@ async function fetchNextOrderBid(storeId: string, orderDate: string): Promise<st
   });
   if (error || typeof data !== "string" || !data.trim()) return null;
   return data.trim();
+}
+
+/** Nama pengguna pembuat transaksi, dibaca dari profil agar kartu transaksi dapat mencantumkan "Dibuat oleh". */
+async function fetchCreatorNames(ids: Array<string | null | undefined>): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(ids.filter((id): id is string => typeof id === "string" && id.length > 0)));
+  const names = new Map<string, string>();
+  if (unique.length === 0) return names;
+  const { data } = await supabase.from("profiles").select("id, name, email").in("id", unique);
+  (data || []).forEach((profile: any) => {
+    names.set(profile.id, creatorDisplayName(profile));
+  });
+  return names;
 }
 
 export default function AddOrderModal({ open, onOpenChange, booking, order, onSaved, posMode = false, presetRoomId = null }: AddOrderModalProps) {
@@ -191,7 +204,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
     setTxLoading(true);
     const { data } = await supabase
       .from("booking_orders")
-      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, order_source, created_at, booking_order_items(product_name, quantity)")
+      .select("id, bid, date, total_amount, payment_status, process_status, customer_name, room_id, booking_id, order_source, created_at, created_by, booking_order_items(product_name, quantity)")
       .eq("store_id", currentStore.id)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -262,7 +275,12 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
       const { data: { user } } = await supabase.auth.getUser();
       const drafts = user ? readPosOrderDrafts(localStorage, currentStore.id, user.id) : [];
       const resumedServerIds = new Set(drafts.map((draft) => draft.server_order_id).filter(Boolean));
-      setTxOrders([...drafts, ...rows.filter((row) => !resumedServerIds.has(row.id))]);
+      const serverRows = rows.filter((row) => !resumedServerIds.has(row.id));
+      const creatorNames = await fetchCreatorNames([...serverRows.map((row) => row.created_by), user?.id]);
+      setTxOrders([
+        ...drafts.map((draft) => ({ ...draft, created_by_name: (user && creatorNames.get(user.id)) || "" })),
+        ...serverRows.map((row) => ({ ...row, created_by_name: creatorNames.get(row.created_by) || "" })),
+      ]);
     } catch (error) {
       setTxOrders(rows);
       toast.error(userFacingError(error, "Draft belum dapat dimuat. Silakan coba lagi."));
@@ -1498,6 +1516,7 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
                         )}
                         <div className="flex justify-between items-center gap-2 font-black pt-2 border-t text-lg text-black">
                           <span>Total</span>
+                          <span className="min-w-0 truncate text-sm font-semibold text-muted-foreground">Dibuat oleh: {o.created_by_name || "-"}</span>
                           {dokuTimers[o.id] && <PosDokuPaymentTimer since={dokuTimers[o.id].since} minutes={dokuTimers[o.id].minutes} />}
                           <span>{fmt(Number(o.total_amount) || 0)}</span>
                         </div>
