@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Tambahkan menu Settlement seperti laporan DOKU: ringkasan per tanggal uang masuk, detail transaksi berhasil, pencarian/filter/export, dan akses laporan batch resmi DOKU tanpa menganggap pembayaran success sebagai dana yang sudah masuk bank. Data nyata SAFA menampilkan 6 pembayaran Rp700.001 dalam 3 tanggal; Detail, pencarian, dan dua Export terverifikasi, 104 tes lulus.
+- [ ] Samakan kolom dan tampilan batch Settlement resmi lebih detail — terhambat: menunggu tangkapan layar menu Settlement pada dashboard DOKU asli dari pengguna.
+
 - [x] Cocokkan status dan waktu transaksi DOKU dengan data resmi, termasuk invoice ANKA-b024166d-6f97-4de0-b0c9-f1e38cb5a0a7; DOKU asli dan tabel akun aktif terverifikasi SUCCESS Rp200.000 pada 18 Nov 2026 21:06:37 WIB, sinkronisasi berulang tidak menambah pembayaran; 16 tes lulus. Status QR diganti dipisahkan dari status resmi, tombol Sinkronkan memeriksa seluruh transaksi terpilih.
 
 - [x] Tambahkan tombol Custom di katalog POS dan formulir nama/nominal; 11 tes lulus, dua item Rp25.000/Rp10.000 tampil dengan total Rp35.000 dan berhasil dibuka kembali dari draft menggunakan akun aktif, tanpa transaksi pembayaran.

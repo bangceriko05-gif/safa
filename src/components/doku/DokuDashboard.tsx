@@ -5,11 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2, Receipt, RefreshCw, Search, Settings } from "lucide-react";
+import { Download, Landmark, Loader2, Receipt, RefreshCw, Search, Settings } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import DokuLogo from "./DokuLogo";
 import DokuSettings from "./DokuSettings";
+import DokuSettlement from "./DokuSettlement";
 import { userFacingError } from "@/utils/userFacingError";
 import { dokuDashboardTime, needsDokuReconciliation, dokuTransactionMethod, formatDokuPaidAt, formatDokuTransactionTime, matchesDokuTransactionSearch, type DokuTransaction } from "@/utils/dokuTransactions";
 import ReportColumnFilter from "@/components/reports/ReportColumnFilter";
@@ -60,23 +61,28 @@ export default function DokuDashboard() {
     setLoading(true);
     void (async () => {
       const selection = "id,invoice_number,amount,status,channel,environment,created_at,paid_at,transaction_at";
+      const dateColumn = tab === "settlements" ? "paid_at" : "created_at";
       let posRequest = supabase.from("doku_payment_attempts")
         .select(`${selection},booking_orders(bid)`)
         .eq("store_id", currentStore.id)
-        .order("created_at", { ascending: false })
+        .order(dateColumn, { ascending: false })
         .limit(500);
       let bookingRequest = supabase.from("doku_booking_attempts")
         .select(`${selection},bookings(bid)`)
         .eq("store_id", currentStore.id)
-        .order("created_at", { ascending: false })
+        .order(dateColumn, { ascending: false })
         .limit(500);
+      if (tab === "settlements") {
+        posRequest = posRequest.eq("status", "success").not("paid_at", "is", null);
+        bookingRequest = bookingRequest.eq("status", "success").not("paid_at", "is", null);
+      }
       if (from) {
-        posRequest = posRequest.gte("created_at", `${from}T00:00:00+07:00`);
-        bookingRequest = bookingRequest.gte("created_at", `${from}T00:00:00+07:00`);
+        posRequest = posRequest.gte(dateColumn, `${from}T00:00:00+07:00`);
+        bookingRequest = bookingRequest.gte(dateColumn, `${from}T00:00:00+07:00`);
       }
       if (to) {
-        posRequest = posRequest.lte("created_at", `${to}T23:59:59+07:00`);
-        bookingRequest = bookingRequest.lte("created_at", `${to}T23:59:59+07:00`);
+        posRequest = posRequest.lte(dateColumn, `${to}T23:59:59+07:00`);
+        bookingRequest = bookingRequest.lte(dateColumn, `${to}T23:59:59+07:00`);
       }
       const [posResult, bookingResult] = await Promise.all([posRequest, bookingRequest]);
       if (!active) return;
@@ -121,7 +127,7 @@ export default function DokuDashboard() {
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [currentStore?.id, currentStore?.name, from, to, invalidDate, refresh]);
+  }, [currentStore?.id, currentStore?.name, from, to, invalidDate, refresh, tab]);
 
   const searched = useMemo(() => rows.filter(row => matchesDokuTransactionSearch(row, query)), [rows, query]);
   const filterOptions = useMemo(() => Object.fromEntries(columns.map(column => {
@@ -154,7 +160,7 @@ export default function DokuDashboard() {
   return <div className="space-y-6">
     <header className="flex items-center gap-3"><DokuLogo className="h-10 w-10" /><div><h1 className="text-2xl font-bold">DOKU</h1><p className="mt-1 text-sm text-muted-foreground">{currentStore?.name}</p></div></header>
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList className="mb-6"><TabsTrigger value="transactions" className="gap-2"><Receipt className="h-4 w-4" />Transaksi</TabsTrigger><TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4" />Pengaturan</TabsTrigger></TabsList>
+      <TabsList className="mb-6 h-auto max-w-full flex-wrap gap-1"><TabsTrigger value="transactions" className="gap-2"><Receipt className="h-4 w-4" />Transaksi</TabsTrigger><TabsTrigger value="settlements" className="gap-2"><Landmark className="h-4 w-4" />Settlement</TabsTrigger><TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4" />Pengaturan</TabsTrigger></TabsList>
       <TabsContent value="transactions" className="space-y-5">
         <h2 className="text-xl font-semibold">Transaksi</h2>
         <section className="max-w-xl rounded-lg border bg-card p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-semibold">Rincian</h3><Button variant="ghost" size="sm" onClick={() => { setSelections({}); setQuery(""); setFrom(""); setTo(""); }}>Lihat semua</Button></div><div className="grid grid-cols-3 gap-3">{[{ name: "SUCCESS", value: totals.success, style: "doku-summary-success" }, { name: "FAILED", value: totals.failed, style: "doku-summary-failed" }, { name: "PENDING", value: totals.pending, style: "doku-summary-pending" }].map(({ name, value, style }) => <div key={name} className={`${style} border-l-[3px] pl-3`}><p className="text-xs font-bold">{name}</p><p className="mt-1 text-base font-semibold text-foreground">{idr(value)}</p></div>)}</div></section>
@@ -189,6 +195,7 @@ export default function DokuDashboard() {
           <div className="border-t px-4 py-3 text-xs text-muted-foreground">{filtered.length} transaksi</div>
         </section>
       </TabsContent>
+      <TabsContent value="settlements"><DokuSettlement rows={rows} loading={loading} syncing={syncing} from={from} to={to} invalidDate={invalidDate} onFromChange={setFrom} onToChange={setTo} onRefresh={() => setRefresh(value => value + 1)} /></TabsContent>
       <TabsContent value="settings"><DokuSettings /></TabsContent>
     </Tabs>
   </div>;
