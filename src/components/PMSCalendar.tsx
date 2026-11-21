@@ -1,5 +1,6 @@
 import AnkaLoader from "@/components/AnkaLoader";
 import { bookingPaymentCaption } from "@/utils/bookingPaymentCaption";
+import { calendarRoomOccupancy } from "@/utils/calendarRoomOccupancy";
 import BookingWhatsAppPhone from "@/components/booking/BookingWhatsAppPhone";
 import BookingDokuTimer, { useBookingDokuTimers } from "@/components/booking/BookingDokuTimer";
 import { useEffect, useState, useMemo } from "react";
@@ -100,6 +101,7 @@ export default function PMSCalendar({
   const { currentStore } = useStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<BookingWithAdmin[]>([]);
+  const [occupancyBookings, setOccupancyBookings] = useState<Booking[]>([]);
   const dokuTimers = useBookingDokuTimers(bookings.filter((b: any) => b.payment_status !== "lunas" && b.status !== "BATAL").map((b) => b.id));
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
@@ -426,25 +428,42 @@ export default function PMSCalendar({
       const startDate = format(visibleDates[0], "yyyy-MM-dd");
       const endDate = format(visibleDates[visibleDates.length - 1], "yyyy-MM-dd");
 
-      // Calculate earliest possible start date for multi-night bookings
-      // A booking starting 60 days before could still span into our view
-      const earliestStartDate = format(addDays(visibleDates[0], -60), "yyyy-MM-dd");
-
-      // Fetch bookings that:
-      // 1. Start within the visible range, OR
-      // 2. Start before the range but could span into it (multi-night bookings)
-      // Exclude CO (checked-out) and BATAL bookings from calendar display
+      // Include completed stays for historical occupancy, but not calendar cards.
       const { data: bookingsData, error } = await supabase
         .from("bookings")
         .select("*, bid")
         .eq("store_id", currentStore.id)
-        .gte("date", earliestStartDate)
         .lte("date", endDate)
-        .not("status", "in", "(CO,BATAL)");
+        .not("status", "eq", "BATAL")
+        .order("date", { ascending: false })
+        .order("id")
+        .range(0, 999);
 
       if (error) throw error;
+
+      // The API caps each response; never silently omit stays in larger outlets.
+      if (bookingsData) {
+        let pageSize = bookingsData.length;
+        let offset = 1000;
+        while (pageSize === 1000) {
+          const { data: page, error: pageError } = await supabase
+            .from("bookings")
+            .select("*, bid")
+            .eq("store_id", currentStore.id)
+            .lte("date", endDate)
+            .not("status", "eq", "BATAL")
+            .order("date", { ascending: false })
+            .order("id")
+            .range(offset, offset + 999);
+          if (pageError) throw pageError;
+          bookingsData.push(...(page || []));
+          pageSize = page?.length || 0;
+          offset += 1000;
+        }
+      }
       
       if (!bookingsData || bookingsData.length === 0) {
+        setOccupancyBookings([]);
         setBookings([]);
         return;
       }
@@ -453,7 +472,7 @@ export default function PMSCalendar({
       const visibleStartDate = startOfDay(visibleDates[0]);
       const visibleEndDate = startOfDay(visibleDates[visibleDates.length - 1]);
       
-      const relevantBookings = bookingsData.filter(booking => {
+      const overlappingBookings = bookingsData.filter(booking => {
         const bookingStart = startOfDay(new Date(booking.date));
         const nights = booking.duration || 1;
         const bookingEnd = addDays(bookingStart, nights - 1);
@@ -462,6 +481,9 @@ export default function PMSCalendar({
         // booking ends on or after visible start AND booking starts on or before visible end
         return bookingEnd >= visibleStartDate && bookingStart <= visibleEndDate;
       });
+
+      setOccupancyBookings(overlappingBookings);
+      const relevantBookings = overlappingBookings.filter(booking => booking.status !== "CO");
 
       if (relevantBookings.length === 0) {
         setBookings([]);
@@ -1130,6 +1152,7 @@ export default function PMSCalendar({
                   {visibleDates.map((date) => {
                     const dayName = format(date, "EEE", { locale: idLocale });
                     const dayNum = format(date, "d");
+                    const occupancy = calendarRoomOccupancy(rooms, occupancyBookings, date);
                     const today = isToday(date);
                     const selected = isSelected(date);
                     
@@ -1143,11 +1166,12 @@ export default function PMSCalendar({
                         )}
                         onClick={() => handleDateClick(date)}
                       >
-                        <div className={`text-xs uppercase ${today ? "text-primary font-bold" : "text-muted-foreground"}`}>
-                          {dayName}
+                        <div className={cn("text-sm whitespace-nowrap", today ? "text-primary font-bold" : "text-foreground")}>
+                          {dayName} {dayNum}
                         </div>
-                        <div className={`text-lg ${today ? "text-primary font-bold" : ""}`}>
-                          {dayNum}
+                        <div className={cn("text-lg tabular-nums whitespace-nowrap", today && "text-primary font-bold")}
+                          aria-label={`${occupancy.occupied} kamar terisi dari ${occupancy.total} kamar`}>
+                          {occupancy.occupied}/{occupancy.total}
                         </div>
                       </th>
                     );
