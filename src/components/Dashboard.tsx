@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import StoreSelector from "./StoreSelector";
 import DokuLogo from "./doku/DokuLogo";
+import DashboardNotifications from "./DashboardNotifications";
 const DokuDashboard = lazyWithRetry(() => import("./doku/DokuDashboard"));
 const DateNavigation = lazyWithRetry(() => import("./DateNavigation"));
 const RoomSummary = lazyWithRetry(() => import("./RoomSummary"));
@@ -876,10 +877,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
-                <Bell className="h-4 w-4" />
-                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-destructive" />
-              </Button>
+              <DashboardNotifications key={`${currentStore.id}:${user.id}`} storeId={currentStore.id} userId={user.id} />
               <button onClick={openProfileDialog} className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-muted">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">{(profileData.name || user?.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
