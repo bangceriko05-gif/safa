@@ -464,7 +464,7 @@ export default function PermissionManagement() {
     saveFn: () => Promise<void>,
     hasUnsaved: boolean
   ) => (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       {/* Bulk actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -475,7 +475,12 @@ export default function PermissionManagement() {
             Hapus Semua
           </Button>
         </div>
-        <Button onClick={saveFn} disabled={saving || !hasUnsaved} size="sm">
+        <Button
+          onClick={saveFn}
+          disabled={saving || !hasUnsaved}
+          size="sm"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 h-11 gap-2 px-5 shadow-lg md:right-6"
+        >
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Simpan
         </Button>
