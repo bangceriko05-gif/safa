@@ -54,16 +54,18 @@ export default function TaxSettings() {
     if (includeAllowed) modes.push("include");
     if (excludeAllowed) modes.push("exclude");
     const { error } = await supabase
-      .from("stores")
-      .update({
-        tax_enabled: enabled,
-        tax_rate: Number(rate) || 0,
-        tax_modes_allowed: modes.length ? modes : ["exclude"],
-      })
-      .eq("id", currentStore.id);
+      .rpc("save_delegated_store_settings", {
+        p_store_id: currentStore.id,
+        p_section: "tax",
+        p_values: {
+          tax_enabled: enabled,
+          tax_rate: Number(rate) || 0,
+          tax_modes_allowed: modes.length ? modes : ["exclude"],
+        },
+      });
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error("Pengaturan PPN gagal disimpan. Periksa izin Anda dan coba kembali.");
       return;
     }
     toast.success("Pengaturan PPN tersimpan");

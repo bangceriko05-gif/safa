@@ -152,9 +152,11 @@ export default function StoreManagement() {
 
       if (editingStore) {
         const { error } = await supabase
-          .from("stores")
-          .update(storeData)
-          .eq("id", editingStore.id);
+          .rpc("save_delegated_store_settings", {
+            p_store_id: editingStore.id,
+            p_section: "outlet",
+            p_values: storeData,
+          });
 
         if (error) throw error;
         

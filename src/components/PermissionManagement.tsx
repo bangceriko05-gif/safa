@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Shield, User, Users, Save, RefreshCw } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
+import { clearPermissionCache } from "@/utils/permissionCache";
 
 interface Permission {
   id: string;
@@ -275,6 +276,7 @@ export default function PermissionManagement() {
         if (error) throw error;
       }
       await logActivity({ actionType: "updated", entityType: "Permission", description: `Mengubah ${toAdd.length + toRemove.length} permission untuk pengguna`, storeId: currentStore?.id });
+      clearPermissionCache();
       toast.success("Perubahan permission berhasil disimpan");
       setPendingUserChanges(new Set());
       setHasUnsavedUserChanges(false);
@@ -300,22 +302,30 @@ export default function PermissionManagement() {
         if (hasRolePerm(permId)) toRemove.push(permId);
         else toAdd.push(permId);
       });
-      for (const permId of toRemove) {
-        const existing = rolePermissions.find(rp => rp.permission_id === permId);
-        if (existing) await supabase.from("role_permissions").delete().eq("id", existing.id);
-      }
-      for (const permId of toAdd) {
-        await supabase.from("role_permissions").insert({ role: selectedRole, permission_id: permId });
-      }
-
-      // Sync to users with this role
       if (toRemove.length > 0) {
-        const { data: userRoles } = await supabase.from("user_roles").select("user_id").eq("role", selectedRole);
-        if (userRoles && userRoles.length > 0) {
-          const userIds = userRoles.map(ur => ur.user_id);
-          await supabase.from("user_permissions").delete().in("permission_id", toRemove).in("user_id", userIds);
-        }
+        const { error } = await supabase.from("role_permissions").delete().eq("role", selectedRole).in("permission_id", toRemove);
+        if (error) throw error;
       }
+      if (toAdd.length > 0) {
+        const { error } = await supabase.from("role_permissions").insert(toAdd.map(permission_id => ({ role: selectedRole, permission_id })));
+        if (error) throw error;
+      }
+      const { data: userRoles, error: rolesError } = await supabase.from("user_roles").select("user_id").eq("role", selectedRole);
+      if (rolesError) throw rolesError;
+      const userIds = userRoles?.map(ur => ur.user_id) ?? [];
+      if (userIds.length > 0 && toRemove.length > 0) {
+        const { error } = await supabase.from("user_permissions").delete().in("permission_id", toRemove).in("user_id", userIds);
+        if (error) throw error;
+      }
+      if (userIds.length > 0 && toAdd.length > 0) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) throw new Error("Sesi berakhir. Silakan masuk kembali.");
+        const { error } = await supabase.from("user_permissions").upsert(userIds.flatMap(user_id =>
+          toAdd.map(permission_id => ({ user_id, permission_id, granted_by: user.id }))
+        ), { onConflict: "user_id,permission_id", ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      clearPermissionCache();
 
       await logActivity({ actionType: "updated", entityType: "Permission", description: `Mengubah ${toAdd.length + toRemove.length} permission untuk role ${selectedRole}`, storeId: currentStore?.id });
       toast.success("Perubahan permission role berhasil disimpan");

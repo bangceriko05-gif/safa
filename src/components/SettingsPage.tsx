@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { canAccessSettingsTab, canOpenSettings } from "@/utils/settingsAccess";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
 import NoAccessMessage from "./NoAccessMessage";
 import AnkaLoader from "./AnkaLoader";
@@ -42,6 +43,22 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   const { hasPermission, loading: permLoading } = usePermissions();
   const { isFeatureEnabled, getFeatureInfo } = useStoreFeatures(currentStore?.id);
   const [activeTab, setActiveTab] = useState("display");
+  const canAccessTab = (tab: string) => canAccessSettingsTab(tab, hasPermission);
+  const settingsTabs = [
+    { value: "display", label: "Tampilan", icon: Monitor },
+    { value: "colors", label: "Warna", icon: Palette },
+    { value: "notifications", label: "Notifikasi", icon: Bell },
+    { value: "whatsapp", label: "Pesan WhatsApp", icon: WhatsAppIcon },
+    { value: "print", label: "Nota", icon: Printer },
+    { value: "printer-driver", label: "Printer", icon: Printer },
+    { value: "rooms", label: "Kamar", icon: Bed },
+    { value: "ota", label: "OTA", icon: Globe },
+    { value: "payment-methods", label: "Metode Bayar", icon: CreditCard },
+    { value: "tax", label: "PPN", icon: Receipt },
+    { value: "pos", label: "POS", icon: ShoppingCart },
+    { value: "outlet", label: "Outlet", icon: Store },
+  ].filter(tab => canAccessTab(tab.value));
+  const visibleTab = settingsTabs.some(tab => tab.value === activeTab) ? activeTab : settingsTabs[0]?.value ?? "";
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   const [tabsScrollEl, setTabsScrollEl] = useState<HTMLDivElement | null>(null);
   const [showLeftScrollHint, setShowLeftScrollHint] = useState(false);
@@ -289,7 +306,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
     toast.success("Warna Ready (Sudah Dipakai) berhasil diubah");
   };
 
-  const canEditColors = userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan";
+  const canEditColors = canAccessTab("colors");
 
   const colorOptions = [
     { value: "#87CEEB", label: "Sky Blue" },
@@ -338,37 +355,15 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
   if (permLoading) {
     return <AnkaLoader />;
   }
-  if (!hasPermission("manage_settings")) {
+  if (!canOpenSettings(hasPermission)) {
     return <NoAccessMessage featureName="Pengaturan" />;
   }
 
   return (
     <div className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={visibleTab} onValueChange={setActiveTab}>
         {(() => {
-          const isManager =
-            userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan";
-
-          const tabs: { value: string; label: string; icon: any }[] = [
-            { value: "display", label: "Tampilan", icon: Monitor },
-            { value: "colors", label: "Warna", icon: Palette },
-            { value: "notifications", label: "Notifikasi", icon: Bell },
-            { value: "whatsapp", label: "Pesan WhatsApp", icon: WhatsAppIcon },
-          ];
-          if (isManager) {
-            tabs.push(
-              { value: "print", label: "Nota", icon: Printer },
-              { value: "printer-driver", label: "Printer", icon: Printer },
-              { value: "rooms", label: "Kamar", icon: Bed },
-              { value: "ota", label: "OTA", icon: Globe },
-              { value: "payment-methods", label: "Metode Bayar", icon: CreditCard },
-              { value: "tax", label: "PPN", icon: Receipt },
-              { value: "pos", label: "POS", icon: ShoppingCart },
-            );
-          }
-          if (userRole === "admin") {
-            tabs.push({ value: "outlet", label: "Outlet", icon: Store });
-          }
+          const tabs = settingsTabs;
 
           return (
             <div className="relative rounded-xl border bg-card p-1.5 shadow-sm">
@@ -427,6 +422,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
 
 
         {/* Display Settings */}
+        {canAccessTab("display") && (
         <TabsContent value="display" className="mt-4 space-y-4">
           {isFeatureEnabled("settings.display") ? (
             <>
@@ -506,8 +502,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             <FeatureInactiveNotice featureName="Tampilan" icon={Monitor} price={getFeatureInfo("settings.display").price} description={getFeatureInfo("settings.display").description} />
           )}
         </TabsContent>
+        )}
 
         {/* Color Settings */}
+        {canAccessTab("colors") && (
         <TabsContent value="colors" className="mt-4 space-y-4">
           {isFeatureEnabled("settings.colors") ? (
             <>
@@ -638,7 +636,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
                   </div>
                   {!canEditColors && (
                     <p className="text-sm text-muted-foreground">
-                      Hanya admin dan leader yang dapat mengubah warna status
+                      Izin Warna diperlukan untuk mengubah warna status
                     </p>
                   )}
                 </CardContent>
@@ -648,8 +646,10 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             <FeatureInactiveNotice featureName="Warna" icon={Palette} price={getFeatureInfo("settings.colors").price} description={getFeatureInfo("settings.colors").description} />
           )}
         </TabsContent>
+        )}
 
         {/* Notification Settings */}
+        {canAccessTab("notifications") && (
         <TabsContent value="notifications" className="mt-4">
           {isFeatureEnabled("settings.notifications") ? (
             <NotificationSettings />
@@ -657,14 +657,17 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
             <FeatureInactiveNotice featureName="Notifikasi" icon={Bell} price={getFeatureInfo("settings.notifications").price} description={getFeatureInfo("settings.notifications").description} />
           )}
         </TabsContent>
+        )}
 
         {/* Print Settings */}
+        {canAccessTab("whatsapp") && (
         <TabsContent value="whatsapp" className="mt-4">
           <WhatsAppMessageSettings key={currentStore?.id} />
         </TabsContent>
+        )}
 
         {/* Print Settings */}
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("print") && (
           <TabsContent value="print" className="mt-4">
             {isFeatureEnabled("settings.print") ? (
               <PrintSettingsComponent />
@@ -675,14 +678,14 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         )}
 
         {/* Thermal Printer Driver */}
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("printer-driver") && (
           <TabsContent value="printer-driver" className="mt-4">
             <ThermalPrinterSettings />
           </TabsContent>
         )}
 
         {/* Room Settings */}
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("rooms") && (
           <TabsContent value="rooms" className="mt-4 space-y-4">
             {isFeatureEnabled("settings.rooms") ? (
               <>
@@ -718,7 +721,7 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         )}
 
         {/* OTA Management */}
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("ota") && (
           <TabsContent value="ota" className="mt-4">
             {isFeatureEnabled("settings.ota") ? (
               <OtaSourceManagement />
@@ -729,27 +732,27 @@ export default function SettingsPage({ userRole }: SettingsPageProps) {
         )}
 
         {/* Payment Method Settings */}
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("payment-methods") && (
           <TabsContent value="payment-methods" className="mt-4">
             <PaymentMethodSettings />
           </TabsContent>
         )}
 
         {/* Tax (PPN) Settings */}
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("tax") && (
           <TabsContent value="tax" className="mt-4">
             <TaxSettings />
           </TabsContent>
         )}
 
-        {(userRole === "admin" || userRole === "leader" || userRole === "owner" || userRole === "akuntan") && (
+        {canAccessTab("pos") && (
           <TabsContent value="pos" className="mt-4">
             <PosSettings />
           </TabsContent>
         )}
 
         {/* Outlet Management */}
-        {userRole === "admin" && (
+        {canAccessTab("outlet") && (
           <TabsContent value="outlet" className="mt-4">
             {isFeatureEnabled("settings.outlet") ? (
               <Card>

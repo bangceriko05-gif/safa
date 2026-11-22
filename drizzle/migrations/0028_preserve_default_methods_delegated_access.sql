@@ -1,0 +1,4 @@
+DROP POLICY delegated_payment_methods_manage ON public.payment_methods;
+CREATE POLICY delegated_payment_methods_insert ON public.payment_methods FOR INSERT TO authenticated WITH CHECK (public.has_store_access(auth.uid(),store_id) AND public.has_permission(auth.uid(),'settings_payment_methods'));
+CREATE POLICY delegated_payment_methods_update ON public.payment_methods FOR UPDATE TO authenticated USING (public.has_store_access(auth.uid(),store_id) AND public.has_permission(auth.uid(),'settings_payment_methods')) WITH CHECK (public.has_store_access(auth.uid(),store_id) AND public.has_permission(auth.uid(),'settings_payment_methods'));
+CREATE POLICY delegated_payment_methods_delete ON public.payment_methods FOR DELETE TO authenticated USING (NOT is_default AND public.has_store_access(auth.uid(),store_id) AND public.has_permission(auth.uid(),'settings_payment_methods'));

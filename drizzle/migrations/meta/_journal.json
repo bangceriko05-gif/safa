@@ -183,6 +183,27 @@
       "when": 1795051983448,
       "tag": "0025_doku_separate_qr_renewal_state",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795309109937,
+      "tag": "0026_delegated_settings_submenu_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795309193814,
+      "tag": "0027_scoped_delegated_room_and_store_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1795309343325,
+      "tag": "0028_preserve_default_methods_delegated_access",
+      "breakpoints": true
     }
   ]
 }

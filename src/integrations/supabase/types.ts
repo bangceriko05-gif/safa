@@ -4211,6 +4211,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      save_delegated_store_settings: {
+        Args: { p_section: string; p_store_id: string; p_values: Json }
+        Returns: undefined
+      }
       save_doku_outlet_settings: {
         Args: {
           p_channels: Json

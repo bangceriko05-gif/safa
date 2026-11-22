@@ -51,18 +51,20 @@ export default function ScheduleTimeSettings() {
     setSaving(true);
     try {
       const { error } = await supabase
-        .from("stores")
-        .update({
-          schedule_start_time: startTime,
-          schedule_end_time: endTime,
-          schedule_slot_minutes: parseInt(slotMinutes) || 60,
-        } as any)
-        .eq("id", currentStore.id);
+        .rpc("save_delegated_store_settings", {
+          p_store_id: currentStore.id,
+          p_section: "rooms",
+          p_values: {
+            schedule_start_time: startTime,
+            schedule_end_time: endTime,
+            schedule_slot_minutes: parseInt(slotMinutes) || 60,
+          },
+        });
       if (error) throw error;
       window.dispatchEvent(new CustomEvent("schedule-settings-changed"));
       toast.success("Jam operasional berhasil disimpan");
     } catch (e: any) {
-      toast.error(e.message || "Gagal menyimpan jam operasional");
+      toast.error("Jam operasional gagal disimpan. Periksa izin Anda dan coba kembali.");
     } finally {
       setSaving(false);
     }

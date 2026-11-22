@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Jadikan semua izin submenu Pengaturan dapat dipilih dan berlaku untuk User, termasuk Nota. Akun User hanya dengan izin Nota membuka dan menyimpan pengaturan (204), lalu berhasil membaca ulang. Izin WhatsApp/Printer/Kamar dipilih dan disimpan dari panel permission, lalu keempat submenu muncul dan terbuka pada User. 126 tes umum dan 2 tes akses nyata lulus; akses PPN tanpa izin dan Nota outlet lain ditolak. Printer fisik tidak diuji.
+
 - [x] Sesuaikan kelompok permission dengan menu/submenu dashboard; Cetak menjadi Nota, Pengguna dan Log terpisah, semua nama izin tersimpan tetap utuh. 112 tes lulus; tampilan dan pilihan Nota diuji dengan data akun aktif tanpa menyimpan hak akses. Navigasi tab admin tidak teruji karena sesi aktif Akuntan; pemeriksaan tampilan memakai komponen langsung.
 
 - [x] Ubah judul kalender menjadi hari/tanggal dan rasio kamar terisi/jumlah kamar hotel; riwayat CO tetap dihitung tanpa mengubah kartu Ready. Kalender akun aktif SAFA terverifikasi Jum 20: 8/20 termasuk 3 kamar CO dan Sab 21: 16/20, sesuai hitungan data tersimpan; 110 tes lulus.
