@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Sesuaikan kelompok permission dengan menu/submenu dashboard; Cetak menjadi Nota, Pengguna dan Log terpisah, semua nama izin tersimpan tetap utuh. 112 tes lulus; tampilan dan pilihan Nota diuji dengan data akun aktif tanpa menyimpan hak akses. Navigasi tab admin tidak teruji karena sesi aktif Akuntan; pemeriksaan tampilan memakai komponen langsung.
+
 - [x] Ubah judul kalender menjadi hari/tanggal dan rasio kamar terisi/jumlah kamar hotel; riwayat CO tetap dihitung tanpa mengubah kartu Ready. Kalender akun aktif SAFA terverifikasi Jum 20: 8/20 termasuk 3 kamar CO dan Sab 21: 16/20, sesuai hitungan data tersimpan; 110 tes lulus.
 
 - [x] Tambahkan menu Settlement seperti laporan DOKU: ringkasan per tanggal uang masuk, detail transaksi berhasil, pencarian/filter/export, dan akses laporan batch resmi DOKU tanpa menganggap pembayaran success sebagai dana yang sudah masuk bank. Data nyata SAFA menampilkan 6 pembayaran Rp700.001 dalam 3 tanggal; Detail, pencarian, dan dua Export terverifikasi, 104 tes lulus.
