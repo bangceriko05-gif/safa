@@ -3051,6 +3051,8 @@ export type Database = {
       }
       room_daily_status: {
         Row: {
+          cleaning_started_at: string | null
+          cleaning_started_by: string | null
           date: string
           id: string
           room_id: string
@@ -3059,6 +3061,8 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          cleaning_started_at?: string | null
+          cleaning_started_by?: string | null
           date: string
           id?: string
           room_id: string
@@ -3067,6 +3071,8 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          cleaning_started_at?: string | null
+          cleaning_started_by?: string | null
           date?: string
           id?: string
           room_id?: string
@@ -4186,6 +4192,10 @@ export type Database = {
       has_store_access: {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
+      }
+      housekeeping_action: {
+        Args: { p_action: string; p_status_id: string }
+        Returns: undefined
       }
       is_store_admin: {
         Args: { _store_id: string; _user_id: string }

@@ -22,6 +22,7 @@ const SuperAdmin = lazyWithRetry(() => import("./pages/SuperAdmin"));
 const PosOrderDetail = lazyWithRetry(() => import("./pages/PosOrderDetail"));
 const RoomScan = lazyWithRetry(() => import("./pages/RoomScan"));
 const Shop = lazyWithRetry(() => import("./pages/Shop"));
+const Housekeeping = lazyWithRetry(() => import("./pages/Housekeeping"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/super-admin" element={<SuperAdmin />} />
               <Route path="/pos-order/:id" element={<PosOrderDetail />} />
               <Route path="/room-scan" element={<RoomScan />} />
+              <Route path="/profil" element={<Housekeeping />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/shop/:storeSlug" element={<Shop />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
