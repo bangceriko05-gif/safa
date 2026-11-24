@@ -12,8 +12,16 @@ describe('Housekeeping room lifecycle', () => {
   test('completed cleaning becomes ready and counts in today progress', () => {
     expect(housekeepingRooms([{ ...row, status: 'Aktif', cleaning_started_at: '2026-11-23T01:10:00Z' }], '2026-11-23')[0]?.stage).toBe('done');
   });
-  test('older unresolved dirty rooms remain in queue', () => {
-    expect(housekeepingRooms([{ ...row, date: '2026-11-22' }], '2026-11-23')).toHaveLength(1);
+  test('historical dirty cells do not override today Ready on the calendar', () => {
+    expect(housekeepingRooms([{ ...row, date: '2026-11-22' }], '2026-11-23')).toHaveLength(0);
+  });
+  test('315 dirty on November 21 is not dirty on November 24; 317 dirty today remains', () => {
+    const tasks = housekeepingRooms([
+      { ...row, room_id: '315', date: '2026-11-21' },
+      { ...row, room_id: '317', date: '2026-11-24', updated_at: '2026-11-24T02:37:00Z' },
+    ], '2026-11-24');
+    expect(tasks.map(task => task.room_id)).toEqual(['317']);
+    expect(tasks[0]?.stage).toBe('dirty');
   });
   test('latest ready status supersedes older dirty status', () => {
     expect(housekeepingRooms([{ ...row, date: '2026-11-22' }, { ...row, id: 'ready', status: 'Aktif' }], '2026-11-23')).toHaveLength(0);

@@ -62,7 +62,7 @@ export default function Housekeeping() {
       const statuses: HousekeepingStatus[] = [];
       if (rooms?.length) {
         for (let offset = 0; ; offset += 1000) {
-          const result = await supabase.from('room_daily_status').select('*').in('room_id', rooms.map(room => room.id)).lte('date', today).order('date', { ascending: false }).order('id').range(offset, offset + 999);
+          const result = await supabase.from('room_daily_status').select('*').in('room_id', rooms.map(room => room.id)).eq('date', today).order('date', { ascending: false }).order('id').range(offset, offset + 999);
           if (result.error) throw result.error;
           statuses.push(...(result.data ?? []));
           if ((result.data?.length ?? 0) < 1000) break;

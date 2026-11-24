@@ -18,7 +18,9 @@ export function jakartaDate(value = new Date()): string {
 export function housekeepingRooms(rows: HousekeepingStatus[], today: string) {
   const latest = new Map<string, HousekeepingStatus>();
   for (const row of rows) {
-    if (row.date > today) continue;
+    // Match the calendar and room summary: dirtiness belongs to its saved day.
+    // A historical dirty cell must not override today's Ready/default state.
+    if (row.date !== today) continue;
     const previous = latest.get(row.room_id);
     if (!previous || row.date > previous.date || (row.date === previous.date && row.updated_at > previous.updated_at)) latest.set(row.room_id, row);
   }
