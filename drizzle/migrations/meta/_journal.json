@@ -211,6 +211,13 @@
       "when": 1795407658865,
       "tag": "0029_housekeeping_room_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795527584377,
+      "tag": "0030_housekeeping_actions_current_day_only",
+      "breakpoints": true
     }
   ]
 }
