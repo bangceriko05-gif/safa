@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { logActivity } from "@/utils/activityLogger";
 import { signupSchema, loginSchema } from "@/utils/authValidation";
 import { userFacingError } from "@/utils/userFacingError";
+import { profileLoginCallback, profileStoreSelectionPath } from "@/utils/profileLogin";
 
 interface ValidationErrors {
   name?: string;
@@ -29,6 +30,8 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const navigate = useNavigate();
+  const { search } = useLocation();
+  const storeSelectionPath = profileStoreSelectionPath(search);
 
   useEffect(() => {
     // Load saved email only (password should never be stored)
@@ -46,13 +49,13 @@ export default function Auth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-          navigate("/select-store");
+          navigate(storeSelectionPath, { replace: true });
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, storeSelectionPath]);
 
   const validateForm = (): boolean => {
     setErrors({});
@@ -153,7 +156,7 @@ export default function Auth() {
         }
 
         toast.success("Login berhasil!");
-        navigate("/select-store");
+        navigate(storeSelectionPath, { replace: true });
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -322,7 +325,7 @@ export default function Auth() {
               setLoading(true);
               try {
                 const { error } = await lovable.auth.signInWithOAuth("google", {
-                  redirect_uri: window.location.origin,
+                  redirect_uri: profileLoginCallback(window.location.origin, search),
                 });
                 if (error) {
                   toast.error("Gagal login dengan Google");

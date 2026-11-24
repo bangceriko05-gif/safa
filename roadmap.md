@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Wajibkan login untuk /profil; login email/Google mempertahankan tujuan melalui pilihan outlet. Akses tanpa sesi menuju login, akun aktif kembali ke /profil dan membaca 3 kamar kotor, reload tetap berfungsi; 11 tes terkait lulus. Persetujuan Google eksternal tidak diselesaikan otomatis.
+
 - [x] Buat /profil Housekeeping: daftar kamar kotor, mulai/selesai pembersihan, progres harian, pilihan outlet, dan sinkronisasi status kalender. Alur kamar uji nyata berhasil dimulai, diselesaikan, dan terbaca ulang setelah reload; kamar uji dihapus. 7 tes Housekeeping lulus, tampilan HP tanpa luapan dan tanpa error aplikasi.
 
 - [x] Jadikan semua izin submenu Pengaturan dapat dipilih dan berlaku untuk User, termasuk Nota. Akun User hanya dengan izin Nota membuka dan menyimpan pengaturan (204), lalu berhasil membaca ulang. Izin WhatsApp/Printer/Kamar dipilih dan disimpan dari panel permission, lalu keempat submenu muncul dan terbuka pada User. 126 tes umum dan 2 tes akses nyata lulus; akses PPN tanpa izin dan Nota outlet lain ditolak. Printer fisik tidak diuji.

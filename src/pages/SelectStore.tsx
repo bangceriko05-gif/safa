@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, Loader2, AlertTriangle, Copy, Check, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { profileLoginDestination } from "@/utils/profileLogin";
 
 
 interface StoreData {
@@ -26,6 +27,7 @@ export default function SelectStore() {
   const [copied, setCopied] = useState(false);
   const { setCurrentStore } = useStore();
   const navigate = useNavigate();
+  const { search } = useLocation();
   
   const bankAccount = "0241003956";
 
@@ -136,7 +138,7 @@ export default function SelectStore() {
     
     setCurrentStore(store);
     
-    navigate("/dashboard");
+    navigate(profileLoginDestination(search) ?? "/dashboard", { replace: true });
   };
 
   if (loading) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Bell, Brush, Check, Clock, Loader2, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,10 +29,27 @@ export default function Housekeeping() {
   const key = ['housekeeping', currentStore?.id, userId, today];
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setUserId(data.session?.user.id ?? null); setAuthLoaded(true); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUserId(session?.user.id ?? null));
+    let active = true;
+    let revision = 0;
+    const validateUser = async () => {
+      const request = ++revision;
+      const { data, error } = await supabase.auth.getUser();
+      if (!active || request !== revision) return;
+      setUserId(error ? null : data.user?.id ?? null);
+      setAuthLoaded(true);
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        revision++;
+        setUserId(null);
+        setAuthLoaded(true);
+      } else {
+        setTimeout(() => { if (active) void validateUser(); }, 0);
+      }
+    });
+    void validateUser();
     const timer = setInterval(() => setToday(jakartaDate()), 60_000);
-    return () => { subscription.unsubscribe(); clearInterval(timer); };
+    return () => { active = false; subscription.unsubscribe(); clearInterval(timer); };
   }, []);
 
   const { data, isPending, isError, refetch } = useQuery({
@@ -99,9 +116,10 @@ export default function Housekeeping() {
     return `${room?.name} ${room?.room_categories?.name ?? ''}`.toLowerCase().includes(search.toLowerCase());
   });
 
-  if (!authLoaded || isLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Memuat" /></div>;
-  if (!userId) return <main className="min-h-screen bg-background p-6 flex flex-col items-center justify-center gap-4"><Brush className="h-12 w-12 text-destructive" /><h1 className="text-2xl font-bold">Housekeeping</h1><p>Masuk untuk melihat kamar outlet Anda.</p><Button onClick={() => navigate('/auth')}>Masuk</Button></main>;
-  if (isStoreInactive || !currentStore) return <main className="min-h-screen bg-background p-6 flex flex-col items-center justify-center gap-4"><h1 className="text-2xl font-bold">Housekeeping</h1><p>{isStoreInactive ? 'Outlet belum aktif.' : 'Belum ada outlet yang dapat diakses.'}</p><Button onClick={() => navigate('/select-store')}>Pilih Outlet</Button></main>;
+  if (!authLoaded) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Memuat" /></div>;
+  if (!userId) return <Navigate to="/auth?next=%2Fprofil" replace />;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Memuat" /></div>;
+  if (isStoreInactive || !currentStore) return <main className="min-h-screen bg-background p-6 flex flex-col items-center justify-center gap-4"><h1 className="text-2xl font-bold">Housekeeping</h1><p>{isStoreInactive ? 'Outlet belum aktif.' : 'Belum ada outlet yang dapat diakses.'}</p><Button onClick={() => navigate('/select-store?next=%2Fprofil')}>Pilih Outlet</Button></main>;
 
   return <main className="min-h-screen bg-muted/40 text-foreground pb-6">
     <div className="mx-auto max-w-4xl px-4 sm:px-6">
