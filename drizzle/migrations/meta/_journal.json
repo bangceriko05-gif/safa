@@ -218,6 +218,13 @@
       "when": 1795527584377,
       "tag": "0030_housekeeping_actions_current_day_only",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795569021403,
+      "tag": "0031_add_feature_subscription_billing",
+      "breakpoints": true
     }
   ]
 }

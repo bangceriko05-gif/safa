@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Tambahkan Pembayaran Langganan dari ikon kalender centang di header: masa aktif PMS dan fitur bulanan per outlet, biaya, tagihan terdekat, dan riwayat sesuai referensi. Bayar Sekarang menampilkan rekening BCA PMS tanpa WhatsApp/DOKU; SAFA menagih PMS + POS Rp300.000 pada tanggal sama, POS tetap Rp150.000 dan Akuntansi nonaktif tidak ditagihkan. Salin rekening, kembali, tampilan HP, formulir Super Admin, RLS riwayat, serta 150 tes lulus; data uji riwayat dihapus.
+
 - [x] Periksa akses /profil: website terbit masih versi lama dan menampilkan 404; halaman pratinjau tersedia dengan login wajib. Samakan Housekeeping dengan status hari ini kalender: 315 tidak tampil kotor, 317 dan 208 tetap tampil; reload dan 12 tes terkait lulus tanpa mengubah data kamar.
 - [x] Periksa seluruh pembaca status kamar dan tindakan pembersihan: kalender, jadwal, ringkasan, checkout/detail/edit/daftar booking, laporan petugas, pindai kamar, fungsi database dan penghapusan pengguna. Batasi housekeeping_action hanya ke tanggal hari ini WIB; 13 tes lulus termasuk penolakan start/complete pada 315 tanggal 21 November dengan riwayat tetap utuh. Tidak ada tabel cron.job pada database; fungsi Booking Request lama tidak digunakan kembali.
 - [ ] Terapkan halaman /profil pada website terbit — menunggu publikasi versi terbaru oleh pengguna.

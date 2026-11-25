@@ -12,6 +12,8 @@ interface StoreFeature {
   is_enabled: boolean;
   activation_price: string | null;
   activation_description: string | null;
+  monthly_price: number | null;
+  subscription_end_date: string | null;
 }
 
 interface FeatureConfig {
@@ -184,20 +186,28 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
     }
   };
 
-  const handleMetaSave = async (feature: StoreFeature, price: string, description: string) => {
+  const handleMetaSave = async (feature: StoreFeature, price: number, endDate: string, description: string) => {
     try {
       const { error } = await supabase
         .from("store_features")
-        .update({ 
-          activation_price: price || null, 
+        .update({
+          activation_price: price > 0 ? String(price) : null,
+          monthly_price: price > 0 ? price : null,
+          subscription_end_date: endDate || null,
           activation_description: description || null,
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString()
         })
         .eq("id", feature.id);
       if (error) throw error;
-      setFeatures(prev => prev.map(f => f.id === feature.id ? { ...f, activation_price: price || null, activation_description: description || null } : f));
+      setFeatures(prev => prev.map(f => f.id === feature.id ? {
+        ...f,
+        activation_price: price > 0 ? String(price) : null,
+        monthly_price: price > 0 ? price : null,
+        subscription_end_date: endDate || null,
+        activation_description: description || null,
+      } : f));
       setEditingMeta(null);
-      toast.success("Info aktivasi berhasil disimpan");
+      toast.success("Harga dan masa aktif fitur berhasil disimpan");
     } catch (error: any) {
       toast.error(error.message || "Gagal menyimpan");
     }
@@ -261,11 +271,11 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                     <p className="text-sm font-medium">{config.label}</p>
                     <p className="text-xs text-muted-foreground">{config.description}</p>
                   </div>
-                  {!feature.is_enabled && (
+                  {(
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingMeta(editingMeta === key ? null : key); }}
                       className="ml-1 p-0.5 rounded hover:bg-muted"
-                      title="Edit info aktivasi"
+                      title="Edit harga dan masa aktif"
                     >
                       <Pencil className="h-3 w-3 text-muted-foreground" />
                     </button>
@@ -280,7 +290,7 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                   disabled={updating === feature.id}
                 />
               </div>
-              {editingMeta === key && !feature.is_enabled && (
+              {editingMeta === key && (
                 <FeatureMetaEditor feature={feature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
               )}
 
@@ -304,11 +314,11 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                           <div className="flex items-center gap-2">
                             <ChildIcon className={`h-3.5 w-3.5 ${childFeature.is_enabled ? "text-primary" : "text-muted-foreground"}`} />
                             <span className="text-sm">{childConfig.label}</span>
-                            {!childFeature.is_enabled && (
+                            {(
                               <button
                                 onClick={() => setEditingMeta(editingMeta === childKey ? null : childKey)}
                                 className="ml-1 p-0.5 rounded hover:bg-muted"
-                                title="Edit info aktivasi"
+                                title="Edit harga dan masa aktif"
                               >
                                 <Pencil className="h-3 w-3 text-muted-foreground" />
                               </button>
@@ -323,7 +333,7 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                             disabled={updating === childFeature.id}
                           />
                         </div>
-                        {editingMeta === childKey && !childFeature.is_enabled && (
+                        {editingMeta === childKey && (
                           <FeatureMetaEditor feature={childFeature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
                         )}
                       </div>

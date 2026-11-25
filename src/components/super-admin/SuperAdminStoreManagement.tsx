@@ -81,6 +81,7 @@ export default function SuperAdminStoreManagement() {
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
   const [subscriptionEditStore, setSubscriptionEditStore] = useState<Store | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState({ start: "", end: "", price: 0 });
+  const [recordSubscriptionPayment, setRecordSubscriptionPayment] = useState(false);
   const [roomLimitEditStore, setRoomLimitEditStore] = useState<Store | null>(null);
   const [roomLimitValue, setRoomLimitValue] = useState("");
   const [formData, setFormData] = useState({
@@ -466,6 +467,7 @@ export default function SuperAdminStoreManagement() {
                             className="text-xs space-y-0.5 cursor-pointer hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
                             onClick={() => {
                               setSubscriptionEditStore(store);
+                              setRecordSubscriptionPayment(false);
                               setSubscriptionForm({
                                 start: store.subscription_start_date || "",
                                 end: store.subscription_end_date || "",
@@ -497,6 +499,7 @@ export default function SuperAdminStoreManagement() {
                             className="text-xs text-muted-foreground cursor-pointer hover:text-primary hover:underline"
                             onClick={() => {
                               setSubscriptionEditStore(store);
+                              setRecordSubscriptionPayment(false);
                               setSubscriptionForm({ start: "", end: "", price: 0 });
                             }}
                           >
@@ -891,8 +894,16 @@ export default function SuperAdminStoreManagement() {
                 className="h-11"
               />
               <p className="text-[11px] text-muted-foreground">
-                Biaya langganan outlet per periode ini. Kosongkan (0) jika gratis.
+                Biaya langganan PMS per bulan. Kosongkan (0) jika gratis.
               </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+              <div>
+                <Label htmlFor="record-subscription-payment" className="text-sm font-medium">Catat pembayaran lunas</Label>
+                <p className="text-xs text-muted-foreground">Aktifkan hanya jika pembayaran PMS sudah diterima.</p>
+              </div>
+              <Switch id="record-subscription-payment" checked={recordSubscriptionPayment} onCheckedChange={setRecordSubscriptionPayment} />
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -913,13 +924,29 @@ export default function SuperAdminStoreManagement() {
                       })
                       .eq("id", subscriptionEditStore.id);
                     if (error) throw error;
+                    if (recordSubscriptionPayment && subscriptionForm.price > 0) {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      const { error: paymentError } = await supabase.from("subscription_payments").insert({
+                        store_id: subscriptionEditStore.id,
+                        feature_key: "pms",
+                        feature_name: "PMS",
+                        amount: subscriptionForm.price,
+                        period_start: subscriptionForm.start || null,
+                        period_end: subscriptionForm.end || null,
+                        status: "paid",
+                        payment_method: "Transfer Bank",
+                        paid_at: new Date().toISOString(),
+                        created_by: user?.id || null,
+                      });
+                      if (paymentError) throw paymentError;
+                    }
                     await logActivity({
                       actionType: 'updated',
                       entityType: 'Outlet',
                       entityId: subscriptionEditStore.id,
                       description: `[Super Admin] Mengubah data langganan outlet ${subscriptionEditStore.name}`,
                     });
-                    toast.success("Data langganan berhasil diupdate");
+                    toast.success(recordSubscriptionPayment ? "Langganan dan riwayat pembayaran berhasil disimpan" : "Data langganan berhasil diupdate");
                     setSubscriptionEditStore(null);
                     fetchStores();
                   } catch (error: any) {

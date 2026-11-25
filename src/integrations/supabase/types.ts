@@ -3669,7 +3669,9 @@ export type Database = {
           feature_key: string
           id: string
           is_enabled: boolean
+          monthly_price: number | null
           store_id: string
+          subscription_end_date: string | null
           updated_at: string
         }
         Insert: {
@@ -3679,7 +3681,9 @@ export type Database = {
           feature_key: string
           id?: string
           is_enabled?: boolean
+          monthly_price?: number | null
           store_id: string
+          subscription_end_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -3689,7 +3693,9 @@ export type Database = {
           feature_key?: string
           id?: string
           is_enabled?: boolean
+          monthly_price?: number | null
           store_id?: string
+          subscription_end_date?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3773,6 +3779,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      subscription_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          feature_key: string
+          feature_name: string
+          id: string
+          paid_at: string | null
+          payment_method: string | null
+          period_end: string | null
+          period_start: string | null
+          reference: string | null
+          status: string
+          store_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          feature_key?: string
+          feature_name: string
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          status?: string
+          store_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          feature_key?: string
+          feature_name?: string
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          status?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {
