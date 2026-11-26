@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Calendar, Receipt, Users, FileText, Settings, Package, History, UserCog, Inbox, Shield, List, TrendingDown, TrendingUp, Monitor, Palette, Bell, Printer, Bed, Store, ShoppingCart, Tags, LayoutGrid, DollarSign, ChevronDown, ChevronRight, Scale, Globe, Pencil, Boxes, Store as StoreIcon } from "lucide-react";
 import FeatureMetaEditor from "./FeatureMetaEditor";
+import { Button } from "@/components/ui/button";
 
 interface StoreFeature {
   id: string;
@@ -13,6 +14,7 @@ interface StoreFeature {
   activation_price: string | null;
   activation_description: string | null;
   monthly_price: number | null;
+  subscription_start_date: string | null;
   subscription_end_date: string | null;
 }
 
@@ -102,6 +104,7 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [editingMeta, setEditingMeta] = useState<string | null>(null);
+  const [pmsDates, setPmsDates] = useState({ start: "", end: "" });
 
   useEffect(() => {
     fetchFeatures();
@@ -110,12 +113,14 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
   const fetchFeatures = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const [{ data, error }, outlet] = await Promise.all([supabase
         .from("store_features")
         .select("*")
-        .eq("store_id", storeId);
+        .eq("store_id", storeId), supabase.from("stores").select("subscription_start_date, subscription_end_date").eq("id", storeId).single()]);
 
       if (error) throw error;
+      if (outlet.error) throw outlet.error;
+      setPmsDates({ start: outlet.data?.subscription_start_date || "", end: outlet.data?.subscription_end_date || "" });
       setFeatures((data as StoreFeature[]) || []);
     } catch (error) {
       console.error("Error fetching features:", error);
@@ -186,30 +191,33 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
     }
   };
 
-  const handleMetaSave = async (feature: StoreFeature, price: number, endDate: string, description: string) => {
+  const handleMetaSave = async (feature: StoreFeature, price: number, startDate: string, endDate: string, description: string) => {
     try {
       const { error } = await supabase
         .from("store_features")
         .update({
           activation_price: price > 0 ? String(price) : null,
-          monthly_price: price > 0 ? price : null,
+          monthly_price: price,
+          subscription_start_date: startDate || null,
           subscription_end_date: endDate || null,
           activation_description: description || null,
           updated_at: new Date().toISOString()
         })
-        .eq("id", feature.id);
+        .eq("id", feature.id).eq("store_id", storeId).select("id").single();
       if (error) throw error;
       setFeatures(prev => prev.map(f => f.id === feature.id ? {
         ...f,
         activation_price: price > 0 ? String(price) : null,
-        monthly_price: price > 0 ? price : null,
+        monthly_price: price,
+        subscription_start_date: startDate || null,
         subscription_end_date: endDate || null,
         activation_description: description || null,
       } : f));
       setEditingMeta(null);
       toast.success("Harga dan masa aktif fitur berhasil disimpan");
-    } catch (error: any) {
-      toast.error(error.message || "Gagal menyimpan");
+    } catch (error) {
+      console.error("Feature subscription save failed", error);
+      toast.error("Pengaturan langganan belum berhasil disimpan. Silakan coba lagi.");
     }
   };
 
@@ -272,13 +280,14 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                     <p className="text-xs text-muted-foreground">{config.description}</p>
                   </div>
                   {(
-                    <button
+                    <Button variant="ghost" size="icon"
                       onClick={(e) => { e.stopPropagation(); setEditingMeta(editingMeta === key ? null : key); }}
-                      className="ml-1 p-0.5 rounded hover:bg-muted"
+                      className="ml-1 h-8 w-8 shrink-0"
+                      aria-label={`Edit langganan ${config.label}`}
                       title="Edit harga dan masa aktif"
                     >
                       <Pencil className="h-3 w-3 text-muted-foreground" />
-                    </button>
+                    </Button>
                   )}
                   {!feature.is_enabled && feature.activation_price && editingMeta !== key && (
                     <span className="text-xs text-muted-foreground ml-1">— {feature.activation_price}</span>
@@ -291,13 +300,13 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                 />
               </div>
               {editingMeta === key && (
-                <FeatureMetaEditor feature={feature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
+                <FeatureMetaEditor feature={feature} name={config.label} storeName={storeName} fallbackStart={pmsDates.start} fallbackEnd={pmsDates.end} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
               )}
 
               {/* Sub-features */}
               {hasChildren && isExpanded && feature.is_enabled && (
                 <div className="ml-8 mt-1 space-y-1 border-l-2 border-primary/20 pl-4">
-                  {Object.entries(config.children!).map(([childKey, childConfig]) => {
+                  {Object.entries(config.children || {}).map(([childKey, childConfig]) => {
                     const childFeature = getFeature(childKey);
                     if (!childFeature) return null;
                     const ChildIcon = childConfig.icon;
@@ -315,13 +324,14 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                             <ChildIcon className={`h-3.5 w-3.5 ${childFeature.is_enabled ? "text-primary" : "text-muted-foreground"}`} />
                             <span className="text-sm">{childConfig.label}</span>
                             {(
-                              <button
+                              <Button variant="ghost" size="icon"
                                 onClick={() => setEditingMeta(editingMeta === childKey ? null : childKey)}
-                                className="ml-1 p-0.5 rounded hover:bg-muted"
+                                className="ml-1 h-8 w-8 shrink-0"
+                                aria-label={`Edit langganan ${childConfig.label}`}
                                 title="Edit harga dan masa aktif"
                               >
                                 <Pencil className="h-3 w-3 text-muted-foreground" />
-                              </button>
+                              </Button>
                             )}
                             {!childFeature.is_enabled && childFeature.activation_price && editingMeta !== childKey && (
                               <span className="text-xs text-muted-foreground ml-1">— {childFeature.activation_price}</span>
@@ -334,7 +344,7 @@ export default function StoreFeatureToggle({ storeId, storeName }: StoreFeatureT
                           />
                         </div>
                         {editingMeta === childKey && (
-                          <FeatureMetaEditor feature={childFeature} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
+                          <FeatureMetaEditor feature={childFeature} name={childConfig.label} storeName={storeName} fallbackStart={pmsDates.start} fallbackEnd={pmsDates.end} onSave={handleMetaSave} onCancel={() => setEditingMeta(null)} />
                         )}
                       </div>
                     );

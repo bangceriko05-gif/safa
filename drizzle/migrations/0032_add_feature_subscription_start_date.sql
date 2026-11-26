@@ -1,0 +1,2 @@
+ALTER TABLE public.store_features ADD COLUMN subscription_start_date date;
+COMMENT ON COLUMN public.store_features.subscription_start_date IS 'Feature-specific subscription start date; null uses the outlet PMS start date.';

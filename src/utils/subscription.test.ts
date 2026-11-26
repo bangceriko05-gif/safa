@@ -6,6 +6,7 @@ import {
   PMS_PAYMENT_ACCOUNT,
   subscriptionBillTiming,
   subscriptionDaysLeft,
+  extendFeatureSubscription,
 } from "./subscription";
 
 const store = {
@@ -27,6 +28,30 @@ const pos = {
 };
 
 describe("langganan PMS dan fitur bulanan", () => {
+  test("tanggal mulai dan nominal tiap fitur tetap independen dari PMS dan fitur lain", () => {
+    const items = buildSubscriptionItems(store, [
+      { ...pos, subscription_start_date: "2026-11-01" },
+      { ...pos, id: "inventory", feature_key: "pos.inventory", monthly_price: 75000, subscription_start_date: "2026-11-10", subscription_end_date: "2026-12-10" },
+    ]);
+    expect(items[1]).toMatchObject({ startDate: "2026-11-01", endDate: "2026-11-25", monthlyPrice: 50000 });
+    expect(items[2]).toMatchObject({ startDate: "2026-11-10", endDate: "2026-12-10", monthlyPrice: 75000 });
+    expect(items[0].startDate).toBe("2026-11-21");
+  });
+
+  test("tanggal mulai fitur yang belum diatur mengikuti PMS", () => {
+    expect(buildSubscriptionItems(store, [pos])[1].startDate).toBe("2026-11-21");
+  });
+
+  test("perpanjangan 1, 2, 3 bulan memakai akhir fitur sendiri", () => {
+    expect(extendFeatureSubscription("2026-01-01", "2026-11-26", 1)).toBe("2026-12-26");
+    expect(extendFeatureSubscription("2026-01-01", "2026-11-26", 2)).toBe("2027-01-26");
+    expect(extendFeatureSubscription("2026-01-01", "2026-11-26", 3)).toBe("2027-02-26");
+  });
+
+  test("perpanjangan memakai tanggal mulai saat akhir kosong dan membatasi akhir bulan", () => {
+    expect(extendFeatureSubscription("2026-01-31", "", 1)).toBe("2026-02-28");
+    expect(extendFeatureSubscription("", "", 1)).toBe("");
+  });
   test("PMS memakai biaya Rp150.000 dari pengaturan outlet", () => {
     const [pms] = buildSubscriptionItems(store, [], new Date("2026-11-22T08:00:00"));
     expect(pms.monthlyPrice).toBe(150000);

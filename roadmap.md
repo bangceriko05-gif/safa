@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Samakan pengaturan langganan tiap fitur dengan dialog PMS: mulai/akhir sendiri, perpanjangan +1/+2/+3 bulan dan nominal masing-masing. POS berhasil disimpan/dibaca ulang setelah reload tanpa mengubah PMS; nilai uji dikembalikan, dialog HP terverifikasi, 14 tes lulus.
+
 - [x] Tambahkan Pembayaran Langganan dari ikon kalender centang di header: masa aktif PMS dan fitur bulanan per outlet, biaya, tagihan terdekat, dan riwayat sesuai referensi. Bayar Sekarang menampilkan rekening BCA PMS tanpa WhatsApp/DOKU; SAFA menagih PMS + POS Rp300.000 pada tanggal sama, POS tetap Rp150.000 dan Akuntansi nonaktif tidak ditagihkan. Salin rekening, kembali, tampilan HP, formulir Super Admin, RLS riwayat, serta 150 tes lulus; data uji riwayat dihapus.
 
 - [x] Periksa akses /profil: website terbit masih versi lama dan menampilkan 404; halaman pratinjau tersedia dengan login wajib. Samakan Housekeeping dengan status hari ini kalender: 315 tidak tampil kotor, 317 dan 208 tetap tampil; reload dan 12 tes terkait lulus tanpa mengubah data kamar.

@@ -125,7 +125,7 @@ export default function SubscriptionPayment({ store }: { store: SubscriptionStor
     const [featureResult, paymentResult] = await Promise.all([
       supabase
         .from("store_features")
-        .select("id, feature_key, is_enabled, activation_price, monthly_price, subscription_end_date")
+        .select("id, feature_key, is_enabled, activation_price, monthly_price, subscription_start_date, subscription_end_date")
         .eq("store_id", store.id),
       supabase
         .from("subscription_payments")

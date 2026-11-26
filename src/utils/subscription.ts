@@ -1,3 +1,11 @@
+import { addMonths, format, parseISO } from "date-fns";
+
+export function extendFeatureSubscription(start: string, end: string, months: number): string {
+  const base = end || start;
+  if (!base) return "";
+  return format(addMonths(parseISO(base), months), "yyyy-MM-dd");
+}
+
 export const PMS_PAYMENT_ACCOUNT = {
   bank: "BCA",
   number: "0241003956",
@@ -19,6 +27,7 @@ export interface SubscriptionFeatureRow {
   is_enabled: boolean;
   activation_price: string | null;
   monthly_price: number | string | null;
+  subscription_start_date?: string | null;
   subscription_end_date: string | null;
 }
 
@@ -102,7 +111,7 @@ export function buildSubscriptionItems(
         featureKey: feature.feature_key,
         ...info,
         monthlyPrice,
-        startDate: null,
+        startDate: feature.subscription_start_date || store.subscription_start_date || null,
         endDate,
         isEnabled: feature.is_enabled,
         isActive: feature.is_enabled && (daysLeft === null || daysLeft > 0),
