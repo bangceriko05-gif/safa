@@ -47,8 +47,7 @@ import {
 import StoreSelector from "./StoreSelector";
 import DokuLogo from "./doku/DokuLogo";
 import DashboardNotifications from "./DashboardNotifications";
-import SubscriptionPaymentIcon from "./SubscriptionPaymentIcon";
-const SubscriptionPayment = lazyWithRetry(() => import("./SubscriptionPayment"));
+import SubscriptionPayment from "./SubscriptionPayment";
 const DokuDashboard = lazyWithRetry(() => import("./doku/DokuDashboard"));
 const DateNavigation = lazyWithRetry(() => import("./DateNavigation"));
 const RoomSummary = lazyWithRetry(() => import("./RoomSummary"));
@@ -129,7 +128,10 @@ export default function Dashboard() {
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ roomId: string; time: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTabRaw] = useState(() => searchParams.get("tab") || "transactions");
+  const [activeTab, setActiveTabRaw] = useState(() => {
+    const initialTab = searchParams.get("tab");
+    return !initialTab || initialTab === "subscription" ? "transactions" : initialTab;
+  });
   const [reportsVisited, setReportsVisited] = useState(activeTab === "reports");
   const [dashboardSearch, setDashboardSearch] = useState("");
   const [roomsSection, setRoomsSection] = useState<"products" | "inventory" | "rooms">("products");
@@ -198,6 +200,14 @@ export default function Dashboard() {
     const tabParam = searchParams.get("tab");
     const customerSectionParam = searchParams.get("customersSection");
 
+    if (tabParam === "subscription") {
+      const params = new URLSearchParams(searchParams);
+      params.set("tab", "transactions");
+      setSearchParams(params, { replace: true });
+      setActiveTabRaw("transactions");
+      return;
+    }
+
     if (tabParam && tabParam !== activeTab) {
       setActiveTabRaw(tabParam);
     }
@@ -212,7 +222,7 @@ export default function Dashboard() {
       }
       setCustomersSection(customerSectionParam);
     }
-  }, [searchParams, activeTab]);
+  }, [searchParams, activeTab, setSearchParams]);
   const [displaySize, setDisplaySize] = useState<string>(() => {
     return localStorage.getItem("schedule-display-size") || "normal";
   });
@@ -879,16 +889,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setActiveTab("subscription")}
-                className="h-10 w-10 rounded-xl bg-card shadow-sm"
-                aria-label="Pembayaran Langganan"
-                title="Pembayaran Langganan"
-              >
-                <SubscriptionPaymentIcon className="h-6 w-6" />
-              </Button>
+              <SubscriptionPayment key={currentStore.id} store={currentStore} />
               <DashboardNotifications key={`${currentStore.id}:${user.id}`} storeId={currentStore.id} userId={user.id} />
               <button onClick={openProfileDialog} className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-muted">
                 <Avatar className="h-8 w-8">
@@ -905,7 +906,7 @@ export default function Dashboard() {
           <div className="p-4 md:p-5">
             <div className="mx-auto max-w-[1440px] space-y-5">
               {/* Header */}
-              <div className={cn("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", (activeTab === "transactions" || activeTab === "doku" || activeTab === "subscription") && "hidden")}>
+              <div className={cn("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", (activeTab === "transactions" || activeTab === "doku") && "hidden")}>
                 <div className="flex items-start gap-3">
                   <div className="space-y-2">
                     <h1 className="text-3xl font-bold text-foreground">{currentStore.name}</h1>
@@ -1126,14 +1127,6 @@ export default function Dashboard() {
             ) : (
               <FeatureInactiveNotice featureName="Pengaturan" icon={Settings} price={getFeatureInfo("settings").price} description={getFeatureInfo("settings").description} />
             ))}
-          </TabsContent>
-
-          <TabsContent value="subscription" className="mt-6">
-            {activeTab === "subscription" && (
-              <Suspense fallback={<AnkaLoader />}>
-                <SubscriptionPayment store={currentStore} onBack={() => setActiveTab("bookings")} />
-              </Suspense>
-            )}
           </TabsContent>
 
           <TabsContent value="doku" className="mt-6">

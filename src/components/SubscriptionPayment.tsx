@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -12,6 +11,7 @@ import {
   Loader2,
   Scale,
   Store,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import SubscriptionPaymentIcon from "./SubscriptionPaymentIcon";
 import {
   buildSubscriptionItems,
   formatSubscriptionDate,
@@ -47,8 +49,8 @@ interface PaymentRow {
 function SubscriptionItemIcon({ item }: { item: SubscriptionItem }) {
   const Icon = item.featureKey === "pms" ? Layers3 : item.featureKey === "reports.accounting" ? Scale : Store;
   return (
-    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-      <Icon className="h-8 w-8" strokeWidth={1.8} />
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <Icon className="h-5 w-5" strokeWidth={1.8} />
     </div>
   );
 }
@@ -58,48 +60,48 @@ function SubscriptionCard({ item }: { item: SubscriptionItem }) {
   const nearest = item.daysLeft !== null && item.daysLeft <= 7;
   return (
     <Card className="overflow-hidden border-border/70 shadow-sm">
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start gap-4">
+      <CardContent className="p-3.5">
+        <div className="flex items-start gap-3">
           <SubscriptionItemIcon item={item} />
-          <div className="min-w-0 flex-1 border-l border-border pl-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h3 className="text-xl font-bold">{item.name}</h3>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
+          <div className="min-w-0 flex-1 border-l border-border pl-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-bold">{item.name}</h3>
+                <p className="truncate text-xs text-muted-foreground">{item.description}</p>
               </div>
               <Badge
                 variant="outline"
                 className={cn(
-                  "gap-1 border-transparent",
+                  "shrink-0 gap-1 border-transparent px-2 py-0.5 text-[11px]",
                   item.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground",
                 )}
               >
-                {item.isActive && <Check className="h-3.5 w-3.5" />}
+                {item.isActive && <Check className="h-3 w-3" />}
                 {statusLabel}
               </Badge>
             </div>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 border-t border-border pt-4 sm:grid-cols-3">
-          <div className="flex items-center gap-3">
-            <CreditCard className="h-6 w-6 shrink-0 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground">Biaya Bulanan</p>
-              <p className="font-bold">{formatSubscriptionPrice(item.monthlyPrice)}</p>
+        <div className="mt-3 grid grid-cols-1 gap-2 border-t border-border pt-3 min-[460px]:grid-cols-3">
+          <div className="flex items-start gap-2">
+            <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground">Biaya Bulanan</p>
+              <p className="text-xs font-bold">{formatSubscriptionPrice(item.monthlyPrice)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 sm:border-l sm:border-border sm:pl-4">
-            <CalendarDays className="h-6 w-6 shrink-0 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground">Aktif Sampai</p>
-              <p className="font-bold">{formatSubscriptionDate(item.endDate)}</p>
+          <div className="flex items-start gap-2 min-[460px]:border-l min-[460px]:border-border min-[460px]:pl-2.5">
+            <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground">Aktif Sampai</p>
+              <p className="text-xs font-bold">{formatSubscriptionDate(item.endDate)}</p>
             </div>
           </div>
-          <div className={cn("flex items-center gap-3 rounded-xl px-3 py-2", nearest ? "bg-destructive/10" : "bg-primary/5")}>
-            <CalendarDays className={cn("h-6 w-6 shrink-0", nearest ? "text-destructive" : "text-primary")} />
-            <div>
-              <p className="text-xs text-muted-foreground">Tagihan Berikutnya</p>
-              <p className="font-bold">{item.isEnabled ? formatSubscriptionDate(item.endDate) : "Tidak ditagihkan"}</p>
+          <div className={cn("flex items-start gap-2 rounded-lg px-2 py-1.5", nearest ? "bg-destructive/10" : "bg-primary/5")}>
+            <CalendarDays className={cn("mt-0.5 h-4 w-4 shrink-0", nearest ? "text-destructive" : "text-primary")} />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground">Tagihan Berikutnya</p>
+              <p className="text-xs font-bold">{item.isEnabled ? formatSubscriptionDate(item.endDate) : "Tidak ditagihkan"}</p>
             </div>
           </div>
         </div>
@@ -108,10 +110,12 @@ function SubscriptionCard({ item }: { item: SubscriptionItem }) {
   );
 }
 
-export default function SubscriptionPayment({ store, onBack }: { store: SubscriptionStore; onBack: () => void }) {
+export default function SubscriptionPayment({ store }: { store: SubscriptionStore }) {
+  const [open, setOpen] = useState(false);
   const [features, setFeatures] = useState<SubscriptionFeatureRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadedStoreId, setLoadedStoreId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -135,13 +139,15 @@ export default function SubscriptionPayment({ store, onBack }: { store: Subscrip
     } else {
       setFeatures((featureResult.data || []) as SubscriptionFeatureRow[]);
       setPayments((paymentResult.data || []) as PaymentRow[]);
+      setLoadedStoreId(store.id);
     }
     setLoading(false);
   }, [store.id]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    setShowHistory(false);
+    if (open) void loadData();
+  }, [open, loadData]);
 
   const items = useMemo(() => buildSubscriptionItems(store, features), [store, features]);
   const nextBill = useMemo(() => nextSubscriptionBill(items), [items]);
@@ -159,71 +165,142 @@ export default function SubscriptionPayment({ store, onBack }: { store: Subscrip
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-8">
-      <div className="flex items-start gap-4">
-        <Button variant="outline" size="icon" onClick={onBack} aria-label="Kembali" className="mt-1 h-11 w-11 shrink-0 rounded-xl">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Pembayaran Langganan</h2>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">Kelola pembayaran PMS dan fitur tambahan properti Anda.</p>
-          <p className="mt-1 text-sm font-medium">{store.name}</p>
-        </div>
-      </div>
-
-      <section className="relative overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground shadow-lg sm:p-6">
-        <div className="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-primary-foreground/10" />
-        <div className="relative flex items-center gap-5">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-foreground/15">
-            <Crown className="h-9 w-9" />
-          </div>
-          <div className="border-l border-primary-foreground/30 pl-5">
-            <p className="text-sm font-semibold">Status Akun</p>
-            <div className="mt-0.5 flex items-center gap-2">
-              <h3 className="text-3xl font-bold">{accountActive ? "Aktif" : "Tidak Aktif"}</h3>
-              {accountActive && <CheckCircle2 className="h-7 w-7 text-success" />}
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn("h-10 w-10 rounded-xl bg-card shadow-sm", open && "border-primary ring-2 ring-primary/20")}
+            aria-label="Pembayaran Langganan"
+            title="Pembayaran Langganan"
+          >
+            <SubscriptionPaymentIcon className="h-6 w-6" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          sideOffset={8}
+          collisionPadding={12}
+          aria-label="Panel Pembayaran Langganan"
+          className="w-[460px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl p-0 shadow-xl"
+        >
+          <div className="flex items-start justify-between gap-3 border-b bg-card px-4 py-3">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold tracking-tight">Pembayaran Langganan</h2>
+              <p className="truncate text-xs text-muted-foreground">{store.name}</p>
             </div>
-            <p className="mt-1 text-sm text-primary-foreground/85">
-              {accountActive ? "PMS & fitur tambahan berjalan normal." : "Hubungi admin ANKA untuk mengaktifkan langganan."}
-            </p>
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Tutup panel langganan" className="h-8 w-8 shrink-0 rounded-lg">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </div>
-      </section>
 
-      <section className="space-y-4">
-        <h3 className="text-xl font-bold">Detail Langganan</h3>
-        {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
-        ) : (
-          items.map((item) => <SubscriptionCard key={item.id} item={item} />)
-        )}
-      </section>
+          <div className="max-h-[min(620px,78vh)] space-y-4 overflow-y-auto p-4">
+            <section className="relative overflow-hidden rounded-xl bg-primary p-4 text-primary-foreground shadow-sm">
+              <div className="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-primary-foreground/10" />
+              <div className="relative flex items-center gap-3.5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15">
+                  <Crown className="h-6 w-6" />
+                </div>
+                <div className="border-l border-primary-foreground/30 pl-3.5">
+                  <p className="text-xs font-semibold">Status Akun</p>
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <h3 className="text-xl font-bold">{accountActive ? "Aktif" : "Tidak Aktif"}</h3>
+                    {accountActive && <CheckCircle2 className="h-5 w-5 text-success" />}
+                  </div>
+                  <p className="mt-0.5 text-xs text-primary-foreground/85">
+                    {accountActive ? "PMS & fitur tambahan berjalan normal." : "Hubungi admin ANKA untuk mengaktifkan langganan."}
+                  </p>
+                </div>
+              </div>
+            </section>
 
-      {!loading && nextBill && (
-        <section className="flex flex-col gap-3 rounded-xl border-l-4 border-l-destructive bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <CalendarDays className="h-8 w-8 shrink-0 text-destructive" />
-            <div>
-              <h3 className="font-bold">Tagihan Terdekat</h3>
-              <p className="text-sm text-muted-foreground">{nextBill.name} – {formatSubscriptionPrice(nextBill.monthlyPrice)}</p>
+            <section className="space-y-2.5">
+              <h3 className="text-sm font-bold">Detail Langganan</h3>
+              {loading && loadedStoreId !== store.id ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : (
+                <div className="space-y-2.5">
+                  {items.map((item) => <SubscriptionCard key={item.id} item={item} />)}
+                </div>
+              )}
+            </section>
+
+            {!(loading && loadedStoreId !== store.id) && nextBill && (
+              <section className="flex flex-col gap-2 rounded-xl border-l-4 border-l-destructive bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="h-6 w-6 shrink-0 text-destructive" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold">Tagihan Terdekat</h3>
+                    <p className="text-xs text-muted-foreground">{nextBill.name} – {formatSubscriptionPrice(nextBill.monthlyPrice)}</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="w-fit shrink-0 border-transparent bg-destructive/10 px-2.5 py-1 text-xs text-destructive">
+                  {subscriptionBillTiming(nextBill.daysLeft)}
+                </Badge>
+              </section>
+            )}
+
+            <div className="space-y-2">
+              <Button
+                className="h-10 w-full gap-2 text-sm font-bold"
+                onClick={() => {
+                  setOpen(false);
+                  setShowPayment(true);
+                }}
+                disabled={loading && loadedStoreId !== store.id}
+              >
+                <CreditCard className="h-4 w-4" />
+                Bayar Sekarang
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 w-full gap-2 text-sm font-bold"
+                onClick={() => setShowHistory((value) => !value)}
+                aria-expanded={showHistory}
+              >
+                <FileText className="h-4 w-4" />
+                Riwayat Pembayaran
+              </Button>
             </div>
-          </div>
-          <Badge variant="outline" className="w-fit border-transparent bg-destructive/10 px-4 py-2 text-destructive">
-            {subscriptionBillTiming(nextBill.daysLeft)}
-          </Badge>
-        </section>
-      )}
 
-      <div className="space-y-3">
-        <Button size="lg" className="h-12 w-full gap-3 text-base font-bold" onClick={() => setShowPayment(true)} disabled={loading}>
-          <CreditCard className="h-5 w-5" />
-          Bayar Sekarang
-        </Button>
-        <Button size="lg" variant="outline" className="h-12 w-full gap-3 text-base font-bold" onClick={() => setShowHistory((value) => !value)} aria-expanded={showHistory}>
-          <FileText className="h-5 w-5" />
-          Riwayat Pembayaran
-        </Button>
-      </div>
+            {showHistory && (
+              <Card>
+                <CardContent className="p-3.5">
+                  <h3 className="mb-3 text-sm font-bold">Riwayat Pembayaran</h3>
+                  {payments.length === 0 ? (
+                    <div className="rounded-lg bg-muted/50 p-4 text-center">
+                      <p className="text-sm font-medium">Belum ada pembayaran yang tercatat.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Riwayat akan muncul setelah pembayaran langganan dikonfirmasi admin ANKA.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {payments.map((payment) => (
+                        <div key={payment.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">{payment.feature_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatSubscriptionDate((payment.paid_at || payment.created_at).slice(0, 10))}
+                              {payment.payment_method ? ` • ${payment.payment_method}` : ""}
+                            </p>
+                            {payment.reference && <p className="mt-1 text-[11px] text-muted-foreground">Referensi: {payment.reference}</p>}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-sm font-bold">{formatSubscriptionPrice(Number(payment.amount))}</p>
+                            <p className={cn("text-xs", payment.status === "paid" ? "text-success" : "text-muted-foreground")}>
+                              {payment.status === "paid" ? "Lunas" : payment.status === "pending" ? "Menunggu" : "Dibatalkan"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
 
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
         <DialogContent className="max-w-md">
@@ -255,41 +332,6 @@ export default function SubscriptionPayment({ store, onBack }: { store: Subscrip
           <p className="text-sm text-muted-foreground">Pembayaran DOKU untuk langganan belum tersedia. Setelah transfer, kirim bukti pembayaran kepada administrator agar masa aktif diperpanjang.</p>
         </DialogContent>
       </Dialog>
-
-      {showHistory && (
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="mb-4 text-lg font-bold">Riwayat Pembayaran</h3>
-            {payments.length === 0 ? (
-              <div className="rounded-lg bg-muted/50 p-6 text-center">
-                <p className="font-medium">Belum ada pembayaran yang tercatat.</p>
-                <p className="mt-1 text-sm text-muted-foreground">Riwayat akan muncul setelah pembayaran langganan dikonfirmasi admin ANKA.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-semibold">{payment.feature_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatSubscriptionDate((payment.paid_at || payment.created_at).slice(0, 10))}
-                        {payment.payment_method ? ` • ${payment.payment_method}` : ""}
-                      </p>
-                      {payment.reference && <p className="mt-1 text-xs text-muted-foreground">Referensi: {payment.reference}</p>}
-                    </div>
-                    <div className="sm:text-right">
-                      <p className="font-bold">{formatSubscriptionPrice(Number(payment.amount))}</p>
-                      <p className={cn("text-sm", payment.status === "paid" ? "text-success" : "text-muted-foreground")}>
-                        {payment.status === "paid" ? "Lunas" : payment.status === "pending" ? "Menunggu" : "Dibatalkan"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </>
   );
 }
