@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
 import PaymentMethodHoverCell from "@/components/shared/PaymentMethodHoverCell";
+import { printTransactionReceipt } from "@/lib/directPrint";
 
 interface Expense {
   id: string;
@@ -1390,8 +1391,11 @@ export default function ExpenseTransactionView({ timeRange, customDateRange, sea
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            const url = `/receipt/transaction?id=${expense.id}&type=expense`;
-                            window.open(url, '_blank');
+                            void printTransactionReceipt({
+                              storeId: expense.store_id || currentStore?.id,
+                              transactionId: expense.id,
+                              type: "expense",
+                            });
                           }}
                         >
                           <Printer className="h-4 w-4 text-primary" />

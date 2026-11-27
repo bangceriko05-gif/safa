@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { printFromReceiptPage } from "@/lib/directPrint";
+import { buildTransactionReceiptEscPos } from "@/lib/receiptEscPos";
 
 interface PrintSettings {
   paper_size: string;
@@ -133,7 +135,41 @@ export default function TransactionReceipt() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    if (!transaction) {
+      window.print();
+      return;
+    }
+    void printFromReceiptPage({
+      storeId: transaction.store_id,
+      buildBytes: (config) =>
+        buildTransactionReceiptEscPos(
+          {
+            header: {
+              businessName: printSettings?.business_name || storeName || "Store",
+              businessAddress: printSettings?.business_address,
+              businessPhone: printSettings?.business_phone,
+              managerName: printSettings?.manager_name,
+              showManagerSignature: printSettings?.show_manager_signature,
+              footerText: printSettings?.footer_text,
+            },
+            isExpense: type === "expense",
+            bid: transaction.bid,
+            createdAt: transaction.created_at,
+            date: transaction.date,
+            customerName: transaction.customer_name,
+            description: transaction.description,
+            category: transaction.category,
+            paymentMethod: transaction.payment_method,
+            creatorName,
+            products: products.map((p) => ({ name: p.product_name, quantity: p.quantity, subtotal: p.subtotal })),
+            totalAmount: transaction.amount || 0,
+            paidAmount: (transaction as any).paid_amount || 0,
+          },
+          config
+        ),
+    });
+  };
 
   const getPaperWidth = () => {
     switch (printSettings?.paper_size) {

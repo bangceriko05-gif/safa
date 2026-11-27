@@ -8,6 +8,8 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { printFromReceiptPage } from "@/lib/directPrint";
+import { buildBookingReceiptEscPos } from "@/lib/receiptEscPos";
 
 interface BookingData {
   id: string;
@@ -486,7 +488,91 @@ export default function BookingReceipt() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!booking) {
+      window.print();
+      return;
+    }
+    const grandTotal = calculateGrandTotal();
+    const paid1 = orderOnlyMode ? 0 : (booking.price || 0);
+    const paid2 = orderOnlyMode ? 0 : (booking.dual_payment ? (booking.price_2 || 0) : 0);
+    const totalBayar = paid1 + paid2 + (orderOnlyMode || combined ? orderExtraPaid : 0);
+    const payments: { label: string; method: string; amount: number; ref?: string | null }[] = [];
+    if (booking.payment_method) {
+      payments.push({ label: "Pembayaran 1:", method: booking.payment_method, amount: paid1, ref: booking.reference_no });
+    }
+    if (booking.dual_payment && booking.payment_method_2) {
+      payments.push({ label: "Pembayaran 2:", method: booking.payment_method_2, amount: paid2, ref: booking.reference_no_2 });
+    }
+    void printFromReceiptPage({
+      storeId: booking.store_id,
+      buildBytes: (config) =>
+        buildBookingReceiptEscPos(
+          {
+            header: {
+              businessName: printSettings?.business_name || storeName || "ANKA PMS",
+              businessAddress: printSettings?.business_address,
+              businessPhone: printSettings?.business_phone,
+              managerName: printSettings?.manager_name,
+              showManagerSignature: printSettings?.show_manager_signature,
+              footerText: printSettings?.footer_text,
+            },
+            title: orderOnlyMode ? "NOTA ORDER" : combined ? "NOTA GABUNGAN" : "NOTA BOOKING",
+            bid: overrideBid || booking.bid,
+            createdAt: booking.created_at,
+            customerName: booking.customer_name,
+            phone: booking.phone,
+            statusLabel: getStatusLabel(booking.status),
+            orderOnlyMode,
+            checkInDate: booking.date,
+            checkOutDate: booking.checkout_date || new Date(booking.date),
+            duration: booking.duration,
+            durationUnit: booking.duration_unit,
+            roomName: booking.room_name,
+            variantName: booking.variant_name,
+            multiRooms:
+              !orderOnlyMode && sharedBilling && sharedBilling.rooms.length > 1
+                ? sharedBilling.rooms.map((r, i) => ({
+                    label: `Kamar ${i + 1} ${r.rooms?.name || ""} ${r.duration}${booking.duration_unit === "jam" ? "j" : "m"}`,
+                    amount: billingRoomTotal(r),
+                  }))
+                : undefined,
+            roomSubtotal: getRoomSubtotal(),
+            products: products.map((p) => ({
+              name: p.product_name,
+              quantity: p.quantity,
+              subtotal: p.subtotal,
+              freePpn: p.free_ppn,
+            })),
+            discountAmount: calculateDiscount(),
+            discountLabel: booking.discount_type === "percent" ? `Diskon (${booking.discount_value}%)` : "Diskon",
+            deposit: deposit
+              ? {
+                  label: `Deposito (${deposit.deposit_type === "Uang" ? "Uang" : `Identitas - ${deposit.identity_type || ""}`})`,
+                  amount: calculateDepositAmount(),
+                }
+              : null,
+            serviceCharge:
+              orderServiceCharge > 0
+                ? {
+                    label:
+                      orderServiceChargeInfo?.type === "percent" && orderServiceChargeInfo?.value != null
+                        ? `Service Charge (${orderServiceChargeInfo.value}%)`
+                        : "Service Charge",
+                    amount: orderServiceCharge,
+                  }
+                : null,
+            tax: orderTax.amount > 0 ? { label: `PPN${orderTax.rate ? ` (${orderTax.rate}%)` : ""}`, amount: orderTax.amount } : null,
+            orderOther: orderOther !== 0 ? { label: orderOther < 0 ? "Diskon Transaksi" : "Biaya Lain", amount: orderOther } : null,
+            grandTotal,
+            isLunas: totalBayar >= grandTotal,
+            payments,
+            totalPaid: totalBayar,
+            remaining: Math.max(0, grandTotal - totalBayar),
+            note: booking.note,
+          },
+          config
+        ),
+    });
   };
 
   const getPaperWidth = () => {

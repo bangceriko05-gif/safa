@@ -14,6 +14,8 @@ import {
   DEFAULT_PRINTER_CONFIG,
   PrinterConfig,
   PrinterConnection,
+  hasConfiguredPrinter,
+  isPrinterConnected,
   loadPrinterConfig,
   savePrinterConfig,
   pairPrinter,
@@ -54,9 +56,12 @@ export default function ThermalPrinterSettings() {
   const [config, setConfig] = useState<PrinterConfig>(DEFAULT_PRINTER_CONFIG);
   const [pairing, setPairing] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    setConfig(loadPrinterConfig(currentStore?.id));
+    const loaded = loadPrinterConfig(currentStore?.id);
+    setConfig(loaded);
+    void isPrinterConnected(currentStore?.id).then(setIsConnected);
   }, [currentStore?.id]);
 
   const update = <K extends keyof PrinterConfig>(k: K, v: PrinterConfig[K]) =>
@@ -68,21 +73,41 @@ export default function ThermalPrinterSettings() {
   };
 
   const handleSave = () => {
-    savePrinterConfig(config, currentStore?.id);
+    const next: PrinterConfig = {
+      ...config,
+      connected: config.connection === "lan" ? Boolean(config.host?.trim()) : config.connected,
+    };
+    persist(next);
+    void isPrinterConnected(currentStore?.id).then(setIsConnected);
     toast.success("Pengaturan printer tersimpan");
   };
 
   const handlePair = async () => {
     setPairing(true);
     try {
-      const name = await pairPrinter(config);
-      persist({ ...config, deviceName: name });
-      toast.success(`Terhubung ke ${name}`);
+      const paired = await pairPrinter(config);
+      persist({
+        ...config,
+        deviceName: paired.deviceName,
+        vendorId: paired.vendorId,
+        productId: paired.productId,
+        connected: true,
+      });
+      setIsConnected(true);
+      toast.success(`Terhubung ke ${paired.deviceName}`);
     } catch (e: any) {
       if (e?.name !== "NotFoundError") toast.error(e?.message || "Gagal menghubungkan printer");
     } finally {
       setPairing(false);
     }
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectPrinter(currentStore?.id);
+    const next = loadPrinterConfig(currentStore?.id);
+    setConfig(next);
+    setIsConnected(false);
+    toast.info("Koneksi printer diputus. Cetak nota akan membuka tab baru.");
   };
 
   const handleTest = async () => {
@@ -104,7 +129,11 @@ export default function ThermalPrinterSettings() {
       b.align("center").line("Printer siap digunakan").line("Powered by ANKA PMS").feed(1);
       if (config.openDrawer) b.openDrawer();
       if (config.autoCut) b.cut();
-      await printRaw(b.build(), { ...config, copies: 1 });
+      await printRaw(b.build(), { ...config, copies: 1 }, { allowPrompt: false });
+      if (hasConfiguredPrinter({ ...config, connected: true })) {
+        persist({ ...config, connected: true });
+        setIsConnected(true);
+      }
       toast.success("Perintah cetak terkirim ke printer");
     } catch (e: any) {
       toast.error(e?.message || "Gagal mencetak");
@@ -121,9 +150,12 @@ export default function ThermalPrinterSettings() {
         <CardTitle className="flex items-center gap-2">
           <Printer className="h-5 w-5" />
           Driver Printer (Cetak Langsung)
+          <Badge variant={isConnected ? "default" : "secondary"} className="ml-auto">
+            {isConnected ? "Terhubung" : "Belum Terhubung"}
+          </Badge>
         </CardTitle>
         <CardDescription>
-          Cetak nota langsung ke printer thermal tanpa dialog cetak browser. Mendukung Bluetooth, USB, Serial, dan LAN/WiFi.
+          Saat terhubung, tombol Print langsung mencetak ke printer tanpa membuka tab baru. Jika tidak terhubung, nota otomatis dibuka di tab baru.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -276,7 +308,7 @@ export default function ThermalPrinterSettings() {
         </Accordion>
 
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="ghost" onClick={() => disconnectPrinter()}>Putuskan</Button>
+          <Button variant="ghost" onClick={handleDisconnect}>Putuskan</Button>
           <Button variant="outline" onClick={handleTest} disabled={testing}>
             {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
             Test Print

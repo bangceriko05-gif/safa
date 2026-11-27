@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Perbaiki alur cetak nota: saat printer terhubung ke website langsung mencetak tanpa membuka tab baru, dan saat tidak terhubung atau gagal terhubung otomatis membuka tab baru halaman nota. Berlaku di semua tombol Print (booking, POS, deposit, pemasukan, pengeluaran, laporan). 10 tes cetak langsung + 4 skenario Playwright (tidak terhubung, terhubung via LAN bridge, bridge offline, dan setelah Putuskan) terverifikasi lulus; pencetakan ke perangkat Bluetooth/USB/Serial fisik tidak diuji.
+
 - [x] Samakan pengaturan langganan tiap fitur dengan dialog PMS: mulai/akhir sendiri, perpanjangan +1/+2/+3 bulan dan nominal masing-masing. POS berhasil disimpan/dibaca ulang setelah reload tanpa mengubah PMS; nilai uji dikembalikan, dialog HP terverifikasi, 14 tes lulus.
 
 - [x] Tambahkan Pembayaran Langganan dari ikon kalender centang di header: masa aktif PMS dan fitur bulanan per outlet, biaya, tagihan terdekat, dan riwayat sesuai referensi. Bayar Sekarang menampilkan rekening BCA PMS tanpa WhatsApp/DOKU; SAFA menagih PMS + POS Rp300.000 pada tanggal sama, POS tetap Rp150.000 dan Akuntansi nonaktif tidak ditagihkan. Salin rekening, kembali, tampilan HP, formulir Super Admin, RLS riwayat, serta 150 tes lulus; data uji riwayat dihapus.

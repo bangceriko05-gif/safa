@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useStore } from "@/contexts/StoreContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useStoreFeatures } from "@/hooks/useStoreFeatures";
+import { printTransactionReceipt } from "@/lib/directPrint";
 
 // Import sub-reports
 import SalesReport from "./reports/SalesReport";
@@ -751,11 +752,19 @@ export default function Reports() {
   };
 
   const handlePrintExpense = (expense: Expense) => {
-    window.open(`/receipt/transaction?id=${expense.id}&type=expense`, '_blank');
+    void printTransactionReceipt({
+      storeId: currentStore?.id,
+      transactionId: expense.id,
+      type: "expense",
+    });
   };
 
   const handlePrintIncome = (income: AdditionalIncome) => {
-    window.open(`/receipt/transaction?id=${income.id}&type=income`, '_blank');
+    void printTransactionReceipt({
+      storeId: currentStore?.id,
+      transactionId: income.id,
+      type: "income",
+    });
   };
 
   const handleDeleteExpense = async (id: string) => {

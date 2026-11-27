@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
 import { logActivity } from "@/utils/activityLogger";
+import { printDepositReceipt } from "@/lib/directPrint";
 import { Banknote, CreditCard, Upload, X, Loader2, Pencil, Trash2, Shield, Calendar, User, Undo2, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -538,7 +539,7 @@ export default function DepositDetailPopup({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`/receipt/deposit?id=${deposit.id}`, '_blank')}
+                    onClick={() => void printDepositReceipt({ storeId: deposit.store_id || currentStore?.id, depositId: deposit.id })}
                   >
                     <Printer className="h-4 w-4 mr-1" />
                     Print

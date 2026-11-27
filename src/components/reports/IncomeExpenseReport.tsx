@@ -22,6 +22,7 @@ import {
   formatCurrencyPlain
 } from "@/utils/reportExport";
 import { toast } from "sonner";
+import { printTransactionReceipt } from "@/lib/directPrint";
 import {
   Dialog,
   DialogContent,
@@ -560,11 +561,19 @@ export default function IncomeExpenseReport({ initialTab, showAddButton, hideDat
   };
 
   const handlePrintExpense = (expense: ExpenseData) => {
-    window.open(`/receipt/transaction?id=${expense.id}&type=expense`, '_blank');
+    void printTransactionReceipt({
+      storeId: currentStore?.id,
+      transactionId: expense.id,
+      type: "expense",
+    });
   };
 
   const handlePrintIncome = (income: IncomeData) => {
-    window.open(`/receipt/transaction?id=${income.id}&type=income`, '_blank');
+    void printTransactionReceipt({
+      storeId: currentStore?.id,
+      transactionId: income.id,
+      type: "income",
+    });
   };
 
   const handleExportIncomeDetail = () => {

@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { printFromReceiptPage } from "@/lib/directPrint";
+import { buildDepositReceiptEscPos } from "@/lib/receiptEscPos";
 
 interface PrintSettings {
   paper_size: string;
@@ -103,7 +105,39 @@ export default function DepositReceipt() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    if (!deposit) {
+      window.print();
+      return;
+    }
+    void printFromReceiptPage({
+      storeId: deposit.store_id,
+      buildBytes: (config) =>
+        buildDepositReceiptEscPos(
+          {
+            header: {
+              businessName: printSettings?.business_name || storeName || "Store",
+              businessAddress: printSettings?.business_address,
+              businessPhone: printSettings?.business_phone,
+              managerName: printSettings?.manager_name,
+              showManagerSignature: printSettings?.show_manager_signature,
+              footerText: printSettings?.footer_text,
+            },
+            isReprint,
+            createdAt: deposit.created_at,
+            roomName,
+            isUang: deposit.deposit_type === "uang",
+            amount: deposit.amount,
+            identityType: deposit.identity_type,
+            identityOwnerName: deposit.identity_owner_name,
+            notes: deposit.notes,
+            statusLabel: deposit.status === "active" ? "Aktif" : "Dikembalikan",
+            creatorName,
+          },
+          config
+        ),
+    });
+  };
 
   const getPaperWidth = () => {
     switch (printSettings?.paper_size) {

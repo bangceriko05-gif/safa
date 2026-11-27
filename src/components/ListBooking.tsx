@@ -28,6 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Eye, Edit, XCircle, LogIn, LogOut, Trash2, Undo, ChevronDown, ChevronLeft, ChevronRight, List, Printer, ImageIcon, Search, Copy, Infinity, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { printBookingReceipt } from "@/lib/directPrint";
 import { format, addDays, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { DateRange } from "react-day-picker";
@@ -927,7 +928,7 @@ export default function ListBooking({ userRole, onEditBooking, onAddBooking, tim
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => window.open(`/receipt?id=${booking.id}`, '_blank')}
+                                  onClick={() => void printBookingReceipt({ storeId: currentStore?.id, bookingId: booking.id })}
                                   title="Print Nota"
                                 >
                                   <Printer className="h-4 w-4" />

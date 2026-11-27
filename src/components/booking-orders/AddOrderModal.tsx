@@ -28,6 +28,7 @@ import { formatDokuQrCountdown } from "@/utils/dokuCheckoutLayout";
 import { useTransactionCancellation, appendCancellationReason } from "@/hooks/useTransactionCancellation";
 import { isLocalPosDraft, readPosOrderDrafts, removePosOrderDraft, savePosOrderDraft } from "@/utils/posOrderDrafts";
 import { creatorDisplayName } from "@/utils/orderCreator";
+import { printBookingReceipt } from "@/lib/directPrint";
 import { isDuplicateBidError, posOrderTitleBid } from "@/utils/posOrderTitle";
 
 interface Product {
@@ -1056,8 +1057,11 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
 
       // Post-save action
       if (afterAction === "print") {
-        const bookingIdParam = effectiveBooking?.id ? `id=${effectiveBooking.id}&` : "";
-        window.open(`/receipt?${bookingIdParam}order=${orderId}`, "_blank");
+        void printBookingReceipt({
+          storeId: currentStore.id,
+          bookingId: effectiveBooking?.id,
+          orderId,
+        });
       } else if (afterAction === "whatsapp") {
         const phoneRaw = (waPhoneOverride || "").replace(/\D/g, "");
         if (phoneRaw) {
@@ -1344,7 +1348,13 @@ export default function AddOrderModal({ open, onOpenChange, booking, order, onSa
             {activeOrder?.id && !isLocalPosDraft(activeOrder) && (!posMode || posSettings.enable_print) && (
               <button
                 type="button"
-                onClick={() => window.open(`/receipt?${booking?.id ? `id=${booking.id}&` : ""}order=${activeOrder.id}`, "_blank")}
+                onClick={() =>
+                  void printBookingReceipt({
+                    storeId: currentStore?.id,
+                    bookingId: booking?.id,
+                    orderId: activeOrder.id,
+                  })
+                }
                 className="inline-flex items-center gap-1.5 px-3 h-8 rounded bg-white/15 hover:bg-white/25 text-sm"
                 title="Cetak nota order"
               >

@@ -28,6 +28,7 @@ import { DateRange } from "react-day-picker";
 import TransactionBidPopup from "@/components/transaction/TransactionBidPopup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import { printDraftInvoice, printTransactionReceipt } from "@/lib/directPrint";
 import BulkDeleteBatalBar from "@/components/shared/BulkDeleteBatalBar";
 import CustomerNameInput from "@/components/customers/CustomerNameInput";
 
@@ -831,8 +832,11 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => {
-                  const url = `/receipt/transaction?id=${viewingIncome.id}&type=income`;
-                  window.open(url, '_blank');
+                  void printTransactionReceipt({
+                    storeId: viewingIncome.store_id || currentStore?.id,
+                    transactionId: viewingIncome.id,
+                    type: "income",
+                  });
                 }}>
                   <Printer className="h-4 w-4 mr-1" />
                   Print
@@ -1101,21 +1105,40 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                     const totalBayar = getIncomeTotal();
                     const storeName = currentStore?.name || "Store";
                     const dateStr = incomeForm.date ? format(new Date(incomeForm.date), "dd/MM/yyyy") : "";
-                    const printWindow = window.open("", "_blank", "width=400,height=600");
-                    if (!printWindow) { toast.error("Popup diblokir browser"); return; }
-                    const rows = incomeProducts.map(p => 
-                      `<tr><td style="padding:2px 0">${p.product_name} x${p.quantity}</td><td style="text-align:right;padding:2px 0">${new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(p.subtotal)}</td></tr>`
-                    ).join("");
                     const discVal = parseFloat(incomeDiscount.value) || 0;
-                    let discountRow = "";
-                    if (discVal > 0) {
-                      const discAmount = incomeDiscount.type === "percentage" 
-                        ? incomeProducts.reduce((s, p) => s + p.subtotal, 0) * (discVal / 100) 
-                        : discVal;
-                      discountRow = `<tr><td style="padding:2px 0">Diskon${incomeDiscount.type === "percentage" ? " " + incomeDiscount.value + "%" : ""}</td><td style="text-align:right;padding:2px 0;color:red">-${new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(discAmount)}</td></tr>`;
-                    }
-                    printWindow.document.write(`<!DOCTYPE html><html><head><title>Invoice</title><style>body{font-family:monospace;padding:16px;max-width:300px;margin:0 auto}table{width:100%;border-collapse:collapse}.divider{border-top:1px dashed #999;margin:8px 0}.total{font-weight:bold;font-size:14px}.btn-print{display:block;width:100%;padding:10px;margin-bottom:12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer}@media print{.no-print{display:none!important}}</style></head><body><div class="no-print"><button class="btn-print" onclick="window.print()">🖨️ Print Invoice</button></div><div style="text-align:center;margin-bottom:8px"><strong>${storeName}</strong><br/><small>${dateStr}</small></div><div class="divider"></div><p style="text-align:center;font-weight:bold;margin:4px 0">INVOICE</p>${incomeForm.customer_name ? `<p style="font-size:11px;margin:4px 0">Pelanggan: ${incomeForm.customer_name}</p>` : ""}<div class="divider"></div><table>${rows}${discountRow}</table><div class="divider"></div><table><tr class="total"><td>TOTAL</td><td style="text-align:right">${new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(totalBayar)}</td></tr></table><div class="divider"></div><p style="text-align:center;font-size:9px;color:#999;margin-top:12px">Powered by ANKA PMS</p></body></html>`);
-                    printWindow.document.close();
+                    const discAmount = discVal > 0
+                      ? (incomeDiscount.type === "percentage"
+                        ? incomeProducts.reduce((s, p) => s + p.subtotal, 0) * (discVal / 100)
+                        : discVal)
+                      : 0;
+                    const discLabel = `Diskon${incomeDiscount.type === "percentage" ? " " + incomeDiscount.value + "%" : ""}`;
+                    void printDraftInvoice({
+                      storeId: currentStore?.id,
+                      invoice: {
+                        storeName,
+                        dateLabel: dateStr,
+                        customerName: incomeForm.customer_name || null,
+                        products: incomeProducts.map((p) => ({
+                          name: p.product_name,
+                          quantity: p.quantity,
+                          subtotal: p.subtotal,
+                        })),
+                        discount: discAmount > 0 ? { label: discLabel, amount: discAmount } : null,
+                        total: totalBayar,
+                      },
+                      openFallback: () => {
+                        const printWindow = window.open("", "_blank", "width=400,height=600");
+                        if (!printWindow) { toast.error("Popup diblokir browser"); return; }
+                        const rows = incomeProducts.map(p =>
+                          `<tr><td style="padding:2px 0">${p.product_name} x${p.quantity}</td><td style="text-align:right;padding:2px 0">${new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(p.subtotal)}</td></tr>`
+                        ).join("");
+                        const discountRow = discAmount > 0
+                          ? `<tr><td style="padding:2px 0">${discLabel}</td><td style="text-align:right;padding:2px 0;color:red">-${new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(discAmount)}</td></tr>`
+                          : "";
+                        printWindow.document.write(`<!DOCTYPE html><html><head><title>Invoice</title><style>body{font-family:monospace;padding:16px;max-width:300px;margin:0 auto}table{width:100%;border-collapse:collapse}.divider{border-top:1px dashed #999;margin:8px 0}.total{font-weight:bold;font-size:14px}.btn-print{display:block;width:100%;padding:10px;margin-bottom:12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer}@media print{.no-print{display:none!important}}</style></head><body><div class="no-print"><button class="btn-print" onclick="window.print()">🖨️ Print Invoice</button></div><div style="text-align:center;margin-bottom:8px"><strong>${storeName}</strong><br/><small>${dateStr}</small></div><div class="divider"></div><p style="text-align:center;font-weight:bold;margin:4px 0">INVOICE</p>${incomeForm.customer_name ? `<p style="font-size:11px;margin:4px 0">Pelanggan: ${incomeForm.customer_name}</p>` : ""}<div class="divider"></div><table>${rows}${discountRow}</table><div class="divider"></div><table><tr class="total"><td>TOTAL</td><td style="text-align:right">${new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(totalBayar)}</td></tr></table><div class="divider"></div><p style="text-align:center;font-size:9px;color:#999;margin-top:12px">Powered by ANKA PMS</p></body></html>`);
+                        printWindow.document.close();
+                      },
+                    });
                   }}>
                     <Printer className="h-4 w-4 mr-1" />
                     Print Invoice
@@ -1494,8 +1517,11 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            const url = `/receipt/transaction?id=${income.id}&type=income`;
-                            window.open(url, '_blank');
+                            void printTransactionReceipt({
+                              storeId: income.store_id || currentStore?.id,
+                              transactionId: income.id,
+                              type: "income",
+                            });
                           }}
                           title="Print Nota"
                         >
@@ -1546,8 +1572,11 @@ export default function IncomeTransactionView({ timeRange, customDateRange, sear
             </Button>
             <Button onClick={() => {
               if (printPreviewId) {
-                const url = `/receipt/transaction?id=${printPreviewId}&type=income`;
-                window.open(url, '_blank');
+                void printTransactionReceipt({
+                  storeId: currentStore?.id,
+                  transactionId: printPreviewId,
+                  type: "income",
+                });
                 setPrintPreviewId(null);
               }
             }}>

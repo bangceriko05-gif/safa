@@ -23,6 +23,7 @@ import BookingWhatsAppPhone from "./booking/BookingWhatsAppPhone";
 import BookingPaymentWhatsAppIcon from "./booking/BookingPaymentWhatsAppIcon";
 import BookingPaymentDialog from "./booking/BookingPaymentDialog";
 import { CreditCard } from "lucide-react";
+import { printBookingReceipt } from "@/lib/directPrint";
 
 interface BookingPopoverContentProps {
   booking: any;
@@ -119,11 +120,13 @@ export default function BookingPopoverContent({
   const [loadingIdentity, setLoadingIdentity] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
 
-  const openReceipt = (suffix = "") => {
-    const receipt = window.open(`/receipt?id=${encodeURIComponent(booking.id)}${suffix}`, "_blank");
-    if (!receipt) {
-      toast.error("Nota tidak dapat dibuka. Izinkan pop-up untuk situs ini, lalu coba cetak kembali.");
-    }
+  const openReceipt = (opts?: { orderId?: string; combined?: boolean }) => {
+    void printBookingReceipt({
+      storeId: booking.store_id,
+      bookingId: booking.id,
+      orderId: opts?.orderId,
+      combined: opts?.combined,
+    });
   };
 
   const handleOpenDataId = async () => {
@@ -277,14 +280,14 @@ export default function BookingPopoverContent({
               {orderBids.map((o) => (
                 <DropdownMenuItem
                   key={o.id}
-                  onSelect={() => openReceipt(`&order=${encodeURIComponent(o.id)}`)}
+                  onSelect={() => openReceipt({ orderId: o.id })}
                 >
                   Order {o.bid || o.id.slice(0, 6)}
                 </DropdownMenuItem>
               ))}
               {orderBids.length > 0 && (
                 <DropdownMenuItem
-                  onSelect={() => openReceipt("&combined=1")}
+                  onSelect={() => openReceipt({ combined: true })}
                   className="font-semibold"
                 >
                   Gabungkan Semua BID

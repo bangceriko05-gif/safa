@@ -28,6 +28,7 @@ import PaymentDialog, { PaymentDialogResult } from "@/components/purchase/Paymen
 import DiscountDialog from "@/components/purchase/DiscountDialog";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { logActivity } from "@/utils/activityLogger";
+import { printBookingReceipt } from "@/lib/directPrint";
 import { computeServiceCharge } from "@/utils/posOrderCharges";
 
 const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(Math.round(n || 0));
@@ -522,7 +523,7 @@ export default function PosOrderDetail() {
     }
   };
 
-  const doPrint = () => window.open(`/receipt?order=${id}`, "_blank");
+  const doPrint = () => void printBookingReceipt({ storeId: order?.store_id, orderId: id });
 
   const formatIDR = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);

@@ -28,6 +28,7 @@ import CheckOutDepositPopup from "@/components/deposit/CheckOutDepositPopup";
 import CancelBookingDialog from "@/components/booking/CancelBookingDialog";
 import BookingPaymentDialog from "@/components/booking/BookingPaymentDialog";
 import { usePermissions } from "@/hooks/usePermissions";
+import { printBookingReceipt } from "@/lib/directPrint";
 import { CreditCard } from "lucide-react";
 
 interface BookingDetailPopupProps {
@@ -488,7 +489,10 @@ export default function BookingDetailPopup({
 
   const handlePrintReceipt = () => {
     if (booking) {
-      window.open(`/receipt?id=${booking.id}`, '_blank');
+      void printBookingReceipt({
+        storeId: booking.store_id || currentStore?.id,
+        bookingId: booking.id,
+      });
     }
   };
 
