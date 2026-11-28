@@ -27,6 +27,18 @@ export type DirectPrintOutcome =
   | { mode: "tab" }
   | { mode: "fallback"; error: unknown };
 
+const inFlightPrintKeys = new Map<string, Promise<DirectPrintOutcome>>();
+
+function dedupePrintJob(key: string, runner: () => Promise<DirectPrintOutcome>): Promise<DirectPrintOutcome> {
+  const existing = inFlightPrintKeys.get(key);
+  if (existing) return existing;
+  const promise = runner().finally(() => {
+    inFlightPrintKeys.delete(key);
+  });
+  inFlightPrintKeys.set(key, promise);
+  return promise;
+}
+
 /**
  * Core decision logic:
  * - Printer not connected (sync or async check) -> open new tab, never printRaw.
@@ -510,7 +522,8 @@ export function printBookingReceipt(opts: {
 }): Promise<DirectPrintOutcome> {
   const url = bookingReceiptUrl(opts);
   const storeId = opts.storeId || undefined;
-  return runDirectOrTabPrint({
+  return dedupePrintJob(`booking:${url}`, () =>
+    runDirectOrTabPrint({
     shouldAttemptSync: () => shouldAttemptDirectPrint(storeId),
     checkConnected: () => isPrinterConnected(storeId),
     printDirectly: async () => {
@@ -521,7 +534,8 @@ export function printBookingReceipt(opts: {
       toast.success(`Nota berhasil dicetak${config.deviceName ? ` ke ${config.deviceName}` : ""}`);
     },
     openTab: (afterError) => openReceiptTab(url, afterError),
-  });
+    })
+  );
 }
 
 export function printTransactionReceipt(opts: {
@@ -531,7 +545,8 @@ export function printTransactionReceipt(opts: {
 }): Promise<DirectPrintOutcome> {
   const url = transactionReceiptUrl(opts.transactionId, opts.type);
   const storeId = opts.storeId || undefined;
-  return runDirectOrTabPrint({
+  return dedupePrintJob(`tx:${url}`, () =>
+    runDirectOrTabPrint({
     shouldAttemptSync: () => shouldAttemptDirectPrint(storeId),
     checkConnected: () => isPrinterConnected(storeId),
     printDirectly: async () => {
@@ -542,7 +557,8 @@ export function printTransactionReceipt(opts: {
       toast.success(`Nota berhasil dicetak${config.deviceName ? ` ke ${config.deviceName}` : ""}`);
     },
     openTab: (afterError) => openReceiptTab(url, afterError),
-  });
+    })
+  );
 }
 
 export function printDepositReceipt(opts: {
@@ -551,7 +567,8 @@ export function printDepositReceipt(opts: {
 }): Promise<DirectPrintOutcome> {
   const url = depositReceiptUrl(opts.depositId);
   const storeId = opts.storeId || undefined;
-  return runDirectOrTabPrint({
+  return dedupePrintJob(`deposit:${url}`, () =>
+    runDirectOrTabPrint({
     shouldAttemptSync: () => shouldAttemptDirectPrint(storeId),
     checkConnected: () => isPrinterConnected(storeId),
     printDirectly: async () => {
@@ -566,7 +583,8 @@ export function printDepositReceipt(opts: {
       toast.success(`Nota deposit berhasil dicetak${config.deviceName ? ` ke ${config.deviceName}` : ""}`);
     },
     openTab: (afterError) => openReceiptTab(url, afterError),
-  });
+    })
+  );
 }
 
 export function printDraftInvoice(opts: {

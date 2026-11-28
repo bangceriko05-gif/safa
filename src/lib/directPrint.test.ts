@@ -210,6 +210,60 @@ describe("Thermal printer connection detection", () => {
     expect(await isPrinterConnected("store-1")).toBe(false);
   });
 
+  it("splits Bluetooth receipts into 20-byte MTU-safe chunks and retries once on stale GATT error", async () => {
+    const chunkLengths: number[] = [];
+    let failFirstWrite = true;
+    const mockChar = {
+      properties: { write: true, writeWithoutResponse: true },
+      writeValueWithoutResponse: async (chunk: Uint8Array) => {
+        if (chunk.byteLength > 20) {
+          throw new Error("Value length exceeds 20-byte BLE MTU");
+        }
+        if (failFirstWrite) {
+          failFirstWrite = false;
+          throw new Error("GATT operation failed (stale connection)");
+        }
+        chunkLengths.push(chunk.byteLength);
+      },
+    };
+    const mockDevice = {
+      name: "RPP02N",
+      gatt: {
+        connected: false,
+        connect: async () => {
+          mockDevice.gatt.connected = true;
+          return {
+            getPrimaryServices: async () => [{ getCharacteristics: async () => [mockChar] }],
+          };
+        },
+        disconnect: () => {
+          mockDevice.gatt.connected = false;
+        },
+      },
+      addEventListener: () => {},
+    };
+    setMockNavigator({
+      bluetooth: {
+        requestDevice: async () => mockDevice,
+        getDevices: async () => [],
+      },
+    });
+
+    const cfg: PrinterConfig = { ...DEFAULT_PRINTER_CONFIG, connection: "bluetooth" };
+    const paired = await pairPrinter(cfg);
+    savePrinterConfig({ ...cfg, deviceName: paired.deviceName, connected: true }, "store-a");
+
+    // Also verify another outlet reuses the live connected printer without opening a tab
+    expect(shouldAttemptDirectPrint("store-b")).toBe(true);
+    expect(await isPrinterConnected("store-b")).toBe(true);
+
+    const payload = new Uint8Array(65).fill(0x41);
+    await printRaw(payload, { ...cfg, deviceName: "RPP02N", connected: true });
+
+    expect(chunkLengths).toEqual([20, 20, 20, 5]);
+    expect(chunkLengths.every((len) => len <= 20)).toBe(true);
+  });
+
   it("detects plugged-in USB printer and falls back when unplugged", async () => {
     const transferred: Uint8Array[] = [];
     const mockUsbDev = {

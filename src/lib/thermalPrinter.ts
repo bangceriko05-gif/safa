@@ -50,6 +50,36 @@ export class PrinterNotConnectedError extends Error {
 }
 
 const STORAGE_PREFIX = "anka_printer_config_";
+const LAST_ACTIVE_KEY = "anka_printer_last_active";
+
+function loadLastActivePrinterConfig(): PrinterConfig | null {
+  try {
+    const raw = localStorage.getItem(LAST_ACTIVE_KEY);
+    if (!raw) return null;
+    const parsed = { ...DEFAULT_PRINTER_CONFIG, ...JSON.parse(raw) } as PrinterConfig;
+    return hasConfiguredPrinter(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLastActivePrinterConfig(config: PrinterConfig) {
+  try {
+    if (hasConfiguredPrinter(config)) {
+      localStorage.setItem(LAST_ACTIVE_KEY, JSON.stringify({ ...config, connected: true }));
+    }
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function clearLastActivePrinterConfig() {
+  try {
+    localStorage.removeItem(LAST_ACTIVE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function loadPrinterConfig(storeId?: string): PrinterConfig {
   try {
@@ -64,6 +94,11 @@ export function loadPrinterConfig(storeId?: string): PrinterConfig {
 export function savePrinterConfig(config: PrinterConfig, storeId?: string) {
   try {
     localStorage.setItem(STORAGE_PREFIX + (storeId || "default"), JSON.stringify(config));
+    if (config.connected === false) {
+      clearLastActivePrinterConfig();
+    } else if (hasConfiguredPrinter(config)) {
+      saveLastActivePrinterConfig(config);
+    }
   } catch {
     /* ignore quota */
   }
@@ -109,9 +144,18 @@ const BLE_SERVICES = [
   "000018f0-0000-1000-8000-00805f9b34fb",
   "0000ff00-0000-1000-8000-00805f9b34fb",
   "0000ffe0-0000-1000-8000-00805f9b34fb",
+  "0000fff0-0000-1000-8000-00805f9b34fb",
+  "0000ae30-0000-1000-8000-00805f9b34fb",
+  "0000af30-0000-1000-8000-00805f9b34fb",
+  "0000fee7-0000-1000-8000-00805f9b34fb",
   "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
   "49535343-fe7d-4ae5-8fa9-9fafd205e455",
+  "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f",
 ];
+
+const BLE_CONNECT_TIMEOUT_MS = 6000;
+// Universal BLE ATT MTU is 23 bytes (20-byte write payload) across Android/iOS/desktop thermal printers
+const BLE_SAFE_CHUNK_SIZE = 20;
 
 let bleDevice: any = null;
 let bleChar: any = null;
@@ -182,16 +226,32 @@ async function connectBluetooth(pick: boolean, allowPrompt = pick, config?: Prin
 
   const server = await withTimeout<any>(
     bleDevice.gatt.connect(),
-    3000,
+    BLE_CONNECT_TIMEOUT_MS,
     "Printer Bluetooth tidak merespons."
   );
-  const services = await server.getPrimaryServices();
+  let services: any[] = [];
+  try {
+    services = await server.getPrimaryServices();
+  } catch {
+    for (const uuid of BLE_SERVICES) {
+      try {
+        const svc = await server.getPrimaryService(uuid);
+        if (svc) services.push(svc);
+      } catch {
+        /* service not on this printer */
+      }
+    }
+  }
   for (const service of services) {
-    const chars = await service.getCharacteristics();
-    const writable = chars.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
-    if (writable) {
-      bleChar = writable;
-      break;
+    try {
+      const chars = await service.getCharacteristics();
+      const writable = chars.find((c: any) => c.properties?.writeWithoutResponse || c.properties?.write);
+      if (writable) {
+        bleChar = writable;
+        break;
+      }
+    } catch {
+      /* skip unreadable service */
     }
   }
   if (!bleChar) throw new Error("Printer Bluetooth tidak punya karakteristik tulis (tidak kompatibel ESC/POS).");
@@ -199,15 +259,59 @@ async function connectBluetooth(pick: boolean, allowPrompt = pick, config?: Prin
   return bleChar;
 }
 
+async function writeBleChunk(char: any, chunk: Uint8Array) {
+  const preferWithoutResponse = Boolean(char.properties?.writeWithoutResponse && typeof char.writeValueWithoutResponse === "function");
+  const canWriteWithResponse = Boolean(char.properties?.write && (typeof char.writeValueWithResponse === "function" || typeof char.writeValue === "function"));
+
+  if (preferWithoutResponse) {
+    try {
+      await char.writeValueWithoutResponse(chunk);
+      return;
+    } catch (err) {
+      if (!canWriteWithResponse) throw err;
+    }
+  }
+
+  if (typeof char.writeValueWithResponse === "function") {
+    await char.writeValueWithResponse(chunk);
+  } else if (typeof char.writeValue === "function") {
+    await char.writeValue(chunk);
+  } else if (typeof char.writeValueWithoutResponse === "function") {
+    await char.writeValueWithoutResponse(chunk);
+  } else {
+    throw new Error("Karakteristik printer Bluetooth tidak mendukung penulisan data.");
+  }
+}
+
 async function writeBluetooth(data: Uint8Array, allowPrompt: boolean, config?: PrinterConfig) {
   const run = async () => {
-    const char = await connectBluetooth(false, allowPrompt, config);
-    const chunkSize = 180;
-    for (let i = 0; i < data.length; i += chunkSize) {
-      const chunk = data.slice(i, i + chunkSize);
-      if (char.properties.writeWithoutResponse) await char.writeValueWithoutResponse(chunk);
-      else await char.writeValue(chunk);
-      await new Promise((r) => setTimeout(r, 20));
+    const sendAll = async (char: any) => {
+      for (let i = 0; i < data.length; i += BLE_SAFE_CHUNK_SIZE) {
+        const chunk = data.slice(i, i + BLE_SAFE_CHUNK_SIZE);
+        await writeBleChunk(char, chunk);
+        await new Promise((r) => setTimeout(r, 12));
+      }
+    };
+
+    let char = await connectBluetooth(false, allowPrompt, config);
+    try {
+      await sendAll(char);
+    } catch (firstErr) {
+      // Retry once after refreshing GATT characteristic in case the printer went idle silently
+      bleChar = null;
+      if (bleDevice?.gatt?.connected) {
+        try {
+          bleDevice.gatt.disconnect();
+        } catch {
+          /* ignore */
+        }
+      }
+      try {
+        char = await connectBluetooth(false, allowPrompt, config);
+        await sendAll(char);
+      } catch {
+        throw firstErr;
+      }
     }
   };
   const queued = bleWriteQueue.then(run, run);
@@ -275,7 +379,10 @@ async function connectUsb(pick: boolean, allowPrompt = pick, config?: PrinterCon
 
 async function writeUsb(data: Uint8Array, allowPrompt: boolean, config?: PrinterConfig) {
   const { device, endpoint } = await connectUsb(false, allowPrompt, config);
-  await device.transferOut(endpoint, data);
+  const chunkSize = 512;
+  for (let i = 0; i < data.length; i += chunkSize) {
+    await device.transferOut(endpoint, data.slice(i, i + chunkSize));
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -376,10 +483,10 @@ export function getEffectivePrinterConfig(storeId?: string): PrinterConfig {
   const config = loadPrinterConfig(storeId);
   if (config.connected === false) return config;
   if (hasConfiguredPrinter(config)) return config;
-  if (activeLiveConnection === "bluetooth" && bleDevice?.gatt?.connected) {
+  if (bleDevice?.gatt && (activeLiveConnection === "bluetooth" || bleDevice.gatt.connected)) {
     return { ...config, connection: "bluetooth", deviceName: bleDevice.name || "Printer Bluetooth", connected: true };
   }
-  if (activeLiveConnection === "usb" && usbDevice?.opened) {
+  if (usbDevice && (activeLiveConnection === "usb" || usbDevice.opened)) {
     return {
       ...config,
       connection: "usb",
@@ -389,7 +496,7 @@ export function getEffectivePrinterConfig(storeId?: string): PrinterConfig {
       connected: true,
     };
   }
-  if (activeLiveConnection === "serial" && serialPort?.writable) {
+  if (serialPort && (activeLiveConnection === "serial" || serialPort.writable)) {
     const info = serialPort.getInfo?.() || {};
     return {
       ...config,
@@ -400,6 +507,8 @@ export function getEffectivePrinterConfig(storeId?: string): PrinterConfig {
       connected: true,
     };
   }
+  const shared = loadLastActivePrinterConfig();
+  if (shared) return shared;
   return config;
 }
 
@@ -441,7 +550,7 @@ export async function isPrinterConnected(storeId?: string): Promise<boolean> {
       const dev = await resolvePairedBleDevice(config);
       if (!dev?.gatt) return false;
       try {
-        await withTimeout(dev.gatt.connect(), 2500, "Printer Bluetooth tidak terhubung.");
+        await withTimeout(dev.gatt.connect(), BLE_CONNECT_TIMEOUT_MS, "Printer Bluetooth tidak terhubung.");
         return Boolean(dev.gatt.connected);
       } catch {
         return false;
@@ -526,6 +635,7 @@ export async function disconnectPrinter(storeId?: string) {
   usbDevice = null;
   serialPort = null;
   activeLiveConnection = null;
+  clearLastActivePrinterConfig();
   if (storeId) {
     const current = loadPrinterConfig(storeId);
     savePrinterConfig({ ...current, connected: false }, storeId);

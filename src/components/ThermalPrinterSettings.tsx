@@ -227,6 +227,11 @@ export default function ThermalPrinterSettings() {
             <div className="flex-1 min-w-[180px]">
               <Label className="text-xs">Perangkat Terpilih</Label>
               <p className="text-sm font-medium">{config.deviceName || "Belum ada perangkat"}</p>
+              {config.connection === "bluetooth" && config.deviceName && config.connected !== false && !isConnected && (
+                <p className="text-[11px] text-amber-600 mt-0.5">
+                  Browser memutus Bluetooth saat halaman dimuat ulang. Klik Hubungkan Ulang untuk cetak langsung.
+                </p>
+              )}
             </div>
             {config.connection === "serial" && (
               <div className="w-32">
@@ -243,7 +248,7 @@ export default function ThermalPrinterSettings() {
             )}
             <Button variant="outline" onClick={handlePair} disabled={pairing || !supported}>
               {pairing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plug className="h-4 w-4 mr-2" />}
-              {config.deviceName ? "Ganti Perangkat" : "Cari & Hubungkan"}
+              {config.deviceName ? (isConnected ? "Ganti Perangkat" : "Hubungkan Ulang") : "Cari & Hubungkan"}
             </Button>
           </div>
         )}
